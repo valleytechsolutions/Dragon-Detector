@@ -2,7 +2,9 @@
 
 ## M5Stack StopWatch C152
 
-466×466 round AMOLED with yellow and blue keys; ESP32-S3, 16 MB flash and 8 MB PSRAM. Internal flash stores this firmware's files; there is no built-in microSD slot.
+![Actual M5Stack StopWatch C152, manufacturer photograph](https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/1242/C152_stopwatch_mainpictures_01.webp)
+
+466Ã—466 round AMOLED with yellow and blue keys; ESP32-S3, 16 MB flash and 8 MB PSRAM. Internal flash stores this firmware's files; there is no built-in microSD slot.
 
 - [Official specifications, wiring and photographs](https://docs.m5stack.com/en/core/StopWatch)
 - [Actual product and manufacturer photographs](https://shop.m5stack.com/products/m5stack-stopwatch-dev-kit-esp32-s3)
@@ -10,7 +12,7 @@
 
 ## Spotpear / Guition JC3636W518
 
-1.8-inch 360×360 round touch LCD, ESP32-S3 with 16 MB flash and 8 MB octal PSRAM. This project preserves its original microSD and audio support.
+1.8-inch 360Ã—360 round touch LCD, ESP32-S3 with 16 MB flash and 8 MB octal PSRAM. This project preserves its original microSD and audio support.
 
 ![Spotpear board photograph, hosted by Spotpear](https://cdn.static.spotpear.com/uploads/picture/product/esp32/EPS32-S3-1.8inch-Touch-LCD/WEB-EPS32-S3-1.8inch-Touch-LCD.jpg)
 
