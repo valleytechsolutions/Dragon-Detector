@@ -1,0 +1,6 @@
+.pio/
+backups/
+reference/
+*.log
+__pycache__/
+release/*.zip

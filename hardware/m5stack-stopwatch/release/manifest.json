@@ -1,0 +1,18 @@
+{
+  "version": "0.2.0",
+  "device": "M5Stack StopWatch C152",
+  "chip": "ESP32-S3",
+  "flash": "16MB",
+  "files": {
+    "Dragon-Detector-StopWatch-v0.2.0-update-0x0.bin": {
+      "sha256": "6132fc67c722d4dcf3817c55b29dbfaed1287befecb994f56dca6f230acd8dc5",
+      "bytes": 1683648,
+      "flash_offset": "0x0"
+    },
+    "Dragon-Detector-StopWatch-v0.2.0-factory-0x0.bin": {
+      "sha256": "9cf98bd0df202b20d147f54404cac776924ba000ff04421954e664a41e8beb4b",
+      "bytes": 16777216,
+      "flash_offset": "0x0"
+    }
+  }
+}

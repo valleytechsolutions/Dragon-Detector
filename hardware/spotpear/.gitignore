@@ -1,0 +1,9 @@
+.pio/
+.venv/
+__pycache__/
+*.exe
+*.pdb
+*.pcap
+*.wav
+*.log
+

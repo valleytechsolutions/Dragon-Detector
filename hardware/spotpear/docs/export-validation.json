@@ -1,0 +1,10 @@
+{
+  "csv_records": 98,
+  "pcap_packets": 63,
+  "pcap_linktype": 105,
+  "wav_frames": 112384,
+  "wav_seconds": 7.024,
+  "wav_peak": 9695,
+  "wav_rms": 392.49,
+  "mp3_roundtrip_sha256": "37292876fe7fceeb9bf951584566b70afbdba2e0bc932520db7fa6c4ec641356"
+}

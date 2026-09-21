@@ -1,0 +1,69 @@
+[
+  {
+    "screen": "channels",
+    "before": {
+      "page": 6,
+      "pending": 6,
+      "scroll": 0,
+      "tab": 0
+    },
+    "after_up": {
+      "page": 6,
+      "pending": 6,
+      "scroll": 251,
+      "tab": 0
+    },
+    "after_down": {
+      "page": 6,
+      "pending": 6,
+      "scroll": 7,
+      "tab": 0
+    }
+  },
+  {
+    "screen": "settings",
+    "before": {
+      "page": 9,
+      "pending": 9,
+      "scroll": 0,
+      "tab": 0
+    },
+    "after_up": {
+      "page": 9,
+      "pending": 9,
+      "scroll": 253,
+      "tab": 0
+    },
+    "after_down": {
+      "page": 9,
+      "pending": 9,
+      "scroll": 7,
+      "tab": 0
+    }
+  },
+  {
+    "screen": "about",
+    "before": {
+      "page": 10,
+      "pending": 10,
+      "scroll": 0,
+      "tab": 0
+    },
+    "after_up": {
+      "page": 10,
+      "pending": 10,
+      "scroll": 261,
+      "tab": 0
+    },
+    "after_down": {
+      "page": 10,
+      "pending": 10,
+      "scroll": 124,
+      "tab": 0
+    }
+  },
+  {
+    "buttons": "A returns to radar; B opens menu and cycles tabs; A exits badge",
+    "status": "passed"
+  }
+]

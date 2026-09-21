@@ -1,0 +1,17 @@
+**/.pio/
+**/.venv/
+**/__pycache__/
+*.pyc
+*.log
+*.elf
+*.map
+*.exe
+*.pdb
+*.pcap
+*.wav
+.env
+.env.*
+backups/
+reference/
+.DS_Store
+Thumbs.db
