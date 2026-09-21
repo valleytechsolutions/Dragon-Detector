@@ -4,13 +4,13 @@
 
 # Dragon Detector
 
-Dragon Detector is development-stage ESP32-S3 firmware for the **Spotpear / Guition JC3636W518 1.8-inch 360Ã—360 round touch display**. It presents passive Wi-Fi and BLE observations as a Dragon Radar-inspired interface, logs evidence to microSD, records microphone audio on explicit command, and plays local WAV/MP3 files.
+Dragon Detector is development-stage ESP32-S3 firmware for the **Spotpear / Guition JC3636W518 1.8-inch 360×360 round touch display**. It presents passive Wi-Fi and BLE observations as a Dragon Radar-inspired interface, logs evidence to microSD, records microphone audio on explicit command, and plays local WAV/MP3 files.
 
 This project adapts selected passive detection ideas from [ESP32 Marauder by JustCallMeKoko](https://github.com/justcallmekoko/ESP32Marauder), pinned during development at commit [`8ae4622`](https://github.com/justcallmekoko/ESP32Marauder/tree/8ae4622abcc9c9c5729d4e97491907581d7f0c34). Marauder is copyright Just Call Me Koko and contributors and is distributed under the MIT License; the preserved license is in [`docs/MARAUDER-LICENSE.txt`](docs/MARAUDER-LICENSE.txt). Dragon Detector is a separate GPL-3.0 project and is not an official Marauder build.
 
 ## Actual supported device
 
-[Spotpear product page](https://spotpear.com/shop/EPS32-S3R8-1.8inch-360x360-Round-LCD-Display-WIFI-Secondary-TouchScreen-AIDA64-Arduino-LVGL-WirelessAida64-Wireless-Power-Video-Electronic-Photo-Frame-MP3.html) Â· [Spotpear hardware wiki and vendor demo](https://spotpear.com/wiki/EPS32-S3R8-1.8inch-360x360-Round-LCD-Display-WIFI-Secondary-TouchScreen-AIDA64-Arduino-LVGL-WirelessAida64-Wireless-Power-Video-Electronic-Photo-Frame-MP3.html)
+[Spotpear product page](https://spotpear.com/shop/EPS32-S3R8-1.8inch-360x360-Round-LCD-Display-WIFI-Secondary-TouchScreen-AIDA64-Arduino-LVGL-WirelessAida64-Wireless-Power-Video-Electronic-Photo-Frame-MP3.html) · [Spotpear hardware wiki and vendor demo](https://spotpear.com/wiki/EPS32-S3R8-1.8inch-360x360-Round-LCD-Display-WIFI-Secondary-TouchScreen-AIDA64-Arduino-LVGL-WirelessAida64-Wireless-Power-Video-Electronic-Photo-Frame-MP3.html)
 
 ![Actual Spotpear JC3636W518 board](https://cdn.static.spotpear.com/uploads/picture/product/esp32/EPS32-S3-1.8inch-Touch-LCD/WEB-EPS32-S3-1.8inch-Touch-LCD.jpg)
 

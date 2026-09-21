@@ -4,15 +4,15 @@
 
 | Board | File | Address |
 |---|---|---|
-| Spotpear/Guition JC3636W518, 360Ãƒâ€”360 | [v0.1.1 complete BIN](../hardware/spotpear/firmware/Dragon-Detector-0.1.1-ESP32S3-JC3636W518-0x0.bin) | `0x0` |
-| M5Stack StopWatch C152, 466Ãƒâ€”466 | [v0.2.0 factory BIN](../hardware/m5stack-stopwatch/release/Dragon-Detector-StopWatch-v0.2.0-factory-0x0.bin) | `0x0` |
+| Spotpear/Guition JC3636W518, 360×360 | [v0.1.1 complete BIN](../hardware/spotpear/firmware/Dragon-Detector-0.1.1-ESP32S3-JC3636W518-0x0.bin) | `0x0` |
+| M5Stack StopWatch C152, 466×466 | [v0.2.0 factory BIN](../hardware/m5stack-stopwatch/release/Dragon-Detector-StopWatch-v0.2.0-factory-0x0.bin) | `0x0` |
 | Existing StopWatch Dragon Detector with the same partition layout | [v0.2.0 update BIN](../hardware/m5stack-stopwatch/release/Dragon-Detector-StopWatch-v0.2.0-update-0x0.bin) | `0x0` |
 
 The StopWatch factory BIN is 16,777,216 bytes and replaces internal files and settings. The update BIN is 1,683,648 bytes and preserves the filesystem only on this exact StopWatch layout; it resets NVS preferences. Use factory for initial installation. The Spotpear full BIN is 1,572,752 bytes. Neither Spotpear image nor StopWatch image belongs on the other device.
 
 ## 2. Download the files
 
-Download this repository with **Code Ã¢â€ â€™ Download ZIP**, extract it, then open a terminal in the extracted `DragonBall-Z-Radar` folder. Alternatively, download the one BIN through GitHub's **Download raw file** button. The commands below assume the whole repository was extracted; if you downloaded just a BIN, replace its path with your downloaded file's path.
+Download this repository with **Code → Download ZIP**, extract it, then open a terminal in the extracted `DragonBall-Z-Radar` folder. Alternatively, download the one BIN through GitHub's **Download raw file** button. The commands below assume the whole repository was extracted; if you downloaded just a BIN, replace its path with your downloaded file's path.
 
 ## 3. Install the flashing tools
 

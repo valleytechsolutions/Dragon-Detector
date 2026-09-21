@@ -10,10 +10,10 @@ A Dragon Radar-inspired interface for passive Wi-Fi and Bluetooth LE observation
 
 | | Spotpear / Guition round LCD | M5Stack StopWatch |
 |---|---|---|
-| Exact board | JC3636W518, 360Ã—360 | C152, 466Ã—466 AMOLED |
+| Exact board | JC3636W518, 360×360 | C152, 466×466 AMOLED |
 | Version | 0.1.1 | 0.2.0 |
 | Complete source | [Spotpear project](hardware/spotpear) | [StopWatch project](hardware/m5stack-stopwatch) |
-| Fresh-install BIN â€” flash at **0x0** | [Download Spotpear BIN](hardware/spotpear/firmware/Dragon-Detector-0.1.1-ESP32S3-JC3636W518-0x0.bin) | [Download StopWatch factory BIN](hardware/m5stack-stopwatch/release/Dragon-Detector-StopWatch-v0.2.0-factory-0x0.bin) |
+| Fresh-install BIN — flash at **0x0** | [Download Spotpear BIN](hardware/spotpear/firmware/Dragon-Detector-0.1.1-ESP32S3-JC3636W518-0x0.bin) | [Download StopWatch factory BIN](hardware/m5stack-stopwatch/release/Dragon-Detector-StopWatch-v0.2.0-factory-0x0.bin) |
 | File storage | microSD | Internal flash |
 | Media | WAV/MP3 playback and manual recording | Badge images; no music player or microphone recorder |
 | Navigation | Touchscreen and radar bottom-edge swipe | Touchscreen, yellow radar button, blue menu button |
@@ -70,9 +70,9 @@ This is a custom firmware using selected passive detection work, not a complete 
 
 ## Credits
 
-**[JustCallMeKoko](https://github.com/justcallmekoko)** â€” creator of [ESP32 Marauder](https://github.com/justcallmekoko/ESP32Marauder), the upstream reference for adapted passive detection work. Original MIT attribution is preserved.
+**[JustCallMeKoko](https://github.com/justcallmekoko)** — creator of [ESP32 Marauder](https://github.com/justcallmekoko/ESP32Marauder), the upstream reference for adapted passive detection work. Original MIT attribution is preserved.
 
-**[CodeHedge](https://github.com/CodeHedge)** â€” acknowledgment for related [Marauder/CYD and Biscuit community work](https://github.com/CodeHedge/ESP32Marauder) and [flashing tools](https://github.com/CodeHedge/biscuit_flasher). This credit does not imply that CodeHedge authored or reviewed Dragon Detector.
+**[CodeHedge](https://github.com/CodeHedge)** — acknowledgment for related [Marauder/CYD and Biscuit community work](https://github.com/CodeHedge/ESP32Marauder) and [flashing tools](https://github.com/CodeHedge/biscuit_flasher). This credit does not imply that CodeHedge authored or reviewed Dragon Detector.
 
 Thanks also to M5Stack, Spotpear/Guition, Espressif, LVGL, NimBLE-Arduino, ESP8266Audio, and the other dependencies documented in [CREDITS.md](CREDITS.md). VTS branding was supplied by the project owner. This project is not endorsed by those projects, manufacturers, or the Dragon Ball rights holders.
 
