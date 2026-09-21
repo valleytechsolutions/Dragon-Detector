@@ -1,0 +1,209 @@
+Processing dragon (platform: https://github.com/pioarduino/platform-espressif32/releases/download/51.03.07/platform-espressif32.zip; board: esp32-s3-devkitc-1; framework: arduino)
+--------------------------------------------------------------------------------
+Verbose mode can be enabled via `-v, --verbose` option
+CONFIGURATION: https://docs.platformio.org/page/boards/espressif32/esp32-s3-devkitc-1.html
+PLATFORM: Espressif 32 (51.3.6) > Espressif ESP32-S3-DevKitC-1-N8 (8 MB QD, No PSRAM)
+HARDWARE: ESP32S3 240MHz, 320KB RAM, 8MB Flash
+DEBUG: Current (esp-builtin) On-board (esp-builtin) External (cmsis-dap, esp-bridge, esp-prog, iot-bus-jtag, jlink, minimodule, olimex-arm-usb-ocd, olimex-arm-usb-ocd-h, olimex-arm-usb-tiny-h, olimex-jtag-tiny, tumpa)
+PACKAGES: 
+ - framework-arduinoespressif32 @ 3.0.7 
+ - framework-arduinoespressif32-libs @ 5.1.0+sha.632e0c2a9f 
+ - tool-esptoolpy @ 4.8.1 
+ - tool-mkfatfs @ 2.0.1 
+ - tool-mklittlefs @ 3.2.0 
+ - tool-mkspiffs @ 2.230.0 (2.30) 
+ - tool-riscv32-esp-elf-gdb @ 11.2.0+20220823 
+ - tool-xtensa-esp-elf-gdb @ 11.2.0+20230208 
+ - toolchain-riscv32-esp @ 12.2.0+20230208 
+ - toolchain-xtensa-esp32s3 @ 12.2.0+20230208
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 45 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- NimBLE-Arduino @ 2.3.6
+|-- ESP8266Audio @ 1.9.9
+|-- lvgl @ 8.3.11
+|-- WiFi @ 3.0.7
+|-- FS @ 3.0.7
+|-- SD_MMC @ 3.0.7
+|-- ESP32_IO_Expander @ 0.0.2
+|-- ESP32_Display_Panel @ 0.1.4
+Building in release mode
+Compiling .pio\build\dragon\src\audio.cpp.o
+Compiling .pio\build\dragon\src\main.cpp.o
+Compiling .pio\build\dragon\src\radio.cpp.o
+Compiling .pio\build\dragon\src\selftest.cpp.o
+Compiling .pio\build\dragon\src\storage.cpp.o
+Compiling .pio\build\dragon\src\ui.cpp.o
+In file included from src/audio.cpp:7:
+C:/Users/khali/.platformio/packages/framework-arduinoespressif32-libs/esp32s3/include/driver/deprecated/driver/i2s.h:27:2: warning: #warning "This set of I2S APIs has been deprecated, please include 'driver/i2s_std.h', 'driver/i2s_pdm.h' or 'driver/i2s_tdm.h' instead. if you want to keep using the old APIs and ignore this warning, you can enable 'Suppress leagcy driver deprecated warning' option under 'I2S Configuration' menu in Kconfig" [-Wcpp]
+   27 | #warning "This set of I2S APIs has been deprecated, \
+      |  ^~~~~~~
+src/audio.cpp: In function 'void audioTask(void*)':
+src/audio.cpp:65:154: warning: 'i2s_driver_config_t::<unnamed union>::dma_buf_count' is deprecated [-Wdeprecated-declarations]
+   65 |           cfg.channel_format=I2S_CHANNEL_FMT_RIGHT_LEFT;cfg.communication_format=I2S_COMM_FORMAT_STAND_I2S;cfg.intr_alloc_flags=ESP_INTR_FLAG_LEVEL1;cfg.dma_buf_count=6;cfg.dma_buf_len=256;
+      |                                                                                                                                                          ^~~~~~~~~~~~~
+In file included from C:/Users/khali/.platformio/packages/framework-arduinoespressif32-libs/esp32s3/include/driver/deprecated/driver/i2s.h:20:
+C:/Users/khali/.platformio/packages/framework-arduinoespressif32-libs/esp32s3/include/driver/deprecated/driver/i2s_types_legacy.h:225:13: note: declared here
+  225 |         int dma_buf_count __attribute__((deprecated));  /*!< This is an alias to 'dma_desc_num' for backward compatibility */
+      |             ^~~~~~~~~~~~~
+src/audio.cpp:65:154: warning: 'i2s_driver_config_t::<unnamed union>::dma_buf_count' is deprecated [-Wdeprecated-declarations]
+   65 |           cfg.channel_format=I2S_CHANNEL_FMT_RIGHT_LEFT;cfg.communication_format=I2S_COMM_FORMAT_STAND_I2S;cfg.intr_alloc_flags=ESP_INTR_FLAG_LEVEL1;cfg.dma_buf_count=6;cfg.dma_buf_len=256;
+      |                                                                                                                                                          ^~~~~~~~~~~~~
+C:/Users/khali/.platformio/packages/framework-arduinoespressif32-libs/esp32s3/include/driver/deprecated/driver/i2s_types_legacy.h:225:13: note: declared here
+  225 |         int dma_buf_count __attribute__((deprecated));  /*!< This is an alias to 'dma_desc_num' for backward compatibility */
+      |             ^~~~~~~~~~~~~
+src/audio.cpp:65:154: warning: 'i2s_driver_config_t::<unnamed union>::dma_buf_count' is deprecated [-Wdeprecated-declarations]
+   65 |           cfg.channel_format=I2S_CHANNEL_FMT_RIGHT_LEFT;cfg.communication_format=I2S_COMM_FORMAT_STAND_I2S;cfg.intr_alloc_flags=ESP_INTR_FLAG_LEVEL1;cfg.dma_buf_count=6;cfg.dma_buf_len=256;
+      |                                                                                                                                                          ^~~~~~~~~~~~~
+C:/Users/khali/.platformio/packages/framework-arduinoespressif32-libs/esp32s3/include/driver/deprecated/driver/i2s_types_legacy.h:225:13: note: declared here
+  225 |         int dma_buf_count __attribute__((deprecated));  /*!< This is an alias to 'dma_desc_num' for backward compatibility */
+      |             ^~~~~~~~~~~~~
+src/audio.cpp:65:174: warning: 'i2s_driver_config_t::<unnamed union>::dma_buf_len' is deprecated [-Wdeprecated-declarations]
+   65 |           cfg.channel_format=I2S_CHANNEL_FMT_RIGHT_LEFT;cfg.communication_format=I2S_COMM_FORMAT_STAND_I2S;cfg.intr_alloc_flags=ESP_INTR_FLAG_LEVEL1;cfg.dma_buf_count=6;cfg.dma_buf_len=256;
+      |                                                                                                                                                                              ^~~~~~~~~~~
+C:/Users/khali/.platformio/packages/framework-arduinoespressif32-libs/esp32s3/include/driver/deprecated/driver/i2s_types_legacy.h:229:13: note: declared here
+  229 |         int dma_buf_len __attribute__((deprecated));    /*!< This is an alias to 'dma_frame_num' for backward compatibility */
+      |             ^~~~~~~~~~~
+src/audio.cpp:65:174: warning: 'i2s_driver_config_t::<unnamed union>::dma_buf_len' is deprecated [-Wdeprecated-declarations]
+   65 |           cfg.channel_format=I2S_CHANNEL_FMT_RIGHT_LEFT;cfg.communication_format=I2S_COMM_FORMAT_STAND_I2S;cfg.intr_alloc_flags=ESP_INTR_FLAG_LEVEL1;cfg.dma_buf_count=6;cfg.dma_buf_len=256;
+      |                                                                                                                                                                              ^~~~~~~~~~~
+C:/Users/khali/.platformio/packages/framework-arduinoespressif32-libs/esp32s3/include/driver/deprecated/driver/i2s_types_legacy.h:229:13: note: declared here
+  229 |         int dma_buf_len __attribute__((deprecated));    /*!< This is an alias to 'dma_frame_num' for backward compatibility */
+      |             ^~~~~~~~~~~
+src/audio.cpp:65:174: warning: 'i2s_driver_config_t::<unnamed union>::dma_buf_len' is deprecated [-Wdeprecated-declarations]
+   65 |           cfg.channel_format=I2S_CHANNEL_FMT_RIGHT_LEFT;cfg.communication_format=I2S_COMM_FORMAT_STAND_I2S;cfg.intr_alloc_flags=ESP_INTR_FLAG_LEVEL1;cfg.dma_buf_count=6;cfg.dma_buf_len=256;
+      |                                                                                                                                                                              ^~~~~~~~~~~
+C:/Users/khali/.platformio/packages/framework-arduinoespressif32-libs/esp32s3/include/driver/deprecated/driver/i2s_types_legacy.h:229:13: note: declared here
+  229 |         int dma_buf_len __attribute__((deprecated));    /*!< This is an alias to 'dma_frame_num' for backward compatibility */
+      |             ^~~~~~~~~~~
+In file included from vendor/Demo_Arduino_en/lib/lvgl/src/core/lv_obj.h:140,
+                 from vendor/Demo_Arduino_en/lib/lvgl/lvgl.h:35,
+                 from src/main.cpp:3:
+vendor/Demo_Arduino_en/lib/lvgl/src/core/lv_obj_style.h: In function 'void lv_obj_remove_style_all(_lv_obj_t*)':
+vendor/Demo_Arduino_en/lib/lvgl/src/core/lv_obj_style.h:94:48: warning: bitwise operation between different enumeration types '<unnamed enum>' and '<unnamed enum>' is deprecated [-Wdeprecated-enum-enum-conversion]
+   94 |     lv_obj_remove_style(obj, NULL, LV_PART_ANY | LV_STATE_ANY);
+      |                                    ~~~~~~~~~~~~^~~~~~~~~~~~~~
+In file included from vendor/Demo_Arduino_en/lib/lvgl/src/core/lv_obj.h:140,
+                 from vendor/Demo_Arduino_en/lib/lvgl/lvgl.h:35,
+                 from src/ui.cpp:2:
+vendor/Demo_Arduino_en/lib/lvgl/src/core/lv_obj_style.h: In function 'void lv_obj_remove_style_all(_lv_obj_t*)':
+vendor/Demo_Arduino_en/lib/lvgl/src/core/lv_obj_style.h:94:48: warning: bitwise operation between different enumeration types '<unnamed enum>' and '<unnamed enum>' is deprecated [-Wdeprecated-enum-enum-conversion]
+   94 |     lv_obj_remove_style(obj, NULL, LV_PART_ANY | LV_STATE_ANY);
+      |                                    ~~~~~~~~~~~~^~~~~~~~~~~~~~
+Linking .pio\build\dragon\firmware.elf
+Retrieving maximum program size .pio\build\dragon\firmware.elf
+Checking size .pio\build\dragon\firmware.elf
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [==        ]  24.2% (used 79152 bytes from 327680 bytes)
+Flash: [==        ]  23.9% (used 1506313 bytes from 6291456 bytes)
+Building .pio\build\dragon\firmware.bin with action:
+  "$PYTHONEXE" "$OBJCOPY" --chip esp32s3 elf2image --flash_mode ${__get_board_flash_mode(__env__)} --flash_freq ${__get_board_f_image(__env__)} --flash_size 16MB --elf-sha256-offset 0xb0 -o $TARGET $SOURCES
+Building .pio\build\dragon\firmware.bin
+esptool.py v4.8.1.1
+Creating esp32s3 image...
+Merged 2 ELF sections
+Successfully created esp32s3 image.
+Configuring upload protocol...
+AVAILABLE: cmsis-dap, esp-bridge, esp-builtin, esp-prog, espota, esptool, iot-bus-jtag, jlink, minimodule, olimex-arm-usb-ocd, olimex-arm-usb-ocd-h, olimex-arm-usb-tiny-h, olimex-jtag-tiny, tumpa
+CURRENT: upload_protocol = esptool
+Looking for upload port...
+Using manually specified: COM3
+Uploading .pio\build\dragon\firmware.bin
+esptool.py v4.8.1.1
+Serial port COM3
+Connecting...
+Chip is ESP32-S3 (QFN56) (revision v0.2)
+Features: WiFi, BLE, Embedded PSRAM 8MB (AP_3v3)
+Crystal is 40MHz
+MAC: f0:9e:9e:1e:61:98
+Uploading stub...
+Running stub...
+Stub running...
+Changing baud rate to 921600
+Changed.
+Configuring flash size...
+Auto-detected Flash size: 16MB
+Flash will be erased from 0x00000000 to 0x00004fff...
+Flash will be erased from 0x00008000 to 0x00008fff...
+Flash will be erased from 0x0000e000 to 0x0000ffff...
+Flash will be erased from 0x00010000 to 0x0017ffff...
+SHA digest in image updated
+Compressed 19504 bytes to 12970...
+Writing at 0x00000000... (100 %)
+Wrote 19504 bytes (12970 compressed) at 0x00000000 in 0.3 seconds (effective 448.4 kbit/s)...
+Hash of data verified.
+Compressed 3072 bytes to 129...
+Writing at 0x00008000... (100 %)
+Wrote 3072 bytes (129 compressed) at 0x00008000 in 0.1 seconds (effective 442.8 kbit/s)...
+Hash of data verified.
+Compressed 8192 bytes to 47...
+Writing at 0x0000e000... (100 %)
+Wrote 8192 bytes (47 compressed) at 0x0000e000 in 0.1 seconds (effective 574.7 kbit/s)...
+Hash of data verified.
+Compressed 1506672 bytes to 936210...
+Writing at 0x00010000... (1 %)
+Writing at 0x00023788... (3 %)
+Writing at 0x00027aa6... (5 %)
+Writing at 0x00032068... (6 %)
+Writing at 0x0003b8c6... (8 %)
+Writing at 0x00044044... (10 %)
+Writing at 0x0004fb3d... (12 %)
+Writing at 0x0005ae43... (13 %)
+Writing at 0x00060e1d... (15 %)
+Writing at 0x00066577... (17 %)
+Writing at 0x0007b193... (18 %)
+Writing at 0x00083a55... (20 %)
+Writing at 0x00088c1f... (22 %)
+Writing at 0x0008e1a8... (24 %)
+Writing at 0x0009381e... (25 %)
+Writing at 0x00099131... (27 %)
+Writing at 0x0009e230... (29 %)
+Writing at 0x000a2fb2... (31 %)
+Writing at 0x000a8721... (32 %)
+Writing at 0x000ad777... (34 %)
+Writing at 0x000b278f... (36 %)
+Writing at 0x000b7997... (37 %)
+Writing at 0x000bd190... (39 %)
+Writing at 0x000c28ae... (41 %)
+Writing at 0x000c7c7c... (43 %)
+Writing at 0x000cd593... (44 %)
+Writing at 0x000d3162... (46 %)
+Writing at 0x000d87ab... (48 %)
+Writing at 0x000de3e6... (50 %)
+Writing at 0x000e3c31... (51 %)
+Writing at 0x000e94d6... (53 %)
+Writing at 0x000ee3f7... (55 %)
+Writing at 0x000f3f17... (56 %)
+Writing at 0x000f95d8... (58 %)
+Writing at 0x000ff06b... (60 %)
+Writing at 0x001044e6... (62 %)
+Writing at 0x001092c5... (63 %)
+Writing at 0x0010e167... (65 %)
+Writing at 0x001136f8... (67 %)
+Writing at 0x00118e78... (68 %)
+Writing at 0x0011e3dd... (70 %)
+Writing at 0x001234ee... (72 %)
+Writing at 0x001283a8... (74 %)
+Writing at 0x0012d4bc... (75 %)
+Writing at 0x00132531... (77 %)
+Writing at 0x00137894... (79 %)
+Writing at 0x0013cd0c... (81 %)
+Writing at 0x00142774... (82 %)
+Writing at 0x00147f24... (84 %)
+Writing at 0x0014d97b... (86 %)
+Writing at 0x0015631f... (87 %)
+Writing at 0x0015d308... (89 %)
+Writing at 0x0016422d... (91 %)
+Writing at 0x0016905a... (93 %)
+Writing at 0x0016e40c... (94 %)
+Writing at 0x00173894... (96 %)
+Writing at 0x00179427... (98 %)
+Writing at 0x0017ed5e... (100 %)
+Wrote 1506672 bytes (936210 compressed) at 0x00010000 in 10.4 seconds (effective 1153.5 kbit/s)...
+Hash of data verified.
+
+Leaving...
+Hard resetting with RTC WDT...
+========================= [SUCCESS] Took 30.96 seconds =========================

@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <!-- <meta name="viewport" content="width=1920px, user-scalable=no"> -->
+    <!--<meta name="viewport" content="width=device-width, initial-scale=1.0,minimum-scale=1.0,maximum-scale=1.0, user-scalable=no">-->
+    <title>DeepsSeek AI Voice Chat EPS32 S3 1.8inch Round LCD Display WIFI-AIDA64-Secondary-TouchScreen/Wireless-Power/Video-Player LVGL XiaoZhi AI DeepSeek User Manual</title>
+    <meta name="keywords" content="DeepsSeek AI Voice Chat  EPS32 S3 1.8inch Round LCD Display WIFI-AIDA64-Secondary-TouchScreen/Wireless-Power/Video-Player LVGL  XiaoZhi AI DeepSeek User Manual">
+    <meta name="description" content="DeepsSeek AI Voice Chat  EPS32 S3 1.8inch Round LCD Display WIFI-AIDA64-Secondary-TouchScreen/Wireless-Power/Video-Player LVGL  XiaoZhi AI DeepSeek User Manual
+【ESP32 S3 XiaoZhi AI DeepSeek Guide】
+】Deepseek Xiaozhi AI firmware
+】Deepseek Xiaozhi AI Guide
+[] Connect to WIFI
+[] Enter the settings backend
+[] Click console/【控制台】
+[] Click manage devices/【管理设备】
+[] Click add device/【添加设备】
+[] Restart the device.
+[] Set English answer and DeepSeek
+[] Restart the device 
+【Secondary Screen Guide】
+】Network configuration
+】Basic operations
+】Operation of each function
+】 Second control method: Web control
+】 Detailed instructions for each function
+[] Computer secondary screen function (AIDA64)
+[] Audio spectrum function
+[] MP3 music playback function
+[] Electronic photo frame function
+[] MJPEG playback function mjpeg conversion tool download
+[] Real-time weather display function
+[] Clock display function
+【Display touch example】
+【I2S audio example】
+【Schematic diagram】
+【Tools】
+【Restore factory firmware】
+【After-sales】">
+
+    <link rel="shortcut icon" href="https://cdn.static.spotpear.com/uploads/picture/web/spotpear-logo-2.png" />
+    <link rel="bookmark" href="https://cdn.static.spotpear.com/uploads/picture/web/spotpear-logo-2.png" />
+
+    <!-- <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Noto+Sans+SC:100,300,400,500,700,900"> -->
+    <link rel="stylesheet" href="https://static.spotpear.com/static/index/css/reset.css">
+    <link rel="stylesheet" href="https://static.spotpear.com/static/index/css/iconfont.css?v=20230326">
+    <link rel="stylesheet" href="https://static.spotpear.com/static/index/js/layui/css/layui.css">
+    <link rel="stylesheet" href="https://static.spotpear.com/static/index/css/swiper.css">
+    <link rel="stylesheet" href="https://static.spotpear.com/static/index/css/animate.min.css">
+    <link rel="stylesheet" href="https://static.spotpear.com/static/index/css/common.css?v=2020">
+    
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-CJKW0XKGBE"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-CJKW0XKGBE');
+</script>
+    <script type="text/javascript" src="https://static.spotpear.com/static/index/js/vue@2.js"></script>
+
+<link rel="stylesheet" href="https://static.spotpear.com/static/index/css/other.css">
+</head>
+
+
+
+<body>
+
+    <div class="container">
+
+        <div class="header_con">
+            <div class="header_div">
+                <div class="welcome user_link fl">
+
+                </div>
+                <div class="fr">
+                    <div class="login_info fl">
+                        <a href="/index/forum/index.html">Forum</a>
+                        <span style="margin: 10px;">|</span>
+                    </div>
+                    
+                                        <div class="login_btn fl">
+                                                <a href="/index/auth/login.html?next=/wiki/EPS32-S3R8-1.8inch-360x360-Round-LCD-Display-WIFI-Secondary-TouchScreen-AIDA64-Arduino-LVGL-WirelessAida64-Wireless-Power-Video-Electronic-Photo-Frame-MP3.html">Sign in</a>
+                                                <span>|</span>
+                                                <a href="/index/auth/login.html?type=register&next=/wiki/EPS32-S3R8-1.8inch-360x360-Round-LCD-Display-WIFI-Secondary-TouchScreen-AIDA64-Arduino-LVGL-WirelessAida64-Wireless-Power-Video-Electronic-Photo-Frame-MP3.html">Register</a>
+                                            </div>
+                                        <div class="user_link fl">
+                        <span>|</span>
+                                                <a href="/index/auth/login.html?next=/wiki/EPS32-S3R8-1.8inch-360x360-Round-LCD-Display-WIFI-Secondary-TouchScreen-AIDA64-Arduino-LVGL-WirelessAida64-Wireless-Power-Video-Electronic-Photo-Frame-MP3.html" onclick="return is_login_link(this)">Account</a>
+                                                <span>|</span>
+                                                <a href="/index/auth/login.html?next=/wiki/EPS32-S3R8-1.8inch-360x360-Round-LCD-Display-WIFI-Secondary-TouchScreen-AIDA64-Arduino-LVGL-WirelessAida64-Wireless-Power-Video-Electronic-Photo-Frame-MP3.html" onclick="return is_login_link(this)">My Orders</a>
+                                                <div class="cart_nav_box">
+                            <a href="/index/pay/cart.html" class="cart_nav_link">Cart(<em class="cart-num">0</em>)</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="header" style="display:flex">
+
+            <div class="header_body">
+
+                <div class="left">
+
+                    <a href="/">
+
+                        <img src="https://cdn.static.spotpear.com/uploads/picture/web/spotpear-logo-2.png" alt="">
+
+                        <span>Spotpear</span>
+
+                    </a>
+
+                </div>
+
+                <div class="right">
+
+                    <ul class="father">
+
+                        <!-- class='active' -->
+
+                        
+                        <li >
+
+                            <a href="/index/product/new.html" >NEW</a>
+
+                            <ul class="child">
+
+                                
+                            </ul>
+
+                        </li>
+
+                        
+                        <li >
+
+                            <a href="/index/product/index.html" >PRODUCTS</a>
+
+                            <ul class="child">
+
+                                
+                            </ul>
+
+                        </li>
+
+                        
+                        <li class="active" >
+
+                            <a href="/index/study/index.html" >ARTICLES</a>
+
+                            <ul class="child">
+
+                                
+                            </ul>
+
+                        </li>
+
+                        
+                        <li >
+
+                            <a href="/index/about_us/index.html" >ABOUT US</a>
+
+                            <ul class="child">
+
+                                
+                            </ul>
+
+                        </li>
+
+                        
+                        <li >
+
+                            <a href="/index/contact/index.html" >CONTACT US</a>
+
+                            <ul class="child">
+
+                                
+                            </ul>
+
+                        </li>
+
+                        
+                        <li >
+
+                            <a href="/index/pay/index.html" >SHOP</a>
+
+                            <ul class="child">
+
+                                
+                            </ul>
+
+                        </li>
+
+                                            </ul>
+	<style>
+	.search .sele{
+		border-radius: 0;
+  border: none;
+  border: 0;
+  outline: none;
+	}
+	</style>
+
+                    <form action="/index/search/index.html">
+					
+
+                        <div class="search">
+							<select class="sele" name="lx" >
+								<option value="0" >PRODUCTS</option>
+								<option value="1" >ARTICLES</option>
+                                <option value="2" >FORUM</option>
+							</select>
+
+      
+
+                            <input type="text" id="top_search" required name="keywords" value=""
+
+                                placeholder="">
+								
+							 <div class="search_btn" id="top_search_img">
+                            
+                                <img src="https://static.spotpear.com/static/index/img/search1.png" alt="">
+                            
+                            </div>
+
+                        </div>
+
+                    </form>
+
+                    <div class="mobile_nav">
+
+                        <img class="slideDown" src="https://static.spotpear.com/static/index/img/nav.png" alt="">
+
+                        <img class="close" src="https://static.spotpear.com/static/index/img/nav_close.png" alt="">
+
+                    </div>
+
+                </div>
+
+                <div class="mobile_banner_nav">
+
+                    <div class="mobile_banner_nav_shadow">
+
+                        <ul>
+
+                            
+                            <li >
+
+                                <a href="/index/product/new.html" >NEW</a>
+
+                                <ul class="child">
+
+                                    
+                                </ul>
+
+                            </li>
+
+                            
+                            <li >
+
+                                <a href="/index/product/index.html" >PRODUCTS</a>
+
+                                <ul class="child">
+
+                                    
+                                </ul>
+
+                            </li>
+
+                            
+                            <li class="active" >
+
+                                <a href="/index/study/index.html" >ARTICLES</a>
+
+                                <ul class="child">
+
+                                    
+                                </ul>
+
+                            </li>
+
+                            
+                            <li >
+
+                                <a href="/index/about_us/index.html" >ABOUT US</a>
+
+                                <ul class="child">
+
+                                    
+                                </ul>
+
+                            </li>
+
+                            
+                            <li >
+
+                                <a href="/index/contact/index.html" >CONTACT US</a>
+
+                                <ul class="child">
+
+                                    
+                                </ul>
+
+                            </li>
+
+                            
+                            <li >
+
+                                <a href="/index/pay/index.html" >SHOP</a>
+
+                                <ul class="child">
+
+                                    
+                                </ul>
+
+                            </li>
+
+                            
+                        </ul>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="fixed_right">
+
+            <ul>
+
+                <li class="service" attr-show='qq_list'>
+
+                    <a href="javasrcipt:;"><span class="iconfont icon-kefu"></span></a>
+
+                </li>
+
+                <li class="service" attr-show='phone_list'>
+
+                    <a href="javasrcipt:;"><span class="iconfont icon-dianhua"></span></a>
+
+                </li>
+
+                <li class="service" attr-show='email_list'>
+
+                    <a href="javasrcipt:;"><span class="iconfont icon-666666"></span></a>
+
+                </li>
+
+                <li class="service" attr-show='wx_list'>
+
+                    <a href="javasrcipt:;"><span class="iconfont icon-weixin"></span></a>
+
+                </li>
+
+                <li class="qr_code">
+
+                    <a href="javascript:;"><span class="iconfont icon-erweima"></span></a>
+
+                    <div id="qr_code_box">
+
+                        <img src="https://cdn.static.spotpear.com/uploads/picture/web/jishu.jpg" alt="">
+                                                <img src="https://cdn.static.spotpear.com/uploads/picture/web/dianhua111.jpg" alt="">
+                        
+                    </div>
+
+                </li>
+                <li class="service-gwc">
+                    <a href="/index/pay/cart.html"><span class="iconfont icon-gouwuche"></span><span  class="icon-text" style="margin-top: -10px; margin-left: 5px;">(<em class="cart-num">0</em>)</span> </a>
+                </li>
+                <li class="service-user">
+                                            <a href="/index/auth/login.html?next=/wiki/EPS32-S3R8-1.8inch-360x360-Round-LCD-Display-WIFI-Secondary-TouchScreen-AIDA64-Arduino-LVGL-WirelessAida64-Wireless-Power-Video-Electronic-Photo-Frame-MP3.html"><span class="iconfont icon-user"></span><span class="icon-text">Account</span></a>
+                                        </li>
+                <li class="service-forum">
+                    <a href="/index/forum/index.html"><span class="iconfont icon-luntan"></span><span class="icon-text"><b>Forum</b></span></a>
+                </li>
+                <li class="go_top"><a href="#"><span class="iconfont icon-top"></span></a></li>
+
+            </ul>
+
+            <div class="fiexed_text">
+
+                <!-- QQ客服最多放12个 -->
+
+                <ul class="qq_list">
+
+                    
+                    <li><a href="javascript:;"><span class="iconfont icon-kefu"></span>sales/support</a>
+
+                        <p>Google Chat:---</p>
+
+                    </li>
+
+                    
+                </ul>
+
+                <!-- 电话最多放6个 -->
+
+                <ul class="phone_list">
+
+                    
+                    <li><a href="javascript:;"><span class="iconfont icon-dianhua"></span>sales</a>
+
+                        <p>+86-0755-88291180</p>
+
+                    </li>
+
+                    
+                </ul>
+
+                <!-- 邮箱最多放6个 -->
+
+                <ul class="email_list">
+
+                    
+                    <li><a target="_blank" href="mailto:sales@spotpear.com"><span
+
+                                class="iconfont icon-666666"></span>sales01</a>
+
+                        <p>sales@spotpear.com</p>
+
+                    </li>
+
+                    
+                    <li><a target="_blank" href="mailto:dragon_manager@163.com"><span
+
+                                class="iconfont icon-666666"></span>sales02</a>
+
+                        <p>dragon_manager@163.com</p>
+
+                    </li>
+
+                    
+                    <li><a target="_blank" href="mailto:tech-support@spotpear.com"><span
+
+                                class="iconfont icon-666666"></span>support</a>
+
+                        <p>tech-support@spotpear.com</p>
+
+                    </li>
+
+                    
+                    <li><a target="_blank" href="mailto:zhoujie@spotpear.com"><span
+
+                                class="iconfont icon-666666"></span>CEO-Complaints</a>
+
+                        <p>zhoujie@spotpear.com</p>
+
+                    </li>
+
+                    
+                </ul>
+
+                <!-- 微信最多放6个 -->
+
+                <ul class="wx_list">
+
+                    
+                    <li><a href="javascript:;"><span class="iconfont icon-weixin"></span>Only Tech-Support</a>
+
+                        <p>WhatsApp:13246739196</p>
+
+                    </li>
+
+                    
+                    <li><a href="javascript:;"><span class="iconfont icon-weixin"></span>Purchase/Shipping/Refund</a>
+
+                        <p>WhatsApp:13424403025</p>
+
+                    </li>
+
+                    
+                </ul>
+
+            </div>
+
+        </div>
+<style>
+.detail_right_text div {
+    float: left;
+    font-size: 14px;
+}
+
+.detail_right_text .yc {
+    width: 100px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.detail_right_text .red {
+    color: red;
+}
+    /* 基础样式 */
+.article-directory {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-family: Arial, sans-serif;
+}
+
+.article-directory ul {
+  padding-left: 20px; /* 或使用margin，根据个人偏好调整 */
+}
+
+.article-directory a {
+  text-decoration: none;
+  color: #333; /* 文本颜色 */
+  display: block;
+  padding: 5px 0; /* 上下内边距，形成点击区域 */
+  transition: color 0.3s ease; /* 颜色过渡效果 */
+}
+
+/* 鼠标悬停效果 */
+.article-directory a:hover {
+  color: #007BFF; /* 鼠标悬停文本颜色 */
+}
+
+/* 当前选中项的样式 */
+.article-directory a.active {
+  font-weight: bold;
+  color: #007BFF; /* 或其他突出颜色 */
+}
+
+/* 可选：为不同级别的目录添加不同的样式 */
+.article-directory li ul a {
+  /* 在这里自定义二级及更深层次链接的样式，例如字体大小、颜色等 */
+}    
+.tag {
+        display:inline;
+		padding:5px;
+		font:14px/28px 'microsoft yahei';
+		background-color:#E8E8E8;
+		color:#666;
+		border-radius:4px;
+        line-height: 35px;
+		transition-duration:0.2s;
+    }
+    .stag {
+        /* display:block;
+		height:28px;
+		padding:0 10px;
+		float:left;
+		margin-right:6px;
+		margin-top:3px;
+		font:14px/28px 'microsoft yahei';
+		background-color:#E8E8E8;
+		color:#666;
+		border-radius:4px;
+		transition-duration:0.2s; */
+
+
+        padding: 3px 5px 3px 5px;
+        margin: 2px;
+        font: 14px/28px 'microsoft yahei';
+        background-color: #E8E8E8;
+        color: #666;
+        border-radius: 5px;
+        transition-duration: 0.2s;
+    }
+    .tag_label {
+		font:14px/28px 'microsoft yahei';
+		color:#666;
+    }
+</style>
+<div class="index_body">
+    <div class="study_body">
+        <div class="study_detail_content">
+            
+            <div class="product_detail_nav">
+
+                <ul>
+                    <li><a target="_blank" href="/">HOME</a></li>
+                    <li>></li>
+                    <li><a target="_blank" href="/index/study/index.html">ARTICLES</a></li>
+                                        <li>></li>
+                    <li><a target="_blank" href="/wiki-category/Common-Moudle.html">Common Moudle</a></li>
+                                        <li>></li>
+                    <li><a target="_blank" href="/wiki-category/Common-Moudle-ESP.html">ESP</a></li>
+                                    </ul>
+
+            </div>
+
+            <div class="study_detail_title">
+                <h1>ESP32-S3-1.8-LCD-Touch User Guide</h1>
+            </div>
+            
+            <div class="study_detail_bottom">
+                <div class="study_detail_left">
+                    <div class="detail_left_nav">
+                        <ul>
+                                                        <li attr-id="1" class="active"><a href="javascript:;">User guide</a></li>
+                                                        <li><a href="/index/forum/questions/product_id/1849.html" style="color: red;">Ask a Question</a></li>
+
+                                                        
+                        </ul>
+                    </div>
+                    
+                    <div attr-id="1" class="detail_left_content rich_text" >
+                        <h1 name="【Version selection】" id="【Version selection】"><span style="overflow-wrap: break-word; scroll-behavior: smooth; word-break: break-word; color: rgb(255, 156, 0); font-size: 26px; font-weight: bold;">【Version selection</span><span style="overflow-wrap: break-word; scroll-behavior: smooth; word-break: break-word; color: rgb(255, 156, 0); font-size: 26px; font-weight: bold;">】</span></h1><h1 name="" id=""><img src="https://cdn.static.spotpear.com/uploads/picture/learn/ESP32/ESP32-AI/223.jpg" style="width: 960px;"><span style="overflow-wrap: break-word; scroll-behavior: smooth; word-break: break-word; color: rgb(255, 156, 0); font-size: 26px; font-weight: bold;"><br></span></h1><p style="overflow-wrap: break-word; scroll-behavior: smooth; word-break: break-word; margin-top: 0px; margin-bottom: 0px; padding: 0px; -webkit-tap-highlight-color: rgba(0, 0, 0, 0);"><span style="color: rgb(255, 0, 0); font-size: 18px;">Note: V2 version uses a new microphone. The microphone of V1 version is almost discontinued. Others are the same</span><br></p><h1 name="【ESP32 S3 XiaoZhi AI DeepSeek Guide】" id="【ESP32 S3 XiaoZhi AI DeepSeek Guide】"><font color="#ff9c00" face="微软雅黑"><span style="font-size: 26px; font-family: 微软雅黑;"><b>【ESP32 S3 XiaoZhi AI DeepSeek Guide】</b></span></font></h1><h2 name="】Deepseek Xiaozhi AI firmware" id="】Deepseek Xiaozhi AI firmware"><span style="color: rgb(255, 156, 0); font-family: 微软雅黑; font-size: 18px;">】Deepseek Xiaozhi AI firmware</span></h2><p><span style="font-size: 18px; font-family: 微软雅黑; background-color: rgb(255, 255, 255);">Xiaozhi firmware download</span>&nbsp; &nbsp;<a href="https://cdn.static.spotpear.com/uploads/picture/learn/ESP32/ESP32-AI-Series-User-Guide/esp32-S3_firmware_1.8-AI-EN.bin" target="_blank" style=""><span style="font-size: 20px; text-decoration-line: underline; color: rgb(107, 173, 222);">V1</span></a><span style="font-size: 20px;"> </span><a href="https://cdn.static.spotpear.com/uploads/picture/learn/ESP32/ESP32-AI/JC3636W518_AI_Chat.bin" target="_blank" style=""><span style="font-size: 20px; color: rgb(107, 173, 222); text-decoration-line: underline;">V2</span></a></p><p><a href="https://spotpear.com/wiki/EPS32-S3R8-1.8inch-360x360-Round-LCD-Display-WIFI-Secondary-TouchScreen-AIDA64-Arduino-LVGL-WirelessAida64-Wireless-Power-Video-Electronic-Photo-Frame-MP3.html#%E3%80%90Restore%20factory%20firmware%E3%80%91" target="_blank" style="color: rgb(57, 132, 198); background-color: rgb(255, 255, 255); text-decoration-line: underline;"><span style="font-size: 18px; font-family: 微软雅黑;">How to download firmware</span></a></p><p><a href="https://github.com/78/xiaozhi-esp32" target="_blank" style="color: rgb(57, 132, 198); background-color: rgb(255, 255, 255); text-decoration-line: underline;"><span style="font-size: 18px; font-family: 微软雅黑;">Source code link</span></a></p><p><img src="https://cdn.static.spotpear.com/uploads/picture/learn/ESP32/esp32-S3-1.8-touch/xzt12.png" style="width: 389px;"><br></p><p><br></p><h2 name="】Deepseek Xiaozhi AI Guide Video" id="】Deepseek Xiaozhi AI Guide Video"><span style="font-family: 微软雅黑; font-size: 18px;"><span style="color: rgb(255, 156, 0);">】Deepseek Xiaozhi AI Guide </span><a href="https://www.youtube.com/watch?v=KULKjYAIuMk" target="_blank" style="text-decoration-line: underline; color: rgb(255, 0, 0);"><span style="font-size: 18px;">Video</span></a></span></h2><h3 name="[] Connect to WIFI" id="[] Connect to WIFI"><font face="微软雅黑"><span style="font-size: 18px; font-family: 微软雅黑;">[] Connect to WIFI</span></font></h3><p style="line-height: 1.5;"><font face="微软雅黑"><span style="font-size: 18px; font-family: 微软雅黑;">After powering on, the device will automatically open an AP named Xiaozhi F4A5. Connect to this AP with your phone and wait for a moment. The network page will pop up, automatically searching for hotspots in the current environment. Select your hotspot and enter your password to complete the network. After the network is completed, the screen will get the device code.</span></font></p><p style="line-height: 1.5;"><span style="font-family: 微软雅黑; font-size: 18px;"><br></span></p><p style="line-height: 1.5;"><span style="font-family: 微软雅黑; font-size: 18px;"><span style="font-family: 微软雅黑;">Note: Some mobile phones will automatically disconnect the hotspot and use the 5G network once they find that the hotspot cannot connect to the Internet. At this time, you need to connect to the AP again. If the network configuration page does not pop up after connecting to the AP, please enter 192.168.4.1 on the mobile browser to open it.</span><br><br></span></p><h3 name="[]&nbsp;Enter the settings backend" id="[]&nbsp;Enter the settings backend"><span style="color: rgb(0, 0, 0); font-size: 18px; font-family: 微软雅黑;">[]&nbsp;</span><font face="微软雅黑"><span style="font-size: 18px; font-family: 微软雅黑;">Enter the settings backend</span></font></h3><p><a href="https://xiaozhi.me/" target="_blank" style="color: rgb(51, 51, 51); font-family: 微软雅黑; overflow-wrap: break-word; scroll-behavior: smooth; word-break: break-word; margin: 0px; padding: 0px; font-size: 16px; outline: 0px;"><span style="overflow-wrap: break-word; scroll-behavior: smooth; word-break: break-word; font-size: 18px; color: rgb(57, 132, 198); text-decoration-line: underline; font-family: 微软雅黑;">https://xiaozhi.me</span></a></p><p><br></p><h3 name="[] Click console/【控制台】" id="[] Click console/【控制台】"><span style="font-family: 微软雅黑; font-size: 18px;">[] Click console/【控制台】</span></h3><p><img src="https://cdn.static.spotpear.com/uploads/picture/learn/ESP32/esp32-S3-1.8-touch/xzt3.png" style="width: 545px;"></p><p><br></p><h3 name="[] Click&nbsp;manage devices/【管理设备】" id="[] Click&nbsp;manage devices/【管理设备】"><span style="font-family: 微软雅黑; font-size: 18px;">[] Click&nbsp;</span><span style="font-family: 微软雅黑; font-size: 18px;">manage devices</span><span style="font-family: 微软雅黑;">/【管理设备】</span></h3><p><img src="https://cdn.static.spotpear.com/uploads/picture/learn/ESP32/esp32-S3-1.8-touch/xzt2.png" style="width: 625px;"></p><p><br></p><h3 name="[] Click add device/【添加设备】" id="[] Click add device/【添加设备】"><span style="font-family: 微软雅黑; font-size: 18px;">[] Click add device</span><span style="font-family: 微软雅黑;">/【添加设备】</span></h3><p><img src="https://cdn.static.spotpear.com/uploads/picture/learn/ESP32/esp32-S3-1.8-touch/xzt1.png" style="width: 756px; height: 188.632px;"><br></p><p><span style="font-family: 微软雅黑; font-size: 18px;">Enter the device code on the screen</span></p><p><img src="https://cdn.static.spotpear.com/uploads/picture/learn/ESP32/esp32-S3-1.8-touch/xzt15.png" style="width: 445px;"><span style="font-family: 微软雅黑; font-size: 18px;"><br></span></p><p><span style="font-family: 微软雅黑; font-size: 18px;"><br></span></p><h3 name="[] Restart the device." id="[] Restart the device."><span style="font-family: 微软雅黑; font-size: 18px;">[] Restart the device.</span></h3><p><span style="font-family: 微软雅黑; font-size: 18px;"> wait for connection, and after successful connection, as shown in the figure</span></p><p><img src="https://cdn.static.spotpear.com/uploads/picture/learn/ESP32/esp32-S3-1.8-touch/xzt6.png" style="width: 461px;"><span style="font-family: 微软雅黑; font-size: 18px;"><br></span></p><p><span style="font-family: 微软雅黑; font-size: 18px;">Say “HI，ESP”， You can start the conversation now</span></p><p><span style="font-family: 微软雅黑; font-size: 18px;"><br></span></p><h3 name="[]&nbsp;Set English answer and DeepSeek" id="[]&nbsp;Set English answer and DeepSeek"><span style="font-size: 18px;"><span style="font-family: 微软雅黑;">[]&nbsp;</span><span style="color: rgb(255, 0, 0); font-weight: bold; font-family: 微软雅黑;">Set English answer and DeepSeek</span></span></h3><p style=""><span style="font-size: 18px;"><span style="font-weight: bold; font-family: 微软雅黑; font-size: 16px;">Click【配置角色】-&gt;【英文老师】-&gt;【语言模型】Choose Deepseek V3-&gt;【保存设置】</span></span></p><p><img src="https://cdn.static.spotpear.com/uploads/picture/learn/ESP32/esp32-S3-1.8-touch/xzt4.png" style="width: 621px;"></p><p><img src="https://cdn.static.spotpear.com/uploads/picture/learn/ESP32/esp32-S3-1.8-touch/xzt9.png" style="width: 715.477px; height: 203.656px;"><br></p><p><img src="https://cdn.static.spotpear.com/uploads/picture/learn/ESP32/esp32-S3-1.8-touch/xzt13.png" style="width: 680.78px; height: 913.656px;"></p><p><br></p><h3 name="[]&nbsp;Restart the device&nbsp;" id="[]&nbsp;Restart the device&nbsp;"><span style="font-size: 18px; font-family: 微软雅黑;">[]&nbsp;Restart the device&nbsp;</span></h3><p><span style="font-family: 微软雅黑; font-size: 18px;">Restart the device and it will be ready for use later</span><br></p><p><br></p><h1 name="【Secondary Screen&nbsp;Guide】" id="【Secondary Screen&nbsp;Guide】"><span style="background-color: rgb(255, 255, 255);"><span style="color: rgb(255, 156, 0); font-family: 微软雅黑; font-size: 26px; font-weight: bold;">【S</span><span style="color: rgb(255, 156, 0); font-family: 微软雅黑; font-size: 26px; font-weight: 700;">econdary Screen&nbsp;</span></span><span style="color: rgb(255, 156, 0); font-family: 微软雅黑; font-size: 26px; font-weight: 700;">Guid</span><span style="color: rgb(255, 156, 0);"><span style="font-family: 微软雅黑; font-size: 26px; font-weight: 700;">e</span>】</span></h1><h2 name="】Network configuration" id="】Network configuration"><span style="font-family: 微软雅黑; font-size: 18px; color: rgb(255, 156, 0); background-color: rgb(255, 255, 255);">】Network configuration</span></h2><p style="line-height: 1.5;"><span style="font-family: 微软雅黑; font-size: 18px;">The AIDA64 secondary screen and weather clock of this device need to be network configured for use.</span></p><p style="line-height: 1.5;"><span style="font-family: 微软雅黑; font-size: 18px;">After powering on, the device will automatically open an AP named My-Ap, and the password is 12345678. Connect to this AP with your mobile phone, and the network configuration page will pop up after a while, automatically searching for hotspots in the current environment. Select your hotspot and enter the password to complete the network configuration. After the network configuration is completed, the screen will obtain an IP address, which can be viewed on the WIFI page in the settings.</span></p><p style="line-height: 1.5;"><span style="font-family: 微软雅黑; font-size: 18px;"><br></span></p><p style="line-height: 1.5;"><span style="font-family: 微软雅黑; font-size: 18px;">Note: Some mobile phones will automatically disconnect the hotspot and use the 5G network once they find that the hotspot cannot connect to the Internet. At this time, you need to connect to the AP again. If the network configuration page does not pop up after connecting to the AP, please enter 192.168.4.1 on the mobile browser to open it.</span></p><p style="line-height: 1.5;"><span style="font-family: 微软雅黑; font-size: 18px;"><br></span></p><h2 name="】Basic operations" id="】Basic operations"><span style="font-family: 微软雅黑; font-size: 18px; color: rgb(255, 156, 0); background-color: rgb(255, 255, 255);">】Basic operations</span></h2><p style="line-height: 1.5;"><span style="font-family: 微软雅黑; font-size: 18px;">[] Display the main menu</span></p><p style="line-height: 1.5;"><span style="font-family: 微软雅黑; font-size: 18px;">[] In the functions of secondary screen, sound pickup, electronic photo frame, MJPEG playback, weather, and clock, slide from bottom to top in the touch area to call out the main menu.</span></p><p style="line-height: 1.5;"><span style="font-family: 微软雅黑; font-size: 18px;">[] On the playlist screen of the music playback page, click the "○" icon above to call out the main menu</span></p><p style="line-height: 1.5;"><span style="font-family: 微软雅黑; font-size: 18px;">[] On the settings page, click the "&lt;" icon to call out the main menu</span></p><p style="line-height: 1.5;"><span style="font-family: 微软雅黑; font-size: 18px;">[] Click the main menu to enter each function page</span></p><p><span style="font-family: 微软雅黑; font-size: 18px;"><br></span></p><h2 name="】Operation of each function" id="】Operation of each function"><span style="font-family: 微软雅黑; font-size: 18px; color: rgb(255, 156, 0); background-color: rgb(255, 255, 255);">】Operation of each function</span></h2><p style="line-height: 1.5;"><span style="font-family: 微软雅黑; font-size: 18px;">[] Secondary screen: Swipe left and right on the screen area to switch to different secondary screen styles.</span></p><p style="line-height: 1.5;"><span style="font-family: 微软雅黑; font-size: 18px;">[] Theme clock: Swipe left and right on the screen area to switch to different dials.</span></p><p style="line-height: 1.5;"><span style="font-family: 微软雅黑; font-size: 18px;">[] Weather: None</span></p><p style="line-height: 1.5;"><span style="font-family: 微软雅黑; font-size: 18px;">[] MJPEG playback: Swipe left and right on the screen area to switch to the next or previous file.</span></p><p style="line-height: 1.5;"><span style="font-family: 微软雅黑; font-size: 18px;">[] Album: Swipe left and right on the screen area to switch to the next or previous file.</span></p><p style="line-height: 1.5;"><span style="font-family: 微软雅黑; font-size: 18px;">[] Music playback: divided into playback page and menu/list page. By default, enter the menu/list page, which will automatically scan and list the mp3 files in the music directory on the TF card. Click the corresponding name to play and go to the playback page. Click anywhere on the screen on the playback page to display the menu/list page. If there is no action after 3 seconds, the menu/list page will be automatically hidden.</span></p><p style="line-height: 1.5;"><span style="font-family: 微软雅黑; font-size: 18px;">[] Audio spectrum: None</span></p><p style="line-height: 1.5;"><span style="font-family: 微软雅黑; font-size: 18px;">[] Settings: All settings are performed on the settings page. In order to extend the life of the flash, the changes made on the settings page will be saved to the flash only when you exit the settings page.</span></p><p style="line-height: 1.5;"><span style="font-family: 微软雅黑; font-size: 18px;"><br></span></p><h2 name="】 Second control method: Web control" id="】 Second control method: Web control"><span style="font-family: 微软雅黑; font-size: 18px; color: rgb(255, 156, 0); background-color: rgb(255, 255, 255);">】 Second control method: Web control</span></h2><p style="line-height: 1.5;"><span style="font-family: 微软雅黑; font-size: 18px;">After successfully connecting to the Internet, enter the settings page, click WiFi, enter the WiFi page, scroll to the bottom to find the current connected IP address, and enter the IP of this device in the computer browser to enter the web control page.</span></p><p><span style="font-family: 微软雅黑; font-size: 18px;"><br></span></p><h2 name="】 Detailed instructions for each function" id="】 Detailed instructions for each function"><span style="font-family: 微软雅黑; font-size: 18px; color: rgb(255, 156, 0); background-color: rgb(255, 255, 255);">】 Detailed instructions for each function</span></h2><h3 name="[] Computer secondary screen function (AIDA64)" id="[] Computer secondary screen function (AIDA64)"><span style="font-family: 微软雅黑; font-size: 18px; color: rgb(255, 156, 0); background-color: rgb(255, 255, 255);">[] Computer secondary screen function (AIDA64)</span></h3><p><span style="font-family: 微软雅黑;">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="font-family: 微软雅黑; font-size: 18px;">1. Find an activated AIDA64 client (by yourself).</span></p><p><span style="font-family: 微软雅黑; font-size: 18px;"><br></span></p><p><span style="font-family: 微软雅黑;">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="font-family: 微软雅黑; font-size: 18px;">2. Menu [File] [Settings] [LCD], select Remote Sensor.</span></p><p><span style="font-family: 微软雅黑; font-size: 18px;"><br></span></p><p><span style="font-family: 微软雅黑;">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="font-family: 微软雅黑; font-size: 18px;">3. Port 80, fill in 1280×800 resolution at random, and check [Enable RemoteSensor LCD support].</span></p><p><span style="font-family: 微软雅黑; font-size: 18px;"><br></span></p><p><span style="font-family: 微软雅黑;">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="font-family: 微软雅黑; font-size: 18px;"><span style="font-family: 微软雅黑;">4. Click [LCD Project], click [Import] in the upper right corner, and then select the aida_remote_</span><a href="https://cdn.static.spotpear.com/uploads/picture/learn/ESP32/esp32-S3-1.8-touch/aida_remote_1.85.rslcd" target="_blank" style="color: rgb(0, 0, 255); background-color: rgb(255, 255, 255); text-decoration-line: underline;"><span style="font-family: 微软雅黑;">1.85.rslcd file</span></a><span style="font-family: 微软雅黑;"> </span></span><span style="font-family: 微软雅黑;">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="font-family: 微软雅黑; font-size: 18px;">provided by our file.</span></p><p><span style="font-family: 微软雅黑; font-size: 18px;"><br></span></p><p><span style="font-family: 微软雅黑;">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="font-family: 微软雅黑; font-size: 18px;">5. After importing, you need to make some settings, because everyone's CPU GPU motherboard hard disk network </span><span style="font-family: 微软雅黑;">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="font-family: 微软雅黑; font-size: 18px;">card is different, please set one by one, 8 parameters CPU usage \CPU freq\ CPU temp\CPU fan\GPU usage \GPU </span><span style="font-family: 微软雅黑;">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="font-family: 微软雅黑; font-size: 18px;">freq\ GPU temp\GPU fan.</span></p><p><span style="font-family: 微软雅黑; font-size: 18px;"><br></span></p><p><span style="font-family: 微软雅黑;">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="font-family: 微软雅黑; font-size: 18px;">6. Note that you must not modify the text in "Show Label". "Show unit" must be filled with "^" (without quotation </span><span style="font-family: 微软雅黑;">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="font-family: 微软雅黑; font-size: 18px;">marks), otherwise the device cannot be detected.</span></p><p><span style="font-family: 微软雅黑; font-size: 18px;"><br></span></p><p><span style="font-family: 微软雅黑;">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="font-family: 微软雅黑; font-size: 18px;">7. After all modifications are completed, click OK, and then minimize AIDA64. You can let it start automatically </span><span style="font-family: 微软雅黑;">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="font-family: 微软雅黑; font-size: 18px;">when it starts in the settings. (Settings, General, Run AIDA64 when Windows starts).</span></p><p><span style="font-family: 微软雅黑; font-size: 18px;"><br></span></p><p><span style="font-family: 微软雅黑;">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="font-family: 微软雅黑; font-size: 18px;">8. Access the IP address of the screen through the web page, set your computer's IP address (that is, the computer </span><span style="font-family: 微软雅黑;">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="font-family: 微软雅黑; font-size: 18px;">IP running AIDA64) in the "Secondary Screen Host Address" at the bottom, and then save.</span></p><p><span style="font-family: 微软雅黑;">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="font-family: 微软雅黑; font-size: 18px;">Note: If the local port 80 is occupied, you need to add a colon at the end and add a custom port.</span></p><p><span style="font-family: 微软雅黑;">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="font-family: 微软雅黑; font-size: 18px;">For example, "</span></p><p><span style="font-family: 微软雅黑;">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="font-family: 微软雅黑; font-size: 18px;">192.168.0.100 uses the host address of 192.168.0.100, and the default port is 80</span></p><p><span style="font-family: 微软雅黑;">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="font-family: 微软雅黑; font-size: 18px;">192.168.0.100:9223 uses the host address of 192.168.0.100 and uses port 9223</span></p><p><span style="font-family: 微软雅黑;">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="font-family: 微软雅黑; font-size: 18px;">Note that the colon is an English colon ":".</span></p><p><span style="font-family: 微软雅黑; font-size: 18px;"><br></span></p><p><span style="font-family: 微软雅黑;">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="font-family: 微软雅黑; font-size: 18px;">9. The firewall allows AIDA64 to access the network, or manually opens TCP port 80 (or your custom port). </span><span style="font-family: 微软雅黑;">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="font-family: 微软雅黑; font-size: 18px;">Important!</span></p><p><a href="https://wiki.mcneel.com/zoo/window7firewall" target="_blank" style="color: rgb(0, 0, 255);"><span style="font-size: 18px; text-decoration-line: underline; font-family: 微软雅黑;">https://wiki.mcneel.com/zoo/window7firewall</span></a><br></p><p><span style="font-family: 微软雅黑;">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="font-family: 微软雅黑; font-size: 18px;">After the settings are completed, switch the screen to the AIDA64 function window to display the computer status </span><span style="font-family: 微软雅黑;">&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="font-family: 微软雅黑; font-size: 18px;">information.</span></p><p><span style="font-family: 微软雅黑; font-size: 18px;"><br></span></p><h3 name="[] Audio spectrum function" id="[] Audio spectrum function"><span style="font-family: 微软雅黑; font-size: 18px; color: rgb(255, 156, 0); background-color: rgb(255, 255, 255);">[] Audio spectrum function</span></h3><p><span style="font-family: 微软雅黑; font-size: 18px;">Gain correction can be performed on the Web page. There are 4 levels in total. Adjust to the appropriate level to ensure that the spectrum is almost invisible when it is quiet.</span></p><p><span style="font-family: 微软雅黑; font-size: 18px;"><br></span></p><h3 name="[] MP3 music playback function" id="[] MP3 music playback function"><span style="font-family: 微软雅黑; font-size: 18px; color: rgb(255, 156, 0); background-color: rgb(255, 255, 255);">[] MP3 music playback function</span></h3><p><span style="font-family: 微软雅黑; font-size: 18px;">Put mp3 files with a sampling rate of 48000 or less and below 320kbps into the music directory of the TF card (restart the device each time you remove the card and copy it and insert it back into the device, the same below).</span></p><p><span style="font-family: 微软雅黑; font-size: 18px;"><br></span></p><h3 name="[] Electronic photo frame function" id="[] Electronic photo frame function"><span style="font-family: 微软雅黑; font-size: 18px; color: rgb(255, 156, 0); background-color: rgb(255, 255, 255);">[] Electronic photo frame function</span></h3><p><span style="font-family: 微软雅黑; font-size: 18px;">Put a 360×360 JPEG file into the pic directory of the TF card.</span></p><p><span style="font-family: 微软雅黑; font-size: 18px;"><br></span></p><h3 name="[] MJPEG playback function mjpeg conversion tool download" id="[] MJPEG playback function mjpeg conversion tool download"><span style="font-family: 微软雅黑; font-size: 18px;"><span style="background-color: rgb(255, 255, 255); color: rgb(255, 156, 0); font-family: 微软雅黑;">[] MJPEG playback function </span><a href="https://cdn.static.spotpear.com/uploads/picture/learn/ESP32/esp32-S3-1.8-touch/mjpeg-conversion-tool-2.0.zip" target="_blank" style="color: rgb(0, 0, 255); background-color: rgb(255, 255, 255); text-decoration-line: underline;"><span style="font-family: 微软雅黑;">mjpeg conversion tool download</span></a></span></h3><p><span style="font-family: 微软雅黑; font-size: 18px;">Use the mjpeg conversion tool to convert the video to be played into a 360*360 MJPEG file with an FPS of 25 and a video quality of 7, and copy the file to the mjpeg directory of the TF card.</span></p><p><span style="font-family: 微软雅黑; font-size: 18px;"><br></span></p><h3 name="[] Real-time weather display function" id="[] Real-time weather display function"><span style="font-family: 微软雅黑; font-size: 18px; color: rgb(255, 156, 0); background-color: rgb(255, 255, 255);">[] Real-time weather display function</span></h3><p><span style="font-family: 微软雅黑; font-size: 18px;">Configure the city code in the web page and use it. Enter the city name on the web page and click Save to automatically generate the city code. However, it takes time to refresh. After the screen exits the weather interface, enter the weather interface again. After the network refresh is successful, the corresponding city weather will be obtained.</span></p><p><span style="font-family: 微软雅黑; font-size: 18px;"><br></span></p><h3 name="[] Clock display function" id="[] Clock display function"><span style="font-family: 微软雅黑; font-size: 18px; color: rgb(255, 156, 0); background-color: rgb(255, 255, 255);">[] Clock display function</span></h3><p><span style="font-family: 微软雅黑; font-size: 18px;">Enter the clock screen, slide from left to right, and select the corresponding dial screen.</span></p><p><span style="font-family: 微软雅黑; font-size: 18px;"><br></span></p><h1 name="【Display touch example】" id="【Display touch example】"><span style="font-family: 微软雅黑; font-size: 26px; color: rgb(255, 156, 0); background-color: rgb(255, 255, 255); font-weight: bold;">【Display touch example】</span></h1><p><span style="font-family: 微软雅黑; font-size: 18px;"><span style="font-family: 微软雅黑;">Code example: </span><a href="https://cdn.static.spotpear.com/uploads/picture/learn/ESP32/esp32-S3-1.8-touch/Demo_Arduino_en.rar" target="_blank" style="text-decoration-line: underline; color: rgb(0, 0, 255); background-color: rgb(255, 255, 255);"><span style="font-family: 微软雅黑;">Download</span></a></span></p><p><span style="font-family: 微软雅黑; font-size: 18px;">Instructions:</span></p><p><span style="font-family: 微软雅黑; font-size: 18px;">Requires Arduino 3.0.1 and above</span></p><p><span style="font-family: 微软雅黑; font-size: 18px;">】Install ESP32_Display_Panel (0.1.4) library and ESP32_IO_Expander (0.0.2) library</span></p><p><img src="https://cdn.static.spotpear.com/uploads/picture/learn/ESP32/esp32-S3-1.8-touch/esp32-s3-1.8-t2.jpg" style="width: 780px;"><span style="font-family: 微软雅黑; font-size: 18px;"><br></span></p><p><span style="font-family: 微软雅黑; font-size: 18px;">】Import lv_config.h and the three files in the lib into the library used by Arduino</span></p><p><img src="https://cdn.static.spotpear.com/uploads/picture/learn/ESP32/esp32-S3-1.8-touch/esp32-s3-1.8-t8.jpg" style="width: 639px;"></p><p><span style="font-family: 微软雅黑; font-size: 18px;"><span style="font-family: 微软雅黑;">】How to view your own library path：</span><a href="https://spotpear.com/wiki/Arduino-check-library-path.html" target="_blank" style="color: rgb(0, 0, 255); background-color: rgb(255, 255, 255); text-decoration-line: underline;"><span style="font-family: 微软雅黑;">【Arduino-check-library-path】</span></a></span></p><p><span style="font-family: 微软雅黑; font-size: 18px;">】Arduino Adjust the IDE according to the settings in the screenshot</span></p><p><img src="https://cdn.static.spotpear.com/uploads/picture/learn/ESP32/esp32-S3-1.8-touch/esp32-s3-1.8-t1.jpg" style="width: 580px;"><span style="font-family: 微软雅黑; font-size: 18px;"><br></span></p><p><span style="font-family: 微软雅黑; font-size: 18px;">】Finally, click to upload the code. Please re-plug the power supply after uploading.</span></p><p><span style="font-family: 微软雅黑; font-size: 18px;"><br></span></p><h1 name="【I2S audio example】" id="【I2S audio example】"><span style="font-family: 微软雅黑; font-size: 26px; font-weight: bold; color: rgb(255, 156, 0); background-color: rgb(255, 255, 255);">【I2S audio example】</span></h1><p><a href="https://github.com/schreibfaul1/ESP32-audioI2S" target="_blank" style="background-color: rgb(255, 255, 255);"><span style="font-size: 18px; color: rgb(0, 0, 255); text-decoration-line: underline; font-family: 微软雅黑;">https://github.com/schreibfaul1/ESP32-audioI2S</span></a></p><p><br></p><h1 name="【Schematic diagram】" id="【Schematic diagram】"><span style="font-family: 微软雅黑; font-size: 26px; font-weight: bold; color: rgb(255, 156, 0);">【Schematic diagram】</span></h1><p style="line-height: 1.8;"><a href="https://cdn.static.spotpear.com/uploads/picture/learn/ESP32/esp32-S3-1.8-touch/ESP32-S3R8_%E8%A7%84%E6%A0%BC%E4%B9%A6.PDF" target="_blank" style="color: rgb(0, 0, 255); background-color: rgb(255, 255, 255); text-decoration-line: underline;"><span style="font-size: 18px; font-family: 微软雅黑;">ESP32-S3R8_Datasheet.PDF</span></a><br></p><p style="line-height: 1.8;"><a href="https://cdn.static.spotpear.com/uploads/picture/learn/ESP32/esp32-S3-1.8-touch/pcm5100a.pdf" target="_blank" style="background-color: rgb(255, 255, 255); color: rgb(0, 0, 255);"><span style="font-size: 18px; text-decoration-line: underline; font-family: 微软雅黑;">pcm5100a.pdf</span></a></p><p style="line-height: 1.8;"><a href="https://cdn.static.spotpear.com/uploads/picture/learn/ESP32/esp32-S3-1.8-touch/1_P1.pdf" target="_blank" style="background-color: rgb(255, 255, 255); color: rgb(0, 0, 255);"><span style="font-size: 18px; text-decoration-line: underline; font-family: 微软雅黑;">1_P1.pdf</span></a></p><p style="line-height: 1.8;"><a href="https://cdn.static.spotpear.com/uploads/picture/learn/ESP32/esp32-S3-1.8-touch/2_S3R8.pdf" target="_blank" style="background-color: rgb(255, 255, 255); color: rgb(0, 0, 255);"><span style="font-size: 18px; text-decoration-line: underline; font-family: 微软雅黑;">2_S3R8.pdf</span></a></p><p style="line-height: 1.8;"><a href="https://cdn.static.spotpear.com/uploads/picture/learn/ESP32/esp32-S3-1.8-touch/3_DAC.pdf" target="_blank" style="background-color: rgb(255, 255, 255); color: rgb(0, 0, 255);"><span style="font-size: 18px; text-decoration-line: underline; font-family: 微软雅黑;">3_DAC.pdf</span></a></p><p style="line-height: 1.8;"><a href="https://cdn.static.spotpear.com/uploads/picture/learn/ESP32/esp32-S3-1.8-touch/4_LCD.pdf" target="_blank" style="background-color: rgb(255, 255, 255); color: rgb(0, 0, 255);"><span style="font-size: 18px; text-decoration-line: underline; font-family: 微软雅黑;">4_lcd.PDF</span></a></p><p style="line-height: 1.8;"><a href="https://cdn.static.spotpear.com/uploads/picture/learn/ESP32/esp32-S3-1.8-touch/5_QI.pdf" target="_blank" style="background-color: rgb(255, 255, 255); color: rgb(0, 0, 255);"><span style="font-size: 18px; text-decoration-line: underline; font-family: 微软雅黑;">5_qi.PDF</span></a></p><p><a href="https://cdn.static.spotpear.com/uploads/picture/learn/ESP32/esp32-S3-1.8-touch/JC3636W518_V1.0%E7%BB%93%E6%9E%84%E5%9B%BE.DWG" target="_blank" style=""><span style="font-size: 18px; color: rgb(0, 0, 255); background-color: rgb(255, 255, 255); text-decoration-line: underline; font-family: 微软雅黑;">6_DWG</span></a></p><p><br></p><h1 name="【Tools】" id="【Tools】"><span style="font-family: 微软雅黑; font-size: 26px; font-weight: bold; color: rgb(255, 156, 0); background-color: rgb(255, 255, 255);">【Tools】</span></h1><p style="line-height: 1.6;"><a href="https://cdn.static.spotpear.com/uploads/picture/learn/ESP32/esp32-S3-1.8-touch/Serial-Port-Tools-sscom32.rar" target="_blank" style=""><span style="font-size: 18px; color: rgb(0, 0, 255); background-color: rgb(255, 255, 255); text-decoration-line: underline; font-family: 微软雅黑;">Serial port tool download</span></a></p><p style="line-height: 1.6;"><a href="https://cdn.static.spotpear.com/uploads/picture/learn/ESP32/esp32-S3-1.8-touch/Network-Debugging-Assistant.rar" target="_blank"><span style="font-size: 18px; color: rgb(0, 0, 255); background-color: rgb(255, 255, 255); text-decoration-line: underline; font-family: 微软雅黑;">Network debugging assistant download</span></a></p><p style="line-height: 1.6;"><a href="https://cdn.static.spotpear.com/uploads/picture/learn/ESP32/esp32-S3-1.8-touch/flash_download_tool_3.9.3.rar" target="_blank"><span style="font-size: 18px; color: rgb(0, 0, 255); background-color: rgb(255, 255, 255); text-decoration-line: underline; font-family: 微软雅黑;">Burn tool</span></a></p><p style="line-height: 1.6;"><a href="https://cdn.static.spotpear.com/uploads/picture/learn/ESP32/esp32-S3-1.8-touch/mjpeg-conversion-tool-2.0.zip" target="_blank" style=""><span style="font-size: 18px; color: rgb(0, 0, 255); background-color: rgb(255, 255, 255); text-decoration-line: underline; font-family: 微软雅黑;">mjpeg conversion tool</span></a></p><p><span style="font-family: 微软雅黑; font-size: 18px;"><br></span></p><h1 name="【Restore factory firmware】" id="【Restore factory firmware】"><span style="font-family: 微软雅黑; font-size: 26px; font-weight: bold; color: rgb(255, 156, 0); background-color: rgb(255, 255, 255);">【Restore factory firmware】</span></h1><p><span style="font-family: 微软雅黑; font-size: 18px;">】Firmware download</span></p><p><span style="font-family: 微软雅黑; font-size: 18px;">Secondary Screen&nbsp; &nbsp; &nbsp;<a href="https://cdn.static.spotpear.com/uploads/picture/learn/ESP32/esp32-S3-1.8-touch/1.85_demo.bin" target="_blank" style="text-decoration-line: underline; color: rgb(0, 0, 255);">V1</a>&nbsp; <a href="https://cdn.static.spotpear.com/uploads/picture/learn/ESP32/ESP32-AI/JC3636W518_video_play.bin" target="_blank" style="color: rgb(0, 0, 255); text-decoration-line: underline;">V2</a></span></p><p><span style="font-family: 微软雅黑; font-size: 18px;">AI Chat&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; <a href="https://cdn.static.spotpear.com/uploads/picture/learn/ESP32/ESP32-AI-Series-User-Guide/esp32-S3_firmware_1.8-AI-EN.bin" target="_blank" style="text-decoration-line: underline; color: rgb(0, 0, 255);">V1</a>&nbsp; <a href="https://cdn.static.spotpear.com/uploads/picture/learn/ESP32/ESP32-AI/JC3636W518_AI_Chat.bin" target="_blank" style="color: rgb(0, 0, 255); text-decoration-line: underline;">V2</a></span><br><br></p><p><span style="font-family: 微软雅黑; font-size: 18px;">】Download and open the burn software</span></p><p><a href="https://cdn.static.spotpear.com/uploads/picture/learn/ESP32/esp32-S3-1.8-touch/flash_download_tool_3.9.3.rar" target="_blank" style="outline: none;"><span style="font-size: 18px; color: rgb(0, 0, 255); background-color: rgb(255, 255, 255); text-decoration-line: underline; font-family: 微软雅黑;">Burn tool</span></a><br></p><p><img src="https://cdn.static.spotpear.com/uploads/picture/learn/ESP32/esp32-S3-1.8-touch/esp32-s3-1.8-t5.jpg" style="width: 531px;"><span style="font-family: 微软雅黑; font-size: 18px;"><br></span></p><p><span style="font-family: 微软雅黑; font-size: 18px;">】How to use</span></p><p><img src="https://cdn.static.spotpear.com/uploads/picture/learn/ESP32/esp32-S3-1.8-touch/esp32-s3-1.8-t4.jpg" style="width: 190px;"><span style="font-family: 微软雅黑; font-size: 18px;"><br></span></p><p><span style="font-family: 微软雅黑; font-size: 18px;">Just burn the factory firmware, as shown in the figure</span></p><p><img src="https://cdn.static.spotpear.com/uploads/picture/learn/ESP32/esp32-S3-1.8-touch/2.png" style="width: 775px;"><span style="font-family: 微软雅黑; font-size: 18px;"><br></span></p><p><span style="font-family: 微软雅黑; font-size: 18px;">The following effect appears, indicating that the burn is successful, and you can power it on again.</span></p><p><img src="https://cdn.static.spotpear.com/uploads/picture/learn/ESP32/esp32-S3-1.8-touch/3.png" style="width: 599px;"></p><p><br></p><p><br></p><h1 name="【After-sales】" id="【After-sales】"><span style="font-family: 微软雅黑; font-size: 26px; font-weight: bold; color: rgb(255, 156, 0); background-color: rgb(255, 255, 255);">【After-sales】</span></h1><p><span style="font-family: 微软雅黑; font-size: 18px;">Monday-Friday (9:30-6:30) Saturday (9:30-5:30)</span></p><p><span style="font-family: 微软雅黑; font-size: 18px;">Mobile: +86&nbsp; 13434470212</span></p><p><span style="font-family: 微软雅黑; font-size: 18px;">Email:&nbsp;</span><span style="font-family: 微软雅黑; font-size: 18px;">services01</span><span style="font-family: 微软雅黑; font-size: 18px;">@spotpear.com</span></p>                    </div>
+
+                    <div attr-id="2" class="detail_left_content rich_text" style="display: none;">
+                                            </div>
+                    
+                    <div attr-id="3" class="detail_left_content rich_text" style="display: none;">
+                                            </div>
+
+                    <div attr-id="4" class="detail_left_content rich_text" style="display: none;">
+                                            </div>
+
+                    <div style="padding: 0 10px; padding-bottom: 10px;">
+                                                        <span class="tag_label">TAG：</span>
+                                                                <span class="stag"><a href="/index/study/detail/id/1142.html">Jetson Nano 1.54inch OLED</a></span>
+                                                                <span class="stag"><a href="/index/study/detail/id/1203.html">Raspberry Pi</a></span>
+                                                                <span class="stag"><a href="/index/study/detail/id/1215.html">Gyroscope Sensor</a></span>
+                                                                <span class="stag"><a href="/wiki/ESP32-S3-1.28inch-Round-LCD-Display-TouchScreen.html">ESP32-S3</a></span>
+                                                                <span class="stag"><a href="/wiki/24.5-inch-Type-C-Monitor-HDR-2K-DisplayScreen-Computer-PC-Raspberry-Pi-Jetson-PC-1440P.html">Raspberry Pi 24.5 inch Type C/HDMI 2K Display 24.5inch Screen 2560x1440 Computer PC Phone For Xbox/PS4/Switch</a></span>
+                                                                <span class="stag"><a href="/index/study/detail/id/1133.html">Raspberry Pi IR Thermal Imagi</a></span>
+                                                                <span class="stag"><a href="/index/study/detail/id/1186.html">OPS Computer</a></span>
+                                                                <span class="stag"><a href="/wiki/Raspberry-Pi-LCD-3D-Display-Transparent-Screen-Refractive-Prism-Game-Mini-TV-1.3inch-ST7789-Audio-User-Guide-Display.html">Raspberry Pi LCD 3D Display</a></span>
+                                                                <span class="stag"><a href="/index/study/detail/id/1037.html">Core3566102032</a></span>
+                                                                <span class="stag"><a href="/wiki/ESP32-S3-Industrial-8-CH-Controller-IOT-RS485-CAN-ETH-RJ45-POE.html">ESP32-S3 Industrial 8-Channel Controller with WiFi Bluetooth CAN IoT RS485 and RJ45 ETH POE</a></span>
+                                                                <span class="stag"><a href="/index/study/detail/id/1174.html">SP3232EEN</a></span>
+                                                                <span class="stag"><a href="/wiki/Raspberry-Pi-AI-Camera-Official-Original-12MP-IMX500.html">Raspberry Pi AI Camera Official Original 12MP IMX500 Intelligent visual Sensor On-Board RP2040</a></span>
+                                                                <span class="stag"><a href="/wiki/Seeed-Studio-XIAO-RA4M1-Tiny-SuperMini-Arduino-Uno-R4-R7FA4M1.html">XIAO RA4M1 Tiny SuperMini Board For Arduino Uno IDE For SeeedStudio R7FA4M1</a></span>
+                                                                <span class="stag"><a href="/index/study/detail/id/1159.html">Raspberry Pi DS3231</a></span>
+                                                                <span class="stag"><a href="/wiki/Compatible-Arduino-UNO-R4-Minima.html">R7FA4 Plus A Board Based on R7FA4M1AB3CFM Compatible with Arduino UNO For R4 Minima</a></span>
+                                                                <span class="stag"><a href="/wiki/ESP32-S3-2.41-inch-AMOLED-Display-TouchScreen.html">ESP32 S3 Development Board 2.41 inch AMOLED Display 600x450 TouchScreen For Arduino LVGL With SD-Port/ QMI8658C 6-Axis Sensor</a></span>
+                                                                <span class="stag"><a href="/index/study/detail/id/1122.html">Milk V Duo</a></span>
+                                                                <span class="stag"><a href="/wiki/Raspberry-Pi-ESP32-Pico-Arduino-STM32-1.69inch-Touch-LCD-ST7789V2-CST816T.html">1.69inch LCD TouchScreen Display 240&amp;times;280 ST7789 Arduino Raspberry Pi ESP32S3 Pico STM32</a></span>
+                                                                <span class="stag"><a href="/wiki/Raspberry-Pi-5-Case-Argon-Neo-5-User-Guide.html">Code</a></span>
+                                                                <span class="stag"><a href="/index/study/detail/id/1175.html">Raspberry Pi 5 Camera User Guide</a></span>
+                                                        </div>
+                </div>
+                <div class="mobile_line"></div>
+ 
+                               <div class="study_detail_right">
+                    <div class="study_detail_right_box" style="display: flex;border: #d9d9d9 1.5px solid;">
+                        <div class="study_detail_right_product_img" style="flex: 1;">
+                            <a href="/shop/EPS32-S3R8-1.8inch-360x360-Round-LCD-Display-WIFI-Secondary-TouchScreen-AIDA64-Arduino-LVGL-WirelessAida64-Wireless-Power-Video-Electronic-Photo-Frame-MP3.html" target="_blank">
+                                <img src="https://cdn.static.spotpear.com/uploads/picture/product/esp32/EPS32-S3-1.8inch-Touch-LCD/EPS32-S3-1.8inch-Touch-LCD-01-250.jpg" width="140" height="140" alt="">
+                            </a>
+                        </div>
+                        <div class="study_detail_right_product_desc" style="flex: 1;">
+                            <a href="/shop/EPS32-S3R8-1.8inch-360x360-Round-LCD-Display-WIFI-Secondary-TouchScreen-AIDA64-Arduino-LVGL-WirelessAida64-Wireless-Power-Video-Electronic-Photo-Frame-MP3.html" target="_blank">
+                                <div style="display: flex; flex-direction: column; justify-content: center; height: 140px;">
+                                    <div class="detail_right_text">
+                                        <div>Price：</div>
+                                        <div class="red yc">$19.9-32.9</div>
+                                    </div>
+                    
+                                                                        <div class="detail_right_text">
+                                        <div>Model：</div>
+                                        <div class="yc">EPS32-S3-1.8inch-Touch-LCD</div>
+                                    </div>
+                                                                        <div class="detail_right_text">
+                                        <div>Brand：</div>
+                                        <div class="yc">SpotPear</div>
+                                    </div>
+                                                                        <div class="detail_right_text">
+                                        <div>SKU：</div>
+                                        <div class="yc">0601063</div>
+                                    </div>
+                                                                    </div>
+                            </a>
+                        </div>                   
+                    
+                    </div>
+
+                    <div class="study_detail_right_text_box">
+                        <div class="detail_right_text">
+                            <a href="/shop/EPS32-S3R8-1.8inch-360x360-Round-LCD-Display-WIFI-Secondary-TouchScreen-AIDA64-Arduino-LVGL-WirelessAida64-Wireless-Power-Video-Electronic-Photo-Frame-MP3.html"
+                                target="_blank">
+    
+                                <h3
+                                    style="margin: 5px 0;width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                    DeepSeek AI Voice Chat EPS32 S3 1.8 inch Round LCD Display Touch LVGL WIFI AIDA64 Secondary Screen /Wireless Power /Video Player /MP3 /For Arduino                                </h3>
+                            </a>
+                        </div>
+
+                                                <hr>
+                        <div>
+                            <h3><b>[Tutorial Navigation]</b></h3>
+                        </div>
+                        
+                        <div class="detail_right_text">
+                            <ul class="article-directory"><li><a href="#【Version selection】">【Version selection】</a></li><li><a href="#"></a></li><li><a href="#【ESP32 S3 XiaoZhi AI DeepSeek Guide】">【ESP32 S3 XiaoZhi AI DeepSeek Guide】</a></li><ul class="article-directory"><li><a href="#】Deepseek Xiaozhi AI firmware">】Deepseek Xiaozhi AI firmware</a></li><li><a href="#】Deepseek Xiaozhi AI Guide Video">】Deepseek Xiaozhi AI Guide Video</a></li><ul class="article-directory"><li><a href="#[] Connect to WIFI">[] Connect to WIFI</a></li><li><a href="#[]&nbsp;Enter the settings backend">[]&nbsp;Enter the settings backend</a></li><li><a href="#[] Click console/【控制台】">[] Click console/【控制台】</a></li><li><a href="#[] Click&nbsp;manage devices/【管理设备】">[] Click&nbsp;manage devices/【管理设备】</a></li><li><a href="#[] Click add device/【添加设备】">[] Click add device/【添加设备】</a></li><li><a href="#[] Restart the device.">[] Restart the device.</a></li><li><a href="#[]&nbsp;Set English answer and DeepSeek">[]&nbsp;Set English answer and DeepSeek</a></li><li><a href="#[]&nbsp;Restart the device&nbsp;">[]&nbsp;Restart the device&nbsp;</a></li></ul></ul><li><a href="#【Secondary Screen&nbsp;Guide】">【Secondary Screen&nbsp;Guide】</a></li><ul class="article-directory"><li><a href="#】Network configuration">】Network configuration</a></li><li><a href="#】Basic operations">】Basic operations</a></li><li><a href="#】Operation of each function">】Operation of each function</a></li><li><a href="#】 Second control method: Web control">】 Second control method: Web control</a></li><li><a href="#】 Detailed instructions for each function">】 Detailed instructions for each function</a></li><ul class="article-directory"><li><a href="#[] Computer secondary screen function (AIDA64)">[] Computer secondary screen function (AIDA64)</a></li><li><a href="#[] Audio spectrum function">[] Audio spectrum function</a></li><li><a href="#[] MP3 music playback function">[] MP3 music playback function</a></li><li><a href="#[] Electronic photo frame function">[] Electronic photo frame function</a></li><li><a href="#[] MJPEG playback function mjpeg conversion tool download">[] MJPEG playback function mjpeg conversion tool download</a></li><li><a href="#[] Real-time weather display function">[] Real-time weather display function</a></li><li><a href="#[] Clock display function">[] Clock display function</a></li></ul></ul><li><a href="#【Display touch example】">【Display touch example】</a></li><li><a href="#【I2S audio example】">【I2S audio example】</a></li><li><a href="#【Schematic diagram】">【Schematic diagram】</a></li><li><a href="#【Tools】">【Tools】</a></li><li><a href="#【Restore factory firmware】">【Restore factory firmware】</a></li><li><a href="#【After-sales】">【After-sales】</a></li></ul>                        </div>
+                                            </div>
+                </div>
+                
+                               
+                    
+                
+               
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+<div class="footer">
+    <div class="footer_body">
+        <div class="footer_body_left">
+            <ul>
+                                <li >
+                    <a href="/index/product/new.html" >NEW</a>
+                </li>
+                                <li >
+                    <a href="/index/product/index.html" >PRODUCTS</a>
+                </li>
+                                <li class="active">
+                    <a href="/index/study/index.html" >ARTICLES</a>
+                </li>
+                                <li >
+                    <a href="/index/about_us/index.html" >ABOUT US</a>
+                </li>
+                                <li >
+                    <a href="/index/contact/index.html" >CONTACT US</a>
+                </li>
+                                <li >
+                    <a href="/index/pay/index.html" >SHOP</a>
+                </li>
+                            </ul>
+            <div class="beian">©Copyright 2015 Berlinger Haus | All Rights Reserved</div>
+        </div>
+        <div class="footer_body_right">
+            <div class="row">Address：Rm401, building 4, Enlai industrial city, Nankang Road, Danzhutou community, Nanwan street, Longgang District, Shenzhen</div>
+            <!-- <div class="row">Phone：</div> -->
+            <div class="row">Email：tech-support@spotpear.com        (Only tech support .Order see 'CONTACT US' at our web )</div>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript" src="https://static.spotpear.com/static/index/js/jquery.min.js"></script>
+<script type="text/javascript" src="https://static.spotpear.com/static/index/js/axios.min.js"></script>
+<script type="text/javascript" src="https://static.spotpear.com/static/index/js/fun.js"></script>
+<script type="text/javascript" src="https://static.spotpear.com/static/index/js/index.js"></script>
+<script charset="UTF-8" id="LA_COLLECT" src="//sdk.51.la/js-sdk-pro.min.js?id=K0qS1Mf3niJRHxnS&ck=K0qS1Mf3niJRHxnS&autoTrack=true"></script>
+
+</body>
+<script src="https://static.spotpear.com/static/index/js/jquery.min.js"></script>
+<script src="https://static.spotpear.com/static/index/js/layui/layui.js"></script>
+<script src="https://static.spotpear.com/static/index/js/index.js"></script>
+
+</html>
