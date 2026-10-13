@@ -1,0 +1,44 @@
+name: Firmware and web checks
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: node --test tests/web.test.js
+      - run: python tools/test_core.py --cxx g++
+      - run: g++ -std=c++17 -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -Ifirmware/include tests/core_test.cpp -o .work/core_sanitized && .work/core_sanitized
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        board: [spotpear, waveshare, stopwatch]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: pio-${{ runner.os }}-${{ matrix.board }}-${{ hashFiles('platformio.ini') }}
+      - run: pip install platformio==6.2.0 esptool==5.4.0
+      - run: python tools/build_release.py --board ${{ matrix.board }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dragon-detector-${{ matrix.board }}
+          path: web/firmware/${{ matrix.board }}
+          if-no-files-found: error

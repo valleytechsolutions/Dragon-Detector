@@ -1,35 +1,34 @@
-# Building from source
+# Build the current firmware
 
-Use Python 3.11+ and PlatformIO Core. Each hardware folder is a complete independent PlatformIO project; run build commands inside the selected folder, not at repository root.
+Use the root [platformio.ini](../platformio.ini); the projects under `hardware/` are historical releases.
 
-```powershell
-py -m pip install "platformio==6.2.0" "esptool==5.4.0" pillow pyserial
+```
+python -m pip install platformio==6.2.0 esptool==5.4.0
+python -m platformio run -e spotpear -e waveshare -e stopwatch
+python tools/build_release.py --skip-build
 ```
 
-## Spotpear
+The pinned pioarduino platform provides Arduino ESP32 and ESP-IDF. Each board requires 8 MB octal PSRAM. The Waveshare board's flash is deliberately addressed as 16 MB for the existing partition layout. Firmware uses one shared application in `firmware/`; only display/power adapters vary.
 
-```powershell
-cd hardware/spotpear
-pio run
+`tools/build_release.py` builds a blank badge filesystem, checks image/partition sizes, generates split factory/update manifests, merges a factory image, verifies every merged segment, rejects embedded workstation paths, and writes SHA-256 checksums plus source-commit metadata. Do not publish manually renamed binaries from a different board.
+
+## Tests
+
+```
+node --test tests/web.test.js
+python tools/test_core.py --cxx g++
 ```
 
-The app-only output is `.pio/build/dragon/firmware.bin`. Build configuration, libraries and source match the supplied v0.1.1 project. Use the supplied merged release for a fresh install; do not rename an app-only binary to `0x0`. `pio run --target upload --upload-port COM4` performs PlatformIO's configured component upload.
+On Windows without a native compiler, install `ziglang==0.13.0` and run `python tools/test_core.py` without `--cxx`. The packet tests include positive and negative fixtures, bounds checks, rollover, RSSI outliers/reacquisition, CRC consistency and 150,000 random inputs. CI additionally runs AddressSanitizer and UndefinedBehaviorSanitizer.
 
-## StopWatch
+## Local web preview
 
-```powershell
-cd hardware/m5stack-stopwatch
-pio run
-pio run -t buildfs
-py tools/build_release.py
+```
+python -m http.server 8765 --bind 127.0.0.1 --directory web
 ```
 
-The release builder assembles the bootloader, partition table, app and (for factory) clean filesystem, and verifies their positions. Never substitute a dump of your personal device. The StopWatch hardware libraries are pinned to exact Git commits. The application uses 16 MB flash and 8 MB octal PSRAM.
+Open `http://127.0.0.1:8765` in Chrome/Edge. There is no frontend build step. ESP Web Tools is pinned to 10.4.0 and loaded from its distribution; fonts are loaded from Google Fonts. These require network access. The badge editor itself processes images locally.
 
-For an existing matching installation, `pio run --target upload --upload-port COM4` uploads compiled components. The initial filesystem still requires the factory image or explicit filesystem upload; use FLASHING.md for the complete-image method. Filesystem upload overwrites stored files.
+## License boundaries
 
-## Checks
-
-The supplied validation notes describe the tests actually run. On a flashed StopWatch, `py tools/ui_regression.py --port COM4` injects touch/button events and changes screens; run it when the device is idle. `py tools/serial_tool.py selftest --port COM4 --seconds 3` requests firmware self-tests. A successful compile or renderer screenshot does not prove physical color, touch, sound, RF coverage, or battery runtime.
-
-When changing dependencies or hardware code, rebuild and repeat the relevant hardware checks before distributing a new BIN. No build was required for the repository documentation/organization update; the shipped BINs remain byte-identical to the validated release files.
+The current original application/web/tooling is MIT. Vendored drivers/libraries retain their own license notices. `ESP8266Audio` is explicitly excluded from every current build. Historical projects under `hardware/` keep their previous licenses and must not be relabeled. See [CREDITS.md](../CREDITS.md).

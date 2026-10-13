@@ -1,45 +1,29 @@
-# Using Dragon Detector
+# Daily use
 
-## Radar and scanning
+## Radar and tracking
 
-Dots represent recently received Wi-Fi/BLE observations. Radius follows RSSI; it is not a distance measurement. The angle is a stable visual arrangement, not compass bearing. A moving sweep is a UI animation, not directional radio hardware.
+The green radar starts in **Candidates** mode. Repeated fresh signature matches get markers; weak vendor-only hints remain in Wi-Fi/Bluetooth contact lists. Tap a marker for its address, evidence and confidence. Tools → Settings → Radar toggles all contacts. No candidates means no recent qualifying evidence, not a guarantee that no surveillance devices are nearby.
 
-Tap a dot or contact row to inspect its advertised name, address, RSSI, channel, candidate family, confidence and evidence. Device labels with a question mark are candidates. Alerts describe observed patterns and do not establish who caused them.
+Tools → Wi-Fi or Bluetooth opens all contacts. Select one and choose **Track signal** for dedicated listening. Watch filtered dBm and whether the signal is rising/falling. RSSI depends on obstructions, orientation and transmit power; do not treat it as distance or a direction arrow. After ten seconds without an observation, the radar reports a stale target. Settings → Tracking returns to balanced Wi-Fi/BLE scanning.
 
-Open Recon to browse Wi-Fi contacts, Bluetooth contacts, alerts and channel activity. Scroll vertically within lists. Refresh a contact list to rebuild its rows. Selecting a Wi-Fi channel locks monitoring there and pauses BLE; choose Auto to resume alternating scans. Settings provides radio pause/resume and logging controls.
+Swipe upward from the radar's bottom edge or tap Tools. Lists scroll normally. StopWatch yellow returns to radar; blue opens tools and, from tools, opens badge. Waveshare BOOT toggles radar/tools. Touch wakes the dimmed display.
 
-## Navigation by board
+## Badge Studio
 
-| Control | StopWatch | Spotpear |
-|---|---|---|
-| Return to radar | Yellow KEY A, GPIO2 | On-screen navigation |
-| Open tools | Blue KEY B, GPIO1; or bottom-edge radar swipe | Bottom-edge radar swipe |
-| Switch menu tab | Blue button cycles tabs, or tap a tab | Tap a visible tab |
-| Scroll | Vertical movement inside list | Vertical movement inside list |
+1. Open the [Badge Studio](https://valleytechsolutions.github.io/DragonBall-Z-Radar/#studio) in desktop Chrome/Edge and connect a board running 0.3.x. Close the flasher's serial connection first.
+2. The board reports its 360×360 or 466×466 display size. Pick PNG, JPEG or WebP (under 20 MB / 40 MP).
+3. Drag to position. Use Zoom, Center, Fill circle, Fit whole image and Background. The circular preview hides pixels outside the physical display. Transparent pixels are composited onto the chosen background.
+4. Upload & show badge. The board validates dimensions, exact byte count and CRC-32 before replacing the saved image. A failed/incomplete transfer keeps the prior image. Scanning pauses during transfer and resumes afterward.
+5. Your badge is shown and becomes the startup view. Hold the image to open tools. Settings → Boot to radar changes startup back to radar.
 
-## Logs and captures
+Images are processed locally in the browser and sent by USB, not uploaded to GitHub or a cloud service. This version uses a USB web UI; it does not serve a Wi-Fi upload portal. Factory reflashing removes saved badge files; matching 0.3.x split updates preserve them.
 
-Spotpear uses microSD. StopWatch uses internal flash and has no built-in SD slot. StopWatch event logging is opt-in to limit flash wear; logs rotate at 256 KiB and each capture stops at 512 KiB. Spotpear limits are documented in its feature guide. Timestamps are uptime, not UTC. Stored observations may include nearby device identifiers; inspect them before sharing a bug report.
+## Daily settings
 
-The file browser opens folders and previews small text files. Binary PCAPs should be downloaded for analysis rather than read as text. StopWatch USB diagnostics at 115200 baud include `status`, `contacts`, `selftest`, `pause`, `resume`, `ls /dragon`, `capture on`, and `capture off`. Its `get PATH` command emits a `FILE_BYTES` header, exact binary data, then `FILE_END`; a regular terminal is not a binary download utility.
+Brightness defaults to 50%, cycles through 25/50/75/100%, and is saved. After 45 seconds without touch/key activity it drops to 8%; activity restores it. The image shifts a few pixels once a minute. These reduce sustained exposure and display power but do not guarantee burn-in prevention or a particular battery runtime. Scanning continues in badge mode until paused.
 
-## StopWatch badge images
+Event logging is off by default. Spotpear can enable logs and bounded PCAP capture with a FAT32 microSD card. The AMOLED builds keep observations in RAM and use internal LittleFS for the badge. No microphone/music workflow is compiled in 0.3.x; older Spotpear multimedia firmware remains available separately.
 
-![Badge mode](../hardware/m5stack-stopwatch/docs/badge.png)
+## USB diagnostics
 
-Install the helper dependencies from the repository root:
-
-```powershell
-py -m pip install pillow pyserial
-py hardware/m5stack-stopwatch/tools/badge_import.py "C:/Pictures/my-logo.png" --port COM4 --name MyLogo
-```
-
-Replace the input image and COM port. PNG/JPEG/WebP/BMP are converted to 466×466 RGB565. `--fit contain` keeps the whole rectangular image; `--fit cover` fills the square. The physical circular screen can clip square corners, so keep essential content near the center. Each image occupies approximately 424 KiB. Use a unique name for each upload; existing names are protected.
-
-For a graphical importer, run `py -m http.server 8000 --directory hardware/m5stack-stopwatch/tools`, open `http://localhost:8000/Badge-Importer.html` in Chrome/Edge, choose an image, connect the device and import. Close any serial monitor first. Stop the local server with Ctrl+C when finished. The Python importer was tested end-to-end; the browser importer still needs end-to-end validation.
-
-Open Tools → Badge mode. Tap to advance; hold to toggle a ten-second slideshow. Yellow exits to radar. The scanner continues in badge mode, except while USB transfers temporarily pause it. Settings offers optional alert sound and vibration.
-
-## Spotpear audio
-
-The Spotpear variant retains its original local music playback and manual microphone recording controls. These features are intentionally absent from StopWatch. Use its Media tab and microSD file browser; stop/save a recording before playback or transferring files.
+115200 baud, newline-terminated commands: `status`, `contacts`, `selftest`, `pause`, `resume`, `screen radar`, `screen menu`, `screen badge`, `badge info`, `badge boot on`, `badge boot off`, `screenshot`. Screenshots encode the LVGL renderer as RGB565; they do not verify physical panel color transfer. `status` reports scan counts, dropped packets, heap and board display resolution.

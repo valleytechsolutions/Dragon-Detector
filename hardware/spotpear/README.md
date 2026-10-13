@@ -1,3 +1,5 @@
+> **Historical release.** Current 0.3.x firmware is built from the [repository root](../../README.md). This folder retains its original firmware, dependencies, instructions and license.
+
 [Repository home](../../README.md) | [Detailed flashing guide](../../docs/FLASHING.md) | [Credits](../../CREDITS.md)
 
 ![Dragon Detector cover](media/brand/dragon-detector-cover.png)

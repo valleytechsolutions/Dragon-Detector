@@ -1,22 +1,17 @@
-# Identify the hardware
+# Exact board profiles
 
-## M5Stack StopWatch C152
+| Board | Resolution | Adapter | Storage in 0.3 |
+|---|---|---|---|
+| Spotpear / Guition JC3636W518 | 360×360 ST77916 LCD | Vendor ESP32 Display Panel configuration | microSD logs/PCAP; internal flash badge |
+| Waveshare ESP32-S3-Touch-AMOLED-1.75C | 466×466 CO5300 AMOLED, CST9217 touch, AXP2101 | KODE DIY CO5300 / ESP-IDF QSPI, SensorLib, XPowersLib | internal flash badge; observations in RAM |
+| M5Stack StopWatch C152 | 466×466 AMOLED | Pinned M5Unified / M5GFX StopWatch support | internal flash badge; observations in RAM |
 
-![Actual M5Stack StopWatch C152, manufacturer photograph](https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/1242/C152_stopwatch_mainpictures_01.webp)
+[Pin definitions](../firmware/include/board_pins.h) are authoritative for these builds. Waveshare C uses display reset GPIO 1 and touch reset GPIO 2; these are not the non-C board's wiring. It has no SD slot in this profile. M5Unified identifies the StopWatch and rejects an unexpected display.
 
-466×466 round AMOLED with yellow and blue keys; ESP32-S3, 16 MB flash and 8 MB PSRAM. Internal flash stores this firmware's files; there is no built-in microSD slot.
+Manufacturer references:
 
-- [Official specifications, wiring and photographs](https://docs.m5stack.com/en/core/StopWatch)
-- [Actual product and manufacturer photographs](https://shop.m5stack.com/products/m5stack-stopwatch-dev-kit-esp32-s3)
-- [Manufacturer demo firmware](https://github.com/m5stack/M5StopWatch-UserDemo)
+- [Spotpear exact product](https://spotpear.com/shop/EPS32-S3R8-1.8inch-360x360-Round-LCD-Display-WIFI-Secondary-TouchScreen-AIDA64-Arduino-LVGL-WirelessAida64-Wireless-Power-Video-Electronic-Photo-Frame-MP3.html).
+- [Waveshare C-variant hardware/demo source](https://github.com/waveshareteam/ESP32-S3-Touch-AMOLED-1.75C) and [schematic](https://files.waveshare.com/wiki/ESP32-S3-Touch-AMOLED-1.75C/ESP32-S3-Touch-AMOLED-1.75C-schematic.pdf).
+- [M5Stack StopWatch documentation](https://docs.m5stack.com/en/core/StopWatch), [product photographs](https://shop.m5stack.com/products/m5stack-stopwatch-dev-kit-esp32-s3), and [manufacturer demo](https://github.com/m5stack/M5StopWatch-UserDemo).
 
-## Spotpear / Guition JC3636W518
-
-1.8-inch 360×360 round touch LCD, ESP32-S3 with 16 MB flash and 8 MB octal PSRAM. This project preserves its original microSD and audio support.
-
-![Spotpear board photograph, hosted by Spotpear](https://cdn.static.spotpear.com/uploads/picture/product/esp32/EPS32-S3-1.8inch-Touch-LCD/WEB-EPS32-S3-1.8inch-Touch-LCD.jpg)
-
-- [Actual Spotpear product](https://spotpear.com/shop/EPS32-S3R8-1.8inch-360x360-Round-LCD-Display-WIFI-Secondary-TouchScreen-AIDA64-Arduino-LVGL-WirelessAida64-Wireless-Power-Video-Electronic-Photo-Frame-MP3.html)
-- [Original hardware configuration](../hardware/spotpear/docs/HARDWARE.md)
-
-Product photographs remain manufacturer property and are linked for identification. A round screen alone does not establish compatibility: check the exact model before flashing.
+Battery percentage is available through Waveshare AXP2101 and M5Stack power APIs. Spotpear has no configured fuel gauge; no battery estimate is invented. Hardware-in-the-loop testing is distinct from a successful compile; see [validation](VALIDATION.md).

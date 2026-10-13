@@ -15,3 +15,9 @@ backups/
 reference/
 .DS_Store
 Thumbs.db
+
+.work/
+.build/
+web/firmware/
+*.obj
+*.lib

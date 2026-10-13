@@ -1,0 +1,1 @@
+{"name":"esp_lcd_co5300","version":"1.0.2","license":"Apache-2.0","frameworks":"arduino","platforms":"espressif32","build":{"srcDir":"src","includeDir":"src","flags":["-DESP_LCD_CO5300_VER_MAJOR=1","-DESP_LCD_CO5300_VER_MINOR=0","-DESP_LCD_CO5300_VER_PATCH=2"]}}

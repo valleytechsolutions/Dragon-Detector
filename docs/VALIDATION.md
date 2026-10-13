@@ -1,17 +1,21 @@
-# Validation and known limitations
+# Validation status · 0.3.0
 
-The repository organization update changes documentation and file placement, not firmware behavior. Release BINs were compared byte-for-byte with the existing release files, and checksums are provided at the root.
+This is an experimental development release, not a claim of field-proven detection accuracy or all-day battery life.
 
-## StopWatch v0.2.0
+All three final board profiles compile locally: Spotpear, Waveshare 1.75C and StopWatch. Release images are built from source and checked by the packager; physical-device verification is separate.
 
-The application compiled and was flashed with esptool verification. All 17 firmware self-tests passed. Real Wi-Fi/BLE observations were received. On-device LVGL tests exercised scrolling in channel/settings/about screens and button handlers; custom logo import was tested over USB. Some queue drops were observed, so complete capture is not claimed.
+## Automated checks
 
-Physical display color confirmation, physical button actuation, audible/vibration feedback, battery runtime, long-duration stability and all candidate-device families remain unverified. The screenshot captures the renderer; it cannot prove the AMOLED transfer. Browser badge import has not been tested end-to-end. See the [detailed StopWatch notes](../hardware/m5stack-stopwatch/docs/VALIDATION.md).
+- Native C++ fixtures cover Axon company/services, SmartTag, Meta composite false positives, generic Xuntong, Biscuit's shared example UUID, Flipper appearance, Find My minimum length, invalid AD fields, public versus random BLE OUI lookup, probe-role interpretation, Flock strict IE matching, disconnect windows, CRC-32, signal spikes, reacquisition and timer rollover.
+- 150,000 random inputs exercise both bounded parsers. CI additionally runs AddressSanitizer and UndefinedBehaviorSanitizer.
+- Node tests cover both image resolutions, RGB565 byte order, CRC agreement, invalid payload sizes and crop geometry.
+- The release packager checks image sizes, partition offsets, every merged image segment, SHA-256 checksums and workstation-path exclusion.
+- Browser QA exercised local image selection, fit controls and narrow-screen layout. Actual USB upload/flash through the browser needs a connected and confirmed target board.
 
-## Spotpear v0.1.1
+## Hardware limits
 
-The existing firmware/source were retained without changing its functionality. Its previous [export validation](../hardware/spotpear/docs/export-validation.json) and [feature limits](../hardware/spotpear/docs/FEATURES.md) are included. This repository cleanup did not reflash or retest the Spotpear device.
+The user's existing Waveshare firmware responds on USB with a 466×466 display, real Wi-Fi/BLE observations and AXP2101 battery status. This verifies the **previous** running port, not the new 0.3.0 firmware. The exact C/non-C model must be confirmed before writing the connected hardware.
 
-## Repository checks
+The new shared source, revised driver, physical touchscreen orientation, colors, button/haptic behavior, persisted badge, failed-transfer recovery, battery runtime and long-duration stability require testing on each physical board. Compile success alone does not establish those properties. No controlled field test against real examples of all named device families has been performed in this update. Do not describe the signature list as guaranteed device detection.
 
-Local project Markdown links/images and firmware checksums are checked before publication. Build caches, device dumps, raw packet captures, personal recordings and saved vendor web pages are excluded. Third-party libraries and original license notices are retained because the build depends on them.
+Historical 0.1/0.2 validation reports remain with their archived board projects and do not validate new 0.3.x changes.
