@@ -25,7 +25,8 @@ extern const lv_img_dsc_t radar_logo;
 #define F14 (&lv_font_montserrat_14)
 #define F16 (&lv_font_montserrat_16)
 #define F20 (&lv_font_montserrat_20)
-#define FCALLOUT F12
+// Two lines must fit the 26px inner height of a 360px-panel callout.
+#define FCALLOUT (&lv_font_montserrat_10)
 #endif
 static const int CENTER=SCREEN_RES/2;
 enum Page {Boot,Radar,Menu,Devices,Details,Alerts,Channels,Files,Audio,Settings,About,Badge,Hunt,Detectors,History,HistoryDetail,Rules,Controls,Display,Diagnostics,Activity,RadarStyle};
