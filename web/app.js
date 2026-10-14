@@ -6,7 +6,17 @@ import {parseBadgeInfo,hasDetectorTools} from './firmware-compat.js';
 const $ = id => document.getElementById(id);
 const models = {spotpear:'Spotpear / Guition JC3636W518',waveshare:'Waveshare ESP32-S3-Touch-AMOLED-1.75C',stopwatch:'M5Stack StopWatch C152'};
 let board = '', releaseReady = false, request = 0;
-function installEnabled(){ $('install-button').disabled = !board || !releaseReady || !$('hardware-confirm').checked; }
+let installerReady=false,installerFailed=false;
+function installEnabled(){
+  const supported=!!navigator.serial && window.isSecureContext;
+  $('install-button').disabled = !board || !releaseReady || !$('hardware-confirm').checked || !installerReady || !supported;
+  if(!supported)$('install-message').textContent='Use desktop Chrome or Edge over HTTPS or localhost for USB installation.';
+  else if(!installerReady)$('install-message').textContent=installerFailed?'The USB installer could not load. Check your connection and reload this page.':'Loading the USB installer…';
+  else if(releaseReady)$('install-message').textContent='Confirm your board, then connect its USB port.';
+}
+const installerTimer=setTimeout(()=>{installerFailed=true;installEnabled();},10000);
+customElements.whenDefined('esp-web-install-button').then(()=>{clearTimeout(installerTimer);installerReady=true;installEnabled();});
+installEnabled();
 async function chooseBoard(next) {
   board = next; releaseReady = false; const revision = ++request;
   $('hardware-confirm').checked = false; $('download').hidden = true; installEnabled();

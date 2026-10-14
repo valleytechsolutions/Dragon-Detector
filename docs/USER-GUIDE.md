@@ -80,7 +80,7 @@ pause
 resume
 ```
 
-`history clear` erases the history without a serial confirmation; use it deliberately. `screenshot` returns the LVGL render, not a photograph. The badge commands from 0.3.x are retained.
+`history clear` erases the history without a serial confirmation; use it deliberately. `screenshot` returns the display render, not a photograph. In 0.5.1 its `SCREENSHOT width height bytes` header precedes RGB565 pixels and a `SCREENSHOT_END crc32` footer; reject a short transfer or checksum mismatch. It briefly pauses scanning. The badge commands from 0.3.x are retained.
 
 ## Audio alerts and foxhunting
 

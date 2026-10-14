@@ -5,9 +5,15 @@ import {BadgeSerial} from '../web/serial.js';
 import {uploadBadge,BADGE_CHUNK_SIZE} from '../web/badge-transfer.js';
 import {readHistory} from '../web/detector-transfer.js';
 import {parseBadgeInfo,hasDetectorTools} from '../web/firmware-compat.js';
+import {readFileSync} from 'node:fs';
+
+test('firmware release updates preserve the independently pinned installer dependency',()=>{
+  const html=readFileSync(new URL('../web/index.html',import.meta.url),'utf8');
+  assert.match(html,/https:\/\/unpkg\.com\/esp-web-tools@10\.4\.0\/dist\/web\/install-button\.js\?module/);
+});
 
 test('USB handshake accepts current/legacy boards and enables tools for 0.4/0.5',()=>{
-  for(const version of ['0.3.1','0.4.0','0.5.0'])for(const size of [360,466]){
+  for(const version of ['0.3.1','0.4.0','0.5.0','0.5.1'])for(const size of [360,466]){
     assert.deepEqual(parseBadgeInfo(`BADGE_INFO ${version} ${size} READY Test board`),{version,size,board:'Test board'});
     assert.equal(hasDetectorTools(version),!version.startsWith('0.3.'));
   }

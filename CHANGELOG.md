@@ -1,5 +1,11 @@
 # Changes
 
+## 0.5.1 — diagnostic capture hardening
+
+- Diagnostic screenshots now mirror an ordinary display refresh, including overlays, instead of constructing a temporary LVGL display context. This avoids the path active during one observed panic reset in 0.5.0; the precise original panic cause was not captured.
+- USB image/file output uses bounded, paced writes and a larger transmit queue. Screenshots report a CRC32 and transfer failure explicitly. Runtime diagnostics retain the capture stage across a restart.
+- Restore the independently pinned ESP Web Tools 10.4.0 loader after a firmware-version replacement changed its URL. Installation stays disabled if the component has not loaded or the browser lacks USB support.
+
 ## 0.5.0 — complete signature audit and radar visibility
 
 - Audit every table entry at SquachWatch-CYD commit `a6167db`: 97 address patterns, 15 services, seven companies, seven exact names and eight SSID prefixes. Add per-entry recognition and radar tests plus runtime-predicate fixtures.

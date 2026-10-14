@@ -6,13 +6,59 @@
 static String serialLine;
 static bool serialOverflow=false;
 static uint32_t lastHealth=0;
-static bool serialBytes(const uint8_t* data,size_t length){size_t sent=0;uint32_t last=millis();while(sent<length){size_t n=Serial.write(data+sent,std::min<size_t>(1024,length-sent));if(n){sent+=n;last=millis();}else if(millis()-last>5000)return false;delay(1);}return true;}
+RTC_NOINIT_ATTR static volatile uint32_t captureTrace[2];
+static constexpr uint32_t CAPTURE_TRACE_MAGIC=0xdd050001;
+static uint32_t previousCaptureStage=0;
+static void captureStage(uint32_t stage){captureTrace[0]=CAPTURE_TRACE_MAGIC;captureTrace[1]=stage;}
+static bool serialBytes(const uint8_t* data,size_t length){
+  size_t sent=0;uint32_t last=millis();
+  while(sent<length){
+    // Small writes with backpressure avoid the native USB driver's overflow
+    // policy, which can discard already queued bytes during a stalled transfer.
+    size_t room=Serial.availableForWrite();
+    size_t n=room?Serial.write(data+sent,std::min<size_t>(128,std::min(room,length-sent))):0;
+    if(n){sent+=n;last=millis();}else if(millis()-last>5000)return false;
+    delay(1);
+  }
+  return true;
+}
+static lv_color_t* capturePixels=nullptr;
+static int captureWidth=0,captureHeight=0;
+static void (*panelFlush)(lv_disp_drv_t*,const lv_area_t*,lv_color_t*)=nullptr;
+static void captureFlush(lv_disp_drv_t* driver,const lv_area_t* area,lv_color_t* pixels){
+  // Mirror the ordinary display refresh before a board driver swaps/reuses its
+  // draw buffer. Do not create LVGL's temporary display/draw context on the stack.
+  if(capturePixels && area->x1>=0 && area->y1>=0 && area->x2<captureWidth && area->y2<captureHeight){
+    const int width=area->x2-area->x1+1;
+    if(width>0)for(int y=area->y1;y<=area->y2;++y)
+      memcpy(capturePixels+y*captureWidth+area->x1,pixels+(y-area->y1)*width,width*sizeof(lv_color_t));
+  }
+  panelFlush(driver,area,pixels);
+}
+static void screenshot(){
+  auto* display=lv_disp_get_default();
+  captureWidth=lv_disp_get_hor_res(display);captureHeight=lv_disp_get_ver_res(display);
+  const size_t bytes=size_t(captureWidth)*captureHeight*sizeof(lv_color_t);
+  capturePixels=(lv_color_t*)ps_calloc(1,bytes);
+  if(!capturePixels){Serial.println("SCREENSHOT_FAILED memory");return;}
+  captureStage(1);const bool wasEnabled=radioEnabled;setRadio(false);
+  captureStage(2);panelFlush=display->driver->flush_cb;display->driver->flush_cb=captureFlush;
+  lv_obj_invalidate(lv_scr_act());lv_refr_now(display);
+  display->driver->flush_cb=panelFlush;
+  captureStage(3);
+  const uint32_t crc=dragon::crc32((const uint8_t*)capturePixels,bytes)^0xffffffffu;
+  Serial.printf("SCREENSHOT %u %u %u\n",captureWidth,captureHeight,unsigned(bytes));
+  const bool complete=serialBytes((const uint8_t*)capturePixels,bytes);
+  Serial.printf("\nSCREENSHOT_%s %08lx\n",complete?"END":"FAILED",crc);
+  captureStage(4);free(capturePixels);capturePixels=nullptr;
+  captureStage(5);setRadio(wasEnabled);captureStage(0);
+}
 static void health(){
   unsigned count=0;for(auto& c:contacts)if(c.used&&millis()-c.seen<30000)++count;
   Serial.printf("HEALTH uptime=%lu heap=%u psram=%u contacts=%u wifi=%lu ble=%lu alerts=%lu drops=%lu storage_drops=%lu malformed=%lu channel=%u phase=%s sd=%s audio=%u\n",
     millis(),ESP.getFreeHeap(),ESP.getFreePsram(),count,wifiFrames,bleFrames,alertTotal,queueDrops,storageDrops,malformedFrames,wifiChannel,blePhase?"BLE":"WIFI",sdReady?"OK":"MISSING",unsigned(audioStatus().mode));
   Serial.printf("DISPLAY %dx%d\n",lv_disp_get_hor_res(nullptr),lv_disp_get_ver_res(nullptr));
-  Serial.printf("RUNTIME reset=%d stack_free=%u\n",esp_reset_reason(),unsigned(uxTaskGetStackHighWaterMark(nullptr)));
+  Serial.printf("RUNTIME reset=%d stack_free=%u capture_previous=%lu\n",esp_reset_reason(),unsigned(uxTaskGetStackHighWaterMark(nullptr)),previousCaptureStage);
   Serial.printf("RADIO_STATS capacity=%u queue_high=%u batch_us=%lu lag_ms=%lu evictions=%lu cache_hits=%lu cache_misses=%lu active_ble=%u\n",unsigned(MAX_CONTACTS),radioQueueHigh,radioMaxBatchUs,radioMaxLagMs,contactEvictions,contactCacheHits,contactCacheMisses,activeBle);
   if(batteryPercent()>=0)Serial.printf("BATTERY %d%% %s\n",batteryPercent(),batteryCharging()?"charging":"discharging");
 }
@@ -47,20 +93,17 @@ static void command(const String& c){
   else if(c=="capture on")setCapture(true);
   else if(c=="capture off")setCapture(false);
   else if(c=="contacts"){for(auto& d:contacts)if(d.used){char mac[18];macText(d.mac,mac);Serial.printf("%s %s %d %s [%s] %s\n",d.ble?"BLE":"WIFI",mac,d.rssi,d.name,dragon::familyName(d.match.family),d.match.evidence);}}
-  else if(c=="screenshot"){
-    // Test artifact: exact LVGL render, encoded as RGB565 bytes over USB.
-    bool wasEnabled=radioEnabled;setRadio(false);
-    lv_img_dsc_t* shot=lv_snapshot_take(lv_scr_act(),LV_IMG_CF_TRUE_COLOR);
-    if(shot){uint32_t bytes=shot->header.w*shot->header.h*2;Serial.printf("SCREENSHOT %u %u %u\n",shot->header.w,shot->header.h,bytes);serialBytes(shot->data,bytes);Serial.println("\nSCREENSHOT_END");lv_snapshot_free(shot);}else Serial.println("SCREENSHOT_FAILED");
-    setRadio(wasEnabled);
-  }
+  else if(c=="screenshot")screenshot();
   else Serial.println("Commands: status, contacts, selftest, pause, resume, record, stop, play /path.mp3, capture on|off, screenshot");
 }
 void setup(){
   // The native USB CDC default is only 256 bytes. Reserve room before begin()
   // so flash writes cannot overflow incoming, acknowledged image chunks.
   Serial.setRxBufferSize(4096);
+  Serial.setTxBufferSize(2048);
   Serial.begin(115200);delay(500);Serial.println("DRAGON DETECTOR " DRAGON_VERSION " / " BOARD_NAME " / boot");
+  previousCaptureStage=captureTrace[0]==CAPTURE_TRACE_MAGIC?captureTrace[1]:0;
+  Serial.printf("PREVIOUS_CAPTURE stage=%lu reset=%d\n",previousCaptureStage,esp_reset_reason());captureStage(0);
   Serial.printf("Flash=%u PSRAM=%u reset=%d\n",ESP.getFlashChipSize(),ESP.getPsramSize(),esp_reset_reason());
   if(ESP.getPsramSize()<4*1024*1024){Serial.println("FATAL: expected octal PSRAM");while(true)delay(100);}
   contacts.data=(Contact*)ps_malloc(MAX_CONTACTS*sizeof(Contact));
