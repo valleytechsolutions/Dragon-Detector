@@ -118,21 +118,17 @@ extern bool huntSound;
 extern int audioFocus;
 
 extern dragon::Stopwatch stopwatch;
-extern dragon::StableOrientation orientation;
+extern uint8_t displayRotation;
 extern int clockOffsetMinutes;
-extern bool rtcAvailable,imuAvailable;
+extern bool rtcAvailable;
 void wearableBegin();
-void wearableLoop();
 bool wearableCommand(const String& command);
 uint64_t stopwatchNow();
 bool configureClock(uint32_t epoch);
 void configureClockOffset(int minutes);
 void clockLocal(dragon::Calendar& date);
-bool configureOrientation(int degrees); // -1 automatic, otherwise clockwise degrees
-bool calibrateOrientation();
-void orientationTouch(bool pressed);
+bool configureOrientation(int degrees); // saved clockwise angle
 void boardSensorsBegin();
-bool boardReadAcceleration(float& x,float& y,float& z);
 bool boardReadRtc(uint32_t& epoch);
 bool boardWriteRtc(uint32_t epoch);
-bool uiStopwatchKey(bool start);
+bool uiStopwatchKey(bool start,uint64_t at=0);

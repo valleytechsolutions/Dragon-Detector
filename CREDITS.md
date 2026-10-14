@@ -58,4 +58,4 @@ The 0.8 Badge Studio transforms, per-board previews, guides, PNG export and mani
 
 ## 0.9 daily tools
 
-Stopwatch/lap arithmetic, calendar validation, stable orientation filtering, rotation buffering and USB clock controls are original MIT application code. RTC/IMU integration uses the already-credited M5Unified BMI270/RX8130 drivers and SensorLib QMI8658 driver. Waveshare PCF85063 register access follows the manufacturer register specification; AXP2101 short-button events use XPowersLib. No new third-party library is added. Hardware sources are listed in [HARDWARE.md](docs/HARDWARE.md).
+Stopwatch/lap arithmetic, calendar validation, manual rotation buffering, device-family colors, buffered M5Stack input and USB clock controls are original MIT application code. RTC integration uses the already-credited M5Unified RX8130 driver. Waveshare PCF85063 register access follows the manufacturer register specification; AXP2101 short-button events use XPowersLib. No new third-party library is added. Hardware sources are listed in [HARDWARE.md](docs/HARDWARE.md).

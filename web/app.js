@@ -3,7 +3,7 @@ import {BadgeSerial} from './serial.js';
 import {encodeBadge} from './badge-codec.js';
 import {uploadBadge} from './badge-transfer.js';
 import {readHistory} from './detector-transfer.js';
-import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasWearableTools} from './firmware-compat.js?v=0.9.0';
+import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasWearableTools} from './firmware-compat.js?v=0.9.1';
 import {readRadarSettings,saveRadarSettings} from './radar-transfer.js';
 import {boardProfiles,connectedProfile,validateManifest} from './board-profiles.js';
 import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan} from './badge-editor.js';
@@ -60,7 +60,7 @@ function setBadgeProfile(id){
   $('badge-board').value=id;draw();
 }
 function controls(){
-  for(const id of ['show-stopwatch','show-clock','clock-save','clock-sync','orientation-save','orientation-calibrate'])$(id).disabled=busy||!serial||!hasWearableTools(firmwareVersion);
+  for(const id of ['show-stopwatch','show-clock','clock-save','clock-sync','orientation-save'])$(id).disabled=busy||!serial||!hasWearableTools(firmwareVersion);
   $('show-activity').disabled=busy||!serial||!hasActivityTools(firmwareVersion);
   $('radar-save').disabled=busy||!serial||!hasRadarTools(firmwareVersion);
   for(const id of ['history-export','show-radar','sync-time','display-save','sound-save','tone-load','tone-save','tone-preview','tone-reset','tone-stop'])$(id).disabled=busy||!serial||!hasDetectorTools(firmwareVersion);
@@ -206,11 +206,10 @@ $('tone-stop').onclick=()=>audioAction(async link=>{await toneReply(link,'tone s
 async function loadWearable(link){
   const state=await readWearable(link);$('clock-offset').value=state.offset;
   if(state.valid)$('clock-local').value=new Date((state.epoch+state.offset*60)*1000).toISOString().slice(0,19);
-  $('orientation-mode').value=state.orientation;$('orientation-mode').querySelector('[value="auto"]').disabled=!state.imu;
-  $('wearable-status').textContent=`${state.rtc?'RTC detected · saved time survives restart':'Software clock · set again after restart'}. ${state.imu?'Motion sensor available.':'No supported motion sensor; use a fixed angle.'}`;
+  $('orientation-mode').value=state.orientation;
+  $('wearable-status').textContent=`${state.rtc?'RTC detected · saved time survives restart':'Software clock · set again after restart'}. Display orientation stays at your saved angle.`;
 }
 $('clock-sync').onclick=()=>detectorAction(async link=>{await setClock(link,Math.floor(Date.now()/1000),-new Date().getTimezoneOffset());await loadWearable(link);$('detector-status').textContent='Computer time and current UTC offset saved.';});
 $('clock-save').onclick=()=>detectorAction(async link=>{const offset=Number($('clock-offset').value);await setClock(link,localClockEpoch($('clock-local').value,offset),offset);await loadWearable(link);$('detector-status').textContent='Local clock saved. Stopwatch elapsed time is unchanged.';});
 $('orientation-save').onclick=()=>detectorAction(async link=>{await setOrientation(link,$('orientation-mode').value);await loadWearable(link);$('detector-status').textContent='Orientation preference saved.';});
-$('orientation-calibrate').onclick=()=>detectorAction(async link=>{await link.write('orientation calibrate');const reply=await link.wait(s=>s==='ORIENTATION_OK'||s.startsWith('ORIENTATION_ERROR'));if(reply!=='ORIENTATION_OK')throw new Error('Hold the display upright and still for 1.2 seconds, then try again.');$('detector-status').textContent='Current upright reference saved.';});
 for(const page of ['stopwatch','clock'])$('show-'+page).onclick=()=>detectorAction(async link=>{await link.write('screen '+page);$('detector-status').textContent=page==='clock'?'Clock displayed.':'Stopwatch displayed. Tap Start, then Lap; Home leaves it running.';});

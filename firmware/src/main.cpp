@@ -64,7 +64,9 @@ static void health(){
   Serial.printf("RADIO_STATS capacity=%u queue_high=%u batch_us=%lu lag_ms=%lu evictions=%lu cache_hits=%lu cache_misses=%lu active_ble=%u\n",unsigned(MAX_CONTACTS),radioQueueHigh,radioMaxBatchUs,radioMaxLagMs,contactEvictions,contactCacheHits,contactCacheMisses,activeBle);
   if(batteryPercent()>=0)Serial.printf("BATTERY %d%% %s\n",batteryPercent(),batteryCharging()?"charging":"discharging");
 }
+static uint32_t loopLastUs[6]{},loopMaxUs[6]{};
 static void command(const String& c){
+  if(c=="loop diagnostics"){const char* names[]={"board","radio","history","audio","ui","badge"};for(int i=0;i<6;++i)Serial.printf("LOOP_TIMING %s last_us=%lu max_us=%lu\n",names[i],loopLastUs[i],loopMaxUs[i]);Serial.println("LOOP_END");return;}
   if(badgeCommand(c) || wearableCommand(c) || detectorCommand(c) || audioCommand(c) || uiCommand(c))return;
   if(c=="status"){health();Serial.printf("SESSION %s\n",sessionPath.c_str());}
   else if(c=="selftest")runSelfTests();
@@ -119,7 +121,8 @@ void setup(){
   storageBegin();badgeInit();audioBegin();detectorBegin();radioBegin();Serial.println("DRAGON READY");health();
 }
 void loop(){
-  boardLoop();radioLoop();storageLoop();detectorLoop();audioLoop();uiLoop();wearableLoop();badgeLoop();
+  uint32_t stamp=micros();auto measured=[&](int i){uint32_t end=micros();loopLastUs[i]=end-stamp;loopMaxUs[i]=std::max(loopMaxUs[i],loopLastUs[i]);stamp=end;};
+  boardLoop();measured(0);radioLoop();measured(1);storageLoop();detectorLoop();measured(2);audioLoop();measured(3);uiLoop();measured(4);badgeLoop();measured(5);
   while(Serial.available()){char c=Serial.read();if(c=='\n'){serialLine.trim();if(serialOverflow)Serial.println("COMMAND_ERROR too long");else command(serialLine);serialLine="";serialOverflow=false;}else if(serialLine.length()<600)serialLine+=c;else serialOverflow=true;}
   if(millis()-lastHealth>10000){lastHealth=millis();health();}
   delay(2);

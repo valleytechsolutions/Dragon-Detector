@@ -18,9 +18,10 @@ test('clock writes require acknowledgments and propagate RTC failure',async()=>{
  link=linkWith(['TIME_OK','CLOCK_ERROR offset']);await assert.rejects(setClock(link,1709164800,0),/offset/);
 });
 test('hardware status and orientation commands are strictly bounded',async()=>{
- const link=linkWith(['CLOCK_STATUS rtc=1 valid=1 epoch=1709164800 offset=-240','ORIENTATION_STATUS imu=1 auto=0 degrees=90 reference=0 changes=2 accel=0,1,0']);
- assert.deepEqual(await readWearable(link),{rtc:true,valid:true,epoch:1709164800,offset:-240,imu:true,orientation:'90'});
- for(const value of ['auto','0','90','180','270']){const l=linkWith(['ORIENTATION_OK']);await setOrientation(l,value);assert.deepEqual(l.writes,[`orientation set ${value}`]);}
+ const link=linkWith(['CLOCK_STATUS rtc=1 valid=1 epoch=1709164800 offset=-240','ORIENTATION_STATUS manual=1 degrees=90']);
+ assert.deepEqual(await readWearable(link),{rtc:true,valid:true,epoch:1709164800,offset:-240,orientation:'90'});
+ for(const value of ['0','90','180','270']){const l=linkWith(['ORIENTATION_OK']);await setOrientation(l,value);assert.deepEqual(l.writes,[`orientation set ${value}`]);}
  await assert.rejects(setOrientation(linkWith([]),'45'),/Choose/);
- await assert.rejects(setOrientation(linkWith(['ORIENTATION_ERROR unavailable']),'auto'),/unavailable/);
+ await assert.rejects(setOrientation(linkWith([]),'auto'),/Choose/);
+ await assert.rejects(setOrientation(linkWith(['ORIENTATION_ERROR unavailable']),'90'),/unavailable/);
 });

@@ -1,4 +1,5 @@
 #include "app.h"
+#include "radar_colors.h"
 #include "board_pins.h"
 #include "radar_layout.h"
 #include <lvgl.h>
@@ -31,7 +32,7 @@ extern const lv_img_dsc_t radar_logo;
 #define FTIMER (&lv_font_montserrat_32)
 #endif
 static const int CENTER=SCREEN_RES/2;
-enum Page {Boot,Radar,Menu,Devices,Details,Alerts,Channels,Files,Audio,Settings,About,Badge,Hunt,Detectors,History,HistoryDetail,Rules,Controls,Display,Diagnostics,Activity,RadarStyle,Stopwatch,Laps,Clock,ClockEdit,Orientation};
+enum Page {Boot,Radar,Menu,Devices,Details,Alerts,Channels,Files,Audio,Settings,About,Badge,Hunt,Detectors,History,HistoryDetail,Rules,Controls,Display,Diagnostics,Activity,RadarStyle,Stopwatch,Laps,Clock,ClockEdit,Orientation,FamilyColors};
 static Page page=Boot,pending=Boot;
 static lv_obj_t *root,*body,*statusLabel,*audioLabel,*audioMeter,*radar,*micBadge;
 static int menuTab=0,filter=0,selected=-1,filePage=0,brightness=100,historyPage=0;
@@ -77,7 +78,6 @@ static String directory="/";
 struct FileRow {String path;bool dir;uint32_t size;};static FileRow files[96];static int fileCount=0;static bool filesTruncated=false;
 struct Dot {int x,y,index;dragon::DeviceKey key;int labelSlot=-1;};static Dot dots[MAX_CONTACTS];static int dotCount=0;
 static lv_color_t color(uint32_t c){return lv_color_hex(c);}
-static uint32_t familyColor(Family f){switch(f){case Family::Flock:return 0xff6878;case Family::Axon:return 0xf5b565;case Family::Meta:return 0xb8a0ff;case Family::Pineapple:return 0xffff70;case Family::Pwnagotchi:return 0xff86db;case Family::Nyanbox:return 0x80eaff;case Family::Halehound:return 0xff582f;case Family::Tracker:return 0x99abff;case Family::Skimmer:return 0xffbb88;case Family::Ble:return 0x83def0;default:return 0xfcdc58;}}
 static lv_obj_t* label(lv_obj_t* parent,const char* text,int x,int y,int w=0,const lv_font_t* font=F14,uint32_t c=0xd9efe0){
   auto* o=lv_label_create(parent);lv_label_set_text(o,text);lv_obj_set_pos(o,S(x),S(y));if(w)lv_obj_set_width(o,S(w));lv_obj_set_style_text_font(o,font,0);lv_obj_set_style_text_color(o,color(c),0);return o;
 }
@@ -166,9 +166,10 @@ static const char* radarFamilyName(Family f){
 static void callout(lv_draw_ctx_t* ctx,const Dot& dot,unsigned slot,const char* text,uint32_t c){
   auto b=dragon::radarLabelSlot(slot);int x=S(b.x),y=S(b.y),w=S(b.w),h=S(b.h);
   int edgeX=constrain(dot.x,x,x+w),edgeY=constrain(dot.y,y,y+h);
-  line(ctx,dot.x,dot.y,edgeX,edgeY,c,1,190);
-  lv_draw_rect_dsc_t box;lv_draw_rect_dsc_init(&box);box.radius=S(4);box.bg_color=color(radarPalettes[radarTheme].bottom);box.bg_opa=LV_OPA_90;
-  box.border_color=color(c);box.border_opa=LV_OPA_50;box.border_width=1;
+  line(ctx,dot.x,dot.y,edgeX,edgeY,dragon::RadarLabelBackground,S(4),255);
+  line(ctx,dot.x,dot.y,edgeX,edgeY,c,S(2),255);
+  lv_draw_rect_dsc_t box;lv_draw_rect_dsc_init(&box);box.radius=S(4);box.bg_color=color(dragon::RadarLabelBackground);box.bg_opa=LV_OPA_COVER;
+  box.border_color=color(c);box.border_opa=LV_OPA_80;box.border_width=1;
   lv_area_t area{(lv_coord_t)x,(lv_coord_t)y,(lv_coord_t)(x+w),(lv_coord_t)(y+h)};lv_draw_rect(ctx,&box,&area);
   lv_draw_label_dsc_t d;lv_draw_label_dsc_init(&d);d.color=color(c);d.font=FCALLOUT;
   lv_area_t textArea{(lv_coord_t)(x+S(4)),(lv_coord_t)(y+S(3)),(lv_coord_t)(x+w-S(4)),(lv_coord_t)(y+h-S(3))};
@@ -213,13 +214,14 @@ static void radarDraw(lv_event_t* e){
     if(changed||uint32_t(now-labelsAt)>=500){dragon::placeRadarLabels(points,dotCount,slots,preferred);labelsAt=now;priorCount=dotCount;for(int i=0;i<dotCount;++i)labelKeys[i]=dots[i].key;}
     for(int i=0;i<dotCount;++i){auto& c=contacts[dots[i].index];Family family=visibleFamily(c,now,detector.families);uint32_t age=now-c.seen;
       char state[24],text[64];if(age>=10000)snprintf(state,sizeof(state),"%s %lus AGO",c.match.confidence==Confidence::Low&&!trafficFresh(c,now)?"CLUE":"SEEN",(unsigned long)(age/1000));else snprintf(state,sizeof(state),"%s",c.match.confidence==Confidence::Low&&!trafficFresh(c,now)?"WEAK CLUE":age>=5000?"FADING":c.rssi>=-55?"STRONG":c.rssi>=-75?"MODERATE":"FAINT");
-      dots[i].labelSlot=slots[i];snprintf(text,sizeof(text),"%s\n%s",radarFamilyName(family),state);callout(ctx,dots[i],slots[i],text,trafficFresh(c,now)?0xff7161:age>=30000?0xa49772:theme.dot);
+      dots[i].labelSlot=slots[i];snprintf(text,sizeof(text),"%s\n%s",radarFamilyName(family),state);callout(ctx,dots[i],slots[i],text,dragon::familyColor(family));
     }
   }
-  for(int i=0;i<dotCount;++i){auto& dot=dots[i];auto& c=contacts[dot.index];int x=dot.x,y=dot.y;uint32_t age=now-c.seen;uint8_t opacity=age>=30000?130:dragon::radarOpacity(age);
-    if(age>=30000 || (c.match.confidence==Confidence::Low&&!trafficFresh(c,now))){auto clue=arc;clue.color=color(theme.dot);clue.opa=opacity;clue.width=2;lv_point_t point{(lv_coord_t)x,(lv_coord_t)y};
+  for(int i=0;i<dotCount;++i){auto& dot=dots[i];auto& c=contacts[dot.index];int x=dot.x,y=dot.y;uint32_t age=now-c.seen;uint8_t opacity=std::max<uint8_t>(205,dragon::radarOpacity(age));uint32_t deviceColor=dragon::familyColor(visibleFamily(c,now,detector.families));
+    disc(ctx,x,y,S(8),dragon::RadarLabelBackground);
+    if(age>=30000 || (c.match.confidence==Confidence::Low&&!trafficFresh(c,now))){auto clue=arc;clue.color=color(deviceColor);clue.opa=opacity;clue.width=S(2);lv_point_t point{(lv_coord_t)x,(lv_coord_t)y};
       if(age>=30000)for(int a=0;a<360;a+=90)lv_draw_arc(ctx,&clue,&point,S(6),a,a+48);else lv_draw_arc(ctx,&clue,&point,S(5),0,359);
-    }else{unsigned pulse=radioEnabled?unsigned((now+contactHash(contactKey(c)))%1800):900;pulse=pulse>900?1800-pulse:pulse;disc(ctx,x,y,S(9),theme.dot,unsigned(opacity)*(25+pulse/20)/255);disc(ctx,x,y,S(5),theme.dot,opacity);disc(ctx,x-S(1),y-S(1),S(2),0xfff8ab,opacity);}
+    }else{unsigned pulse=radioEnabled?unsigned((now+contactHash(contactKey(c)))%1800):900;pulse=pulse>900?1800-pulse:pulse;disc(ctx,x,y,S(9),deviceColor,unsigned(opacity)*(25+pulse/20)/255);disc(ctx,x,y,S(5),deviceColor,opacity);disc(ctx,x-S(1),y-S(1),S(2),0xffffff,opacity);}
     if(dot.index==trackedContact || (detector.enabled(c.trafficFamily)&&trafficFresh(c,now))){auto lock=arc;lock.color=color(dot.index==trackedContact?theme.text:0xff5040);lock.opa=220;lock.width=2;lv_point_t point{(lv_coord_t)x,(lv_coord_t)y};lv_draw_arc(ctx,&lock,&point,S(12),0,359);}
   }
   // Decorative center cursor, not a compass. Keep it above the sweep/labels.
@@ -350,7 +352,7 @@ static void build(){
   }else if(page==Settings){
     title("SETTINGS");body=scrollBody();int n=0;
     row(body,"Clock & date",rtcAvailable?"Set battery-backed RTC / local time":"Software clock / USB time sync",n++,133);
-    row(body,"Orientation",orientation.automatic?"Stable tilt / automatic":"Locked / choose a fixed angle",n++,135);
+    row(body,"Orientation","Choose a saved fixed angle",n++,135);
     row(body,"Display & timeouts","Brightness, dimming and screen off",n++,71);
     row(body,"Radar theme & labels",radarThemeNames[radarTheme],n++,117);
     row(body,"Audio & hunt tones","Volume, target focus and RTTTL alerts",n++,31);
@@ -400,15 +402,15 @@ static void build(){
     button(root,"< FIELD",65,221,109,35,139);button(root,"FIELD >",185,221,109,35,140);
     button(root,"Cancel",73,269,100,33,133);button(root,"Save",185,269,100,33,141);updateDateEditor();
   }else if(page==Orientation){
-    title("ORIENTATION");body=scrollBody();int n=0;
-    row(body,orientation.automatic?"Auto rotate: ON":"Auto rotate: OFF",imuAvailable?"1.2s stable tilt / ignores touch & motion":"No supported accelerometer found",n++,142);
-    row(body,"Lock current orientation","Keep this angle, including after restart",n++,143);
-    for(int r=0;r<4;++r){char text[50];snprintf(text,sizeof(text),"Lock at %d degrees",r*90);row(body,text,"Clockwise from the native display",n++,144+r);}
-    if(imuAvailable)row(body,"Set upright reference","Hold upright and still for 1.2s, then tap",n++,148);
-    row(body,"How auto rotation works","Flat / diagonal / moving: keep current angle",n++,149);
+    title("ORIENTATION","Saved angle / touch follows the display");body=scrollBody();int n=0;
+    for(int r=0;r<4;++r){char text[50];snprintf(text,sizeof(text),"%s%d degrees",((4-displayRotation)&3)==r?LV_SYMBOL_OK "  ":"",r*90);row(body,text,"Clockwise / retained after restart",n++,144+r);}
+  }else if(page==FamilyColors){
+    title("DEVICE COLORS","Same family color in every theme");body=scrollBody();
+    for(unsigned i=0;i<unsigned(Family::Count);++i)row(body,dragon::familyName(Family(i)),"Dot, leader and label",i,0,dragon::familyColor(Family(i)));
   }else if(page==RadarStyle){
     title("RADAR STYLE");body=scrollBody();int n=0;
-    for(int i=0;i<3;++i){String name=String(radarTheme==i?LV_SYMBOL_OK "  ":"")+radarThemeNames[i];row(body,name.c_str(),i==0?"Emerald grid / yellow signals":i==1?"Green phosphor / rings and live sweep":"Dark field / gold targets / red sweep",n++,118+i);}
+    for(int i=0;i<3;++i){String name=String(radarTheme==i?LV_SYMBOL_OK "  ":"")+radarThemeNames[i];row(body,name.c_str(),i==0?"Emerald grid / colored device families":i==1?"Green phosphor / rings and live sweep":"Dark field / gold rings / red sweep",n++,118+i);}
+    row(body,"Device color legend","Unique family colors in every theme",n++,150);
     row(body,radarLabels?"Device labels: ON":"Device labels: OFF",radarLabels?"Every dot labeled / six per radar page":"All dots together / tap for evidence",n++,121);
     row(body,radarRecent?"Recent signals: 2 minutes":"Recent signals: OFF","Stale dots show last-seen age, not live RSSI",n++,124);
   }else if(page==Display){
@@ -441,6 +443,7 @@ static void action(lv_event_t* e){
   if(id>=5000&&id<5000+int(RULE_LIMIT)){controlKey=ruleKeys[id-5000];controlChannel=0;go(Controls);return;}
   if(id>=201 && id<=211){trackedContact=-1;channelLock=id-200;setRadio(true);go(Channels);page=Boot;return;}
   switch(id){
+    case 150:go(FamilyColors);break;
     case 130:go(Stopwatch);break;
     case 131:if(!resetBox){stopwatch.toggle(stopwatchNow());updateTimer();}break;
     case 132:if(!resetBox){if(stopwatch.running)stopwatch.lap(stopwatchNow());else resetStopwatch();updateTimer();}break;
@@ -455,11 +458,7 @@ static void action(lv_event_t* e){
     }
     case 139:case 140:editIndex=(editIndex+(id==140?1:6))%7;updateDateEditor();break;
     case 141:{int64_t epoch=int64_t(dragon::dateEpoch(editDate))-editOffset*60;if(dragon::validEpoch(epoch)&&configureClock(epoch)){configureClockOffset(editOffset);go(Clock);}else {lv_label_set_text(editPreview,"Could not save time.\nCheck date / RTC connection.");}break;}
-    case 142:if(!configureOrientation(orientation.automatic?int(((4-orientation.rotation)&3)*90):-1))uiNotify("AUTO UNAVAILABLE","No supported motion sensor or rotation buffer.",nullptr,false);else{go(Orientation);page=Boot;}break;
-    case 143:configureOrientation(((4-orientation.rotation)&3)*90);go(Orientation);page=Boot;break;
     case 144:case 145:case 146:case 147:configureOrientation((id-144)*90);go(Orientation);page=Boot;break;
-    case 148:uiNotify(calibrateOrientation()?"REFERENCE SAVED":"HOLD STILL","Hold the display upright (not flat) for 1.2 seconds before setting its upright reference.",nullptr,false);break;
-    case 149:uiNotify("STEADY ROTATION","Auto waits 1.2s at a clear angle, ignores motion, flat positions and touch, and waits between turns. Fixed angles are saved.",nullptr,false);break;
     case 1:go(Radar);break;case 2:go(Menu);break;
     case 10:case 11:case 12:menuTab=id-10;go(Menu);page=Boot;break;
     case 20:filter=1;devicePage=0;go(Devices);break;case 21:filter=2;devicePage=0;go(Devices);break;case 22:go(Alerts);break;case 23:go(Channels);break;
@@ -533,7 +532,6 @@ static void action(lv_event_t* e){
   }
 }
 bool uiTouch(bool pressed,int,int){
-  orientationTouch(pressed);
   static bool consumeWake=false;
   if(pressed && outputBrightness==0)consumeWake=true;
   if(pressed)lastInteraction=millis();
@@ -542,6 +540,7 @@ bool uiTouch(bool pressed,int,int){
   return true;
 }
 void uiShow(const String& name){
+  if(name=="device-colors"){go(FamilyColors);return;}
   if(name=="stopwatch"){go(Stopwatch);return;}if(name=="clock"){go(Clock);return;}if(name=="orientation"){go(Orientation);return;}if(name=="laps"){go(Laps);return;}
   if(name=="radar-style"){go(RadarStyle);return;}
   lastInteraction=millis();
@@ -607,10 +606,10 @@ void uiLoop(){
 }
 
 void uiKey(bool home){lastInteraction=millis();go(home?Radar:page==Menu?Badge:Menu);}
-bool uiStopwatchKey(bool start){
+bool uiStopwatchKey(bool start,uint64_t at){
   if(page!=Stopwatch||pending!=Stopwatch)return false;lastInteraction=millis();
   if(resetBox)return true;
-  if(start)stopwatch.toggle(stopwatchNow());else if(stopwatch.running)stopwatch.lap(stopwatchNow());else resetStopwatch();
+  if(!at)at=stopwatchNow();if(start)stopwatch.toggle(at);else if(stopwatch.running)stopwatch.lap(at);else resetStopwatch();
   updateTimer();return true;
 }
 bool uiCommand(const String& cmd){

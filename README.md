@@ -6,7 +6,7 @@
 
 **[Open the web flasher & detector tools](https://valleytechsolutions.github.io/Dragon-Detector/)** · [Install guide](docs/FLASHING.md) · [Controls](docs/USER-GUIDE.md) · [Detection evidence](docs/DETECTION.md) · [Credits](CREDITS.md)
 
-Version **0.9.0** is an experimental development release. See [what has actually been tested](docs/VALIDATION.md) before installing. The flasher requires desktop Chrome/Edge, HTTPS, a USB data cable, and the exact board selection; it stays disabled if matching release files are unavailable.
+Version **0.9.1** is an experimental development release. See [what has actually been tested](docs/VALIDATION.md) before installing. The flasher requires desktop Chrome/Edge, HTTPS, a USB data cable, and the exact board selection; it stays disabled if matching release files are unavailable.
 
 ## Choose the exact board
 
@@ -26,11 +26,11 @@ Photographs are manufacturer-hosted identification images, not pictures of this 
 
 ## A radar you can wear
 
-![Dragon Detector 0.7 radar captured from the attached Waveshare renderer](media/radar-v07.png)
+![Dragon Detector 0.9.1 radar captured from the attached M5Stack renderer](media/radar-green-v091.png)
 
-*Green radar theme with animated sweep, labeled signals and owner-supplied BWM1 logo. Inward means stronger filtered RSSI, with no numerical distance scale. Actual 466×466 LVGL render from Waveshare 1.75C, not a panel photograph. Targets opens the paged list; the speaker button toggles quiet mode.*
+*Green radar theme with animated sweep, labeled signals and owner-supplied BWM1 logo. Inward means stronger filtered RSSI, with no numerical distance scale. Actual 466×466 LVGL render from M5Stack StopWatch C152, not a panel photograph. Targets opens the paged list; the speaker button toggles quiet mode.*
 
-- **Three radar themes:** Green radar (default), Dragon Ball, and Black / gold / red. Animated sweep, pulsing signals, a label and leader for every plotted dot, and six labeled targets per page. Tap the label or dot for evidence and Hunt; choose your theme in Settings or the USB web tools.
+- **Three radar themes:** Green radar (default), Dragon Ball, and Black / gold / red. Each of the 26 device families has its own fixed color for dots, labels and leaders, with a [color legend](docs/RADAR-COLORS.md). Animated sweep, pulsing signals, a label and leader for every plotted dot, and six labeled targets per page. Tap the label or dot for evidence and Hunt; choose your theme in Settings or the USB web tools.
 - **Audited signature coverage:** all 134 table entries in the pinned SquachWatch reference have recognition and radar tests. Includes Flipper, Wi-Fi Pineapple, Pwnagotchi, nyanBOX, Biscuit, Flock, Axon/TASER, Raven, camera glasses, Find My/DULT, SmartTag, Google Find Hub, Tile, Ring/camera/ALPR vendors, decoded drone Remote ID, iBeacon, pentest devices, disconnect bursts and SSID security conflicts. [Coverage and comparison](docs/DETECTION-PARITY.md).
 - **All recognized candidates on radar:** first sightings appear immediately; hollow dots distinguish weak clues. Intermittent signals remain for up to two minutes with a segmented marker and explicit last-seen age. A paged Targets list, quick quiet toggle and live radio-health screen make crowded areas easier to navigate.
 - **Traffic awareness:** Wi-Fi deauthentication/disassociation bursts and BLE pairing/tag spam candidates, with a radar activity banner, counts, protocol/channel evidence and a dedicated Activity screen. See [how traffic detection works](docs/RADAR-AND-ACTIVITY.md).
@@ -47,19 +47,19 @@ Photographs are manufacturer-hosted identification images, not pictures of this 
 
 ## Stopwatch, clock and orientation
 
-**Tools → Daily** now includes a real start/pause/lap stopwatch and a clock. M5Stack yellow/blue and Waveshare BOOT/short PWR operate timing controls; every board also has touch buttons. The latest 50 laps remain available while detection keeps running. Settings provides RTC date/time and local UTC offset, stable-tilt automatic rotation on supported IMUs, and saved orientation locks on all three boards. [Controls, behavior and hardware limits](docs/STOPWATCH-CLOCK-ORIENTATION.md).
+**Tools → Daily** now includes a real start/pause/lap stopwatch and a clock. M5Stack yellow/blue and Waveshare BOOT/short PWR operate timing controls; every board also has touch buttons. The latest 50 laps remain available while detection keeps running. Settings provides RTC date/time and local UTC offset, saved 0°/90°/180°/270° orientation on all three boards. [Controls, behavior and hardware limits](docs/STOPWATCH-CLOCK-ORIENTATION.md).
 
 | Stopwatch · 0.9 | Clock · 0.9 |
 |---|---|
 | ![Stopwatch with elapsed time and touch controls](media/stopwatch-timer-v09.png) | ![Clock with local date and UTC offset](media/stopwatch-clock-v09.png) |
 
-Actual logical renderer captures from the attached M5Stack. Automatic rotation is opt-in and waits for a steady tilt; fresh installations stay locked upright. [Clock and orientation web controls](https://valleytechsolutions.github.io/Dragon-Detector/#detector) are available after connecting firmware 0.9.
+Actual logical renderer captures from the attached M5Stack. Orientation changes only through Settings or the USB tools; fresh installations stay upright. [Clock and orientation web controls](https://valleytechsolutions.github.io/Dragon-Detector/#detector) are available after connecting firmware 0.9.
 
 ## Choose your radar
 
 | Dragon Ball | Black / gold / red |
 |---|---|
-| ![Dragon Ball theme, actual Waveshare LVGL render](media/radar-dragon-v07.png) | ![Black/gold/red theme, actual Waveshare LVGL render](media/radar-gold-v07.png) |
+| ![Dragon Ball theme, actual M5Stack LVGL render](media/radar-dragon-v091.png) | ![Black/gold/red theme, actual M5Stack LVGL render](media/radar-gold-v091.png) |
 
 Settings → Radar theme & labels saves the theme, label preference and recent-signal retention. The images are actual 466×466 renderer captures of received contacts, not physical-panel photographs.
 

@@ -48,43 +48,4 @@ inline PixelPoint rotatePoint(int x,int y,int size,uint8_t r){
 }
 inline PixelPoint unrotatePoint(int x,int y,int size,uint8_t r){return rotatePoint(x,y,size,(4-r)&3);}
 
-class StableOrientation {
- public:
-  static constexpr uint32_t HoldMs=1200,CooldownMs=1500;
-  uint8_t rotation=0,reference=0;
-  bool automatic=false;
-  float x=0,y=0,z=0;
-  uint32_t changes=0;
-  // Calibration establishes which sensor edge is the user's upright edge.
-  bool calibrate(uint32_t now){if(!initialized||now-lastSample>200||!stable||now-stableAt<HoldMs)return false;reference=(quadrant()+4-rotation)&3;resetCandidate();return true;}
-  void lock(uint8_t r){automatic=false;rotation=r&3;resetCandidate();}
-  void setAuto(bool on){automatic=on;resetCandidate();}
-  void missing(){initialized=false;stable=false;resetCandidate();}
-  bool sample(float ax,float ay,float az,uint32_t now,bool interacting){
-    if(!std::isfinite(ax)||!std::isfinite(ay)||!std::isfinite(az)){missing();return false;}
-    float magnitude=ax*ax+ay*ay+az*az;
-    bool gap=!initialized||uint32_t(now-lastSample)>200;
-    float motion=gap?1:std::fabs(ax-rawX)+std::fabs(ay-rawY)+std::fabs(az-rawZ);
-    rawX=ax;rawY=ay;rawZ=az;lastSample=now;
-    if(gap){x=ax;y=ay;z=az;initialized=true;resetCandidate();stable=false;}
-    else{x+=(ax-x)*0.2f;y+=(ay-y)*0.2f;z+=(az-z)*0.2f;}
-    float major=std::max(std::fabs(x),std::fabs(y)),minor=std::min(std::fabs(x),std::fabs(y));
-    bool usable=magnitude>=0.64f&&magnitude<=1.44f&&motion<0.14f&&std::fabs(z)<0.75f&&major>0.65f&&major>minor*1.65f;
-    if(!usable){stable=false;resetCandidate();return false;}
-    if(!stable){stable=true;stableAt=now;}
-    if(!automatic||interacting){resetCandidate();return false;}
-    uint8_t desired=(quadrant()+4-reference)&3;
-    if(desired==rotation){resetCandidate();return false;}
-    if(candidate!=desired){candidate=desired;candidateAt=now;return false;}
-    if(now-candidateAt<HoldMs|| (hasChanged&&now-changedAt<CooldownMs))return false;
-    rotation=desired;changedAt=now;hasChanged=true;++changes;resetCandidate();return true;
-  }
- private:
-  uint8_t quadrant() const {return std::fabs(y)>=std::fabs(x)?(y>=0?0:2):(x>=0?1:3);}
-  void resetCandidate(){candidate=255;}
-  uint8_t candidate=255;
-  bool initialized=false,stable=false,hasChanged=false;
-  float rawX=0,rawY=0,rawZ=0;
-  uint32_t lastSample=0,stableAt=0,candidateAt=0,changedAt=0;
-};
 }

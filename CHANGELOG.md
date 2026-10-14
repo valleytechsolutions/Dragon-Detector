@@ -1,5 +1,12 @@
 # Changes
 
+## 0.9.1 — Manual orientation, responsive touch and device colors
+
+- Use saved 0°/90°/180°/270° display orientation on every board. Remove automatic rotation, calibration and motion polling; clear old Auto preferences on update. Match touch coordinates to the chosen angle.
+- Buffer M5Stack touch transitions and timestamped hardware keys at 100 Hz so short presses survive a radar redraw. Use persistent PSRAM display buffers on its synchronous M5GFX path to reduce repeated drawing and free internal memory.
+- Give all 26 device families distinct RGB565 colors shared by dots, leaders and labels across all three themes. Use opaque dark label plates, stronger leaders and dark marker outlines for contrast; retain hollow/segmented markers and explicit last-seen text for weak/older evidence. Add an on-device color legend.
+- Keep the stopwatch, RTC editor, web daily tools and existing detector behavior. Add family-color uniqueness/contrast checks alongside stopwatch/date/rotation tests.
+
 ## 0.9.0 — Stopwatch, clock and steady orientation
 
 - Add a monotonic stopwatch with start/pause, guarded reset, 50 recent split/total laps and background timing. Map M5Stack yellow/blue and Waveshare BOOT/short PWR; provide touch controls on every board.

@@ -11,14 +11,12 @@
 #include <TouchDrvCSTXXX.hpp>
 #define XPOWERS_CHIP_AXP2101
 #include <XPowersLib.h>
-#include <SensorQMI8658.hpp>
 #include <time.h>
 
 static esp_lcd_panel_io_handle_t panelIo=nullptr;
 static esp_lcd_panel_handle_t panel=nullptr;
 static TouchDrvCST92xx touch;
 static XPowersPMU power;
-static SensorQMI8658 imu;
 static bool touchReady=false,powerReady=false;
 static volatile bool touchIrq=false;
 static void IRAM_ATTR onTouch(){touchIrq=true;}
@@ -117,10 +115,7 @@ static bool rtcRead(uint8_t reg,uint8_t* data,size_t count){
 static bool rtcWrite(uint8_t reg,const uint8_t* data,size_t count){Wire.beginTransmission(0x51);Wire.write(reg);Wire.write(data,count);return Wire.endTransmission()==0;}
 void boardSensorsBegin(){
   uint8_t ctrl=0;rtcAvailable=rtcRead(0,&ctrl,1);
-  imuAvailable=imu.begin(Wire,QMI8658_L_SLAVE_ADDRESS,IIC_SDA,IIC_SCL);
-  if(imuAvailable){imu.configAccelerometer(SensorQMI8658::ACC_RANGE_2G,SensorQMI8658::ACC_ODR_62_5Hz,SensorQMI8658::LPF_MODE_0);imu.enableAccelerometer();}
 }
-bool boardReadAcceleration(float& x,float& y,float& z){return imuAvailable&&imu.getDataReady()&&imu.getAccelerometer(x,y,z);}
 static int decodeBcd(uint8_t v){return (v&15)<=9&&(v>>4)<=9?(v>>4)*10+(v&15):-1;}
 bool boardReadRtc(uint32_t& epoch){
   uint8_t ctrl=0,b[7]{};if(!rtcAvailable||!rtcRead(0,&ctrl,1)||(ctrl&0x22)||!rtcRead(4,b,7)||(b[0]&0x80))return false;

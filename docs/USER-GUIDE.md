@@ -1,4 +1,4 @@
-# Daily detection and hunting · 0.9.0
+# Daily detection and hunting · 0.9.1
 
 The radar starts at **100% brightness with no automatic dimming or screen-off timeout**. It listens passively on 2.4 GHz Wi-Fi and Bluetooth LE. The optional training fox transmitter is off at every boot.
 
@@ -123,4 +123,4 @@ Additional USB commands: `radio active`, `radio passive`, `screen targets`, `scr
 
 ## Daily timing and orientation
 
-Tools → Daily → Stopwatch provides touch Start/Pause, Lap/Reset, and a lap list; hardware keys work while that page is open. Tools → Daily → Clock and Settings → Clock & date configure the local clock. Settings → Orientation offers steady automatic rotation or saved fixed angles. [Full stopwatch, RTC and orientation guide](STOPWATCH-CLOCK-ORIENTATION.md).
+Tools → Daily → Stopwatch provides touch Start/Pause, Lap/Reset, and a lap list; hardware keys work while that page is open. Tools → Daily → Clock and Settings → Clock & date configure the local clock. Settings → Orientation saves a fixed 0°/90°/180°/270° angle. [Full stopwatch, RTC and orientation guide](STOPWATCH-CLOCK-ORIENTATION.md).

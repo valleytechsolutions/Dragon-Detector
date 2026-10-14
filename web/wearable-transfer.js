@@ -19,12 +19,13 @@ export async function readWearable(link){
   await link.write('clock status');const c=await link.wait(s=>s.startsWith('CLOCK_STATUS '));
   await link.write('orientation status');const o=await link.wait(s=>s.startsWith('ORIENTATION_STATUS '));
   const clock=/^CLOCK_STATUS rtc=([01]) valid=([01]) epoch=(\d+) offset=(-?\d+)$/.exec(c);
-  const orientation=/^ORIENTATION_STATUS imu=([01]) auto=([01]) degrees=(0|90|180|270) /.exec(o);
-  if(!clock||!orientation)throw new Error('Invalid clock/orientation response.');
-  return {rtc:clock[1]==='1',valid:clock[2]==='1',epoch:Number(clock[3]),offset:Number(clock[4]),imu:orientation[1]==='1',orientation:orientation[2]==='1'?'auto':orientation[3]};
+  const manual=/^ORIENTATION_STATUS manual=1 degrees=(0|90|180|270)$/.exec(o);
+  const legacy=/^ORIENTATION_STATUS imu=[01] auto=[01] degrees=(0|90|180|270) /.exec(o);
+  if(!clock||(!manual&&!legacy))throw new Error('Invalid clock/orientation response.');
+  return {rtc:clock[1]==='1',valid:clock[2]==='1',epoch:Number(clock[3]),offset:Number(clock[4]),orientation:(manual||legacy)[1]};
 }
 export async function setOrientation(link,value){
-  if(!['auto','0','90','180','270'].includes(value))throw new Error('Choose an orientation.');
+  if(!['0','90','180','270'].includes(value))throw new Error('Choose an orientation.');
   await link.write(`orientation set ${value}`);
   const reply=await link.wait(s=>s==='ORIENTATION_OK'||s.startsWith('ORIENTATION_ERROR'));
   if(reply!=='ORIENTATION_OK')throw new Error(reply.replace('ORIENTATION_ERROR ','Orientation unavailable: '));

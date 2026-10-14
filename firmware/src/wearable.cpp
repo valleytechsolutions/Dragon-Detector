@@ -7,21 +7,18 @@
 #include <stdarg.h>
 
 dragon::Stopwatch stopwatch;
-dragon::StableOrientation orientation;
-bool rtcAvailable=false,imuAvailable=false;
+uint8_t displayRotation=0;
+bool rtcAvailable=false;
 int clockOffsetMinutes=0;
 static Preferences prefs;
-static bool touching=false;
-static uint32_t lastTouch=0,lastSample=0;
 static lv_color_t* rotationBuffer=nullptr;
 static void (*physicalFlush)(lv_disp_drv_t*,const lv_area_t*,lv_color_t*)=nullptr;
 uint64_t stopwatchNow(){return esp_timer_get_time();}
-void orientationTouch(bool pressed){touching=pressed;if(pressed)lastTouch=millis();}
 static void rotatedFlush(lv_disp_drv_t* drv,const lv_area_t* a,lv_color_t* pixels){
   const uint8_t r=drv->rotated;
   if(!r){physicalFlush(drv,a,pixels);return;}
   const int w=a->x2-a->x1+1,h=a->y2-a->y1+1;
-  // One persistent DMA buffer, no allocation or LVGL buffer subdivision per
+  // One persistent rotation buffer, no allocation or LVGL buffer subdivision per
   // frame. Even CO5300 update windows stay even in every orientation.
   auto p=dragon::rotatePoint(a->x1,a->y1,SCREEN_RES,r),q=dragon::rotatePoint(a->x2,a->y2,SCREEN_RES,r);
   lv_area_t out{lv_coord_t(std::min(p.x,q.x)),lv_coord_t(std::min(p.y,q.y)),lv_coord_t(std::max(p.x,q.x)),lv_coord_t(std::max(p.y,q.y))};
@@ -33,30 +30,29 @@ static void rotatedFlush(lv_disp_drv_t* drv,const lv_area_t* a,lv_color_t* pixel
 }
 static void applyRotation(){
   auto* display=lv_disp_get_default();
-  if(display->driver->rotated==orientation.rotation)return;
-  lv_disp_set_rotation(display,lv_disp_rot_t(orientation.rotation));
+  if(display->driver->rotated==displayRotation)return;
+  lv_disp_set_rotation(display,lv_disp_rot_t(displayRotation));
   for(auto* input=lv_indev_get_next(nullptr);input;input=lv_indev_get_next(input))lv_indev_reset(input,nullptr);
   lv_obj_invalidate(lv_scr_act());
 }
 void wearableBegin(){
   prefs.begin("dd-wearable",false);
   clockOffsetMinutes=constrain(prefs.getInt("utc-offset",0),-720,840);
-  orientation.reference=prefs.getUChar("reference",0)&3;
-  orientation.lock(prefs.getUChar("rotation",0));
+  displayRotation=prefs.getUChar("rotation",0)&3;
+  if(prefs.getBool("auto",false))prefs.putBool("auto",false);
   boardSensorsBegin();
   auto* driver=lv_disp_get_default()->driver;
-  rotationBuffer=(lv_color_t*)heap_caps_malloc(driver->draw_buf->size*sizeof(lv_color_t),MALLOC_CAP_INTERNAL|MALLOC_CAP_DMA);
-  if(rotationBuffer){physicalFlush=driver->flush_cb;driver->flush_cb=rotatedFlush;driver->sw_rotate=0;applyRotation();orientation.setAuto(imuAvailable&&prefs.getBool("auto",false));}
-  else {orientation.lock(0);Serial.println("ORIENTATION_ERROR memory; upright retained");}
+  #ifdef BOARD_STOPWATCH
+  // Its synchronous M5GFX transfer can consume the persistent PSRAM frame.
+  constexpr uint32_t rotationCaps=MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT;
+  #else
+  constexpr uint32_t rotationCaps=MALLOC_CAP_INTERNAL|MALLOC_CAP_DMA;
+  #endif
+  rotationBuffer=(lv_color_t*)heap_caps_malloc(driver->draw_buf->size*sizeof(lv_color_t),rotationCaps);
+  if(rotationBuffer){physicalFlush=driver->flush_cb;driver->flush_cb=rotatedFlush;driver->sw_rotate=0;applyRotation();}
+  else {displayRotation=0;Serial.println("ORIENTATION_ERROR memory; upright retained");}
   uint32_t epoch=0;if(rtcAvailable&&boardReadRtc(epoch))setWallTime(epoch);
-  Serial.printf("WEARABLE_READY rtc=%u imu=%u rotation=%u auto=%u\n",rtcAvailable,imuAvailable,orientation.rotation,orientation.automatic);
-}
-void wearableLoop(){
-  uint32_t now=millis();if(now-lastSample<50)return;lastSample=now;
-  if(!imuAvailable)return;
-  float x,y,z;
-  if(!boardReadAcceleration(x,y,z)){orientation.missing();return;}
-  if(orientation.sample(x,y,z,now,touching||now-lastTouch<500))applyRotation();
+  Serial.printf("WEARABLE_READY rtc=%u rotation=%u manual=1\n",rtcAvailable,displayRotation);
 }
 bool configureClock(uint32_t epoch){
   if(!dragon::validEpoch(epoch))return false;
@@ -70,14 +66,8 @@ void clockLocal(dragon::Calendar& date){
   date={t.tm_year+1900,t.tm_mon+1,t.tm_mday,t.tm_hour,t.tm_min,t.tm_sec};
 }
 bool configureOrientation(int degrees){
-  if(!rotationBuffer)return false;
-  if(degrees==-1){if(!imuAvailable)return false;orientation.setAuto(true);}
-  else {if(degrees<0||degrees>270||degrees%90)return false;orientation.lock((4-degrees/90)&3);prefs.putUChar("rotation",orientation.rotation);applyRotation();}
-  prefs.putBool("auto",orientation.automatic);return true;
-}
-bool calibrateOrientation(){
-  if(!imuAvailable||!orientation.calibrate(millis()))return false;
-  prefs.putUChar("reference",orientation.reference);return true;
+  if(!rotationBuffer||degrees<0||degrees>270||degrees%90)return false;
+  displayRotation=(4-degrees/90)&3;prefs.putUChar("rotation",displayRotation);applyRotation();return true;
 }
 static void reply(const char* format,...){
   char line[256];va_list args;va_start(args,format);int n=vsnprintf(line,sizeof(line),format,args);va_end(args);
@@ -90,9 +80,8 @@ static void reply(const char* format,...){
 bool wearableCommand(const String& c){
   if(c=="clock status"){reply("CLOCK_STATUS rtc=%u valid=%u epoch=%lu offset=%d\n",rtcAvailable,wallTime()!=0,wallTime(),clockOffsetMinutes);return true;}
   if(c.startsWith("clock offset ")){int minutes;char extra;if(sscanf(c.c_str(),"clock offset %d %c",&minutes,&extra)!=1||minutes< -720||minutes>840){Serial.println("CLOCK_ERROR offset");return true;}configureClockOffset(minutes);Serial.println("CLOCK_OK");return true;}
-  if(c=="orientation status"){reply("ORIENTATION_STATUS imu=%u auto=%u degrees=%u reference=%u changes=%lu accel=%.3f,%.3f,%.3f\n",imuAvailable,orientation.automatic,((4-orientation.rotation)&3)*90,orientation.reference,orientation.changes,orientation.x,orientation.y,orientation.z);return true;}
-  if(c=="orientation calibrate"){Serial.println(calibrateOrientation()?"ORIENTATION_OK":"ORIENTATION_ERROR hold upright and still for 1.2 seconds");return true;}
-  if(c.startsWith("orientation set ")){int degrees=-1;char extra;bool valid=c=="orientation set auto"||sscanf(c.c_str(),"orientation set %d %c",&degrees,&extra)==1;Serial.println(valid&&configureOrientation(degrees)?"ORIENTATION_OK":"ORIENTATION_ERROR unavailable or invalid angle");return true;}
+  if(c=="orientation status"){reply("ORIENTATION_STATUS manual=1 degrees=%u\n",((4-displayRotation)&3)*90);return true;}
+  if(c.startsWith("orientation set ")){int degrees=-1;char extra;bool valid=sscanf(c.c_str(),"orientation set %d %c",&degrees,&extra)==1;Serial.println(valid&&configureOrientation(degrees)?"ORIENTATION_OK":"ORIENTATION_ERROR unavailable or invalid angle");return true;}
   if(c=="stopwatch status"){reply("STOPWATCH_STATUS running=%u elapsed_us=%llu laps=%lu retained=%u\n",stopwatch.running,stopwatch.elapsed(stopwatchNow()),stopwatch.lapCount,unsigned(stopwatch.retained()));return true;}
   if(c=="stopwatch laps"){for(size_t i=0;i<stopwatch.retained();++i){auto* l=stopwatch.newest(i);reply("LAP %lu split_us=%llu total_us=%llu\n",l->number,l->split,l->total);}Serial.println("LAPS_END");return true;}
   if(c=="stopwatch start"){stopwatch.start(stopwatchNow());Serial.println("STOPWATCH_OK");return true;}
