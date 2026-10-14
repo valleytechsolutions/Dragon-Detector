@@ -6,7 +6,7 @@
 
 **[Open the web flasher & Badge Studio](https://valleytechsolutions.github.io/DragonBall-Z-Radar/)** · [Install guide](docs/FLASHING.md) · [Controls](docs/USER-GUIDE.md) · [Detection evidence](docs/DETECTION.md) · [Credits](CREDITS.md)
 
-Version **0.3.0** is an experimental development release. See [what has actually been tested](docs/VALIDATION.md) before installing. The flasher requires desktop Chrome/Edge, HTTPS, a USB data cable, and the exact board selection; it stays disabled if matching release files are unavailable.
+Version **0.3.1** is an experimental development release. See [what has actually been tested](docs/VALIDATION.md) before installing. The flasher requires desktop Chrome/Edge, HTTPS, a USB data cable, and the exact board selection; it stays disabled if matching release files are unavailable.
 
 ## Choose the exact board
 
@@ -39,7 +39,7 @@ Photographs are manufacturer-hosted identification images, not pictures of this 
 
 ![Browser Badge Studio with owner-supplied VTS artwork](media/badge-studio-v03.jpg)
 
-Browser capture of the 0.3.0 editor. This is a crop preview, not a photograph of a flashed device.
+Browser capture of the Badge Studio editor. This is a crop preview, not a photograph of a flashed device.
 
 ## Install and customize
 

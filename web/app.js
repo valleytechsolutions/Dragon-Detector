@@ -1,5 +1,6 @@
 import {BadgeSerial} from './serial.js';
-import {crc32, encodeBadge, cropGeometry, fitCircleZoom} from './badge-codec.js';
+import {encodeBadge, cropGeometry, fitCircleZoom} from './badge-codec.js';
+import {uploadBadge} from './badge-transfer.js';
 const $ = id => document.getElementById(id);
 const models = {spotpear:'Spotpear / Guition JC3636W518',waveshare:'Waveshare ESP32-S3-Touch-AMOLED-1.75C',stopwatch:'M5Stack StopWatch C152'};
 let board = '', releaseReady = false, request = 0;
@@ -81,16 +82,9 @@ $('upload').onclick=async()=>{
   $('disconnect').disabled=true;draw();
   try{
     const bytes=encodeBadge(ctx.getImageData(0,0,size,size).data,size);
-    link.lines=[];await link.write(`badge upload ${bytes.length} ${crc32(bytes).toString(16)}`);
-    let reply=await link.wait(s=>s==='BADGE_READY'||s.startsWith('BADGE_ERROR'));
-    if(reply!=='BADGE_READY')throw new Error(reply);
-    for(let at=0;at<bytes.length;at+=1024){const end=Math.min(at+1024,bytes.length);await link.write(bytes.subarray(at,end));
-      reply=await link.wait(s=>s.startsWith('BADGE_ERROR')||(s.startsWith('BADGE_ACK ')&&Number(s.slice(10))>=end));
-      if(reply.startsWith('BADGE_ERROR'))throw new Error(reply);
-      const percent=Math.round(end*100/bytes.length);$('progress').value=percent;$('studio-status').textContent=`Uploading ${percent}% · keep USB connected`;
-    }
-    reply=await link.wait(s=>s==='BADGE_OK'||s.startsWith('BADGE_ERROR'));
-    if(reply!=='BADGE_OK')throw new Error(reply);
+    await uploadBadge(link,bytes,percent=>{
+      $('progress').value=percent;$('studio-status').textContent=`Uploading ${percent}% · keep USB connected`;
+    });
     $('studio-status').textContent='Saved and displayed. Your badge will return after a restart. Hold the image to open tools.';
   }catch(error){$('studio-status').textContent=error.message+' Your previous saved badge is preserved.';await disconnect();}
   finally{busy=false;$('disconnect').disabled=false;draw();}

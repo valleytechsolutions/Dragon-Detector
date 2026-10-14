@@ -1,5 +1,11 @@
 # Changes
 
+## 0.3.1 — USB badge transfer fix
+
+- Reserve a 4096-byte USB receive queue before serial startup. The default 256-byte queue dropped data from the original 1024-byte image chunks on a real Waveshare 1.75C.
+- Pace browser uploads in acknowledged 128-byte chunks, also compatible with existing 0.3.0 firmware.
+- Add transfer tests covering the original queue capacity, ACK pacing, a partial final chunk and device-error handling.
+
 ## 0.3.0 — daily badge development release
 
 - Unified the application across Spotpear JC3636W518, Waveshare 1.75C and M5Stack StopWatch C152.

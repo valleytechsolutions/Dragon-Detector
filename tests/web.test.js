@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {crc32,encodeBadge,cropGeometry,fitCircleZoom} from '../web/badge-codec.js';
 import {BadgeSerial} from '../web/serial.js';
+import {uploadBadge,BADGE_CHUNK_SIZE} from '../web/badge-transfer.js';
 test('CRC matches firmware IEEE CRC-32 wire contract',()=>assert.equal(crc32(new TextEncoder().encode('123456789')),0xcbf43926));
 for(const size of [360,466])test(`DDB1 ${size}: header, exact size and RGB565 byte order`,()=>{
   const p=new Uint8Array(size*size*4);p.set([255,0,0,255,0,255,0,255,0,0,255,255]);const b=encodeBadge(p,size);
@@ -39,4 +40,25 @@ test('USB disconnect rejects a pending transfer and permits cleanup',async()=>{
 test('USB missing acknowledgement times out instead of hanging',async()=>{
   const serial=new BadgeSerial(mockPort());await serial.open();
   await assert.rejects(serial.wait(()=>false,20),/timed out/);await serial.close();
+});
+
+test('badge transfer fits a 256-byte hardware RX queue and waits for each ACK',async()=>{
+  const bytes=new Uint8Array(1031);let sent=0,awaiting=false,ready=false;const progress=[];
+  const link={lines:[],async write(data){
+    assert.equal(awaiting,false,'must consume response before next write');awaiting=true;
+    if(typeof data==='string'){assert.match(data,/^badge upload 1031 [0-9a-f]+$/);ready=true;return;}
+    assert.ok(data.length<=256,'original native USB FIFO would drop data');
+    assert.ok(data.length<=BADGE_CHUNK_SIZE);sent+=data.length;
+  },async wait(match){
+    const response=ready?'BADGE_READY':awaiting?`BADGE_ACK ${sent}`:'BADGE_OK';
+    ready=false;awaiting=false;assert.ok(match(response),response);return response;
+  }};
+  await uploadBadge(link,bytes,p=>progress.push(p));assert.equal(sent,1031);
+  assert.equal(progress.at(-1),100);assert.equal(progress.length,Math.ceil(1031/BADGE_CHUNK_SIZE));
+});
+
+test('badge transfer stops on device errors before sending more image data',async()=>{
+  let writes=0;const link={lines:[],write:async()=>{writes++;},wait:async()=>writes===1?'BADGE_READY':'BADGE_ERROR transfer or checksum'};
+  await assert.rejects(uploadBadge(link,new Uint8Array(500)),/BADGE_ERROR/);
+  assert.equal(writes,2);
 });

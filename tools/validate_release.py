@@ -12,7 +12,7 @@ for board in ('spotpear','waveshare','stopwatch'):
     records={name:sha for sha,name in (line.split() for line in (folder/'SHA256SUMS.txt').read_text().splitlines())}
     for mode in ('factory','update'):
         manifest=json.loads((folder/f'{mode}.json').read_text(encoding='utf-8'))
-        assert manifest['version']=='0.3.0'
+        assert manifest['version']=='0.3.1'
         parts=manifest['builds'][0]['parts'];end=0
         for part in parts:
             file=folder/part['path'];assert file.parent==folder and file.exists()
