@@ -28,11 +28,12 @@ static bool reserveObservation(uint8_t& index){if(xQueueReceive(freeSlots,&index
 
 static NimBLEScan* scanner;
 static uint32_t phaseStart=0,lastHop=0,lastAccounting=0;
-struct Advertiser { uint8_t mac[6]{}; uint32_t at=0; uint8_t group=0; bool used=false; };
-static Advertiser advertisers[96];
-static uint32_t lastBleAlert[4]{}; static bool bleAlerted[4]{};
+static dragon::BleBurstMonitor bleBursts;
+static dragon::WifiRetryFilter retries;
+dragon::TrafficStatus trafficStatus;
 static dragon::SsidMonitor ssids;
 static dragon::DisconnectMonitor disconnects;
+unsigned recentDisconnects(){return disconnects.recent(millis());}
 static bool fox=false;
 bool foxTransmit(){return fox;}
 void setFoxTransmit(bool enabled){
@@ -97,13 +98,13 @@ static Contact& getContact(const uint8_t* mac,bool ble,uint8_t addressType,uint3
     ++contactEvictions;
   }
   *slot={};slot->used=true;slot->ble=ble;slot->addressType=key.addressType;memcpy(slot->mac,mac,6);slot->firstSeen=now;
+  float angle=(contactHash(key)%360)*.0174532925f;slot->radarX=cosf(angle);slot->radarY=sinf(angle);
   slot->match={ble?Family::Ble:Family::Wifi,Confidence::None,"no specific signature"};
   contactCache.remember(key,slot-contacts.data);return *slot;
 }
 static void update(Contact& c,const Observation& o,const char* name,dragon::Match m){
-  if(c.packets && uint32_t(o.at-c.seen)>15000)c.trace={};
   if(c.packets && uint32_t(o.at-c.seen)>30000){c.signal={};c.matchHits=0;c.match={c.ble?Family::Ble:Family::Wifi,Confidence::None,"expired evidence"};c.signatureAlerted=false;c.wifiAlerts=0;}
-  c.signal.add(o.rssi,o.at,detector.smoothingMs);c.rssi=c.signal.value();c.trace.add(c.rssi,o.at);c.seen=o.at;c.channel=o.channel;++c.packets;
+  if(o.rssi<0 && o.rssi>=-127){c.signal.add(o.rssi,o.at,detector.smoothingMs);c.rssi=c.signal.value();c.trace.add(c.rssi,o.at);}c.seen=o.at;c.channel=o.channel;++c.packets;
   if(*name)strlcpy(c.name,name,sizeof(c.name));
   if(c.matchHits && uint32_t(o.at-c.matchedAt)>30000){c.matchHits=0;c.signatureAlerted=false;c.match={c.ble?Family::Ble:Family::Wifi,Confidence::None,"expired evidence"};}
   bool changed=m.confidence>c.match.confidence;
@@ -122,23 +123,20 @@ static void update(Contact& c,const Observation& o,const char* name,dragon::Matc
   if((fresh || (watched&&c.packets>=2)) && uint32_t(o.at-c.seen)<30000){
     bool tracker=c.match.family==Family::Tracker||c.match.family==Family::SmartTag||c.match.family==Family::GoogleTag||c.match.family==Family::Tile||c.match.family==Family::IBeacon;
     // Group heavy tag traffic rather than announcing every spoofable address.
-    if(tracker && bleAlerted[3] && uint32_t(o.at-lastBleAlert[3])<30000 && !watched)historyObserve(c,c.match.family,c.match.confidence,c.match.evidence);
+    if(tracker && bleBursts.alerted[3] && uint32_t(o.at-bleBursts.lastAlert[3])<30000 && !watched)historyObserve(c,c.match.family,c.match.confidence,c.match.evidence);
     else emitDetection(c,c.match.family,c.match.confidence,c.match.evidence);
   }
 }
 static void checkBleBurst(Contact& participant,const Observation& o,uint8_t group){
-  Advertiser* slot=nullptr;Advertiser* oldest=&advertisers[0];size_t distinct=0;
-  for(auto& a:advertisers){
-    if(a.used && a.group==group && !memcmp(a.mac,o.mac,6) && uint32_t(o.at-a.at)<=5000){a.at=o.at;return;} // duplicates alone are ordinary advertising
-    if((!a.used || uint32_t(o.at-a.at)>5000) && !slot)slot=&a;
-    if(uint32_t(o.at-a.at)>uint32_t(o.at-oldest->at))oldest=&a;
-  }
-  if(!slot)slot=oldest;memcpy(slot->mac,o.mac,6);slot->at=o.at;slot->group=group;slot->used=true;
-  for(auto& a:advertisers)if(a.used && a.group==group && uint32_t(o.at-a.at)<=5000)++distinct;
-  if(distinct>=12 && (!bleAlerted[group] || uint32_t(o.at-lastBleAlert[group])>30000)){
+  // Ignore scan-response bytes in the fingerprint, so active scanning doesn't
+  // turn one advertisement plus its response into two payload variants.
+  size_t length=o.advLength?std::min<size_t>(o.advLength,o.len):o.len;
+  auto result=bleBursts.observe(contactKey(participant),group,dragon::crc32(o.data,length),o.at);
+  if(result.alert){
     ++participant.wifiAlerts;participant.lastWifiAlert=o.at;participant.trafficFamily=Family::BleSpam;
-    emitDetection(participant,Family::BleSpam,Confidence::Medium,"12+ addresses / 5s; participant, not proven source; spoofing/crowding possible",true);
-    lastBleAlert[group]=o.at;bleAlerted[group]=true;
+    snprintf(participant.trafficEvidence,sizeof(participant.trafficEvidence),"%s: %u addresses, %u payload variants / 5s; possible spam, not proven source",dragon::bleBurstName(group),result.addresses,result.variants);
+    ++trafficStatus.bleAlerts;trafficStatus.lastBle=o.at;trafficStatus.bleGroup=group;trafficStatus.bleAddresses=result.addresses;trafficStatus.bleVariants=result.variants;
+    emitDetection(participant,Family::BleSpam,Confidence::Medium,participant.trafficEvidence,true);
   }
 }
 static void process(const Observation& o){
@@ -149,20 +147,25 @@ static void process(const Observation& o){
     if(o.len<o.original && ((o.data[0]>>2)&3)==0)return;
     auto f=dragon::parseWifi(o.data,o.len);if(!f.valid){++malformedFrames;return;}
     if(f.eapol)++eapolFrames;
+    // Data traffic must not evict the disconnect retry cache during a burst.
+    if((f.deauth||f.disassoc) && retries.duplicate(f,o.at))return;
     Contact& c=getContact(f.source,false,0,o.at);
-    if(f.retry && c.sequenceKnown && c.lastSequence==f.sequence)return;
-    c.lastSequence=f.sequence;c.sequenceKnown=true;
     update(c,o,f.name,f.match);
     if(&c-contacts.data==trackedContact && o.channel>=1 && o.channel<=11)channelLock=o.channel;
     dragon::mergeDrone(c.drone,f.drone,o.at);
     uint8_t peer[6];
     if(ssids.observe(f,o.at,peer)){
       char mac[18],msg[128];macText(peer,mac);snprintf(msg,sizeof(msg),"Same SSID, open/protected mismatch with %s; possible evil twin or network configuration",mac);
-      if(detector.enabled(Family::EvilTwin)){++c.wifiAlerts;c.lastWifiAlert=o.at;c.trafficFamily=Family::EvilTwin;emitDetection(c,Family::EvilTwin,Confidence::Medium,msg);}
+      if(detector.enabled(Family::EvilTwin)){++c.wifiAlerts;c.lastWifiAlert=o.at;c.trafficFamily=Family::EvilTwin;strlcpy(c.trafficEvidence,msg,sizeof(c.trafficEvidence));emitDetection(c,Family::EvilTwin,Confidence::Medium,msg);}
     }
-    if((f.deauth || f.disassoc) && disconnects.observe(o.at) && detector.enabled(Family::Deauth)){
-      ++c.wifiAlerts;c.lastWifiAlert=o.at;c.trafficFamily=Family::Deauth;char msg[128];snprintf(msg,sizeof(msg),"6+ disconnect frames / 3s; last CH %u; address is a participant, spoofing/configuration possible",o.channel);
-      emitDetection(c,Family::Deauth,Confidence::Medium,msg,true);
+    if(f.deauth || f.disassoc){
+      ++trafficStatus.disconnectFrames;
+      if(disconnects.observe(o.at)){
+        ++trafficStatus.disconnectAlerts;trafficStatus.lastDisconnect=o.at;trafficStatus.channel=o.channel;trafficStatus.reason=f.reason;trafficStatus.protectedFrame=f.protectedFrame;
+        ++c.wifiAlerts;c.lastWifiAlert=o.at;c.trafficFamily=Family::Deauth;
+        snprintf(c.trafficEvidence,sizeof(c.trafficEvidence),"%u+ disconnects / 3s; CH %u; %s reason %u; possible attack, source may be spoofed",disconnects.recent(o.at),o.channel,f.protectedFrame?"protected/unknown":"clear",f.reason);
+        emitDetection(c,Family::Deauth,Confidence::Medium,c.trafficEvidence,true);
+      }
     }
   }else{
     ++bleFrames;if(o.len!=o.original){++malformedFrames;return;}auto f=dragon::parseBle(o.data,o.len,o.advLength);if(!f.valid){++malformedFrames;return;}

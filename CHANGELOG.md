@@ -1,5 +1,12 @@
 # Changes
 
+## 0.6.0 — radar, tracking and traffic evidence
+
+- Replace the radar heading with the supplied BWM1 logo, retain RX/targets/battery, add dBm rings, sweep ticks, smoother marker movement and continuous age fading. Cache contact angles instead of recalculating trigonometry per marker/frame.
+- Cap median samples at 10 Hz before elapsed-time smoothing so repeated packets cannot dominate RSSI. Hunt shows raw RSSI; its 24-second trace contains actual reception gaps.
+- Improve disconnect retry filtering with a dedicated recent-frame cache and retain channel/reason evidence. Detect both changing-address BLE bursts and rapid pairing payload changes, with bounded tables, duplicate suppression and cooldowns.
+- Add Radio Activity, a radar warning banner, per-contact traffic evidence and a version-gated web shortcut. Update flasher compatibility, documentation, logo attribution and screenshots.
+
 ## 0.5.1 — diagnostic capture hardening
 
 - Diagnostic screenshots now mirror an ordinary display refresh, including overlays, instead of constructing a temporary LVGL display context. This avoids the path active during one observed panic reset in 0.5.0; the precise original panic cause was not captured.

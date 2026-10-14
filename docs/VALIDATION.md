@@ -1,4 +1,4 @@
-# Validation status · 0.5.1
+# Validation status · 0.6.0
 
 This is an experimental development release. Automated signature checks and basic board checks do not establish field detection accuracy or all-day battery life.
 
@@ -11,9 +11,25 @@ All three board profiles compile locally: Spotpear JC3636W518, Waveshare 1.75C a
 - Native C++ positive/negative fixtures cover all added detector families, dedicated/shared vendor prefixes, public/random BLE addresses, Axon manufacturer/services, Meta composite evidence, Flock probe roles, Biscuit shared-UUID exclusions, Google Find Hub framing, Tile, Raven, iBeacon defaults, and drone Remote ID BLE/beacon/NAN messages encoded with the upstream library.
 - Tracking tests cover signal spikes, reacquisition, timer rollover, history traces, alert cooldown/auto-quiet, SSID conflicts including binary SSIDs and mesh false positives, and display defaults.
 - 150,000 random inputs exercise both bounded radio parsers. A further 50,000 inputs exercise RTTTL parsing. The runner explicitly keeps assertions enabled in optimized builds. All 26 default melodies validate; tests also cover invalid notes/tempo/octaves, size and duration bounds, silence, queue coalescing/expiry/cooldown/rollover, and hunt pitch/cadence bounds. CI runs the native suite with AddressSanitizer and UndefinedBehaviorSanitizer as well.
-- Fifteen Node tests cover both image resolutions, RGB565/CRC, crop geometry, serial framing/disconnects/timeouts, acknowledged small transfers, a full 512-row history export received in one USB chunk, compatible 0.3/0.4/0.5 USB handshakes/tool availability, and the independently pinned web installer dependency.
+- Fifteen Node tests cover both image resolutions, RGB565/CRC, crop geometry, serial framing/disconnects/timeouts, acknowledged small transfers, a full 512-row history export received in one USB chunk, compatible 0.3/0.4/0.5/0.6 USB handshakes/tool availability, and the independently pinned web installer dependency.
 - The release packager checks partition sizes, every merged image segment, checksums and workstation-path exclusion. Manifests identify the exact board and distinguish fresh installs from updates.
 - Browser QA checked detector/audio settings at mobile and desktop widths, 26 family choices, disabled disconnected controls, display defaults, and absence of JavaScript errors. Badge image selection/cropping was checked in 0.3.1. Hardware USB tests use host scripts implementing the same protocol; browser USB permission-picker and end-to-end upload remain unverified.
+
+## Traffic and RSSI checks added in 0.6
+
+- The pinned SquachWatch reference was checked against the 134-entry ledger again; all recognition and radar-visibility fixtures still pass.
+- Host fixtures exercise interleaved Wi-Fi retries, destination/subtype/sequence reuse, disconnect-window expiry and truncated protected frames. BLE fixtures cover changing addresses, fixed-address pairing-payload churn, identical repeats, normal tag telemetry, sparse traffic, cooldown and timer rollover. A further 50,000 crowded observations check bounded table turnover. No attack traffic was transmitted for these checks.
+- RSSI fixtures compare identical signals arriving every 10 ms versus 100 ms, verify monotonic/clamped ring mapping, and exercise missing hunt samples, long gaps and timer rollover. These verify algorithm behavior, not physical ranging accuracy.
+- All three final board profiles build locally. The BWM1 emblem is encoded at native sizes for both display resolutions. Only Waveshare was available for physical checks; Spotpear and M5Stack require on-device validation.
+
+## Waveshare 1.75C · 0.6 hardware and browser checks
+
+- The final application was flashed at `0x10000` and hash-verified; NVS, history and badge files were retained. USB reports `BADGE_INFO 0.6.0 466 READY`; the on-board self-test passes 17/17.
+- Twelve consecutive 434,312-byte display captures passed CRC32, covering radar, Activity, Targets, a real BLE hunt, Radio health, Settings and filters. Passive and active BLE, two USB reconnects and two hunts completed with increasing uptime, no resets, no queue/storage drops and no malformed frames. Radar free internal heap was roughly 117–118 KB; the lowest observed loop stack margin was 1,948 bytes. This short desktop check does not establish all-day stability.
+- The rendered logo, RX/count/battery row, dBm rings, fading markers, Activity text and hunt values were inspected. Sparse hunt reception originally produced no joined line; individual valid samples now render as points, with gaps preserved. The published radar image is an actual LVGL capture without names or addresses, not a photograph or simulated detection.
+- `traffic status` was exercised; no deauth or BLE spam bursts were observed in the ambient run. Attack recognition is covered by host fixtures, not an over-the-air field validation. Dedicated hunting follows an observed address and cannot authenticate its transmitter.
+- The final check retained volume 100%, brightness/output 100%, dim/off timers zero, existing quiet mode and badge storage. Hunt was stopped and passive reception/radar restored. Quiet mode can be changed with the radar speaker button.
+- The local 0.6 flasher was checked at desktop and 390-pixel mobile widths with no horizontal overflow or browser errors. Both PNG assets loaded, all three board selections loaded their matching 0.6 update manifest, board changes reset confirmation, and installation stayed disabled until confirmation/component readiness. Activity stayed disabled without compatible USB firmware. The real browser USB chooser/install path remains unverified; the physical update and USB protocol checks used host tools.
 
 ## Waveshare 1.75C · 0.5 reception and resource checks
 

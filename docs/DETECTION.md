@@ -26,7 +26,7 @@ See the [SquachWatch category comparison](DETECTION-PARITY.md) for coverage, imp
 | iBeacon | Full Apple 004C 02 15 payload and exact length | Strong format evidence; common benign beacon. Enabled by default; individually configurable. |
 | Wi-Fi disconnect burst | Six deauth/disassociation observations in a rolling three seconds across source addresses | Medium traffic evidence; retries suppressed, source spoofable. |
 | SSID conflict | Three observations per BSSID over at least 400 ms, same raw SSID, open/protected mismatch, concurrent freshness | Medium possible evil twin. Multiple BSSIDs or WPA2/WPA3 suite differences alone do not alert; legitimate configurations can trigger. |
-| BLE advert burst | 12 distinct pairing/tag addresses within five seconds | Medium aggregate traffic evidence. Crowds/rotating addresses can trigger; not labeled proven fake devices. |
+| BLE advert burst | 12 distinct pairing/tag addresses within five seconds, or 24 distinct pairing payloads in five seconds | Medium aggregate traffic evidence. Crowds/rotating addresses can trigger; not labeled proven fake devices. |
 
 Identifiers in the table are hexadecimal.
 
@@ -40,7 +40,7 @@ Balanced scanning alternates 3.3 seconds Wi-Fi and 3.3 seconds BLE. Wi-Fi hops U
 
 ## Signal estimation
 
-A five-sample median precedes elapsed-time exponential smoothing (0.6/1.8/4-second constant). Trend compares filtered values over four seconds using a ±3 dB threshold. A 15-second gap resets the estimate; ten-second absence marks a hunt stale. A stale Wi-Fi hunt begins sweeping channels 1–11 after twelve seconds and locks again when its address is heard. The 48-point trace samples at most twice per second. Peak and saved mark are relative signal references, not range calibration.
+A five-sample median, accepting at most one sample per 100 ms, precedes elapsed-time exponential smoothing (0.6/1.8/4-second constant). Trend compares filtered values over four seconds using a ±3 dB threshold. A 15-second gap resets the estimate; ten-second absence marks a hunt stale. A stale Wi-Fi hunt begins sweeping channels 1–11 after twelve seconds and locks again when its address is heard. The 48-point trace covers 24 seconds with 500 ms buckets and explicit missing-signal gaps. Hunt also shows the most recent raw RSSI alongside the filtered gauge. Peak and saved mark are relative signal references, not range calibration.
 
 ## Sources
 

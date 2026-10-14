@@ -41,10 +41,12 @@ static void screenshot(){
   const size_t bytes=size_t(captureWidth)*captureHeight*sizeof(lv_color_t);
   capturePixels=(lv_color_t*)ps_calloc(1,bytes);
   if(!capturePixels){Serial.println("SCREENSHOT_FAILED memory");return;}
-  captureStage(1);const bool wasEnabled=radioEnabled;setRadio(false);
+  captureStage(1);const bool wasEnabled=radioEnabled;
   captureStage(2);panelFlush=display->driver->flush_cb;display->driver->flush_cb=captureFlush;
   lv_obj_invalidate(lv_scr_act());lv_refr_now(display);
   display->driver->flush_cb=panelFlush;
+  // Capture the live sweep before pausing reception for the bulk USB transfer.
+  setRadio(false);
   captureStage(3);
   const uint32_t crc=dragon::crc32((const uint8_t*)capturePixels,bytes)^0xffffffffu;
   Serial.printf("SCREENSHOT %u %u %u\n",captureWidth,captureHeight,unsigned(bytes));

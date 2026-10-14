@@ -4,7 +4,7 @@ import {crc32,encodeBadge,cropGeometry,fitCircleZoom} from '../web/badge-codec.j
 import {BadgeSerial} from '../web/serial.js';
 import {uploadBadge,BADGE_CHUNK_SIZE} from '../web/badge-transfer.js';
 import {readHistory} from '../web/detector-transfer.js';
-import {parseBadgeInfo,hasDetectorTools} from '../web/firmware-compat.js';
+import {parseBadgeInfo,hasDetectorTools,hasActivityTools} from '../web/firmware-compat.js';
 import {readFileSync} from 'node:fs';
 
 test('firmware release updates preserve the independently pinned installer dependency',()=>{
@@ -12,10 +12,11 @@ test('firmware release updates preserve the independently pinned installer depen
   assert.match(html,/https:\/\/unpkg\.com\/esp-web-tools@10\.4\.0\/dist\/web\/install-button\.js\?module/);
 });
 
-test('USB handshake accepts current/legacy boards and enables tools for 0.4/0.5',()=>{
-  for(const version of ['0.3.1','0.4.0','0.5.0','0.5.1'])for(const size of [360,466]){
+test('USB handshake accepts current/legacy boards and enables tools for 0.4/0.5/0.6',()=>{
+  for(const version of ['0.3.1','0.4.0','0.5.0','0.5.1','0.6.0'])for(const size of [360,466]){
     assert.deepEqual(parseBadgeInfo(`BADGE_INFO ${version} ${size} READY Test board`),{version,size,board:'Test board'});
     assert.equal(hasDetectorTools(version),!version.startsWith('0.3.'));
+    assert.equal(hasActivityTools(version),version.startsWith('0.6.'));
   }
   for(const line of ['BADGE_INFO 0.5.0 466 NO_STORAGE Board','BADGE_INFO 0.50.0 466 READY Board','BADGE_INFO 0.5.0 240 READY Board','BADGE_INFO 1.0.0 466 READY Board'])assert.equal(parseBadgeInfo(line),null);
   assert.equal(hasDetectorTools('0.50.0'),false);

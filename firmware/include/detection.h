@@ -92,7 +92,7 @@ inline bool peerName(const uint8_t* data,size_t size,char* name,size_t cap){
 }
 struct WifiFrame {
   bool valid=false, beacon=false, probe=false, deauth=false, disassoc=false, eapol=false, protectedFrame=false, retry=false;
-  uint8_t source[6]{}, bssid[6]{}, channel=0; uint16_t sequence=0, reason=0;
+  uint8_t source[6]{}, destination[6]{}, bssid[6]{}, channel=0,frameType=0; uint16_t sequence=0, reason=0;
   char name[33]{}; Match match{Family::Wifi,Confidence::None,"802.11 frame"};
   uint8_t security=0; // 0 open, 1 legacy privacy, 2 WPA, 4 RSN; bitmask
   uint8_t ssid[32]{},ssidLength=0;
@@ -112,11 +112,11 @@ inline WifiFrame parseWifi(const uint8_t* p,size_t n) {
   WifiFrame f; if(!p || n<24 || (p[0]&3))return f;
   uint8_t type=(p[0]>>2)&3, sub=p[0]>>4;
   if(type!=0 && type!=2)return f;
-  f.valid=true; memcpy(f.source,p+10,6); memcpy(f.bssid,p+16,6);
+  f.valid=true;f.frameType=p[0];memcpy(f.source,p+10,6);memcpy(f.destination,p+4,6);memcpy(f.bssid,p+16,6);
   f.sequence=(uint16_t(p[23])<<8)|p[22]; f.retry=p[1]&8; f.protectedFrame=p[1]&0x40;
   f.beacon=type==0 && (sub==8 || sub==5); f.probe=type==0 && sub==4;
   f.deauth=type==0 && sub==12; f.disassoc=type==0 && sub==10;
-  if((f.deauth || f.disassoc) && !f.protectedFrame) { if(n<26){f.valid=false;return f;} f.reason=p[24]|(uint16_t(p[25])<<8); }
+  if(f.deauth || f.disassoc) {if(n<26){f.valid=false;return f;}if(!f.protectedFrame)f.reason=p[24]|(uint16_t(p[25])<<8);}
   if(f.beacon || f.probe) {
     size_t off=f.beacon?36:24; if(n<off){f.valid=false;return f;}
     if(f.beacon && (p[34]&0x10))f.security=1;

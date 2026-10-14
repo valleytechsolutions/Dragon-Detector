@@ -1,3 +1,3 @@
 #pragma once
 // Release packager reads this same value for all board manifests.
-#define DRAGON_VERSION "0.5.1"
+#define DRAGON_VERSION "0.6.0"

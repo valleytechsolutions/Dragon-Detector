@@ -4,11 +4,11 @@
 
 1. Check the exact printed model: Spotpear JC3636W518, Waveshare **ESP32-S3-Touch-AMOLED-1.75C**, or M5Stack StopWatch C152.
 2. Select that board. The ESP32-S3 chip check does not distinguish these boards.
-3. Choose **Fresh install** for the first 0.3.x/0.4.x installation. It writes a blank badge filesystem. Back up existing firmware, files and settings first. Selecting the installer's erase option erases flash.
+3. Choose **Fresh install** for the first 0.3.x/0.4.x/0.5.x/0.6.x installation. It writes a blank badge filesystem. Back up existing firmware, files and settings first. Selecting the installer's erase option erases flash.
 4. Confirm the board/type checkbox, Connect & install, choose its serial port, and wait for verification. Reset if it stays in the bootloader.
 5. Close the installer before connecting from Badge Studio.
 
-Use **Update** only on an existing 0.3.x/0.4.x installation for the same exact board. The update manifest writes bootloader at `0x0`, partition table at `0x8000`, OTA selection data at `0xE000`, and application at `0x10000`; it skips NVS (`0x9000`) and badge storage. Leave erase unchecked. Firmware cannot preserve settings if you explicitly erase them.
+Use **Update** only on an existing 0.3.x/0.4.x/0.5.x/0.6.x installation for the same exact board. The update manifest writes bootloader at `0x0`, partition table at `0x8000`, OTA selection data at `0xE000`, and application at `0x10000`; it skips NVS (`0x9000`) and badge storage. Leave erase unchecked. Firmware cannot preserve settings if you explicitly erase them.
 
 The factory filesystem is at `0xC10000` on Spotpear/Waveshare and `0x810000` on StopWatch. A merged `factory-0x0.bin` writes intervening blank regions too, so it resets NVS and files. **Never use a merged factory BIN as a preservation update.** Earlier 0.1/0.2 binaries are retained under `hardware/` and use their older instructions.
 

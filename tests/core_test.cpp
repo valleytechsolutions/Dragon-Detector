@@ -15,7 +15,9 @@ static Match ble(const std::vector<uint8_t>& p){auto f=parseBle(p.data(),p.size(
 #include "parity_test.h"
 #include "tones_test.h"
 #include "coverage_test.h"
+#include "traffic_test.h"
 int main(){
+  trafficTests();
   parityTests();toneTests();coverageTests();
   assert(!parseBle(nullptr,0).valid && !parseWifi(nullptr,0).valid);
   assert(ble({3,0xff,0x4d,3}).family==Family::Axon);
@@ -60,7 +62,7 @@ int main(){
   for(int n=11;n<70;++n)t.add(-40,n*100);assert(t.value()>-45 && t.trend==1);
   t.add(-90,30000);assert(t.value()==-90 && t.count==1 && t.trend==0); // Reacquisition
   t.add(0,30100);assert(t.value()==-90); // Invalid RSSI never becomes near
-  SignalTrack rollover;rollover.add(-50,0xfffffff0);rollover.add(-50,40);assert(rollover.count==2 && rollover.value()==-50);
+  SignalTrack rollover;rollover.add(-50,0xfffffff0);rollover.add(-50,140);assert(rollover.count==2 && rollover.value()==-50);
   const uint8_t* check=(const uint8_t*)"123456789";
   assert((crc32(check,9)^0xffffffffu)==0xcbf43926u);
   assert((crc32(check+4,5,crc32(check,4))^0xffffffffu)==0xcbf43926u);

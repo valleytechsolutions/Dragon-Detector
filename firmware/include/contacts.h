@@ -7,9 +7,10 @@ struct Contact {
   int16_t rssi=-100; uint8_t channel=0; uint32_t seen=0,firstSeen=0,packets=0,lastLog=0;
   dragon::Match match{dragon::Family::Wifi,dragon::Confidence::None,""};
   dragon::SignalTrack signal; uint32_t matchedAt=0,matchSince=0; uint16_t matchHits=0; bool signatureAlerted=false;
-  dragon::Burst deauthBurst; uint16_t lastSequence=0; bool sequenceKnown=false;
   uint32_t wifiAlerts=0,lastWifiAlert=0;
   dragon::Family trafficFamily=dragon::Family::Deauth;
+  char trafficEvidence[128]{};
+  float radarX=0,radarY=0,plotRadius=0;
   dragon::AlertGate gate;dragon::DroneInfo drone;dragon::SignalHistory trace;
   uint32_t historyAt=0;dragon::Family historyFamily=dragon::Family::Count;
 };

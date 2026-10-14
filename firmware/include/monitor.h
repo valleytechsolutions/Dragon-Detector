@@ -30,10 +30,11 @@ struct AlertGate {
 // Six received disconnect frames in a rolling three-second window, including
 // changing/spoofed source addresses. A participant is not an identified sender.
 struct DisconnectMonitor {
-  uint32_t times[6]{},lastAlert=0;uint8_t count=0,next=0;bool alerted=false;
+  uint32_t times[64]{},lastAlert=0;uint8_t count=0,next=0;bool alerted=false;
+  unsigned recent(uint32_t now)const{unsigned n=0;for(unsigned i=0;i<count;++i)if(uint32_t(now-times[i])<=3000)++n;return n;}
   bool observe(uint32_t now){
-    times[next]=now;next=(next+1)%6;if(count<6)++count;
-    if(count==6 && uint32_t(now-times[next])<=3000 && (!alerted||uint32_t(now-lastAlert)>=15000)){
+    times[next]=now;next=(next+1)%64;if(count<64)++count;
+    if(recent(now)>=6 && (!alerted||uint32_t(now-lastAlert)>=15000)){
       lastAlert=now;alerted=true;return true;
     }return false;
   }
@@ -66,7 +67,20 @@ public:
 };
 struct SignalHistory {
   int8_t samples[48]{};uint8_t count=0,next=0;uint32_t last=0;int16_t peak=-127,mark=-127;
-  void add(int rssi,uint32_t now){if(rssi>=0||rssi<-127)return;peak=std::max<int16_t>(peak,rssi);if(count&&uint32_t(now-last)<500)return;last=now;samples[next]=rssi;next=(next+1)%48;if(count<48)++count;}
+  static constexpr int Gap=-128;
+  void push(int rssi){samples[next]=rssi;next=(next+1)%48;if(count<48)++count;}
+  void add(int rssi,uint32_t now){
+    if(rssi>=0||rssi<-127)return;peak=std::max<int16_t>(peak,rssi);
+    if(!count){last=now;push(rssi);return;}
+    uint32_t steps=uint32_t(now-last)/500;
+    if(!steps){samples[(next+47)%48]=rssi;return;}
+    for(unsigned i=1;i<std::min<uint32_t>(steps,48);++i)push(Gap);
+    push(rssi);last+=steps*500;
+  }
   int at(unsigned i)const{return samples[(next+48-count+i)%48];}
+  int recent(unsigned column,uint32_t now)const{
+    uint32_t age=uint32_t(now-last)/500;if(!count||age>=48||column>=48)return Gap;
+    int index=int(column)+int(age)+int(count)-48;return index>=0&&index<count?at(index):Gap;
+  }
 };
 }

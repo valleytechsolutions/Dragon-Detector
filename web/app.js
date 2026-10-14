@@ -2,7 +2,7 @@ import {BadgeSerial} from './serial.js';
 import {encodeBadge, cropGeometry, fitCircleZoom} from './badge-codec.js';
 import {uploadBadge} from './badge-transfer.js';
 import {readHistory} from './detector-transfer.js';
-import {parseBadgeInfo,hasDetectorTools} from './firmware-compat.js';
+import {parseBadgeInfo,hasDetectorTools,hasActivityTools} from './firmware-compat.js?v=0.6.0';
 const $ = id => document.getElementById(id);
 const models = {spotpear:'Spotpear / Guition JC3636W518',waveshare:'Waveshare ESP32-S3-Touch-AMOLED-1.75C',stopwatch:'M5Stack StopWatch C152'};
 let board = '', releaseReady = false, request = 0;
@@ -31,7 +31,7 @@ async function chooseBoard(next) {
     if(revision !== request)return;
     if(!data.builds?.length || data.builds[0].chipFamily!=='ESP32-S3')throw new Error('Invalid release manifest.');
     $('installer').setAttribute('manifest', manifest); releaseReady = true;
-    $('board-status').textContent = `${data.version} · ${mode==='factory'?'Fresh installation replaces saved history and badge files.':'Update preserves history, badges and settings; requires this board’s existing 0.3.x / 0.4.x / 0.5.x layout.'}`;
+    $('board-status').textContent = `${data.version} · ${mode==='factory'?'Fresh installation replaces saved history and badge files.':'Update preserves history, badges and settings; requires this board’s existing 0.3.x / 0.4.x / 0.5.x / 0.6.x layout.'}`;
     $('download').href = `firmware/${board}/SHA256SUMS.txt`; $('download').textContent='Firmware file checksums'; $('download').hidden=false;
     $('install-message').textContent='Confirm your board, then connect its USB port.';
   } catch(error) {
@@ -48,6 +48,7 @@ $('install-mode').onchange=()=>{if(board)chooseBoard(board);};
 const canvas=$('preview'), ctx=canvas.getContext('2d',{willReadFrequently:true});
 let photo=null, size=466, zoom=1, offsetX=0, offsetY=0, serial=null, busy=false, firmwareVersion='';
 function controls(){
+  $('show-activity').disabled=busy||!serial||!hasActivityTools(firmwareVersion);
   for(const id of ['history-export','show-radar','sync-time','display-save','sound-save','tone-load','tone-save','tone-preview','tone-reset','tone-stop'])$(id).disabled=busy||!serial||!hasDetectorTools(firmwareVersion);
   $('connect').disabled=$('detector-connect').disabled=busy||!!serial;
   $('disconnect').disabled=$('detector-disconnect').disabled=busy;
@@ -134,6 +135,7 @@ $('history-export').onclick=()=>detectorAction(async link=>{
 });
 $('sync-time').onclick=()=>detectorAction(async link=>{await link.write(`time ${Math.floor(Date.now()/1000)}`);await link.wait(s=>s==='TIME_OK');$('detector-status').textContent='UTC clock synchronized for new history entries.';});
 $('show-radar').onclick=()=>detectorAction(async link=>{await link.write('screen radar');$('detector-status').textContent='Radar view selected.';});
+$('show-activity').onclick=()=>detectorAction(async link=>{await link.write('screen activity');$('detector-status').textContent='Radio Activity selected on the board: deauthentication and BLE spam evidence.';});
 $('display-save').onclick=()=>detectorAction(async link=>{const values=['display-brightness','display-dim','display-off','display-level'].map(id=>Number($(id).value));await link.write('display set '+values.join(' '));const reply=await link.wait(s=>s==='DISPLAY_OK'||s==='DISPLAY_ERROR');if(reply!=='DISPLAY_OK')throw new Error('Display settings were rejected.');$('detector-status').textContent='Display preferences saved on your detector.';});
 draw();
 

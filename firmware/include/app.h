@@ -9,6 +9,9 @@
 #include "monitor.h"
 #include "contacts.h"
 #include "version.h"
+#include "traffic.h"
+extern dragon::TrafficStatus trafficStatus;
+unsigned recentDisconnects();
 
 using dragon::Family;
 using dragon::Confidence;

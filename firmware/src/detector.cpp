@@ -144,6 +144,7 @@ bool emitDetection(Contact& c,Family family,Confidence confidence,const char* ev
   return true;
 }
 bool detectorCommand(const String& cmd){
+  if(cmd=="traffic status"){auto& t=trafficStatus;Serial.printf("TRAFFIC deauth_frames=%lu deauth_alerts=%lu recent=%u channel=%u reason=%u protected=%u ble_alerts=%lu group=%u addresses=%u variants=%u\n",t.disconnectFrames,t.disconnectAlerts,recentDisconnects(),t.channel,t.reason,t.protectedFrame,t.bleAlerts,t.bleGroup,t.bleAddresses,t.bleVariants);return true;}
   if(cmd=="radio active"||cmd=="radio passive"){setActiveBle(cmd=="radio active");Serial.printf("RADIO_MODE active_ble=%u\n",activeBle);return true;}
   if(cmd=="history export"){bool scanning=radioEnabled;setRadio(false);if(!historyExport())Serial.println("HISTORY_ERROR");setRadio(scanning);return true;}
   if(cmd=="history clear"){historyClear();Serial.printf("HISTORY_COUNT %u\n",unsigned(historyCount));return true;}

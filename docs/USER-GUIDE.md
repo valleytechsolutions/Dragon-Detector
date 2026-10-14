@@ -1,4 +1,4 @@
-# Daily detection and hunting · 0.5.0
+# Daily detection and hunting · 0.6.0
 
 The radar starts at **100% brightness with no automatic dimming or screen-off timeout**. It listens passively on 2.4 GHz Wi-Fi and Bluetooth LE. The optional training fox transmitter is off at every boot.
 
@@ -10,12 +10,16 @@ Use **TARGETS** for a ten-row paged list ordered by evidence and signal; refresh
 
 **Settings → Radar** switches between candidates and all contacts. Disabled families and ignored addresses remain suppressed; explicitly watched addresses stay visible unless ignored. Angle is a stable visual arrangement, not a bearing; radius represents signal strength, not distance.
 
+The BWM1 emblem replaces the radar heading. RX mode, target count and battery percentage (where a fuel gauge exists) remain below it. Rings are labeled -40/-60/-80/-100 dBm; inward means stronger signal. Fading markers and AGING labels indicate older reception. The ring scale is not calibrated distance.
+
+**Tools → Activity** shows Wi-Fi disconnect and BLE spam candidates. A recent burst also adds a tappable banner to the radar. Events and contact evidence retain the reason for each alert. [Thresholds and limits](RADAR-AND-ACTIVITY.md).
+
 ## Hunt a signal
 
 1. Select a radar dot, nearby contact or saved history record, then **Hunt signal**.
 2. BLE hunts dedicate reception to BLE. Wi-Fi hunts lock to the last observed channel, or sweep Wi-Fi if the channel is unknown. Other-radio coverage is paused while hunting.
 3. Walk and compare dBm, signal trend and the trace. A less negative value is stronger. **Mark** saves the current filtered value for comparison. The peak and stability label help distinguish a sustained change from a spike.
-4. After ten seconds without reception, the gauge reports signal lost. The filter/trace reset after a long gap; the selected slot cannot be silently replaced by another device.
+4. After ten seconds without reception, the gauge reports signal lost. The filter resets after a long gap; the 24-second trace shows missing reception as gaps, and the selected slot cannot be silently replaced by another device.
 A Wi-Fi target absent for twelve seconds triggers a channel sweep; reception locks to its new channel when it returns. This follows its saved address, not a guessed identity after address rotation.
 
 5. **Stop** restores balanced Wi-Fi/BLE scanning. Returning home keeps the hunt active; tap its radar status or Tools → Hunt to return.

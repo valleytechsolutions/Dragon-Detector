@@ -1,4 +1,4 @@
-# Detection feature comparison · 0.5.0
+# Detection feature comparison · 0.6.0
 
 The requested reference is [SquachWatch-CYD](https://github.com/skizzophrenic/SquachWatch-CYD), reviewed at `a6167dbb0693963b5ad7022e7923cfb458d7676c`. Its detection families and controls informed this independently implemented Dragon Radar interface. Its GPL-3.0 application code and artwork are not incorporated into the MIT application. [Credits and license boundaries](../CREDITS.md).
 
@@ -35,7 +35,7 @@ Every detection category and all **134 table entries** in that pinned reference 
 | Type and confidence filters | Per-family visibility/alert switches; separate weak / medium+ / strong audible-alert threshold. All enabled clues remain on radar; all families enabled on fresh installs |
 | Ignore, snooze, watch | 64 address/radio rules; ignore/watch persist, snooze lasts until restart; watched addresses receive priority cards |
 | Repeated alert suppression | Off / after 5 / after 10; after the allowance, another alert needs a 7 dB stronger signal; allowance resets after 30 minutes |
-| Advertisement floods | Distinct-address grouping over five seconds; aggregated pairing/tag traffic alerts; tag cards quieted during a burst while history and watch rules remain active |
+| Advertisement floods | Distinct-address and pairing-payload grouping over five seconds; aggregated alerts and an Activity view; tag cards quieted during a burst while history and watch rules remain active |
 | Alert cards | Ten-second dismissible cards; watch cards stay until dismissed; hunt/snooze shortcuts; quiet mode |
 | Persistent history | 512 unique address/radio/family records in RAM, bounded two-file flash journal, record CRC, first-match recording, encounters, peak/last signal, UTC when synchronized |
 | Export | Local CSV through the GitHub web tool; optional additional SD event CSV/PCAP on Spotpear |
