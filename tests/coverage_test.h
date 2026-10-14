@@ -49,6 +49,7 @@ static void coverageTests(){
   Contact event;event.used=true;event.packets=1;event.seen=event.lastWifiAlert=99;event.wifiAlerts=1;event.trafficFamily=Family::BleSpam;
   settings.families=1u<<unsigned(Family::BleSpam);assert(candidateVisible(event,100,settings,false,false,false));assert(visibleFamily(event,100)==Family::BleSpam);
   settings.families=0;assert(!candidateVisible(event,100,settings,true,false,false));assert(candidateVisible(event,100,settings,false,false,true));
+  assert(visibleFamily(event,100,0)==event.match.family);
   event.seen=0xfffffff0;event.lastWifiAlert=event.seen;settings.families=1u<<unsigned(Family::BleSpam);assert(candidateVisible(event,10,settings,false,false,false));
   // Cache collision, radio/type separation and reused slots cannot alias.
   std::vector<Contact> entries(MAX_CONTACTS);ContactCache cache;

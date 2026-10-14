@@ -33,7 +33,7 @@ All **well-formed, receivable reference table signatures** have a visible candid
 
 Three locally administered patterns (`82:6B:F2`, `02:C0:CA`, `02:13:37`) are explicitly labeled address-pattern clues, not vendor assignments. Random BLE addresses never receive vendor attribution. Samsung `48:27:EA` and Sonos `00:0E:58` are excluded by both this reference revision and Dragon.
 
-Dragon deliberately rejects malformed/truncated AD fields and Apple byte sequences embedded inside unrelated fields, even where the reference's raw substring matcher would accept them. It requires decoded Remote ID for strong drone evidence; a bare FFFA service remains a visible weak clue. SSID security-conflict alerts require repeat observations to reduce transient false positives. These are evidence-quality differences, not omitted device families.
+Dragon deliberately rejects malformed/truncated AD fields and Apple byte sequences embedded inside unrelated fields, even where the reference's raw substring matcher would accept them. Names identifying the Flock Noir dashboard or Dragon Detector itself do not count as camera-name evidence. It requires decoded Remote ID for strong drone evidence; a bare FFFA service remains a visible weak clue. SSID security-conflict alerts require repeat observations to reduce transient false positives. These are evidence-quality differences, not omitted device families.
 
 ## Hardware and reception boundaries
 

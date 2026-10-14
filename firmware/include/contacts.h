@@ -42,7 +42,7 @@ inline bool candidateVisible(const Contact& c,uint32_t now,const dragon::Detecto
   bool signature=c.match.confidence!=dragon::Confidence::None && c.matchHits && uint32_t(now-c.matchedAt)<30000;
   return watch || (settings.enabled(c.match.family)&&(all||signature)) || (trafficFresh(c,now)&&settings.enabled(c.trafficFamily));
 }
-inline dragon::Family visibleFamily(const Contact& c,uint32_t now){return trafficFresh(c,now)?c.trafficFamily:c.match.family;}
+inline dragon::Family visibleFamily(const Contact& c,uint32_t now,uint32_t families=0xffffffffu){return trafficFresh(c,now)&&(families&(1u<<unsigned(c.trafficFamily)))?c.trafficFamily:c.match.family;}
 inline bool huntSweep(const Contact& c,uint32_t now){return !c.ble && (!c.packets || uint32_t(now-c.seen)>=12000);}
 inline bool preferContact(const Contact& a,const Contact& b,uint32_t now){
   if(trafficFresh(a,now)!=trafficFresh(b,now))return trafficFresh(a,now);

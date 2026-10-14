@@ -136,7 +136,7 @@ static void radarDraw(lv_event_t* e){
   for(int k=0;k<radarCount;++k){int i=radarOrder[k];auto& c=contacts[i];
     if(!radarVisible(c,now))continue;
     uint32_t hash=contactHash(contactKey(c));
-    float a=(hash%360)*.01745329f;int r=S(constrain((-c.rssi-25)*2,20,152));int x=CENTER+cosf(a)*r,y=CENTER+sinf(a)*r;uint32_t cc=familyColor(visibleFamily(c,now));
+    float a=(hash%360)*.01745329f;int r=S(constrain((-c.rssi-25)*2,20,152));int x=CENTER+cosf(a)*r,y=CENTER+sinf(a)*r;uint32_t cc=familyColor(visibleFamily(c,now,detector.families));
     uint8_t opacity=now-c.seen>10000?100:255;
     if(c.match.confidence==Confidence::Low && !trafficFresh(c,now)){
       lv_draw_arc_dsc_t clue=arc;clue.color=color(cc);clue.opa=opacity;clue.width=2;lv_point_t point{(lv_coord_t)x,(lv_coord_t)y};lv_draw_arc(ctx,&clue,&point,S(5),0,359);
@@ -146,10 +146,10 @@ static void radarDraw(lv_event_t* e){
     else if(c.match.family==Family::Meta){disc(ctx,x-u5,y,S(2),cc);disc(ctx,x+u5,y,S(2),cc);}
     else if(c.match.family==Family::Pwnagotchi || c.match.family==Family::Nyanbox){line(ctx,x-u5,y-u5,x-S(2),y-u8,cc,2);line(ctx,x+u5,y-u5,x+S(2),y-u8,cc,2);}
     else if(c.match.family!=Family::Wifi && c.match.family!=Family::Ble){line(ctx,x,y-u7,x+u7,y,cc,1);line(ctx,x+u7,y,x,y+u7,cc,1);line(ctx,x,y+u7,x-u7,y,cc,1);line(ctx,x-u7,y,x,y-u7,cc,1);}
-    if(c.wifiAlerts && millis()-c.lastWifiAlert<30000){lv_draw_arc_dsc_t d=arc;d.color=color(0xff5040);d.width=2;lv_point_t p{(lv_coord_t)x,(lv_coord_t)y};lv_draw_arc(ctx,&d,&p,S(12),0,359);}
-    if(callouts<3 && ((c.wifiAlerts && millis()-c.lastWifiAlert<30000) || c.match.confidence>=Confidence::Low)){
-      const char* text=(c.wifiAlerts && millis()-c.lastWifiAlert<30000)?dragon::familyName(c.trafficFamily):dragon::familyName(c.match.family);
-      int boxX=x<CENTER?S(216):S(26);int boxY=S(92+callouts*31);callout(ctx,x,y,boxX,boxY,text,(c.wifiAlerts && millis()-c.lastWifiAlert<30000)?0xff6655:cc);++callouts;
+    if(detector.enabled(c.trafficFamily) && c.wifiAlerts && millis()-c.lastWifiAlert<30000){lv_draw_arc_dsc_t d=arc;d.color=color(0xff5040);d.width=2;lv_point_t p{(lv_coord_t)x,(lv_coord_t)y};lv_draw_arc(ctx,&d,&p,S(12),0,359);}
+    if(callouts<3 && ((detector.enabled(c.trafficFamily) && c.wifiAlerts && millis()-c.lastWifiAlert<30000) || c.match.confidence>=Confidence::Low)){
+      const char* text=(detector.enabled(c.trafficFamily) && c.wifiAlerts && millis()-c.lastWifiAlert<30000)?dragon::familyName(c.trafficFamily):dragon::familyName(c.match.family);
+      int boxX=x<CENTER?S(216):S(26);int boxY=S(92+callouts*31);callout(ctx,x,y,boxX,boxY,text,(detector.enabled(c.trafficFamily) && c.wifiAlerts && millis()-c.lastWifiAlert<30000)?0xff6655:cc);++callouts;
     }
     dots[dotCount++]={x,y,i,contactKey(c)};
   }
@@ -189,8 +189,8 @@ static void build(){
     devicePage=constrain(devicePage,0,deviceTotal?(deviceTotal-1)/10:0);deviceRows=0;
     for(int k=devicePage*10;k<deviceTotal&&deviceRows<10;++k){auto& c=contacts[order[k]];deviceKeys[deviceRows]=contactKey(c);
       char mac[18],sub[96];displayMac(c.mac,mac);auto flags=deviceRules(contactKey(c));
-      snprintf(sub,sizeof(sub),"%d dBm / %lus / %s%s",c.rssi,(unsigned long)((now-c.seen)/1000),flags&RuleWatch?"WATCH / ":flags&RuleIgnore?"IGNORED / ":c.match.confidence==Confidence::Low?"CLUE / ":"",dragon::familyName(visibleFamily(c,now)));
-      row(body,*c.name?displayName(c.name).c_str():mac,sub,deviceRows,6000+deviceRows,familyColor(visibleFamily(c,now)));++deviceRows;
+      snprintf(sub,sizeof(sub),"%d dBm / %lus / %s%s",c.rssi,(unsigned long)((now-c.seen)/1000),flags&RuleWatch?"WATCH / ":flags&RuleIgnore?"IGNORED / ":c.match.confidence==Confidence::Low?"CLUE / ":"",dragon::familyName(visibleFamily(c,now,detector.families)));
+      row(body,*c.name?displayName(c.name).c_str():mac,sub,deviceRows,6000+deviceRows,familyColor(visibleFamily(c,now,detector.families)));++deviceRows;
     }
     if(!deviceRows)label(body,"Listening...\nNo recent targets",10,30,230);
     button(root,"<",68,274,40,31,114);char pages[30];snprintf(pages,sizeof(pages),"%d/%d",devicePage+1,std::max(1,(deviceTotal+9)/10));label(root,pages,118,280,60,F12);

@@ -11,11 +11,23 @@ All three board profiles compile locally: Spotpear JC3636W518, Waveshare 1.75C a
 - Native C++ positive/negative fixtures cover all added detector families, dedicated/shared vendor prefixes, public/random BLE addresses, Axon manufacturer/services, Meta composite evidence, Flock probe roles, Biscuit shared-UUID exclusions, Google Find Hub framing, Tile, Raven, iBeacon defaults, and drone Remote ID BLE/beacon/NAN messages encoded with the upstream library.
 - Tracking tests cover signal spikes, reacquisition, timer rollover, history traces, alert cooldown/auto-quiet, SSID conflicts including binary SSIDs and mesh false positives, and display defaults.
 - 150,000 random inputs exercise both bounded radio parsers. A further 50,000 inputs exercise RTTTL parsing. The runner explicitly keeps assertions enabled in optimized builds. All 26 default melodies validate; tests also cover invalid notes/tempo/octaves, size and duration bounds, silence, queue coalescing/expiry/cooldown/rollover, and hunt pitch/cadence bounds. CI runs the native suite with AddressSanitizer and UndefinedBehaviorSanitizer as well.
-- Thirteen Node tests cover both image resolutions, RGB565/CRC, crop geometry, serial framing/disconnects/timeouts, acknowledged small transfers, and a full 512-row history export received in one USB chunk.
+- Fourteen Node tests cover both image resolutions, RGB565/CRC, crop geometry, serial framing/disconnects/timeouts, acknowledged small transfers, a full 512-row history export received in one USB chunk, and compatible 0.3/0.4/0.5 USB handshakes/tool availability.
 - The release packager checks partition sizes, every merged image segment, checksums and workstation-path exclusion. Manifests identify the exact board and distinguish fresh installs from updates.
 - Browser QA checked detector/audio settings at mobile and desktop widths, 26 family choices, disabled disconnected controls, display defaults, and absence of JavaScript errors. Badge image selection/cropping was checked in 0.3.1. Hardware USB tests use host scripts implementing the same protocol; browser USB permission-picker and end-to-end upload remain unverified.
 
-## Waveshare 1.75C hardware checks · 2026-10-13
+## Waveshare 1.75C · 0.5 reception and resource checks
+
+The update was written at the application offset and hash-verified, preserving NVS and files. Its on-device self-test passes 17/17. The 134-signature suite runs on the host against the same parser/visibility code; it does not broadcast simulated surveillance devices over the air.
+
+- In the same desk environment, 0.4 reported about **76,092 bytes** free internal heap; 0.5 passive reception reported **121,456 bytes**, about 45 KB more, with contact capacity increased from 160 to 384. Board adapters allocate different display resources, so this measurement applies to Waveshare.
+- Passive and optional active BLE runs continued receiving Wi-Fi/BLE with **zero queue drops, storage drops or malformed-frame counts**. Active mode stayed around 120–121 KB free heap during the short check. This is not a saturated-radio benchmark or an all-day endurance test.
+- The cache served 6,861 hits with 40 misses by 223 seconds; no contact eviction was needed. The highest observed ready-queue occupancy was 21/96. Normal processing sometimes took about 12 ms for one batch, including first-contact history work: the 4 ms budget is a yield target, not a hard real-time limit.
+- Radar, Targets, detector filters and Radio health were inspected through 466×466 LVGL captures. The radar uses hollow clues, filled stronger detections and the Targets/quiet shortcuts. A screenshot transfer initially failed partway through the settings capture; the board continued scanning without resetting. USB screenshot pauses inflate the reported maximum queue age and are not a radio-throughput measurement.
+- The update retained 100% speaker volume, 100% brightness, Never dim/off, stored history and the existing badge filesystem. Active scanning was returned to passive and the screen to radar after checks.
+
+The 0.5 changes have not been physically tested on Spotpear or StopWatch. All three board profiles build; use the preceding hardware checks only for the hardware/functions actually exercised.
+
+## Retained Waveshare 1.75C checks from 0.4 · 2026-10-13
 
 The owner confirmed this exact board and working touch. A private 16 MB recovery image was saved before flashing. The 0.4.0 images were written and hash-verified with esptool.
 
