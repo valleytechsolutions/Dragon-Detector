@@ -1,6 +1,6 @@
 # Exact board profiles
 
-| Board | Resolution | Adapter | Storage in 0.4 |
+| Board | Resolution | Adapter | Storage |
 |---|---|---|---|
 | Spotpear / Guition JC3636W518 | 360×360 ST77916 LCD | Vendor ESP32 Display Panel configuration | microSD logs/PCAP; internal badge/history flash |
 | Waveshare ESP32-S3-Touch-AMOLED-1.75C | 466×466 CO5300 AMOLED, CST9217 touch, AXP2101 | KODE DIY CO5300 / ESP-IDF QSPI, SensorLib, XPowersLib | internal flash badge/history; live observations in RAM |
@@ -24,7 +24,7 @@ Battery percentage is available through Waveshare AXP2101 and M5Stack power APIs
 | Waveshare 1.75C | ES8311 codec, original 16 kHz I2S PCM synthesis | MCLK 16, BCLK 9, WS 45, DOUT 8, amplifier enable 46; codec I2C address 0x18 on the display/touch bus |
 | StopWatch | M5Unified speaker | Board-specific wiring managed by the pinned library; vibration is independent |
 
-Use the board's suitable speaker connection; a bare board with no speaker connected cannot produce sound. The Waveshare owner confirmed audible output. Spotpear and StopWatch audio are build-verified only. RTTTL melodies are synthesized locally, and no microphone input is enabled. Fresh installs use 100% speaker volume and 100% display brightness with no dim/off timers; both remain configurable.
+Use the board's suitable speaker connection; a bare board with no speaker connected cannot produce sound. The Waveshare owner confirmed audible output. StopWatch speaker initialization and a 100% preview were exercised during the 0.8 hardware checks. Spotpear audio remains build-verified only. RTTTL melodies are synthesized locally, and no microphone input is enabled. Fresh installs use 100% speaker volume and 100% display brightness with no dim/off timers; both remain configurable.
 
 ## StopWatch input diagnostics
 
