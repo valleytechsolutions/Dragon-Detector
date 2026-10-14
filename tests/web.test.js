@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {crc32,encodeBadge,cropGeometry,fitCircleZoom} from '../web/badge-codec.js';
 import {BadgeSerial} from '../web/serial.js';
 import {uploadBadge,BADGE_CHUNK_SIZE} from '../web/badge-transfer.js';
+import {readHistory} from '../web/detector-transfer.js';
 test('CRC matches firmware IEEE CRC-32 wire contract',()=>assert.equal(crc32(new TextEncoder().encode('123456789')),0xcbf43926));
 for(const size of [360,466])test(`DDB1 ${size}: header, exact size and RGB565 byte order`,()=>{
   const p=new Uint8Array(size*size*4);p.set([255,0,0,255,0,255,0,255,0,0,255,255]);const b=encodeBadge(p,size);
@@ -61,4 +62,19 @@ test('badge transfer stops on device errors before sending more image data',asyn
   let writes=0;const link={lines:[],write:async()=>{writes++;},wait:async()=>writes===1?'BADGE_READY':'BADGE_ERROR transfer or checksum'};
   await assert.rejects(uploadBadge(link,new Uint8Array(500)),/BADGE_ERROR/);
   assert.equal(writes,2);
+});
+
+test('history export preserves all 512 rows even in one USB read',async()=>{
+  const port=mockPort(),serial=new BadgeSerial(port);await serial.open();
+  const result=readHistory(serial);const rows=Array.from({length:512},(_,i)=>`BLE,0,address-${i},name-${i}`);
+  port.emit('HEALTH unrelated\nHISTORY_BEGIN\nradio,address_type,mac,name\n'+rows.join('\n')+'\nHISTORY_END\n');
+  assert.equal(await result,'radio,address_type,mac,name\r\n'+rows.join('\r\n')+'\r\n');
+  assert.equal(serial.listeners.size,0);await serial.close();
+});
+test('history export rejects storage failure, timeout and disconnect with cleanup',async()=>{
+  for(const mode of ['storage','timeout','disconnect']){
+    const port=mockPort(),serial=new BadgeSerial(port);await serial.open();const result=readHistory(serial,20);
+    if(mode==='storage')port.emit('HISTORY_ERROR\n');if(mode==='disconnect')port.end();
+    await assert.rejects(result,/unavailable|timed out|disconnected/);assert.equal(serial.listeners.size,0);await serial.close();
+  }
 });

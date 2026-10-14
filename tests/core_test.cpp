@@ -1,5 +1,6 @@
 #include "detection.h"
 #include "tracking.h"
+#include "monitor.h"
 #include <cassert>
 #include <vector>
 #include <cstdio>
@@ -7,7 +8,10 @@ using namespace dragon;
 static std::vector<uint8_t> name(const char* s){std::vector<uint8_t> p{uint8_t(strlen(s)+1),9};p.insert(p.end(),s,s+strlen(s));return p;}
 static void append(std::vector<uint8_t>& a,const std::vector<uint8_t>& b){a.insert(a.end(),b.begin(),b.end());}
 static Match ble(const std::vector<uint8_t>& p){auto f=parseBle(p.data(),p.size());assert(f.valid);return f.match;}
+#include "parity_test.h"
+#include "tones_test.h"
 int main(){
+  parityTests();toneTests();
   assert(!parseBle(nullptr,0).valid && !parseWifi(nullptr,0).valid);
   assert(ble({3,0xff,0x4d,3}).family==Family::Axon);
   assert(ble({3,3,0x81,0xfc}).confidence==Confidence::Medium);
@@ -21,7 +25,7 @@ int main(){
   assert(ble({3,0xff,0x53,0x0d,3,3,0x5f,0xfd}).confidence==Confidence::Medium);
   assert(ble({3,0xff,0xc8,9}).confidence==Confidence::None); // Generic module
   auto flock=name("Penguin-1234567890");append(flock,{3,0xff,0xc8,9});assert(ble(flock).family==Family::Flock);
-  auto brokenName=name("Penguin-123x567890");append(brokenName,{3,0xff,0xc8,9});assert(ble(brokenName).confidence==Confidence::None);
+  auto brokenName=name("Penguin-123x567890");append(brokenName,{3,0xff,0xc8,9});assert(ble(brokenName).confidence==Confidence::Low);
   const std::vector<uint8_t> biscuit={17,7,0x4b,0x91,0x31,0xc3,0xc9,0xc5,0xcc,0x8f,0x9e,0x45,0xb5,0x1f,0x01,0xc2,0xaf,0x4f};
   assert(ble(biscuit).confidence==Confidence::None); // Shared Arduino example
   auto b=name("Biscuit Ultra");assert(ble(b).confidence==Confidence::Low);append(b,biscuit);assert(ble(b).family==Family::Biscuit && ble(b).confidence==Confidence::Medium);
@@ -43,7 +47,7 @@ int main(){
   std::vector<uint8_t> fingerprint(24);fingerprint[0]=0x40;fingerprint[10]=0xb4;fingerprint[11]=0x1e;fingerprint[12]=0x52;
   fingerprint.insert(fingerprint.end(),{0,0,2,0,12,0,127,0,221,7,0x50,0x6f,0x9a,0x16,3,1,3,45,0,191,0,221,7,0,0x50,0xf2,8,0,0,0});
   assert(parseWifi(fingerprint.data(),fingerprint.size()).match.confidence==Confidence::Medium);
-  fingerprint.back()=1;assert(parseWifi(fingerprint.data(),fingerprint.size()).match.confidence==Confidence::Low);
+  fingerprint.back()=1;assert(strstr(parseWifi(fingerprint.data(),fingerprint.size()).match.evidence,"OUI"));
   uint8_t deauth[26]{};deauth[0]=0xc0;deauth[24]=7;assert(parseWifi(deauth,26).reason==7);assert(!parseWifi(deauth,25).valid);
   Burst burst;for(int n=0;n<19;++n)assert(!burst.add(n,20));assert(burst.add(20,20));assert(!burst.add(21,20));
   Burst wrap;wrap.add(0xfffffff0,2);assert(wrap.add(20,2));

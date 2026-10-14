@@ -1,0 +1,8 @@
+{
+  "name": "OpenDroneID",
+  "version": "0.0.0+849c03a",
+  "license": "Apache-2.0",
+  "description": "Pinned, unmodified OpenDroneID core message decoder",
+  "repository": {"type": "git", "url": "https://github.com/opendroneid/opendroneid-core-c.git"},
+  "build": {"flags": "-DODID_DISABLE_PRINTF"}
+}

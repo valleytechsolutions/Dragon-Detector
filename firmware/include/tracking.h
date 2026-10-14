@@ -12,7 +12,7 @@ struct SignalTrack {
   float smooth=-100, baseline=-100, spread=0;
   uint32_t last=0, trendAt=0;
   int8_t trend=0;
-  void add(int rssi,uint32_t now) {
+  void add(int rssi,uint32_t now,uint16_t smoothingMs=1800) {
     if(rssi>=0 || rssi<-127)return;
     if(!count || uint32_t(now-last)>15000){
       *this={};smooth=baseline=rssi;last=trendAt=now;
@@ -22,7 +22,7 @@ struct SignalTrack {
     std::sort(sorted,sorted+count);
     float median=sorted[count/2];
     uint32_t dt=now-last;
-    float alpha=1.0f-expf(-float(dt)/1800.0f);
+    float alpha=1.0f-expf(-float(dt)/std::max<uint16_t>(smoothingMs,100));
     smooth+=alpha*(median-smooth);spread=sorted[count-1]-sorted[0];last=now;
     if(uint32_t(now-trendAt)>=4000){
       float delta=smooth-baseline;trend=delta>=3?1:delta<=-3?-1:0;

@@ -1,0 +1,144 @@
+prefix,registered_vendor,family,confidence
+00:04:7D,Motorola Solutions Inc.,Alpr,Low
+00:18:85,Motorola Solutions Inc.,Alpr,Low
+00:1F:92,Motorola Solutions Inc.,Alpr,Low
+00:25:DF,"Axon Enterprise, Inc.",Axon,Medium
+00:40:8C,Axis Communications AB,Camera,Medium
+00:B4:63,Ring LLC,Ring,Medium
+00:BC:99,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+00:BF:15,Genetec Inc.,Alpr,Medium
+04:03:12,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+04:EE:CD,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+08:3B:C1,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+08:54:11,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+08:A1:89,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+08:CC:81,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+0C:75:D2,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+0C:BF:15,Genetec Inc.,Alpr,Medium
+0C:FA:22,Flipper Devices Inc,Flipper,Medium
+10:12:FB,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+10:74:6F,Motorola Solutions Malaysia Sdn. Bhd.,Alpr,Low
+18:68:CB,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+18:7F:88,Ring LLC,Ring,Medium
+18:80:25,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+24:0F:9B,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+24:28:FD,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+24:2B:D6,Ring LLC,Ring,Medium
+24:32:AE,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+24:48:45,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+24:B1:05,Prama Hikvision India Private Limited,Camera,Medium
+28:57:BE,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+2C:A5:9C,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+2C:AA:8E,Wyze Labs Inc,Camera,Medium
+34:09:62,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+34:3E:A4,Ring LLC,Ring,Medium
+38:47:12,"Luxottica Tristar (Dongguan) Optical Co.,Ltd",Meta,Low
+3C:1B:F8,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+3C:A0:70,Blink by Amazon,Camera,Medium
+40:AC:BF,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+40:B5:70,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+44:19:B6,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+44:47:CC,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+44:A6:42,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+48:62:64,Arlo Technology,Camera,Medium
+48:78:5B,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+4C:1F:86,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+4C:62:DF,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+4C:BD:8F,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+4C:CC:34,Motorola Solutions Inc.,Alpr,Low
+4C:F5:DC,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+50:E4:67,Ring LLC,Ring,Medium
+50:E5:38,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+54:8C:81,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+54:C4:15,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+54:E0:19,Ring LLC,Ring,Medium
+58:03:FB,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+58:50:ED,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+5C:34:5B,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+5C:47:5E,Ring LLC,Ring,Medium
+64:9A:63,Ring LLC,Ring,Medium
+64:DB:8B,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+68:6D:BC,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+70:1A:D5,Avigilon Alta,Camera,Medium
+70:AD:43,Blink by Amazon,Camera,Medium
+74:13:48,Blink by Amazon,Camera,Medium
+74:3F:C2,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+74:AB:93,Blink by Amazon,Camera,Medium
+7C:78:B2,Wyze Labs Inc,Camera,Medium
+80:48:2C,Wyze Labs Inc,Camera,Medium
+80:48:9F,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+80:7C:62,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+80:AA:1C,"Luxottica Tristar (Dongguan) Optical Co.,Ltd",Meta,Low
+80:BE:AF,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+80:F5:AE,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+84:94:59,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+84:9A:40,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+88:DE:39,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+8C:22:D2,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+8C:E7:48,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+90:48:6C,Ring LLC,Ring,Medium
+94:E1:AC,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+98:59:49,Luxottica Group S.P.A.,Meta,Low
+98:8B:0A,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+98:9D:E5,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+98:DF:82,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+98:F1:12,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+9C:76:13,Ring LLC,Ring,Medium
+9C:86:2B,Motorola Solutions Malaysia Sdn. Bhd.,Alpr,Low
+A0:FF:0C,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+A4:11:62,Arlo Technology,Camera,Medium
+A4:14:37,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+A4:29:02,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+A4:4B:D9,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+A4:A4:59,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+A4:D5:C2,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+AC:9F:C3,Ring LLC,Ring,Medium
+AC:B9:2F,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+AC:CB:51,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+AC:CC:8E,Axis Communications AB,Camera,Medium
+B0:FF:0D,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+B4:1E:52,Flock Safety,Flock,Medium
+B4:A3:82,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+B8:A4:4F,Axis Communications AB,Camera,Medium
+B8:E2:8C,Motorola Solutions Malaysia Sdn. Bhd.,Alpr,Low
+BC:29:78,Prama Hikvision India Private Limited,Camera,Medium
+BC:5E:33,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+BC:9B:5E,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+BC:AD:28,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+BC:BA:C2,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+C0:51:7E,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+C0:56:E3,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+C0:6D:ED,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+C4:2F:90,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+C4:DB:AD,Ring LLC,Ring,Medium
+C8:19:D8,Blink by Amazon,Camera,Medium
+C8:A7:02,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+CC:13:F3,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+CC:3B:FB,Ring LLC,Ring,Medium
+D0:3F:27,Wyze Labs Inc,Camera,Medium
+D4:E8:53,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+DC:07:F8,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+DC:D2:6A,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+E0:A7:00,Verkada Inc,Camera,Medium
+E0:BA:AD,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+E0:CA:3C,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+E0:DF:13,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+E4:D5:8B,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+E8:27:25,Axis Communications AB,Camera,Medium
+E8:A0:ED,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+EC:A9:71,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+EC:C8:9C,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+F0:74:C1,Blink by Amazon,Camera,Medium
+F0:C8:8B,Wyze Labs Inc,Camera,Medium
+F8:4D:FC,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+FC:9C:98,Arlo Technology,Camera,Medium
+FC:9F:FD,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
+34:D2:70,Amazon Technologies,Camera,Low
+F0:27:2D,Amazon Technologies,Camera,Low
+FC:65:DE,Amazon Technologies,Ring,Low
+68:37:E9,Amazon Technologies,Ring,Low
+A4:C1:38,Telink Semiconductor,Camera,Low
+B8:D7:AF,Murata,Camera,Low
+BC:DD:C2,Espressif,Camera,Low
+00:E0:4C,Realtek,Camera,Low
+00:1A:7D,cyber-blue,Skimmer,Low

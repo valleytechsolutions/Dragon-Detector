@@ -34,6 +34,13 @@
 #define TP_RESET 2
 #define TP_I2C_ADDR 0x5A
 
+// Waveshare official 07_ES8311 example / pin_config.h.
+#define AUDIO_I2S_MCK_IO 16
+#define AUDIO_I2S_BCK_IO 9
+#define AUDIO_I2S_WS_IO 45
+#define AUDIO_I2S_DO_IO 8
+#define AUDIO_MUTE_PIN 46
+
 #define BOARD_HAS_SD 0
 
 #else

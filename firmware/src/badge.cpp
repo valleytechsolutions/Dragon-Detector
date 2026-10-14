@@ -43,7 +43,7 @@ void badgeLoop(){
   static uint32_t shifted=0;if(picture && millis()-shifted>60000){shifted=millis();int d=int((shifted/60000)%5)-2;lv_obj_align(picture,LV_ALIGN_CENTER,d,-d);}
 }
 bool badgeCommand(const String& c){
-  if(c=="badge info"){Serial.printf("BADGE_INFO 0.3.1 %d %s %s\n",SCREEN_RES,ready?"READY":"NO_STORAGE",BOARD_NAME);return true;}
+  if(c=="badge info"){Serial.printf("BADGE_INFO 0.4.0 %d %s %s\n",SCREEN_RES,ready?"READY":"NO_STORAGE",BOARD_NAME);return true;}
   if(c=="badge show"){uiShow("badge");return true;}
   if(c=="badge boot on" || c=="badge boot off"){prefs.putBool("boot",c.endsWith("on"));Serial.println("BADGE_OK");return true;}
   if(!c.startsWith("badge upload "))return false;

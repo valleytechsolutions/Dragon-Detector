@@ -4,6 +4,7 @@
 #include <lvgl.h>
 #include <esp_timer.h>
 static String serialLine;
+static bool serialOverflow=false;
 static uint32_t lastHealth=0;
 static bool serialBytes(const uint8_t* data,size_t length){size_t sent=0;uint32_t last=millis();while(sent<length){size_t n=Serial.write(data+sent,std::min<size_t>(1024,length-sent));if(n){sent+=n;last=millis();}else if(millis()-last>5000)return false;delay(1);}return true;}
 static void health(){
@@ -11,10 +12,11 @@ static void health(){
   Serial.printf("HEALTH uptime=%lu heap=%u psram=%u contacts=%u wifi=%lu ble=%lu alerts=%lu drops=%lu storage_drops=%lu malformed=%lu channel=%u phase=%s sd=%s audio=%u\n",
     millis(),ESP.getFreeHeap(),ESP.getFreePsram(),count,wifiFrames,bleFrames,alertTotal,queueDrops,storageDrops,malformedFrames,wifiChannel,blePhase?"BLE":"WIFI",sdReady?"OK":"MISSING",unsigned(audioStatus().mode));
   Serial.printf("DISPLAY %dx%d\n",lv_disp_get_hor_res(nullptr),lv_disp_get_ver_res(nullptr));
+  Serial.printf("RUNTIME reset=%d stack_free=%u\n",esp_reset_reason(),unsigned(uxTaskGetStackHighWaterMark(nullptr)));
   if(batteryPercent()>=0)Serial.printf("BATTERY %d%% %s\n",batteryPercent(),batteryCharging()?"charging":"discharging");
 }
 static void command(const String& c){
-  if(badgeCommand(c))return;
+  if(badgeCommand(c) || detectorCommand(c) || audioCommand(c) || uiCommand(c))return;
   if(c=="status"){health();Serial.printf("SESSION %s\n",sessionPath.c_str());}
   else if(c=="selftest")runSelfTests();
   else if(c=="pause")setRadio(false);
@@ -57,16 +59,16 @@ void setup(){
   // The native USB CDC default is only 256 bytes. Reserve room before begin()
   // so flash writes cannot overflow incoming, acknowledged image chunks.
   Serial.setRxBufferSize(4096);
-  Serial.begin(115200);delay(500);Serial.println("DRAGON DETECTOR 0.3.1 / " BOARD_NAME " / boot");
+  Serial.begin(115200);delay(500);Serial.println("DRAGON DETECTOR 0.4.0 / " BOARD_NAME " / boot");
   Serial.printf("Flash=%u PSRAM=%u reset=%d\n",ESP.getFlashChipSize(),ESP.getPsramSize(),esp_reset_reason());
   if(ESP.getPsramSize()<4*1024*1024){Serial.println("FATAL: expected octal PSRAM");while(true)delay(100);}
   runSelfTests();boardBegin();uiBegin();
   uint32_t at=millis();while(millis()-at<1600){uiLoop();delay(5);}
-  storageBegin();badgeInit();audioBegin();radioBegin();Serial.println("DRAGON READY");health();
+  storageBegin();badgeInit();audioBegin();detectorBegin();radioBegin();Serial.println("DRAGON READY");health();
 }
 void loop(){
-  boardLoop();radioLoop();storageLoop();uiLoop();badgeLoop();
-  while(Serial.available()){char c=Serial.read();if(c=='\n'){serialLine.trim();command(serialLine);serialLine="";}else if(serialLine.length()<255)serialLine+=c;}
+  boardLoop();radioLoop();storageLoop();detectorLoop();audioLoop();uiLoop();badgeLoop();
+  while(Serial.available()){char c=Serial.read();if(c=='\n'){serialLine.trim();if(serialOverflow)Serial.println("COMMAND_ERROR too long");else command(serialLine);serialLine="";serialOverflow=false;}else if(serialLine.length()<600)serialLine+=c;else serialOverflow=true;}
   if(millis()-lastHealth>10000){lastHealth=millis();health();}
   delay(2);
 }

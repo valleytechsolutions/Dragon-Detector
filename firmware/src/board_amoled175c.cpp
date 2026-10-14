@@ -22,7 +22,7 @@ static void IRAM_ATTR onTouch(){touchIrq=true;}
 static lv_disp_draw_buf_t draw_buf;
 static lv_disp_drv_t disp_drv;
 
-extern void uiTouch(bool pressed,int x,int y);
+extern bool uiTouch(bool pressed,int x,int y);
 
 // CO5300 only accepts windows that start on even and end on odd coordinates.
 static void rounder(lv_disp_drv_t*,lv_area_t* area){
@@ -43,7 +43,7 @@ static void touchRead(lv_indev_drv_t*,lv_indev_data_t* data){
   }else if(pressed && millis()-lastReport>200)pressed=false;
   if(pressed!=was){was=pressed;if(pressed)Serial.printf("TOUCH %d %d\n",lastX,lastY);}
   data->point.x=lastX;data->point.y=lastY;data->state=pressed?LV_INDEV_STATE_PRESSED:LV_INDEV_STATE_RELEASED;
-  uiTouch(pressed,lastX,lastY);
+  if(!uiTouch(pressed,lastX,lastY))data->state=LV_INDEV_STATE_RELEASED;
 }
 // 输入值为0-100
 void set_brightness(uint8_t bri){if(panelIo){uint8_t value=uint16_t(constrain(bri,0,100))*255/100;esp_lcd_panel_io_tx_param(panelIo,0x02005100,&value,1);}}

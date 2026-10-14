@@ -18,7 +18,7 @@ jobs:
           python-version: '3.12'
       - run: node --test tests/web.test.js
       - run: python tools/test_core.py --cxx g++
-      - run: g++ -std=c++17 -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -Ifirmware/include tests/core_test.cpp -o .work/core_sanitized && .work/core_sanitized
+      - run: python tools/test_core.py --cxx g++ --sanitize
   build:
     needs: test
     runs-on: ubuntu-latest

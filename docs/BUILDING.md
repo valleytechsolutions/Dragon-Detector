@@ -17,6 +17,7 @@ The pinned pioarduino platform provides Arduino ESP32 and ESP-IDF. Each board re
 ```
 node --test tests/web.test.js
 python tools/test_core.py --cxx g++
+python tools/test_core.py --cxx g++ --sanitize
 ```
 
 On Windows without a native compiler, install `ziglang==0.13.0` and run `python tools/test_core.py` without `--cxx`. The packet tests include positive and negative fixtures, bounds checks, rollover, RSSI outliers/reacquisition, CRC consistency and 150,000 random inputs. CI additionally runs AddressSanitizer and UndefinedBehaviorSanitizer.
@@ -27,7 +28,7 @@ On Windows without a native compiler, install `ziglang==0.13.0` and run `python 
 python -m http.server 8765 --bind 127.0.0.1 --directory web
 ```
 
-Open `http://127.0.0.1:8765` in Chrome/Edge. There is no frontend build step. ESP Web Tools is pinned to 10.4.0 and loaded from its distribution; fonts are loaded from Google Fonts. These require network access. The badge editor itself processes images locally.
+Open `http://127.0.0.1:8765` in Chrome/Edge. There is no frontend build step. ESP Web Tools is pinned to 10.4.0 and loaded from its distribution; fonts are loaded from Google Fonts. These require network access. The image editor and CSV export process data locally. USB access is available only in supported Chromium browsers. The native test helper compiles the pinned OpenDroneID C decoder separately and links it into the C++ transport tests.
 
 ## License boundaries
 

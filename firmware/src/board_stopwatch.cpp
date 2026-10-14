@@ -3,13 +3,13 @@
 #include <lvgl.h>
 #include <Wire.h>
 
-extern void uiTouch(bool,int,int);
+extern bool uiTouch(bool,int,int);
 static lv_disp_draw_buf_t drawBuffer;
 static lv_disp_drv_t displayDriver;
 static bool injected=false,injectedPress=false;
 static int injectedX=0,injectedY=0;
 static uint32_t vibrationUntil=0,lastFeedback=0,lastAlert=0;
-bool alertSound=false,alertVibration=true;
+bool alertSound=true,alertVibration=true;
 void boardBegin(){
   Wire.begin(47,48,100000);Serial.print("I2C before M5:");for(int a=8;a<120;++a){Wire.beginTransmission(a);if(Wire.endTransmission()==0)Serial.printf(" %02x",a);}Serial.println();Wire.end();
   auto cfg=M5.config();cfg.internal_spk=true;cfg.internal_mic=false;
@@ -29,7 +29,7 @@ static void readTouch(lv_indev_drv_t*,lv_indev_data_t* d){
   else {auto t=M5.Touch.getDetail();pressed=M5.Touch.getCount() && t.isPressed();x=t.x-(M5.Display.width()-466)/2;y=t.y-(M5.Display.height()-466)/2;}
   d->state=pressed?LV_INDEV_STATE_PR:LV_INDEV_STATE_REL;
   if(pressed){d->point.x=constrain(x,0,465);d->point.y=constrain(y,0,465);}
-  uiTouch(pressed,x,y);
+  if(!uiTouch(pressed,x,y))d->state=LV_INDEV_STATE_REL;
 }
 void scr_lvgl_init(){
   lv_init();auto* buf=(lv_color_t*)heap_caps_malloc(466*24*2,MALLOC_CAP_INTERNAL|MALLOC_CAP_DMA);
@@ -51,12 +51,10 @@ void boardLoop(){
   if(M5.BtnA.wasPressed()){Serial.println("KEY A radar");uiKey(true);}
   if(M5.BtnB.wasClicked()){Serial.println("KEY B navigation");uiKey(false);}
   if(vibrationUntil && int32_t(millis()-vibrationUntil)>=0){M5.Power.setVibration(0);vibrationUntil=0;}
-  if(alertTotal!=lastAlert){lastAlert=alertTotal;if(millis()-lastFeedback>10000){lastFeedback=millis();
+  if(alertTotal!=lastAlert){lastAlert=alertTotal;if(!detector.quiet && millis()-lastFeedback>10000){lastFeedback=millis();
     if(alertVibration){M5.Power.setVibration(100);vibrationUntil=millis()+80;}
-    if(alertSound)audioBeep();
   }}
 }
 
 int batteryPercent(){static uint32_t at=0;static int value=-1;if(!at || millis()-at>5000){at=millis();value=M5.Power.getBatteryLevel();}return value;}
 bool batteryCharging(){return M5.Power.isCharging();}
-void audioBeep(){if(M5.Speaker.begin())M5.Speaker.tone(1200,70);}

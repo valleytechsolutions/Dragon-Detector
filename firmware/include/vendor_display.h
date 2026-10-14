@@ -111,7 +111,7 @@ void set_brightness(uint8_t bri)
   backlight->setBrightness(bri);
 }
 
-extern void uiTouch(bool pressed, int x, int y);
+extern bool uiTouch(bool pressed, int x, int y);
 static void touchpad_read(lv_indev_drv_t *indev_drv, lv_indev_data_t *data)
 {
   ESP_PanelTouch *tp = (ESP_PanelTouch *)indev_drv->user_data;
@@ -123,7 +123,7 @@ static void touchpad_read(lv_indev_drv_t *indev_drv, lv_indev_data_t *data)
     data->point.x = point.x;
     data->point.y = point.y;
     data->state = LV_INDEV_STATE_PRESSED;
-    uiTouch(true, point.x, point.y);
+    if(!uiTouch(true, point.x, point.y))data->state=LV_INDEV_STATE_RELEASED;
   }
   else
   {
