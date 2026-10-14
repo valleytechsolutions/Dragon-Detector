@@ -1,5 +1,13 @@
 # Changes
 
+## 0.7.0 — radar themes, complete labels and recent signals
+
+- Add persistent Green radar, Dragon Ball and Black/gold/red themes with animated sweep and pulsing live dots. Green is the default; all retain the BWM1 logo and RX/count/battery. Rings remain unnumbered and radius uses filtered RSSI.
+- Restore labels and leaders by default for every plotted dot. Six targets per radar page keep text readable; every contact remains available across pages and in Targets. Tap labels to open evidence. Add matching USB web appearance controls.
+- Retain intermittent classified signals for up to two minutes with explicit age and segmented stale markers. This changes display retention only, not alert or hunt freshness. Recent retention and labels are configurable.
+- Recognize service identifiers in 16-bit, zero-extended 32-bit and exact Bluetooth Base 128-bit advertising fields. Preserve confidence rules, custom-UUID exclusions, payload offsets and malformed-packet boundaries.
+- Add service-width, label-layout, pagination, stale-marker and USB preference fixtures. Update flasher compatibility, actual theme images and Flipper/Pineapple Pager reception guidance.
+
 ## 0.6.0 — radar, tracking and traffic evidence
 
 - Replace the radar heading with the supplied BWM1 logo, retain RX/targets/battery, add dBm rings, sweep ticks, smoother marker movement and continuous age fading. Cache contact angles instead of recalculating trigonometry per marker/frame.

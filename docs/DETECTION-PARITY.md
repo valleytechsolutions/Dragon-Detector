@@ -1,4 +1,4 @@
-# Detection feature comparison · 0.6.0
+# Detection feature comparison · 0.7.0
 
 The requested reference is [SquachWatch-CYD](https://github.com/skizzophrenic/SquachWatch-CYD), reviewed at `a6167dbb0693963b5ad7022e7923cfb458d7676c`. Its detection families and controls informed this independently implemented Dragon Radar interface. Its GPL-3.0 application code and artwork are not incorporated into the MIT application. [Credits and license boundaries](../CREDITS.md).
 
@@ -25,6 +25,8 @@ Every detection category and all **134 table entries** in that pinned reference 
 | Evil twin candidate | Repeated same **raw SSID**, different BSSIDs, conflicting open/protected status, contemporaneous observations |
 | iBeacon | Complete Apple iBeacon format; enabled by default, optional family toggle |
 | Pentest devices | Flipper company/OUI/service/appearance, Pwnagotchi name/counter fields even with changed MAC, Pineapple/deauther names; retained Nyanbox, HaleHound and Biscuit candidates |
+
+Service IDs also accept equivalent 16/32/Bluetooth-Base-128 advertising encodings, with the original evidence thresholds preserved.
 
 ## Detection controls
 

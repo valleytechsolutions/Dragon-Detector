@@ -1,5 +1,6 @@
 #include "app.h"
 #include "board_pins.h"
+#include "radar_layout.h"
 #include <lvgl.h>
 #include <math.h>
 #include <esp_heap_caps.h>
@@ -27,10 +28,21 @@ extern const lv_img_dsc_t radar_logo;
 #define FCALLOUT F12
 #endif
 static const int CENTER=SCREEN_RES/2;
-enum Page {Boot,Radar,Menu,Devices,Details,Alerts,Channels,Files,Audio,Settings,About,Badge,Hunt,Detectors,History,HistoryDetail,Rules,Controls,Display,Diagnostics,Activity};
+enum Page {Boot,Radar,Menu,Devices,Details,Alerts,Channels,Files,Audio,Settings,About,Badge,Hunt,Detectors,History,HistoryDetail,Rules,Controls,Display,Diagnostics,Activity,RadarStyle};
 static Page page=Boot,pending=Boot;
 static lv_obj_t *root,*body,*statusLabel,*audioLabel,*audioMeter,*radar,*micBadge;
 static int menuTab=0,filter=0,selected=-1,filePage=0,brightness=100,historyPage=0;
+static bool radarLabels=true;
+static uint8_t radarTheme=1;
+static unsigned radarPage=0;
+static lv_obj_t *radarPrevious=nullptr,*radarNext=nullptr,*radarPageLabel=nullptr;
+struct RadarPalette {uint32_t top,bottom,grid,ring,dot,sweep,text,panel;};
+static const RadarPalette radarPalettes[]={
+  {0x20b970,0x0c9553,0x095134,0xe0e5cd,0xffec50,0xb9ff72,0xfffae2,0x064a2e},
+  {0x09291c,0x020c08,0x153d28,0x286c42,0xc0ff65,0x52dc84,0xdbf9c3,0x0b2419},
+  {0x19130b,0x070707,0x3e301b,0xa88742,0xffd166,0xe54138,0xffe4a3,0x21190f}
+};
+static const char* radarThemeNames[]={"Dragon Ball","Green radar","Black / gold / red"};
 static HistoryRecord historySelection;
 static int devicePage=0,deviceRows=0,deviceTotal=0;
 static dragon::DeviceKey deviceKeys[10];
@@ -53,7 +65,7 @@ static int outputBrightness=-1;
 static Preferences settings;
 static String directory="/";
 struct FileRow {String path;bool dir;uint32_t size;};static FileRow files[96];static int fileCount=0;static bool filesTruncated=false;
-struct Dot {int x,y,index;dragon::DeviceKey key;};static Dot dots[MAX_CONTACTS];static int dotCount=0;
+struct Dot {int x,y,index;dragon::DeviceKey key;int labelSlot=-1;};static Dot dots[MAX_CONTACTS];static int dotCount=0;
 static lv_color_t color(uint32_t c){return lv_color_hex(c);}
 static uint32_t familyColor(Family f){switch(f){case Family::Flock:return 0xff6878;case Family::Axon:return 0xf5b565;case Family::Meta:return 0xb8a0ff;case Family::Pineapple:return 0xffff70;case Family::Pwnagotchi:return 0xff86db;case Family::Nyanbox:return 0x80eaff;case Family::Halehound:return 0xff582f;case Family::Tracker:return 0x99abff;case Family::Skimmer:return 0xffbb88;case Family::Ble:return 0x83def0;default:return 0xfcdc58;}}
 static lv_obj_t* label(lv_obj_t* parent,const char* text,int x,int y,int w=0,const lv_font_t* font=F14,uint32_t c=0xd9efe0){
@@ -110,63 +122,74 @@ static void huntDraw(lv_event_t* e){
     line(ctx,area.x1+S((i-1)*240/47),area.y1+S(a),area.x1+S(i*240/47),area.y1+S(b),0xb9f65e,2);
   }
 }
-static void callout(lv_draw_ctx_t* ctx,int dotX,int dotY,int boxX,int boxY,const char* text,uint32_t c){
-  int width=S(118),height=S(34);
-  lv_draw_rect_dsc_t box;lv_draw_rect_dsc_init(&box);box.radius=6;box.bg_color=color(0x071510);box.bg_opa=LV_OPA_90;
-  box.border_color=color(c);box.border_opa=LV_OPA_COVER;box.border_width=1;
-  lv_area_t area{(lv_coord_t)boxX,(lv_coord_t)boxY,(lv_coord_t)(boxX+width),(lv_coord_t)(boxY+height)};lv_draw_rect(ctx,&box,&area);
-  int edgeX=boxX>dotX?boxX:boxX+width;int edgeY=boxY+height/2;line(ctx,dotX,dotY,edgeX,edgeY,c,1,220);
+static const char* radarFamilyName(Family f){
+  switch(f){case Family::Axon:return "Axon / TASER";case Family::Meta:return "Camera glasses";case Family::Tracker:return "Find My / DULT";case Family::GoogleTag:return "Find Hub";case Family::Skimmer:return "Serial module";case Family::Camera:return "Camera vendor";case Family::Alpr:return "ALPR vendor";case Family::Drone:return "Drone RID";case Family::Deauth:return "Deauth burst";case Family::BleSpam:return "BLE burst";case Family::EvilTwin:return "SSID conflict";default:return dragon::familyName(f);}
+}
+static void callout(lv_draw_ctx_t* ctx,const Dot& dot,unsigned slot,const char* text,uint32_t c){
+  auto b=dragon::radarLabelSlot(slot);int x=S(b.x),y=S(b.y),w=S(b.w),h=S(b.h);
+  int edgeX=constrain(dot.x,x,x+w),edgeY=constrain(dot.y,y,y+h);
+  line(ctx,dot.x,dot.y,edgeX,edgeY,c,1,190);
+  lv_draw_rect_dsc_t box;lv_draw_rect_dsc_init(&box);box.radius=S(4);box.bg_color=color(radarPalettes[radarTheme].bottom);box.bg_opa=LV_OPA_90;
+  box.border_color=color(c);box.border_opa=LV_OPA_50;box.border_width=1;
+  lv_area_t area{(lv_coord_t)x,(lv_coord_t)y,(lv_coord_t)(x+w),(lv_coord_t)(y+h)};lv_draw_rect(ctx,&box,&area);
   lv_draw_label_dsc_t d;lv_draw_label_dsc_init(&d);d.color=color(c);d.font=FCALLOUT;
-  lv_area_t textArea{(lv_coord_t)(boxX+5),(lv_coord_t)(boxY+3),(lv_coord_t)(boxX+width-5),(lv_coord_t)(boxY+height-3)};
-  lv_draw_label(ctx,&d,&textArea,text,nullptr);
+  lv_area_t textArea{(lv_coord_t)(x+S(4)),(lv_coord_t)(y+S(3)),(lv_coord_t)(x+w-S(4)),(lv_coord_t)(y+h-S(3))};
+  // Clip locally so an unusually long translated/family label cannot escape.
+  lv_area_t clip;if(_lv_area_intersect(&clip,ctx->clip_area,&textArea)){const lv_area_t* saved=ctx->clip_area;ctx->clip_area=&clip;lv_draw_label(ctx,&d,&textArea,text,nullptr);ctx->clip_area=saved;}
 }
 static void radarDraw(lv_event_t* e){
-  auto* ctx=lv_event_get_draw_ctx(e);disc(ctx,CENTER,CENTER,S(176),0x092317);
-  line(ctx,CENTER,S(16),CENTER,S(344),0x19412b);line(ctx,S(16),CENTER,S(344),CENTER,0x19412b);
-  lv_draw_arc_dsc_t arc;lv_draw_arc_dsc_init(&arc);arc.color=color(0x387b43);arc.width=1;lv_point_t center{(lv_coord_t)CENTER,(lv_coord_t)CENTER};
-  for(int db=-40;db>=-100;db-=20){int r=S(int(dragon::radarRadius(db)));lv_draw_arc(ctx,&arc,&center,r,0,359);
-    char text[12];snprintf(text,sizeof(text),"%d",db);lv_draw_label_dsc_t d;lv_draw_label_dsc_init(&d);d.color=color(0x68815f);d.font=FCALLOUT;lv_area_t a{(lv_coord_t)(CENTER+r-S(30)),(lv_coord_t)(CENTER+S(7)),(lv_coord_t)(CENTER+r+S(2)),(lv_coord_t)(CENTER+S(23))};lv_draw_label(ctx,&d,&a,text,nullptr);
+  auto* ctx=lv_event_get_draw_ctx(e);const auto& theme=radarPalettes[radarTheme];const uint32_t now=millis();
+  disc(ctx,CENTER,CENTER,S(178),theme.grid);disc(ctx,CENTER,CENTER,S(176),theme.ring);
+  lv_draw_rect_dsc_t glass;lv_draw_rect_dsc_init(&glass);glass.radius=LV_RADIUS_CIRCLE;
+  glass.bg_color=color(theme.top);glass.bg_grad.dir=LV_GRAD_DIR_VER;glass.bg_grad.stops[0].color=glass.bg_color;glass.bg_grad.stops[1].color=color(theme.bottom);
+  lv_area_t field{(lv_coord_t)S(9),(lv_coord_t)S(9),(lv_coord_t)(SCREEN_RES-S(9)-1),(lv_coord_t)(SCREEN_RES-S(9)-1)};lv_draw_rect(ctx,&glass,&field);
+  static const int reaches[]={77,119,143,157,166,169,166,157,143,119,77};
+  for(int n=0;n<11;++n){int axis=CENTER+S(n*30-150),reach=S(reaches[n]);line(ctx,axis,CENTER-reach,axis,CENTER+reach,theme.grid,S(1),180);line(ctx,CENTER-reach,axis,CENTER+reach,axis,theme.grid,S(1),180);}
+  lv_draw_arc_dsc_t arc;lv_draw_arc_dsc_init(&arc);arc.color=color(theme.ring);arc.width=S(1);arc.opa=160;lv_point_t center{(lv_coord_t)CENTER,(lv_coord_t)CENTER};
+  if(radarTheme)for(int radius=42;radius<169;radius+=42)lv_draw_arc(ctx,&arc,&center,S(radius),0,359);
+  arc.width=S(2);lv_draw_arc(ctx,&arc,&center,S(170),0,359);
+  // Sweep and pulse are animation, not measurements of bearing or RF activity.
+  static uint32_t sweepAt=0;if(radioEnabled)sweepAt=now;
+  float angle=(sweepAt%6000)*.00104719755f,dx=cosf(angle),dy=sinf(angle);
+  lv_draw_rect_dsc_t trail;lv_draw_rect_dsc_init(&trail);trail.bg_color=color(theme.sweep);
+  for(int n=0;n<18;++n){float nextX=dx*.998629535f+dy*.052335956f,nextY=dy*.998629535f-dx*.052335956f;
+    lv_point_t wedge[]={{(lv_coord_t)CENTER,(lv_coord_t)CENTER},{(lv_coord_t)(CENTER+int(dx*S(166))),(lv_coord_t)(CENTER+int(dy*S(166)))},{(lv_coord_t)(CENTER+int(nextX*S(166))),(lv_coord_t)(CENTER+int(nextY*S(166)))}};
+    trail.bg_opa=58-n*3;lv_draw_triangle(ctx,&trail,wedge);dx=nextX;dy=nextY;
   }
-  for(int i=0;i<36;++i){float a=i*.174532925f;int outer=S(171),inner=S(i%3?168:164);line(ctx,CENTER+cosf(a)*inner,CENTER+sinf(a)*inner,CENTER+cosf(a)*outer,CENTER+sinf(a)*outer,0x486341);}
-  arc.width=3;arc.color=color(0x78985c);lv_draw_arc(ctx,&arc,&center,S(177),0,359);
-  float angle=millis()*0.00075f;
-  if(radioEnabled)for(int i=12;i>=0;--i){float a=angle-i*.022f;line(ctx,CENTER,CENTER,CENTER+cosf(a)*S(164),CENTER+sinf(a)*S(164),0x70ff5a,2,120-i*8);}
-  disc(ctx,CENTER,CENTER,S(3),0xcafc9b);dotCount=0;
-  // Display freshest contacts, oldest age limited to 30 s. Angle is a stable address hash, not a bearing.
-  const uint32_t now=millis();
+  line(ctx,CENTER,CENTER,CENTER+int(cosf(angle)*S(166)),CENTER+int(sinf(angle)*S(166)),theme.sweep,S(2),200);
   if(!radarPrepared || uint32_t(now-radarPrepared)>=250){
     radarPrepared=now;radarCount=0;
     for(size_t i=0;i<MAX_CONTACTS;++i)if(radarVisible(contacts[i],now))radarOrder[radarCount++]=i;
-    std::sort(radarOrder,radarOrder+radarCount,[now](int a,int b){
-      if(a==trackedContact||b==trackedContact)return a==trackedContact&&b!=trackedContact;
-      return preferContact(contacts[a],contacts[b],now);
-    });
+    std::sort(radarOrder,radarOrder+radarCount,[now](int a,int b){if(a==trackedContact||b==trackedContact)return a==trackedContact&&b!=trackedContact;
+      bool staleA=uint32_t(now-contacts[a].seen)>=30000,staleB=uint32_t(now-contacts[b].seen)>=30000;if(staleA!=staleB)return !staleA;return preferContact(contacts[a],contacts[b],now);});
   }
-  int callouts=0;const int u5=S(5),u6=S(6),u7=S(7),u8=S(8);
-  for(int k=0;k<radarCount;++k){int i=radarOrder[k];auto& c=contacts[i];
-    if(!radarVisible(c,now))continue;
+  const unsigned pages=radarLabels?dragon::radarPages(radarCount):1;if(radarPage>=pages)radarPage=pages-1;
+  dotCount=0;unsigned first=radarLabels?radarPage*dragon::RadarPageSize:0,last=radarLabels?std::min<unsigned>(first+dragon::RadarPageSize,radarCount):radarCount;
+  for(unsigned k=first;k<last;++k){int i=radarOrder[k];auto& c=contacts[i];if(!radarVisible(c,now))continue;
     float target=c.signal.count?dragon::radarRadius(c.signal.smooth):158.f;if(!c.plotRadius)c.plotRadius=target;else c.plotRadius+=(target-c.plotRadius)*.35f;
-    float r=c.plotRadius*SCREEN_RES/360;int x=CENTER+c.radarX*r,y=CENTER+c.radarY*r;uint32_t cc=familyColor(visibleFamily(c,now,detector.families));
-    uint8_t opacity=dragon::radarOpacity(now-c.seen);
-    if(c.match.confidence==Confidence::Low && !trafficFresh(c,now)){
-      lv_draw_arc_dsc_t clue=arc;clue.color=color(cc);clue.opa=opacity;clue.width=2;lv_point_t point{(lv_coord_t)x,(lv_coord_t)y};lv_draw_arc(ctx,&clue,&point,S(5),0,359);
-    }else{disc(ctx,x,y,S(9),cc,22);disc(ctx,x,y,S(4),cc,opacity);}
-    if(i==trackedContact){lv_draw_arc_dsc_t lock=arc;lock.color=color(0xffffff);lock.width=2;lv_point_t point{(lv_coord_t)x,(lv_coord_t)y};lv_draw_arc(ctx,&lock,&point,S(15),0,359);}
-    if(c.match.family==Family::Flock){line(ctx,x-u5,y-u6,x+u5,y-u6,cc,2);line(ctx,x-u5,y+u6,x+u5,y+u6,cc,2);}
-    else if(c.match.family==Family::Meta){disc(ctx,x-u5,y,S(2),cc);disc(ctx,x+u5,y,S(2),cc);}
-    else if(c.match.family==Family::Pwnagotchi || c.match.family==Family::Nyanbox){line(ctx,x-u5,y-u5,x-S(2),y-u8,cc,2);line(ctx,x+u5,y-u5,x+S(2),y-u8,cc,2);}
-    else if(c.match.family!=Family::Wifi && c.match.family!=Family::Ble){line(ctx,x,y-u7,x+u7,y,cc,1);line(ctx,x+u7,y,x,y+u7,cc,1);line(ctx,x,y+u7,x-u7,y,cc,1);line(ctx,x-u7,y,x,y-u7,cc,1);}
-    if(detector.enabled(c.trafficFamily) && c.wifiAlerts && millis()-c.lastWifiAlert<30000){lv_draw_arc_dsc_t d=arc;d.color=color(0xff5040);d.width=2;lv_point_t p{(lv_coord_t)x,(lv_coord_t)y};lv_draw_arc(ctx,&d,&p,S(12),0,359);}
-    if(callouts<2 && (trafficFresh(c,now) || c.match.confidence>=Confidence::Low)){
-      Family f=visibleFamily(c,now,detector.families);const char* name=f==Family::Deauth?"Deauth activity":f==Family::BleSpam?"BLE spam?":f==Family::Tracker?"Find My / DULT":dragon::familyName(f);
-      char text[64];snprintf(text,sizeof(text),"%s\n%d dBm / %s",name,c.rssi,uint32_t(now-c.seen)>=5000?"AGING":c.match.confidence==Confidence::Low&&!trafficFresh(c,now)?"CLUE":"LIVE");
-      if(!c.signal.count)snprintf(text,sizeof(text),"%s\nRSSI unavailable",name);
-      int boxX=x<CENTER?S(216):S(26);int boxY=S(106+callouts*43);callout(ctx,x,y,boxX,boxY,text,trafficFresh(c,now)?0xff6655:cc);++callouts;
-    }
-    dots[dotCount++]={x,y,i,contactKey(c)};
+    auto plot=dragon::radarPlotPoint(c.plotRadius,c.radarX,c.radarY);dots[dotCount++]={S(plot.x),S(plot.y),i,contactKey(c)};
   }
+  if(radarLabels){dragon::RadarPoint points[dragon::RadarPageSize];uint8_t preferred[dragon::RadarPageSize];
+    static dragon::DeviceKey labelKeys[dragon::RadarPageSize];static uint8_t slots[dragon::RadarPageSize];static int priorCount=0;static uint32_t labelsAt=0;bool changed=priorCount!=dotCount;
+    for(int i=0;i<dotCount;++i){points[i]={dots[i].x*360/SCREEN_RES,dots[i].y*360/SCREEN_RES};preferred[i]=255;if(i>=priorCount||!(labelKeys[i]==dots[i].key))changed=true;for(int j=0;j<priorCount;++j)if(labelKeys[j]==dots[i].key)preferred[i]=slots[j];}
+    if(changed||uint32_t(now-labelsAt)>=500){dragon::placeRadarLabels(points,dotCount,slots,preferred);labelsAt=now;priorCount=dotCount;for(int i=0;i<dotCount;++i)labelKeys[i]=dots[i].key;}
+    for(int i=0;i<dotCount;++i){auto& c=contacts[dots[i].index];Family family=visibleFamily(c,now,detector.families);uint32_t age=now-c.seen;
+      char state[24],text[64];if(age>=10000)snprintf(state,sizeof(state),"%s %lus AGO",c.match.confidence==Confidence::Low&&!trafficFresh(c,now)?"CLUE":"SEEN",(unsigned long)(age/1000));else snprintf(state,sizeof(state),"%s",c.match.confidence==Confidence::Low&&!trafficFresh(c,now)?"WEAK CLUE":age>=5000?"FADING":c.rssi>=-55?"STRONG":c.rssi>=-75?"MODERATE":"FAINT");
+      dots[i].labelSlot=slots[i];snprintf(text,sizeof(text),"%s\n%s",radarFamilyName(family),state);callout(ctx,dots[i],slots[i],text,trafficFresh(c,now)?0xff7161:age>=30000?0xa49772:theme.dot);
+    }
+  }
+  for(int i=0;i<dotCount;++i){auto& dot=dots[i];auto& c=contacts[dot.index];int x=dot.x,y=dot.y;uint32_t age=now-c.seen;uint8_t opacity=age>=30000?130:dragon::radarOpacity(age);
+    if(age>=30000 || (c.match.confidence==Confidence::Low&&!trafficFresh(c,now))){auto clue=arc;clue.color=color(theme.dot);clue.opa=opacity;clue.width=2;lv_point_t point{(lv_coord_t)x,(lv_coord_t)y};
+      if(age>=30000)for(int a=0;a<360;a+=90)lv_draw_arc(ctx,&clue,&point,S(6),a,a+48);else lv_draw_arc(ctx,&clue,&point,S(5),0,359);
+    }else{unsigned pulse=radioEnabled?unsigned((now+contactHash(contactKey(c)))%1800):900;pulse=pulse>900?1800-pulse:pulse;disc(ctx,x,y,S(9),theme.dot,unsigned(opacity)*(25+pulse/20)/255);disc(ctx,x,y,S(5),theme.dot,opacity);disc(ctx,x-S(1),y-S(1),S(2),0xfff8ab,opacity);}
+    if(dot.index==trackedContact || (detector.enabled(c.trafficFamily)&&trafficFresh(c,now))){auto lock=arc;lock.color=color(dot.index==trackedContact?theme.text:0xff5040);lock.opa=220;lock.width=2;lv_point_t point{(lv_coord_t)x,(lv_coord_t)y};lv_draw_arc(ctx,&lock,&point,S(12),0,359);}
+  }
+  // Decorative center cursor, not a compass. Keep it above the sweep/labels.
+  for(int y=-7;y<=6;++y){int half=(y+7)/2;line(ctx,CENTER-S(half),CENTER+S(y),CENTER+S(half),CENTER+S(y),0xff6651,S(1)+1);}
 }
-static void radarTap(lv_event_t*){lv_point_t p;lv_indev_get_point(lv_indev_get_act(),&p);int nearest=S(18)*S(18),idx=-1;for(int i=0;i<dotCount;++i){int d=(dots[i].x-p.x)*(dots[i].x-p.x)+(dots[i].y-p.y)*(dots[i].y-p.y);if(d<nearest && contactKey(contacts[dots[i].index])==dots[i].key){nearest=d;idx=dots[i].index;}}if(idx>=0){selectContact(idx);go(Details);}}
+static void radarTap(lv_event_t*){lv_point_t p;lv_indev_get_point(lv_indev_get_act(),&p);int nearest=S(18)*S(18),idx=-1;for(int i=0;i<dotCount;++i){int d=(dots[i].x-p.x)*(dots[i].x-p.x)+(dots[i].y-p.y)*(dots[i].y-p.y);if(d<nearest && contactKey(contacts[dots[i].index])==dots[i].key){nearest=d;idx=dots[i].index;}}
+  if(idx<0)for(int i=0;i<dotCount;++i)if(dots[i].labelSlot>=0&&contactKey(contacts[dots[i].index])==dots[i].key){auto b=dragon::radarLabelSlot(dots[i].labelSlot);if(p.x>=S(b.x)&&p.x<=S(b.x+b.w)&&p.y>=S(b.y)&&p.y<=S(b.y+b.h)){idx=dots[i].index;break;}}
+  if(idx>=0){selectContact(idx);go(Details);}}
 static void loadFiles(){
   fileCount=0;filesTruncated=false;if(!sdReady)return;
   xSemaphoreTake(sdMutex,portMAX_DELAY);File dir=SD_MMC.open(directory);
@@ -174,19 +197,23 @@ static void loadFiles(){
 }
 static void build(){
   badgeUnload();page=pending;pageAt=millis();statusLabel=audioLabel=audioMeter=radar=trackingLabel=huntValue=huntMeta=huntGauge=huntGraph=diagnosticsLabel=activityLabel=radarActivity=nullptr;radarPrepared=0;
-  lv_obj_clean(root);lv_obj_set_style_bg_color(root,color(0x071510),0);
+  radarPrevious=radarNext=radarPageLabel=nullptr;lv_obj_clean(root);lv_obj_set_style_bg_color(root,color(0x071510),0);
   if(page==Badge){lv_obj_set_style_bg_color(root,color(0x000000),0);badgeView(root);
   }else if(page==Radar){
     radar=lv_obj_create(root);lv_obj_remove_style_all(radar);lv_obj_set_pos(radar,0,0);lv_obj_set_size(radar,SCREEN_RES,SCREEN_RES);lv_obj_clear_flag(radar,LV_OBJ_FLAG_SCROLLABLE);lv_obj_add_flag(radar,LV_OBJ_FLAG_CLICKABLE);
     lv_obj_add_event_cb(radar,radarDraw,LV_EVENT_DRAW_MAIN,nullptr);lv_obj_add_event_cb(radar,radarTap,LV_EVENT_CLICKED,nullptr);
     auto* logo=lv_img_create(root);lv_img_set_src(logo,&radar_logo);lv_obj_align(logo,LV_ALIGN_TOP_MID,0,S(17));lv_obj_clear_flag(logo,LV_OBJ_FLAG_CLICKABLE);
-    statusLabel=label(root,"LISTENING",56,66,248,F12,0xa7c57f);lv_obj_set_style_text_align(statusLabel,LV_TEXT_ALIGN_CENTER,0);legible(statusLabel);
+    const auto& theme=radarPalettes[radarTheme];
+    statusLabel=label(root,"LISTENING",56,66,248,F12,theme.text);lv_obj_set_style_text_align(statusLabel,LV_TEXT_ALIGN_CENTER,0);legible(statusLabel);lv_obj_set_style_bg_color(statusLabel,color(theme.panel),0);lv_obj_set_style_bg_opa(statusLabel,LV_OPA_60,0);
     radarActivity=label(root,"",75,84,210,F12,0xffbc76);lv_obj_set_style_text_align(radarActivity,LV_TEXT_ALIGN_CENTER,0);legible(radarActivity);lv_obj_add_flag(radarActivity,LV_OBJ_FLAG_CLICKABLE);lv_obj_add_event_cb(radarActivity,action,LV_EVENT_CLICKED,(void*)116);
-    trackingLabel=label(root,"RSSI PROXIMITY / NO BEARING",50,280,260,F12,0xb3ca98);lv_obj_set_style_text_align(trackingLabel,LV_TEXT_ALIGN_CENTER,0);legible(trackingLabel);
+    trackingLabel=label(root,"TAP A SIGNAL",70,280,220,F12,theme.text);lv_obj_set_style_text_align(trackingLabel,LV_TEXT_ALIGN_CENTER,0);
     lv_obj_add_flag(trackingLabel,LV_OBJ_FLAG_CLICKABLE);lv_obj_add_event_cb(trackingLabel,action,LV_EVENT_CLICKED,(void*)57);
-    button(root,"TARGETS",98,301,82,32,96);
-    button(root,"TOOLS",187,301,78,32,2);
-    button(root,detector.quiet?LV_SYMBOL_MUTE:LV_SYMBOL_VOLUME_MAX,270,249,38,34,97);
+    auto* targets=button(root,"TARGETS",98,301,82,32,96);
+    auto* tools=button(root,"TOOLS",187,301,78,32,2);
+    auto* quiet=button(root,detector.quiet?LV_SYMBOL_MUTE:LV_SYMBOL_VOLUME_MAX,270,257,38,34,97);
+    radarPrevious=button(root,LV_SYMBOL_LEFT,86,258,32,24,122);radarNext=button(root,LV_SYMBOL_RIGHT,230,258,32,24,123);radarPageLabel=label(root,"",123,261,103,F12,theme.text);lv_obj_set_style_text_align(radarPageLabel,LV_TEXT_ALIGN_CENTER,0);
+    for(auto* b:{targets,tools,quiet,radarPrevious,radarNext}){lv_obj_set_style_bg_color(b,color(theme.panel),0);lv_obj_set_style_bg_opa(b,LV_OPA_80,0);lv_obj_set_style_border_color(b,color(theme.ring),0);lv_obj_set_style_border_opa(b,LV_OPA_60,0);}
+    for(auto* b:{radarPrevious,radarNext}){lv_obj_set_style_pad_all(b,0,0);lv_obj_add_flag(b,LV_OBJ_FLAG_HIDDEN);}lv_obj_add_flag(radarPageLabel,LV_OBJ_FLAG_HIDDEN);
   }else if(page==Menu){
     title("DRAGON TOOLS");const char* tabs[]={"RECON","BADGE","SYSTEM"};
     for(int i=0;i<3;++i){auto* b=button(root,tabs[i],47+i*89,76,86,32,10+i);if(menuTab==i)lv_obj_set_style_bg_color(b,color(0x36582b),0);}
@@ -197,7 +224,7 @@ static void build(){
   }else if(page==Devices){
     title(filter==0?"RADAR TARGETS":filter==1?"WI-FI CONTACTS":"BLE CONTACTS","Evidence first / strongest signal next");body=scrollBody(88,180);
     int order[MAX_CONTACTS];deviceTotal=0;uint32_t now=millis();
-    for(size_t i=0;i<MAX_CONTACTS;++i){auto& c=contacts[i];if(!c.used || !c.packets || (filter==0&&!radarVisible(c,now)) || (filter==1&&c.ble)||(filter==2&&!c.ble)||now-c.seen>=60000)continue;order[deviceTotal++]=i;}
+    for(size_t i=0;i<MAX_CONTACTS;++i){auto& c=contacts[i];if(!c.used || !c.packets || (filter==0&&!radarVisible(c,now)) || (filter==1&&c.ble)||(filter==2&&!c.ble)||(filter!=0&&now-c.seen>=60000))continue;order[deviceTotal++]=i;}
     std::sort(order,order+deviceTotal,[now](int a,int b){return preferContact(contacts[a],contacts[b],now);});
     devicePage=constrain(devicePage,0,deviceTotal?(deviceTotal-1)/10:0);deviceRows=0;
     for(int k=devicePage*10;k<deviceTotal&&deviceRows<10;++k){auto& c=contacts[order[k]];deviceKeys[deviceRows]=contactKey(c);
@@ -284,6 +311,7 @@ static void build(){
   }else if(page==Settings){
     title("SETTINGS");body=scrollBody();int n=0;
     row(body,"Display & timeouts","Brightness, dimming and screen off",n++,71);
+    row(body,"Radar theme & labels",radarThemeNames[radarTheme],n++,117);
     row(body,"Audio & hunt tones","Volume, target focus and RTTTL alerts",n++,31);
     row(body,"Detection filters","Radar families / audible alert threshold",n++,61);
     row(body,activeBle?"BLE scan: ACTIVE":"BLE scan: PASSIVE",activeBle?"Requests scan-response names; transmits":"Listen only; tap for scan-response names",n++,98);
@@ -303,6 +331,11 @@ static void build(){
     row(body,loggingEnabled&&sdReady?"SD event logging: ON":"SD event logging: OFF",sdReady?sessionPath.c_str():"Requires Spotpear SD card",n++,43);
     row(body,captureEnabled?"PCAP: recording":"PCAP: stopped",sdReady?"Raw 802.11 / 16 MB per capture":"Requires Spotpear SD card",n++,24);
     row(body,"Boot to radar","Clear the saved badge startup choice",n++,55);
+  }else if(page==RadarStyle){
+    title("RADAR STYLE");body=scrollBody();int n=0;
+    for(int i=0;i<3;++i){String name=String(radarTheme==i?LV_SYMBOL_OK "  ":"")+radarThemeNames[i];row(body,name.c_str(),i==0?"Emerald grid / yellow signals":i==1?"Green phosphor / rings and live sweep":"Dark field / gold targets / red sweep",n++,118+i);}
+    row(body,radarLabels?"Device labels: ON":"Device labels: OFF",radarLabels?"Every dot labeled / six per radar page":"All dots together / tap for evidence",n++,121);
+    row(body,radarRecent?"Recent signals: 2 minutes":"Recent signals: OFF","Stale dots show last-seen age, not live RSSI",n++,124);
   }else if(page==Display){
     title("DISPLAY");body=scrollBody();String b=String("Brightness: ")+brightness+"%";row(body,b.c_str(),"25 / 50 / 75 / 100%",0,44);
     String dim=detector.dimSeconds?String("Dim after ")+detector.dimSeconds+" seconds":"Auto dim: NEVER";row(body,dim.c_str(),"Never / 15 / 30 / 60 / 120 / 300 s",1,80);
@@ -392,6 +425,12 @@ static void action(lv_event_t* e){
     case 114:if(devicePage>0)--devicePage;go(Devices);page=Boot;break;
     case 115:if((devicePage+1)*10<deviceTotal)++devicePage;go(Devices);page=Boot;break;
     case 116:go(Activity);break;
+    case 117:go(RadarStyle);break;
+    case 118:case 119:case 120:radarTheme=id-118;settings.putUChar("radar-theme",radarTheme);go(RadarStyle);page=Boot;break;
+    case 121:radarLabels=!radarLabels;settings.putBool("radar-labels",radarLabels);radarPage=0;go(RadarStyle);page=Boot;break;
+    case 122:if(radarPage)--radarPage;break;
+    case 123:if(radarPage+1<dragon::radarPages(radarCount))++radarPage;break;
+    case 124:radarRecent=!radarRecent;settings.putBool("radar-recent",radarRecent);go(RadarStyle);page=Boot;break;
     case 110:if(historyPage>0)--historyPage;go(History);page=Boot;break;
     case 111:if(size_t((historyPage+1)*10)<historyCount)++historyPage;go(History);page=Boot;break;
     case 112:{static const char* buttons[]={"Cancel","Clear",""};auto* box=lv_msgbox_create(root,"CLEAR HISTORY?","Erase stored detections on this device? Active scanning can create new records.",buttons,true);lv_obj_set_width(box,S(260));lv_obj_center(box);lv_obj_add_event_cb(box,[](lv_event_t* event){auto* b=lv_event_get_current_target(event);if(lv_msgbox_get_active_btn(b)==1)historyClear();lv_msgbox_close(b);go(History);page=Boot;},LV_EVENT_VALUE_CHANGED,nullptr);break;}
@@ -416,6 +455,7 @@ bool uiTouch(bool pressed,int x,int y){
   return true;
 }
 void uiShow(const String& name){
+  if(name=="radar-style"){go(RadarStyle);return;}
   lastInteraction=millis();
   if(name=="activity"){go(Activity);return;}
   if(name=="badge")go(Badge);else if(name=="radar")go(Radar);else if(name=="menu")go(Menu);else if(name=="wifi"){filter=1;go(Devices);}else if(name=="ble"){filter=2;go(Devices);}else if(name=="audio")go(Audio);else if(name=="files")go(Files);else if(name=="alerts")go(Alerts);else if(name=="channels")go(Channels);else if(name=="about")go(About);else if(name=="settings")go(Settings);else if(name=="hunt")go(Hunt);else if(name=="detectors")go(Detectors);else if(name=="history")go(History);else if(name=="display")go(Display);else if(name=="health")go(Diagnostics);else if(name=="targets"){filter=0;devicePage=0;go(Devices);}
@@ -424,6 +464,8 @@ void uiBegin(){
   settings.begin("dd-ui",false);
   if(!settings.getBool("panel-v04",false)){settings.putUChar("brightness",100);settings.putBool("panel-v04",true);}
   brightness=settings.getUChar("brightness",100);if(brightness<25||brightness>100)brightness=100;candidatesOnly=settings.getBool("candidates",true);
+  if(!settings.getBool("radar-v07",false)){settings.putBool("radar-labels",true);settings.putUChar("radar-theme",1);settings.putBool("radar-v07",true);}
+  radarLabels=settings.getBool("radar-labels",true);radarRecent=settings.getBool("radar-recent",true);radarTheme=settings.getUChar("radar-theme",1);if(radarTheme>2)radarTheme=1;
   scr_lvgl_init();set_brightness(brightness);lastInteraction=millis();root=lv_scr_act();lv_obj_clear_flag(root,LV_OBJ_FLAG_SCROLLABLE);lv_obj_set_style_bg_color(root,color(0x071510),0);
 #ifdef BOARD_AMOLED_175C
   pinMode(BTN_PIN,INPUT_PULLUP);
@@ -449,7 +491,10 @@ void uiLoop(){
     if(page==Radar && radar){
       bool deauth=detector.enabled(Family::Deauth)&&trafficStatus.disconnectActive(millis()),spam=detector.enabled(Family::BleSpam)&&trafficStatus.bleActive(millis());
       lv_label_set_text(radarActivity,deauth&&spam?"DEAUTH + BLE BURST  >":deauth?"DEAUTH ACTIVITY  >":spam?"BLE SPAM CANDIDATE  >":"");
-      if(trackedContact>=0 && trackingLabel){auto& t=contacts[trackedContact];uint32_t age=millis()-t.seen;String line=age>10000?String("Target stale / ")+age/1000+"s ago":String(t.rssi)+" dBm / "+t.signal.direction();lv_label_set_text(trackingLabel,line.c_str());}
+      if(deauth||spam)lv_obj_clear_flag(radarActivity,LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(radarActivity,LV_OBJ_FLAG_HIDDEN);
+      unsigned pages=radarLabels?dragon::radarPages(radarCount):1;for(auto* o:{radarPrevious,radarNext,radarPageLabel}){if(pages>1)lv_obj_clear_flag(o,LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(o,LV_OBJ_FLAG_HIDDEN);}
+      if(pages>1){char label[24];snprintf(label,sizeof(label),"%u / %u",radarPage+1,pages);lv_label_set_text(radarPageLabel,label);if(radarPage)lv_obj_clear_state(radarPrevious,LV_STATE_DISABLED);else lv_obj_add_state(radarPrevious,LV_STATE_DISABLED);if(radarPage+1<pages)lv_obj_clear_state(radarNext,LV_STATE_DISABLED);else lv_obj_add_state(radarNext,LV_STATE_DISABLED);}
+      if(trackedContact>=0 && trackingLabel){auto& t=contacts[trackedContact];uint32_t age=millis()-t.seen;String line=age>10000?"SIGNAL LOST / HUNT":String("HUNT / ")+t.signal.direction();lv_label_set_text(trackingLabel,line.c_str());}
       lv_obj_invalidate(radar);int count=0;for(auto& c:contacts)if(radarVisible(c,millis()))++count;char s[96];int n=snprintf(s,sizeof(s),"%s %s / %d %s",radioEnabled?(blePhase?"BLE":"WI-FI"):"PAUSED",captureEnabled?"PCAP":"RX",count,count==1?"target":"targets");
       int battery=batteryPercent();if(battery>=0)snprintf(s+n,sizeof(s)-n,"  /  %s%d%%",batteryCharging()?LV_SYMBOL_CHARGE " ":"",battery);lv_label_set_text(statusLabel,s);}
     if(page==Diagnostics&&diagnosticsLabel){
@@ -477,6 +522,12 @@ void uiLoop(){
 
 void uiKey(bool home){lastInteraction=millis();go(home?Radar:page==Menu?Badge:Menu);}
 bool uiCommand(const String& cmd){
+  if(cmd=="radar status"){Serial.printf("RADAR_SETTINGS theme=%u labels=%u recent=%u page=%u pages=%u plotted=%u\n",radarTheme,radarLabels,radarRecent,radarPage+1,radarLabels?dragon::radarPages(radarCount):1,dotCount);return true;}
+  if(cmd=="radar scope all"||cmd=="radar scope candidates"){candidatesOnly=cmd.endsWith("candidates");settings.putBool("candidates",candidatesOnly);radarPage=0;radarPrepared=0;Serial.printf("RADAR_SCOPE %s\n",candidatesOnly?"candidates":"all");return true;}
+  if(cmd=="radar labels on"||cmd=="radar labels off"){radarLabels=cmd.endsWith("on");radarPage=0;settings.putBool("radar-labels",radarLabels);Serial.printf("RADAR_LABELS %u\n",radarLabels);return true;}
+  if(cmd=="radar recent on"||cmd=="radar recent off"){radarRecent=cmd.endsWith("on");settings.putBool("radar-recent",radarRecent);Serial.printf("RADAR_RECENT %u\n",radarRecent);return true;}
+  if(cmd=="radar next"||cmd=="radar previous"){unsigned pages=radarLabels?dragon::radarPages(radarCount):1;if(cmd=="radar next"&&radarPage+1<pages)++radarPage;else if(cmd=="radar previous"&&radarPage)--radarPage;Serial.printf("RADAR_PAGE %u %u\n",radarPage+1,pages);return true;}
+  if(cmd=="radar theme dragon"||cmd=="radar theme green"||cmd=="radar theme gold"){radarTheme=cmd.endsWith("dragon")?0:cmd.endsWith("green")?1:2;settings.putUChar("radar-theme",radarTheme);go(Radar);page=Boot;Serial.printf("RADAR_THEME %u\n",radarTheme);return true;}
   if(cmd=="display status"){Serial.printf("DISPLAY_SETTINGS brightness=%d output=%d dim=%u off=%u dim_level=%u wake=%u\n",brightness,outputBrightness,detector.dimSeconds,detector.offSeconds,detector.idleBrightness,detector.wakeAlert);return true;}
   if(cmd.startsWith("display set ")){
     unsigned b=0,dim=0,off=0,level=0;char extra;

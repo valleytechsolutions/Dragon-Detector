@@ -32,6 +32,8 @@ Identifiers in the table are hexadecimal.
 
 ## Freshness and radio identity
 
+Assigned service IDs are parsed from 16-bit, zero-extended 32-bit and exact Bluetooth Base 128-bit service lists/data fields. Custom UUIDs must match their complete identifier; a coincidental substring does not qualify. Encoding width does not increase confidence or enable reception of extended-only BLE advertisements. See [practical Flipper and Pineapple Pager checks](DEVICE-CHECKS.md).
+
 A first valid signature immediately appears on the radar and in history. Ordinary audible alerts require two matching observations spread over 400 ms. Matching evidence expires after 30 seconds even if unrelated packets continue. Weaker packets cannot refresh a stronger classification. Default audible alerts require medium confidence; weak clues stay visible as hollow dots. All detector families, including iBeacon, are enabled on fresh installs. Watch rules explicitly select an address of interest, including otherwise unclassified contacts.
 
 Vendor lookup uses public BLE addresses and globally assigned unicast Wi-Fi prefixes. Random/local addresses do not receive OUI attribution. Three literal local Wi-Fi address patterns have separate, explicitly unverified clues. BLE address type is part of the contact key. Rotating addresses stay separate; no owner, identity or following-person inference is made.

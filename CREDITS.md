@@ -17,7 +17,7 @@ The direct reference for the Flock prefix union and protocol facts is the owner'
 - **[CodeHedge](https://github.com/CodeHedge)**: [Biscuit GATT reference](https://codehedge.github.io/Biscuit-Wiki/3rd-party-integration/gatt-reference.html), community Marauder/CYD work and [Biscuit flashing tools](https://github.com/CodeHedge/biscuit_flasher). Name/service facts inform detection; no proprietary Biscuit code is included and Pro/Ultra compatibility is not claimed.
 - **[Flipper Devices](https://github.com/flipperdevices/flipperzero-firmware)**: public serial-profile service/appearance values. No GPL Flipper application code is copied.
 - **[Samsung SmartTag research](https://github.com/pogen300/galaxy_smarttag_research)**: public service/protocol findings. No research attack scripts or personal captures are bundled.
-- **Bluetooth SIG**: company and member-service assignments used as vendor evidence, not guaranteed product identity.
+- **Bluetooth SIG**: company and member-service assignments used as vendor evidence, not guaranteed product identity. Service-width decoding follows the [Core Supplement advertising data types](https://www.bluetooth.com/wp-content/uploads/Files/Specification/HTML/CSS_v14/out/en/core-supplementary-features/data-types-specification.html) and exact Bluetooth Base UUID representation; implemented independently.
 - **NoPeek**: earlier manufacturer-ID reference documented in the historical Spotpear feature notes.
 
 ## SquachWatch feature reference
@@ -46,6 +46,10 @@ Source code and pinned build recipes are provided for the application and linked
 
 ## Historical releases and media
 
-The root previously contained a GPL-3.0 license because the Spotpear multimedia build included **ESP8266Audio**. Those existing `hardware/` source trees and binaries keep their original licenses and notices. [The previous root GPL text is preserved](docs/licenses/LEGACY-GPL-3.0.txt). ESP8266Audio is **not compiled into any current 0.3.x/0.4.x/0.5.x/0.6.x build**. This MIT change applies to the owner's current original code; it is not a claim that retained GPL material became MIT.
+The root previously contained a GPL-3.0 license because the Spotpear multimedia build included **ESP8266Audio**. Those existing `hardware/` source trees and binaries keep their original licenses and notices. [The previous root GPL text is preserved](docs/licenses/LEGACY-GPL-3.0.txt). ESP8266Audio is **not compiled into any current 0.3.x/0.4.x/0.5.x/0.6.x/0.7.x build**. This MIT change applies to the owner's current original code; it is not a claim that retained GPL material became MIT.
 
 Hardware and vendor configuration credits: **Spotpear / Guition**, **Waveshare**, **M5Stack**, **Espressif**. VTS artwork and the [BWM1 radar emblem](media/BWM1-official.png) were supplied by the project owner. The original PNG is retained unchanged; tools/encode_radar_logo.py creates native-size RGB565/alpha display assets. Brand/trademark rights remain with their respective owners. The 0.6 traffic monitors, RSSI time sampling and gap-aware trace are original implementations, informed by the credited protocol and workflow references. Manufacturer photographs remain with their owners and are linked for identification. Promotional artwork is not a hardware photograph. UI/browser screenshots describe their capture method and version. Dragon Ball is visual inspiration; no affiliation, endorsement, or trademark rights are granted by the software license.
+
+The 0.7 classic grid, yellow dots and center marker are original LVGL drawing code informed by the [official Bandai / Tamashii PROPLICA Dragon Radar visual reference](https://tamashiiweb.com/item/13034/?sa=JAPAN). No Bandai product photographs, graphics or sounds are bundled as firmware assets. Dragon Ball and associated marks remain with their respective owners.
+
+The Green and Black/gold/red themes, sweep animation, bounded label placement, six-contact radar pages and explicitly aged recent markers are original Dragon Detector implementations. Theme screenshots are captures of its own LVGL renderer; private local identifiers are not published.

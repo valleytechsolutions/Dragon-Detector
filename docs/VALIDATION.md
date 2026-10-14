@@ -1,4 +1,4 @@
-# Validation status · 0.6.0
+# Validation status · 0.7.0
 
 This is an experimental development release. Automated signature checks and basic board checks do not establish field detection accuracy or all-day battery life.
 
@@ -11,9 +11,23 @@ All three board profiles compile locally: Spotpear JC3636W518, Waveshare 1.75C a
 - Native C++ positive/negative fixtures cover all added detector families, dedicated/shared vendor prefixes, public/random BLE addresses, Axon manufacturer/services, Meta composite evidence, Flock probe roles, Biscuit shared-UUID exclusions, Google Find Hub framing, Tile, Raven, iBeacon defaults, and drone Remote ID BLE/beacon/NAN messages encoded with the upstream library.
 - Tracking tests cover signal spikes, reacquisition, timer rollover, history traces, alert cooldown/auto-quiet, SSID conflicts including binary SSIDs and mesh false positives, and display defaults.
 - 150,000 random inputs exercise both bounded radio parsers. A further 50,000 inputs exercise RTTTL parsing. The runner explicitly keeps assertions enabled in optimized builds. All 26 default melodies validate; tests also cover invalid notes/tempo/octaves, size and duration bounds, silence, queue coalescing/expiry/cooldown/rollover, and hunt pitch/cadence bounds. CI runs the native suite with AddressSanitizer and UndefinedBehaviorSanitizer as well.
-- Fifteen Node tests cover both image resolutions, RGB565/CRC, crop geometry, serial framing/disconnects/timeouts, acknowledged small transfers, a full 512-row history export received in one USB chunk, compatible 0.3/0.4/0.5/0.6 USB handshakes/tool availability, and the independently pinned web installer dependency.
+- Sixteen Node tests cover both image resolutions, RGB565/CRC, crop geometry, serial framing/disconnects/timeouts, acknowledged small transfers, a full 512-row history export received in one USB chunk, compatible 0.3/0.4/0.5/0.6/0.7 USB handshakes/tool availability, radar preference loading and acknowledged saves, and the independently pinned web installer dependency.
 - The release packager checks partition sizes, every merged image segment, checksums and workstation-path exclusion. Manifests identify the exact board and distinguish fresh installs from updates.
 - Browser QA checked detector/audio settings at mobile and desktop widths, 26 family choices, disabled disconnected controls, display defaults, and absence of JavaScript errors. Badge image selection/cropping was checked in 0.3.1. Hardware USB tests use host scripts implementing the same protocol; browser USB permission-picker and end-to-end upload remain unverified.
+
+## Radar and protocol checks added in 0.7
+
+- All 134 pinned reference facts still pass recognition and radar eligibility checks. New fixtures compare 23 service clues across 16/32/exact-Base-128 representations, including Google Find Hub and Remote ID payload offsets, Snap corroboration, custom UUID exclusions, truncation and advertisement/response boundaries.
+- Pagination fixtures cover every contact count from zero to 384. Radius/angle fixtures verify markers stay clear of the header and controls while preserving RSSI radius within pixel rounding. Two thousand layouts verify deterministic unique label slots, display bounds and non-overlapping text boxes. Recent-signal fixtures verify the 30/120-second boundaries, expired evidence, disabled families, watch/ignore behavior and timer rollover. None of these establish physical ranging accuracy.
+- The owner confirmed Flipper Zero on the attached Waveshare. The detector also observed an intermittent Pineapple local-address clue; that clue has not been authenticated as the owner's Pager. Private names and addresses are excluded from published images and logs.
+
+## Waveshare 1.75C · 0.7 hardware and browser checks
+
+- All three profiles compile locally. The Waveshare application was flashed at `0x10000` and hash-verified, preserving NVS and files. USB reports `BADGE_INFO 0.7.0 466 READY`; self-test passes 17/17. Spotpear and M5Stack were not physically available.
+- Eight consecutive 434,312-byte captures passed CRC32: three themes, radar settings, a real Flipper hunt, two crowded radar pages and the restored candidate radar. Six labeled contacts per page and next/previous controls worked. Visual inspection found one wrapping signal label; the final build uses shorter strength text, checked again after flashing.
+- Passive and active BLE reception continued with increasing uptime, no resets, zero queue/storage drops and no malformed frames. At the end of the 111-second final-layout run, free internal heap was 114,780 bytes, free PSRAM 7,933,672 bytes and the lowest loop stack margin 3,228 bytes. These are short desktop checks, not endurance or saturated-radio benchmarks.
+- A real restart retained the selected theme and disabled label/recent preferences. Afterwards, green theme, labels on, recent signals on, candidate scope, passive reception and radar were restored. Volume and brightness remain 100%, dim/off timers zero, and the owner's existing quiet mode remains enabled. The speaker shortcut toggles quiet mode.
+- The 0.7 flasher was checked at desktop and 390-pixel mobile widths with no horizontal overflow or browser errors. The logo and all three theme images loaded. All three boards loaded matching factory/update manifests; changing boards reset confirmation. Radar preferences were selectable and their save action remained disabled without compatible USB firmware. The browser USB chooser and end-to-end installation remain unverified; physical flashing and USB protocol tests used host tools.
 
 ## Traffic and RSSI checks added in 0.6
 

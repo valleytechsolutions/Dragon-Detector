@@ -4,7 +4,8 @@ import {crc32,encodeBadge,cropGeometry,fitCircleZoom} from '../web/badge-codec.j
 import {BadgeSerial} from '../web/serial.js';
 import {uploadBadge,BADGE_CHUNK_SIZE} from '../web/badge-transfer.js';
 import {readHistory} from '../web/detector-transfer.js';
-import {parseBadgeInfo,hasDetectorTools,hasActivityTools} from '../web/firmware-compat.js';
+import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools} from '../web/firmware-compat.js';
+import {readRadarSettings,saveRadarSettings} from '../web/radar-transfer.js';
 import {readFileSync} from 'node:fs';
 
 test('firmware release updates preserve the independently pinned installer dependency',()=>{
@@ -12,14 +13,28 @@ test('firmware release updates preserve the independently pinned installer depen
   assert.match(html,/https:\/\/unpkg\.com\/esp-web-tools@10\.4\.0\/dist\/web\/install-button\.js\?module/);
 });
 
-test('USB handshake accepts current/legacy boards and enables tools for 0.4/0.5/0.6',()=>{
-  for(const version of ['0.3.1','0.4.0','0.5.0','0.5.1','0.6.0'])for(const size of [360,466]){
+test('USB handshake accepts current/legacy boards and gates detector/activity tools',()=>{
+  for(const version of ['0.3.1','0.4.0','0.5.0','0.5.1','0.6.0','0.7.0'])for(const size of [360,466]){
     assert.deepEqual(parseBadgeInfo(`BADGE_INFO ${version} ${size} READY Test board`),{version,size,board:'Test board'});
     assert.equal(hasDetectorTools(version),!version.startsWith('0.3.'));
-    assert.equal(hasActivityTools(version),version.startsWith('0.6.'));
+    assert.equal(hasActivityTools(version),/^0\.[67]\./.test(version));
+    assert.equal(hasRadarTools(version),version.startsWith('0.7.'));
   }
   for(const line of ['BADGE_INFO 0.5.0 466 NO_STORAGE Board','BADGE_INFO 0.50.0 466 READY Board','BADGE_INFO 0.5.0 240 READY Board','BADGE_INFO 1.0.0 466 READY Board'])assert.equal(parseBadgeInfo(line),null);
   assert.equal(hasDetectorTools('0.50.0'),false);
+});
+
+test('radar settings preserve all themes and gate each acknowledged write',async()=>{
+  for(const [index,theme] of ['dragon','green','gold'].entries()){
+    const writes=[];const replies=[`RADAR_SETTINGS theme=${index} labels=1 recent=0 page=1 pages=2 plotted=6`,`RADAR_THEME ${index}`,'RADAR_LABELS 1','RADAR_RECENT 0'];
+    const link={write:async s=>writes.push(s),wait:async match=>{const s=replies.shift();assert.ok(match(s));return s;}};
+    const config=await readRadarSettings(link);assert.deepEqual(config,{theme,labels:true,recent:false});await saveRadarSettings(link,config);
+    assert.deepEqual(writes,['radar status',`radar theme ${theme}`,'radar labels on','radar recent off']);
+  }
+  let writes=0;const link={write:async()=>writes++,wait:async()=> 'RADAR_THEME 0'};
+  await assert.rejects(saveRadarSettings(link,{theme:'unknown',labels:true,recent:true}),/Invalid/);assert.equal(writes,0);
+  await assert.rejects(saveRadarSettings(link,{theme:'green',labels:true,recent:true}),/acknowledged/);assert.equal(writes,1);
+  await assert.rejects(readRadarSettings(link),/Invalid radar settings/);
 });
 test('CRC matches firmware IEEE CRC-32 wire contract',()=>assert.equal(crc32(new TextEncoder().encode('123456789')),0xcbf43926));
 for(const size of [360,466])test(`DDB1 ${size}: header, exact size and RGB565 byte order`,()=>{

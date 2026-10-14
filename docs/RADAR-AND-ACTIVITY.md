@@ -1,4 +1,4 @@
-# Radar, hunt and traffic evidence · 0.6
+# Radar, hunt and traffic evidence · 0.7
 
 The same implementation runs on Spotpear / Guition JC3636W518 (360×360), Waveshare ESP32-S3-Touch-AMOLED-1.75C and M5Stack StopWatch C152 (466×466). Each board retains its own display, touch, audio and button adapter. The exact Spotpear model matters; similarly shaped boards are not interchangeable.
 
@@ -6,9 +6,17 @@ The same implementation runs on Spotpear / Guition JC3636W518 (360×360), Wavesh
 
 The owner-supplied BWM1 emblem replaces the heading. RX mode, target count and available battery percentage remain visible. Spotpear has no supported fuel gauge, so it does not display an invented battery value.
 
-Markers move inward as filtered RSSI increases. Rings label -40, -60, -80 and -100 dBm; values stronger than -35 or weaker than -100 clamp at the inner/outer plotting limits. Angle is a stable address arrangement, **not bearing**. The sweep is animation, not a directional antenna. A hollow marker is weak signature evidence; filled markers are stronger. Labels include dBm and LIVE/AGING state, and markers fade until their 30-second expiry.
+Choose **Settings → Radar theme & labels** for **Green radar** (default), **Dragon Ball**, or **Black / gold / red**. Each has an animated sweep and pulsing live targets. Green and gold include unnumbered signal rings; Dragon Ball keeps the emerald square grid and yellow dots. The BWM1 logo and RX/count/battery row stay in every theme. The sweep and red center marker are decorative, not direction sensors.
 
-Signal filtering takes at most one sample per 100 ms, applies a five-sample median and then an elapsed-time exponential filter. Repeating the same radio packet faster does not make a target move inward. Fast/Balanced/Steady smoothing settings remain available. No transmit-power assumptions are used to invent metres.
+Every displayed dot has a device-family label and a leader line by default. Tap the dot **or its label** to open evidence and Hunt. The label says WEAK CLUE when identity is tentative; a family match does not establish an exact model. Six labeled contacts fit each radar page without overlapping text boxes. Previous/next buttons appear for larger sets; all contacts keep being received and recorded. The header counts the complete radar set. Switch labels off only if you prefer all dots together.
+
+Radius follows filtered RSSI: stronger signals move inward. Values stronger than -35 or weaker than -100 dBm clamp at the plotting limits internally; this is not a distance calibration. Angle is a decorative address arrangement, **not bearing**. Markers are kept clear of the logo and controls while preserving their RSSI radius. Hollow live dots indicate weak evidence. STRONG/MID/FAINT describe signal strength separately from identity confidence.
+
+After ten seconds without reception, a label shows SEEN … AGO (CLUE … AGO for a weak identity). **Recent signals** retains previously recognized contacts for up to two minutes as segmented, muted markers with age. This display-only retention never refreshes evidence, triggers an alert, or makes Hunt audio treat a lost signal as live. Turn it off to return to the 30-second radar expiry. Disabled families and ignored addresses remain suppressed. Slot pressure can evict older contacts before that limit.
+
+USB commands: `radar status`, `radar theme green|dragon|gold`, `radar labels on|off`, `radar recent on|off`, `radar next`, `radar previous`, `radar scope candidates|all`. Preferences also load/save from the 0.7 web detector tools.
+
+Signal filtering takes at most one sample per 100 ms, applies a five-sample median and then an elapsed-time exponential filter. Repeating the same radio packet faster does not make a target move inward. Fast/Balanced/Steady smoothing settings remain available. No transmit-power assumptions are used to invent metres. RSSI remains the available passive proximity cue. ESP32-S3 FTM ranging requires a compatible cooperating peer and is not a universal passive measurement: [Espressif FTM reference](https://docs.espressif.com/projects/esp-idf/en/v5.0.5/esp32s3/api-guides/wifi.html#fine-timing-measurement-ftm).
 
 Hunt dedicates reception to the chosen radio/address. Raw RSSI helps expose filter lag; Mark, peak and trend compare changes. The trace uses 48 half-second buckets; missing reception creates gaps instead of a continuous line. A lost Wi-Fi address triggers a channel sweep after twelve seconds. Address rotation can lose a target; unrelated devices are not merged.
 
@@ -31,6 +39,6 @@ Crowded environments and address rotation can trigger these heuristics. Identica
 
 ## Controls and limits
 
-Open **Tools → Activity**, or tap a recent-activity banner on the radar. Events stores the alert detail; contact evidence explains the matched participant. Family toggles, confidence controls and quiet mode continue to apply to alerts. The web tool's **Show radio activity** shortcut requires 0.6.x. USB `traffic status` returns aggregate counters; `screen activity` opens the panel.
+Open **Tools → Activity**, or tap a recent-activity banner on the radar. Events stores the alert detail; contact evidence explains the matched participant. Family toggles, confidence controls and quiet mode continue to apply to alerts. The web tool's **Show radio activity** shortcut requires 0.6.x or 0.7.x. USB `traffic status` returns aggregate counters; `screen activity` opens the panel.
 
 Balanced reception alternates Wi-Fi and BLE; hunting prioritizes one radio, so other activity can be missed. Only the currently received Wi-Fi channel is observed. These are decoded-frame detectors, not RF jamming measurements. All 134 pinned SquachWatch signature checks remain enforced. See [coverage](COVERAGE-AUDIT.md), [validation](VALIDATION.md) and [credits](../CREDITS.md).

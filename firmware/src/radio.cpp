@@ -6,10 +6,11 @@
 #include <atomic>
 
 bool radioEnabled=true,blePhase=false,candidatesOnly=true;
+bool radarRecent=true;
 int trackedContact=-1;
 bool radarVisible(const Contact& c,uint32_t now){
  uint8_t flags=deviceRules(contactKey(c));
- return candidateVisible(c,now,detector,!candidatesOnly,flags&RuleIgnore,flags&RuleWatch);
+ return candidateVisible(c,now,detector,!candidatesOnly,flags&RuleIgnore,flags&RuleWatch) || (radarRecent&&recentCandidateVisible(c,now,detector,flags&RuleIgnore,flags&RuleWatch));
 }
 bool activeBle=false;
 uint32_t radioMaxBatchUs=0,radioMaxLagMs=0,contactEvictions=0,contactCacheHits=0,contactCacheMisses=0;

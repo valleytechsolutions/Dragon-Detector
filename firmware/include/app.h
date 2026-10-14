@@ -57,6 +57,7 @@ bool batteryCharging();
 
 extern int trackedContact;
 extern bool candidatesOnly;
+extern bool radarRecent;
 bool radarVisible(const Contact& c,uint32_t now);
 void trackContact(int index);
 void badgeInit();

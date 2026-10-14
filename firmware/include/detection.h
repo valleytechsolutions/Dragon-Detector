@@ -166,18 +166,35 @@ inline WifiFrame parseWifi(const uint8_t* p,size_t n) {
   return f;
 }
 struct BleFrame { bool valid=false, applePopup=false, fastPair=false, swiftPair=false; uint16_t company=0xffff; char name[64]{}; Match match{Family::Ble,Confidence::None,"BLE advertisement"}; DroneInfo drone; };
+// Bluetooth-assigned 16-bit identifiers can also be carried as zero-extended
+// 32-bit values or in the exact Bluetooth Base UUID. Never shorten custom UUIDs.
+inline bool assignedUuid16(const uint8_t* d,size_t width,uint16_t& value){
+  static const uint8_t base[]={0xfb,0x34,0x9b,0x5f,0x80,0x00,0x00,0x80,0x00,0x10,0x00,0x00};
+  if(width==16){if(memcmp(d,base,sizeof(base))||d[14]||d[15])return false;d+=12;}
+  else if(width==4){if(d[2]||d[3])return false;}
+  else if(width!=2)return false;
+  value=d[0]|uint16_t(d[1])<<8;return true;
+}
 inline BleFrame parseBle(const uint8_t* p,size_t n,size_t advLength=0) {
   BleFrame f; if(!p || !n || advLength>n)return f; bool xuntong=false,lux=false,meta=false,findmy=false,flipper=false,metaService=false,dult=false,axonCompany=false,axonService=false,smarttag=false,biscuit=false,flockService=false;
   bool snap=false,snapService=false,flipperCompany=false,raven=false,tile=false,google=false,ibeacon=false,serial=false,fox=false;
   bool googleService=false,droneService=false,applePairing=false,ibeaconExtra=false;uint8_t ravenServices=0;uint16_t appearance=0;
+  auto service=[&](uint16_t uuid){
+    f.fastPair|=uuid==0xfe2c;findmy|=uuid==0xfd44;flipper|=uuid>=0x3080&&uuid<=0x3083;
+    axonService|=uuid==0xfc81||uuid==0xfe6b||uuid==0xfe6c;smarttag|=uuid==0xfd5a;metaService|=uuid==0xfd5f||uuid==0xfeb7||uuid==0xfeb8;
+    snapService|=uuid==0xfe45;tile|=uuid==0xfeed||uuid==0xfeec;serial|=uuid==0x1101;googleService|=uuid==0xfeaa;droneService|=uuid==0xfffa;
+    if(uuid>=0x3100 && uuid<=0x3500 && (uuid&0xff)==0){raven=true;ravenServices|=1u<<((uuid>>8)-0x31);}
+  };
   for(size_t o=0;o<n;) {
     // NimBLE concatenates ADV and SCAN_RSP. Zero padding terminates only its
     // own segment; malformed lengths must never consume the next segment.
     size_t segmentEnd=advLength && o<advLength?advLength:n;
     uint8_t l=p[o++]; if(!l){o=segmentEnd;continue;} if(l>segmentEnd-o)return f; uint8_t t=p[o]; const uint8_t* d=p+o+1; size_t z=l-1;
     if((t==2||t==3) && z%2)return f;
+    if((t==4||t==5) && z%4)return f;
     if((t==6||t==7) && z%16)return f;
     if(t==0x16 && z<2)return f;
+    if(t==0x20 && z<4)return f;
     if(t==0x21 && z<16)return f;
     if(t==0x19 && z==2)appearance=d[0]|uint16_t(d[1])<<8;
     if((t==8 || t==9) && z)safeText(f.name,sizeof(f.name),d,z);
@@ -191,15 +208,14 @@ inline BleFrame parseBle(const uint8_t* p,size_t n,size_t advLength=0) {
       if(id==0x004c && z>=4){ f.applePopup|=d[2]==0x07 || d[2]==0x0f; findmy|=d[2]==0x12 && d[3]==0x19 && z>=29; }
       f.swiftPair|=id==0x0006 && z>=3 && d[2]==3;
     }
-    if((t==2 || t==3 || t==0x16) && z>=2) { size_t limit=t==0x16?2:z; for(size_t j=0;j+1<limit;j+=2) { uint16_t uuid=d[j]|uint16_t(d[j+1])<<8; f.fastPair|=uuid==0xfe2c;findmy|=uuid==0xfd44;flipper|=uuid>=0x3080&&uuid<=0x3083;axonService|=uuid==0xfc81||uuid==0xfe6b||uuid==0xfe6c;smarttag|=uuid==0xfd5a;metaService|=uuid==0xfd5f||uuid==0xfeb7||uuid==0xfeb8;
-      snapService|=uuid==0xfe45;tile|=uuid==0xfeed||uuid==0xfeec;serial|=uuid==0x1101;
-      googleService|=uuid==0xfeaa;droneService|=uuid==0xfffa;
-      if(uuid>=0x3100 && uuid<=0x3500 && (uuid&0xff)==0){raven=true;ravenServices|=1u<<((uuid>>8)-0x31);}
-    } }
-    if(t==0x16 && z>=3) {
-      uint16_t uuid=d[0]|uint16_t(d[1])<<8;
-      google|=uuid==0xfeaa && (d[2]==0x40||d[2]==0x41) && (z==23||z==24||z==35||z==36);
-      if(uuid==0xfffa && z>=29 && d[2]==0x0d)decodeDrone(d+4,z-4,f.drone);
+    const size_t width=(t==2||t==3||t==0x16)?2:(t==4||t==5||t==0x20)?4:(t==6||t==7||t==0x21)?16:0;
+    const bool serviceData=t==0x16||t==0x20||t==0x21;
+    if(width)for(size_t j=0;j+width<=z;j+=width){uint16_t uuid;if(assignedUuid16(d+j,width,uuid))service(uuid);if(serviceData)break;}
+    uint16_t dataUuid=0;
+    if(serviceData && z>width && assignedUuid16(d,width,dataUuid)) {
+      const uint8_t* body=d+width;const size_t size=z-width;
+      google|=dataUuid==0xfeaa && (body[0]==0x40||body[0]==0x41) && (size==21||size==22||size==33||size==34);
+      if(dataUuid==0xfffa && size>=27 && body[0]==0x0d)decodeDrone(body+2,size-2,f.drone);
     }
     if((t==6||t==7||t==0x21) && z>=16){
       const uint8_t foxId[]={0x90,0x4b,0x5a,0xc6,0x44,0x5f,0x26,0x8e,0x2b,0x45,0x14,0x71,1,0,4,0xdd};

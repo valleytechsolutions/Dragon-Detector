@@ -43,6 +43,13 @@ inline bool candidateVisible(const Contact& c,uint32_t now,const dragon::Detecto
   bool signature=c.match.confidence!=dragon::Confidence::None && c.matchHits && uint32_t(now-c.matchedAt)<30000;
   return watch || (settings.enabled(c.match.family)&&(all||signature)) || (trafficFresh(c,now)&&settings.enabled(c.trafficFamily));
 }
+// Retain an intermittent, previously classified signal as an explicitly stale
+// marker. This never refreshes evidence or qualifies it for alerts/hunt audio.
+inline bool recentCandidateVisible(const Contact& c,uint32_t now,const dragon::DetectorSettings& settings,bool ignore,bool watch){
+  const uint32_t age=uint32_t(now-c.seen);
+  if(!c.used||!c.packets||ignore||age<30000||age>=120000)return false;
+  return watch || (settings.enabled(c.match.family)&&c.match.confidence!=dragon::Confidence::None&&c.matchHits&&uint32_t(now-c.matchedAt)<120000);
+}
 inline dragon::Family visibleFamily(const Contact& c,uint32_t now,uint32_t families=0xffffffffu){return trafficFresh(c,now)&&(families&(1u<<unsigned(c.trafficFamily)))?c.trafficFamily:c.match.family;}
 inline bool huntSweep(const Contact& c,uint32_t now){return !c.ble && (!c.packets || uint32_t(now-c.seen)>=12000);}
 inline bool preferContact(const Contact& a,const Contact& b,uint32_t now){

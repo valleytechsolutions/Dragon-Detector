@@ -1,4 +1,4 @@
-# Daily detection and hunting · 0.6.0
+# Daily detection and hunting · 0.7.0
 
 The radar starts at **100% brightness with no automatic dimming or screen-off timeout**. It listens passively on 2.4 GHz Wi-Fi and Bluetooth LE. The optional training fox transmitter is off at every boot.
 
@@ -10,7 +10,11 @@ Use **TARGETS** for a ten-row paged list ordered by evidence and signal; refresh
 
 **Settings → Radar** switches between candidates and all contacts. Disabled families and ignored addresses remain suppressed; explicitly watched addresses stay visible unless ignored. Angle is a stable visual arrangement, not a bearing; radius represents signal strength, not distance.
 
-The BWM1 emblem replaces the radar heading. RX mode, target count and battery percentage (where a fuel gauge exists) remain below it. Rings are labeled -40/-60/-80/-100 dBm; inward means stronger signal. Fading markers and AGING labels indicate older reception. The ring scale is not calibrated distance.
+The BWM1 emblem replaces the radar heading. RX mode, total radar contacts and battery percentage (where a fuel gauge exists) remain below it. **Settings → Radar theme & labels** offers Green radar (default), Dragon Ball, and Black / gold / red. The sweep animates and live dots pulse; rings have no numbered distance scale.
+
+Every plotted dot has a device-family label and leader by default. Tap either to open its evidence. Six targets fit each labeled radar page; previous/next appears when needed. Weak identities say WEAK CLUE. After ten seconds without reception, labels show last-seen age while preserving weak-clue wording. Recent signals remain for up to two minutes with segmented muted markers, unless this option is disabled. A stale dot is not a live signal; alerts and hunt feedback retain their freshness rules. Switch labels off to show all dots together.
+
+Inward means stronger filtered RSSI. The triangle and sweep do not indicate heading. Detailed dBm readings remain on contact and Hunt screens. [Check a Flipper or Pineapple Pager](DEVICE-CHECKS.md).
 
 **Tools → Activity** shows Wi-Fi disconnect and BLE spam candidates. A recent burst also adds a tappable banner to the radar. Events and contact evidence retain the reason for each alert. [Thresholds and limits](RADAR-AND-ACTIVITY.md).
 
