@@ -3,7 +3,19 @@
 
 #define BTN_PIN 0
 
-#if defined(BOARD_STOPWATCH)
+#if defined(BOARD_XIAO_ROUND)
+#define BOARD_NAME "Seeed XIAO ESP32-S3 + Round Display"
+#define SCREEN_RES 240
+#define BOARD_HAS_AUDIO 0
+#define BOARD_HAS_SD 1
+#define BOARD_SD_SPI 1
+#define XIAO_SD_CS 3
+#define XIAO_LCD_CS 2
+#define XIAO_BACKLIGHT 43
+#define XIAO_TOUCH_INT 44
+#define XIAO_SDA 5
+#define XIAO_SCL 6
+#elif defined(BOARD_STOPWATCH)
 #define BOARD_NAME "M5Stack StopWatch C152"
 #define SCREEN_RES 466
 #define BOARD_HAS_AUDIO 0

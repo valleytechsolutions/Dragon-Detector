@@ -2,11 +2,11 @@
 
 # Dragon Detector · Detection & Hunt Edition
 
-**A Dragon Radar-inspired detector for three ESP32-S3 boards.** Observe device signatures, hunt a selected signal, and keep the evidence in local history. Create a custom image badge in the browser, sized for your exact board.
+**A Dragon Radar-inspired detector for four ESP32-S3 boards.** Observe device signatures, hunt a selected signal, and keep the evidence in local history. Create a custom image badge in the browser, sized for your exact board.
 
 **[Open the web flasher & detector tools](https://valleytechsolutions.github.io/Dragon-Detector/)** · [Install guide](docs/FLASHING.md) · [Controls](docs/USER-GUIDE.md) · [Detection evidence](docs/DETECTION.md) · [Credits](CREDITS.md)
 
-Version **0.9.1** is an experimental development release. See [what has actually been tested](docs/VALIDATION.md) before installing. The flasher requires desktop Chrome/Edge, HTTPS, a USB data cable, and the exact board selection; it stays disabled if matching release files are unavailable.
+Version **0.9.2** is an experimental development release. See [what has actually been tested](docs/VALIDATION.md) before installing. The flasher requires desktop Chrome/Edge, HTTPS, a USB data cable, and the exact board selection; it stays disabled if matching release files are unavailable.
 
 ## Choose the exact board
 
@@ -15,6 +15,7 @@ Version **0.9.1** is an experimental development release. See [what has actually
 | **Spotpear / Guition JC3636W518** | 360×360 round LCD | Touch | `spotpear` |
 | **Waveshare ESP32-S3-Touch-AMOLED-1.75C** | 466×466 round AMOLED | Touch + BOOT / short PWR | `waveshare` |
 | **M5Stack StopWatch C152** | 466×466 round AMOLED | Touch + yellow/blue keys, haptics | `stopwatch` |
+| **Seeed XIAO ESP32-S3 + Round Display** | 240×240 round LCD | Touch + BOOT, microSD, RTC; no speaker | `xiao_round` |
 
 The Waveshare **C variant** has different reset wiring from the non-C 1.75. Firmware is not interchangeable just because a board contains an ESP32-S3. [Board details and manufacturer links](docs/HARDWARE.md).
 
@@ -23,6 +24,14 @@ The Waveshare **C variant** has different reset wiring from the non-C 1.75. Firm
 | ![Spotpear manufacturer photograph](https://cdn.static.spotpear.com/uploads/picture/product/esp32/EPS32-S3-1.8inch-Touch-LCD/WEB-EPS32-S3-1.8inch-Touch-LCD.jpg) | ![M5Stack manufacturer photograph](https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/1242/C152_stopwatch_mainpictures_01.webp) |
 
 Photographs are manufacturer-hosted identification images, not pictures of this firmware. [Waveshare's official C-variant source and hardware reference](https://github.com/waveshareteam/ESP32-S3-Touch-AMOLED-1.75C) identifies the third board. The cover is promotional art; no manufacturer or Dragon Ball affiliation is implied.
+
+The Seeed port has its own 8 MB flash layout, native 240-pixel fonts/logo, buffered touch, shared SPI SD support and RTC controls. USB detection, RTC and badge checks pass; physical panel/touch confirmation and inserted-card tests remain pending. [XIAO hardware, switches and installation](docs/XIAO-ROUND.md).
+
+| XIAO radar · 0.9.2 | XIAO stopwatch · 0.9.2 |
+|---|---|
+| ![Actual XIAO radar renderer](media/xiao-radar-v092.png) | ![Actual XIAO stopwatch renderer](media/xiao-stopwatch-v092.png) |
+
+Logical 240×240 captures from the connected XIAO, not panel photographs.
 
 ## A radar you can wear
 
@@ -40,14 +49,14 @@ Photographs are manufacturer-hosted identification images, not pictures of this 
 - **Your requested display defaults:** 100% brightness, always on, no automatic dimming. Settings offers independent dim and screen-off timers, dim level and wake-on-alert.
 - **Hear the hunt:** 26 original device-family melodies, a distinct Axon alert and double heartbeat, signal-dependent pitch/cadence, and a lost-signal cue. Edit, preview, silence or reset RTTTL tones in the [USB audio editor](https://valleytechsolutions.github.io/Dragon-Detector/#sound).
 - **More room for reception:** 384 contacts in PSRAM, bounded packet processing, indexed packet queues and faster lookups across every board. Passive BLE is the default; optional active scanning requests response-only names. Assigned service IDs are recognized in 16-, 32- and exact Bluetooth Base 128-bit encodings. See [checking a Flipper or Pineapple Pager](docs/DEVICE-CHECKS.md).
-- **Shared firmware:** all three profiles use the same detection, tracking, history, controls and release pipeline. All profiles have synthesized RTTTL speaker alerts. StopWatch adds haptics; Spotpear adds optional SD CSV/PCAP.
-- **Badge Studio:** board-specific 360/466px previews, fit/fill, drag, zoom, rotate, mirror, fine positioning, background color, alignment guides and PNG export. USB identifies the exact board before a CRC-checked upload; interrupted transfers preserve the previous badge.
+- **Shared firmware:** all four profiles use the same detection, tracking, history, controls and release pipeline. The original three profiles have synthesized RTTTL speaker alerts. Seeed XIAO Round uses visual alerts because it has no speaker. StopWatch adds haptics; Spotpear and Seeed XIAO Round add optional SD CSV/PCAP.
+- **Badge Studio:** board-specific 240/360/466px previews, fit/fill, drag, zoom, rotate, mirror, fine positioning, background color, alignment guides and PNG export. USB identifies the exact board before a CRC-checked upload; interrupted transfers preserve the previous badge.
 
 **A detected signature does not prove malicious intent, ownership, recording state or a particular product model.** AirTag/Find My family matches may be another compatible accessory; Biscuit Pro and Ultra are not reliably distinguishable from their shared advertisements. Radar radius reflects filtered signal strength, not measured distance. Angle is decorative, not direction. These radios cannot detect silent devices, Bluetooth Classic, or 5/6 GHz Wi-Fi.
 
 ## Stopwatch, clock and orientation
 
-**Tools → Daily** now includes a real start/pause/lap stopwatch and a clock. M5Stack yellow/blue and Waveshare BOOT/short PWR operate timing controls; every board also has touch buttons. The latest 50 laps remain available while detection keeps running. Settings provides RTC date/time and local UTC offset, saved 0°/90°/180°/270° orientation on all three boards. [Controls, behavior and hardware limits](docs/STOPWATCH-CLOCK-ORIENTATION.md).
+**Tools → Daily** now includes a real start/pause/lap stopwatch and a clock. M5Stack yellow/blue and Waveshare BOOT/short PWR operate timing controls; every board also has touch buttons. The latest 50 laps remain available while detection keeps running. Settings provides RTC date/time and local UTC offset, saved 0°/90°/180°/270° orientation on all four boards. [Controls, behavior and hardware limits](docs/STOPWATCH-CLOCK-ORIENTATION.md).
 
 | Stopwatch · 0.9 | Clock · 0.9 |
 |---|---|

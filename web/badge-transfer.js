@@ -1,7 +1,8 @@
 import {crc32} from './badge-codec.js';
 
-// Stay below the original firmware's 256-byte USB receive queue too.
-export const BADGE_CHUNK_SIZE = 128;
+// End each write with a short USB packet, avoiding intermittent native
+// USB-JTAG stalls at exact 64-byte boundaries. Also fits legacy 256-byte queues.
+export const BADGE_CHUNK_SIZE = 127;
 
 export async function uploadBadge(link, bytes, onProgress = () => {}) {
   link.lines = [];

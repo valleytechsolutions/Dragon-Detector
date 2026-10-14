@@ -1,7 +1,14 @@
 #pragma once
 #include <Arduino.h>
 #include <FS.h>
+#include "board_pins.h"
+#if defined(BOARD_SD_SPI)
+#include <SD.h>
+#define CardFS SD
+#else
 #include <SD_MMC.h>
+#define CardFS SD_MMC
+#endif
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 #include "detection.h"

@@ -58,9 +58,13 @@ bool badgeCommand(const String& c){
     size_t n=Serial.readBytes(buffer,std::min(sizeof(buffer),std::min(available,size_t(length-received))));
     if(received<8)memcpy(header+received,buffer,std::min(n,8-received));
     crc=dragon::crc32(buffer,n,crc);if(f.write(buffer,n)!=n){ok=false;break;}
-    received+=n;last=millis();Serial.printf("BADGE_ACK %u\n",unsigned(received));
+    // Terminate ACK bursts with a short USB packet. Multiple 16-byte ACKs can
+    // otherwise fill a native USB-JTAG packet and stall Windows at a boundary.
+    received+=n;last=millis();Serial.printf("BADGE_ACK %u\n\n",unsigned(received));
   }
-  f.flush();f.close();ok=ok && received==length && (crc^0xffffffffu)==checksum && validHeader(header);
+  f.flush();f.close();
+  if(!ok||received!=length)Serial.printf("BADGE_TRANSFER received=%u expected=%lu write_ok=%u\n",unsigned(received),length,ok);
+  ok=ok && received==length && (crc^0xffffffffu)==checksum && validHeader(header);
   if(ok){
     LittleFS.remove("/badges/previous.rgb565");
     bool had=LittleFS.exists("/badges/active.rgb565");

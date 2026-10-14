@@ -70,6 +70,9 @@ static void command(const String& c){
   if(badgeCommand(c) || wearableCommand(c) || detectorCommand(c) || audioCommand(c) || uiCommand(c))return;
   if(c=="status"){health();Serial.printf("SESSION %s\n",sessionPath.c_str());}
   else if(c=="selftest")runSelfTests();
+#ifdef BOARD_XIAO_ROUND
+  else if(c=="touch status"){extern void xiaoTouchStatus();xiaoTouchStatus();}
+#endif
 #ifdef BOARD_STOPWATCH
   else if(c=="touch status"){extern void stopwatchTouchStatus();stopwatchTouchStatus();}
 #endif
@@ -80,19 +83,19 @@ static void command(const String& c){
   else if(c.startsWith("screen "))uiShow(c.substring(7));
   else if(c=="audio status"){auto a=audioStatus();Serial.printf("AUDIO mode=%u seconds=%lu peak=%u volume=%u file=%s\n",unsigned(a.mode),a.seconds,a.peak,a.volume,a.message);}
   else if(c.startsWith("volume "))audioVolume(c.substring(7).toInt());
-  else if(c.startsWith("ls ") && sdReady){xSemaphoreTake(sdMutex,portMAX_DELAY);File dir=SD_MMC.open(c.substring(3));File f=dir.openNextFile();for(int i=0;f&&i<128;++i){Serial.printf("%s %u %s\n",f.isDirectory()?"DIR":"FILE",unsigned(f.size()),f.path());f.close();f=dir.openNextFile();}f.close();dir.close();xSemaphoreGive(sdMutex);}
+  else if(c.startsWith("ls ") && sdReady){xSemaphoreTake(sdMutex,portMAX_DELAY);File dir=CardFS.open(c.substring(3));File f=dir.openNextFile();for(int i=0;f&&i<128;++i){Serial.printf("%s %u %s\n",f.isDirectory()?"DIR":"FILE",unsigned(f.size()),f.path());f.close();f=dir.openNextFile();}f.close();dir.close();xSemaphoreGive(sdMutex);}
   else if(c.startsWith("put ") && sdReady){
     int split=c.lastIndexOf(' ');String path=c.substring(4,split);long total=c.substring(split+1).toInt();
     if(split<5 || total<=0 || total>16*1024*1024 || path.indexOf("..")>=0 || (!path.startsWith("/music/")&&!path.startsWith("/dragon/"))){Serial.println("PUT_ERROR invalid path or length");return;}
     if(audioStatus().mode==AudioMode::Recording || audioStatus().mode==AudioMode::Playing){Serial.println("PUT_ERROR stop audio first");return;}
-    xSemaphoreTake(sdMutex,portMAX_DELAY);bool exists=SD_MMC.exists(path)||SD_MMC.exists(path+".part");File file;if(!exists)file=SD_MMC.open(path+".part",FILE_WRITE);xSemaphoreGive(sdMutex);
+    xSemaphoreTake(sdMutex,portMAX_DELAY);bool exists=CardFS.exists(path)||CardFS.exists(path+".part");File file;if(!exists)file=CardFS.open(path+".part",FILE_WRITE);xSemaphoreGive(sdMutex);
     if(!file){Serial.println("PUT_ERROR file exists or cannot open");return;}
     bool enabled=radioEnabled;setRadio(false);Serial.println("PUT_READY");uint8_t buffer[1024];size_t written=0;uint32_t last=millis();bool ok=true;
     while(written<size_t(total) && millis()-last<5000){int available=Serial.available();if(available){size_t n=Serial.readBytes(buffer,std::min<size_t>(sizeof(buffer),std::min<size_t>(available,total-written)));xSemaphoreTake(sdMutex,portMAX_DELAY);size_t result=file.write(buffer,n);xSemaphoreGive(sdMutex);if(result!=n){ok=false;break;}written+=n;last=millis();Serial.printf("PUT_ACK %u\n",unsigned(written));}else delay(1);}
-    xSemaphoreTake(sdMutex,portMAX_DELAY);file.close();ok=ok&&written==size_t(total);if(ok)ok=SD_MMC.rename(path+".part",path);if(!ok)SD_MMC.remove(path+".part");xSemaphoreGive(sdMutex);setRadio(enabled);Serial.println(ok?"PUT_OK":"PUT_ERROR incomplete transfer");
+    xSemaphoreTake(sdMutex,portMAX_DELAY);file.close();ok=ok&&written==size_t(total);if(ok)ok=CardFS.rename(path+".part",path);if(!ok)CardFS.remove(path+".part");xSemaphoreGive(sdMutex);setRadio(enabled);Serial.println(ok?"PUT_OK":"PUT_ERROR incomplete transfer");
   }
   else if(c.startsWith("get ") && sdReady){
-    xSemaphoreTake(sdMutex,portMAX_DELAY);File file=SD_MMC.open(c.substring(4));xSemaphoreGive(sdMutex);
+    xSemaphoreTake(sdMutex,portMAX_DELAY);File file=CardFS.open(c.substring(4));xSemaphoreGive(sdMutex);
     if(!file||file.isDirectory()){Serial.println("GET_ERROR");return;}bool enabled=radioEnabled;setRadio(false);size_t remaining=file.size();Serial.printf("FILE_BYTES %u\n",unsigned(remaining));uint8_t data[1024];
     while(remaining){xSemaphoreTake(sdMutex,portMAX_DELAY);size_t n=file.read(data,std::min(sizeof(data),remaining));xSemaphoreGive(sdMutex);if(!n||!serialBytes(data,n))break;remaining-=n;}xSemaphoreTake(sdMutex,portMAX_DELAY);file.close();xSemaphoreGive(sdMutex);Serial.println("\nFILE_END");setRadio(enabled);
   }

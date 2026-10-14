@@ -15,8 +15,22 @@ test('firmware release updates preserve the independently pinned installer depen
   assert.match(html,/https:\/\/unpkg\.com\/esp-web-tools@10\.4\.0\/dist\/web\/install-button\.js\?module/);
 });
 
+test('every release board is available in installation and badge preview controls',()=>{
+  const html=readFileSync(new URL('../web/index.html',import.meta.url),'utf8');
+  const options=html.match(/<select id="badge-board">([\s\S]*?)<\/select>/)[1];
+  for(const id of Object.keys(boardProfiles)){
+    assert.ok(html.includes(`data-board="${id}"`),`installer ${id}`);
+    assert.ok(options.includes(`value="${id}"`),`badge preview ${id}`);
+  }
+});
+
+test('badge chunks stay bounded and terminate with a short USB packet',()=>{
+  assert.ok(BADGE_CHUNK_SIZE>64&&BADGE_CHUNK_SIZE<256);
+  assert.notEqual(BADGE_CHUNK_SIZE%64,0);
+});
+
 test('USB handshake accepts current/legacy boards and gates detector/activity tools',()=>{
-  for(const version of ['0.3.1','0.4.0','0.5.0','0.5.1','0.6.0','0.7.0','0.8.0','0.9.0'])for(const size of [360,466]){
+  for(const version of ['0.3.1','0.4.0','0.5.0','0.5.1','0.6.0','0.7.0','0.8.0','0.9.0','0.9.2'])for(const size of [360,466]){
     assert.deepEqual(parseBadgeInfo(`BADGE_INFO ${version} ${size} READY Test board`),{version,size,board:'Test board'});
     assert.equal(hasDetectorTools(version),!version.startsWith('0.3.'));
     assert.equal(hasActivityTools(version),/^0\.[6789]\./.test(version));
@@ -39,7 +53,7 @@ test('radar settings preserve all themes and gate each acknowledged write',async
   await assert.rejects(readRadarSettings(link),/Invalid radar settings/);
 });
 test('CRC matches firmware IEEE CRC-32 wire contract',()=>assert.equal(crc32(new TextEncoder().encode('123456789')),0xcbf43926));
-for(const size of [360,466])test(`DDB1 ${size}: header, exact size and RGB565 byte order`,()=>{
+for(const size of [240,360,466])test(`DDB1 ${size}: header, exact size and RGB565 byte order`,()=>{
   const p=new Uint8Array(size*size*4);p.set([255,0,0,255,0,255,0,255,0,0,255,255]);const b=encodeBadge(p,size);
   assert.equal(b.length,8+size*size*2);assert.deepEqual([...b.slice(0,8)],[68,68,66,49,size&255,size>>8,size&255,size>>8]);
   assert.deepEqual([...b.slice(8,14)],[248,0,7,224,0,31]);
@@ -114,9 +128,10 @@ test('history export rejects storage failure, timeout and disconnect with cleanu
 });
 
 test('same-resolution boards are distinguished by exact USB identity',()=>{
+ assert.deepEqual(parseBadgeInfo('BADGE_INFO 0.9.2 240 READY Seeed XIAO ESP32-S3 + Round Display'),{version:'0.9.2',size:240,board:'Seeed XIAO ESP32-S3 + Round Display'});
  for(const [board,p] of Object.entries(boardProfiles)){
   assert.equal(connectedProfile({board:p.firmwareName,size:p.size}),board);
-  assert.equal(connectedProfile({board:p.firmwareName,size:240}),null);
+  assert.equal(connectedProfile({board:p.firmwareName,size:128}),null);
  }
  assert.equal(connectedProfile({board:'Unrecognized AMOLED',size:466}),null);
 });
@@ -125,8 +140,9 @@ test('flasher rejects wrong boards, partitions, remote paths and destructive upd
  for(const [board,p] of Object.entries(boardProfiles))for(const mode of ['factory','update']){
   const parts=[{path:'bootloader.bin',offset:0},{path:'partitions.bin',offset:0x8000},{path:'boot_app0.bin',offset:0xe000},{path:'firmware.bin',offset:0x10000}];
   if(mode==='factory')parts.push({path:'littlefs.bin',offset:p.filesystemOffset});
-  const good={name:`Dragon Detector — ${p.firmwareName} (${mode})`,version:'0.8.0',new_install_prompt_erase:mode==='factory',builds:[{chipFamily:'ESP32-S3',parts}]};
+  const good={name:`Dragon Detector — ${p.firmwareName} (${mode})`,version:'0.9.2',new_install_prompt_erase:mode==='factory',builds:[{chipFamily:'ESP32-S3',parts}]};
   assert.equal(validateManifest(good,board,mode),good);
+  if(board==='xiao_round'){const old=structuredClone(good);old.version='0.9.1';assert.throws(()=>validateManifest(old,board,mode),/0.9.2/);}
   for(const mutate of [d=>d.name+=' wrong',d=>d.builds[0].chipFamily='ESP32',d=>d.builds[0].parts[3].offset=0,d=>d.builds[0].parts[3].path='https://example.com/firmware.bin',d=>d.builds[0].parts.push(d.builds[0].parts[0]),d=>d.builds[0].parts.pop(),d=>d.new_install_prompt_erase=!d.new_install_prompt_erase,d=>d.version='0.10.0']){
    const bad=structuredClone(good);mutate(bad);assert.throws(()=>validateManifest(bad,board,mode),/manifest/);
   }
@@ -135,7 +151,7 @@ test('flasher rejects wrong boards, partitions, remote paths and destructive upd
 });
 
 test('rotated and mirrored badge fits preserve every image corner within the safe circle',()=>{
- for(const size of [360,466])for(const [w,h] of [[800,400],[400,800],[466,466],[2000,50]])for(const turns of [-1,0,1,2,3,4])for(const mirror of [false,true]){
+ for(const size of [240,360,466])for(const [w,h] of [[800,400],[400,800],[466,466],[2000,50]])for(const turns of [-1,0,1,2,3,4])for(const mirror of [false,true]){
   const g=badgeTransform(w,h,size,{zoom:fitBadgeZoom(w,h,size,turns),turns,mirror});
   for(const x of [-w/2,w/2])for(const y of [-h/2,h/2]){
    const dx=g.scale*(x*g.mirror*Math.cos(g.angle)-y*Math.sin(g.angle)),dy=g.scale*(x*g.mirror*Math.sin(g.angle)+y*Math.cos(g.angle));

@@ -11,7 +11,14 @@
 #define LV_TICK_CUSTOM 1
 #define LV_TICK_CUSTOM_INCLUDE "Arduino.h"
 #define LV_TICK_CUSTOM_SYS_TIME_EXPR (millis())
-#if defined(BOARD_AMOLED_175C) || defined(BOARD_STOPWATCH)
+#if defined(BOARD_XIAO_ROUND)
+#define LV_FONT_MONTSERRAT_8 1
+#define LV_FONT_MONTSERRAT_10 1
+#define LV_FONT_MONTSERRAT_12 1
+#define LV_FONT_MONTSERRAT_14 1
+#define LV_FONT_MONTSERRAT_22 1
+#define LV_FONT_DEFAULT &lv_font_montserrat_10
+#elif defined(BOARD_AMOLED_175C) || defined(BOARD_STOPWATCH)
 // 466 px panel: each 360 px layout font moves up to keep the same proportions.
 #define LV_FONT_MONTSERRAT_14 1
 #define LV_FONT_MONTSERRAT_16 1

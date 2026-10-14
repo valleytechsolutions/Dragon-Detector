@@ -25,7 +25,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        board: [spotpear, waveshare, stopwatch]
+        board: [spotpear, waveshare, stopwatch, xiao_round]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

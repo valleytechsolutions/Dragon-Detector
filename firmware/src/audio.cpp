@@ -25,12 +25,22 @@ static bool start(const char* text,bool isPreview=false){
 void audioBegin(){
  prefs.begin("dd-tones",false);status.volume=constrain(prefs.getUChar("volume",100),0,100);huntSound=prefs.getBool("hunt",true);audioFocus=prefs.getInt("focus",-1);if(audioFocus<-1||audioFocus>=int(Family::Count))audioFocus=-1;
  for(unsigned i=0;i<unsigned(Family::Count);++i){char key[12];snprintf(key,sizeof(key),"tone%u",i);String value=prefs.getString(key,"");dragon::Melody test;if(value.length()<=dragon::TONE_TEXT_MAX&&dragon::parseTone(value.c_str(),test))custom[i]=value;else prefs.remove(key);}
+ #ifdef BOARD_XIAO_ROUND
+ ready=false;strlcpy(status.message,"No onboard speaker / visual alerts",sizeof(status.message));
+ #else
  ready=toneOutputBegin();snprintf(status.message,sizeof(status.message),"%s",ready?"RTTTL speaker ready":"Speaker initialization failed");if(!ready)status.mode=AudioMode::Error;
+ #endif
  Serial.printf("AUDIO_READY %u\n",ready);
 }
 void audioSave(){prefs.putUChar("volume",status.volume);prefs.putBool("hunt",huntSound);prefs.putInt("focus",audioFocus);detectorSave();}
 void audioVolume(int v){status.volume=constrain(v,0,100);audioSave();}
-void audioStop(){playing=preview=false;queue.clear();toneOutput(0,0,0);status.mode=ready?AudioMode::Idle:AudioMode::Error;}
+void audioStop(){playing=preview=false;queue.clear();toneOutput(0,0,0);
+#ifdef BOARD_XIAO_ROUND
+ status.mode=AudioMode::Idle;
+#else
+ status.mode=ready?AudioMode::Idle:AudioMode::Error;
+#endif
+}
 void audioPlay(const String&){snprintf(status.message,sizeof(status.message),"Use RTTTL alerts in Settings / Audio");}
 void audioRecord(){snprintf(status.message,sizeof(status.message),"Microphone recording is not enabled");}
 AppAudioStatus audioStatus(){return status;}
@@ -100,7 +110,7 @@ bool audioCommand(const String& c){
  Serial.println("TONE_ERROR command");return true;
 }
 #ifndef BOARD_STOPWATCH
-#ifndef BOARD_AMOLED_175C
+#if !defined(BOARD_AMOLED_175C) && !defined(BOARD_XIAO_ROUND)
 void boardBegin(){}
 void boardLoop(){}
 #endif

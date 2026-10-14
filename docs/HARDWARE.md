@@ -33,3 +33,7 @@ On current StopWatch firmware, USB `touch status` reports controller samples and
 ## Clock, motion and timing controls · 0.9
 
 [M5Stack StopWatch official documentation](https://docs.m5stack.com/en/core/StopWatch) identifies the RX8130CE RTC, BMI270 IMU and GPIO 2/1 yellow/blue keys. [Waveshare 1.75C documentation](https://docs.waveshare.com/ESP32-S3-Touch-AMOLED-1.75C) describes the onboard RTC/IMU and programmable BOOT/PWR buttons; the adapter probes PCF85063 (0x51) on its existing SDA15/SCL14 bus and reads short PWR events from AXP2101. Version 0.9.1 uses manual display orientation on all boards and does not poll motion sensors. The Spotpear JC3636W518 profile uses touch timing controls and a software clock. [User guide](STOPWATCH-CLOCK-ORIENTATION.md).
+
+## Seeed XIAO ESP32-S3 + Round Display · 0.9.2
+
+A fourth profile, `xiao_round`, supports the 240×240 GC9A01/CHSC6X expansion with BM8563 RTC and SPI microSD. It uses the XIAO’s 8 MB flash and 8 MB PSRAM, visual alerts, buffered touch and a separate 8 MB partition layout. It has no speaker, haptics or automatic rotation. [Exact wiring, switches, controls and SD behavior](XIAO-ROUND.md).

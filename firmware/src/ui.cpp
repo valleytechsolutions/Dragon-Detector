@@ -14,8 +14,20 @@ extern const lv_img_dsc_t vts_logo;
 extern const lv_img_dsc_t radar_logo;
 // The layout is authored for the 360 px round panel. S() maps it onto the
 // board's panel; label/button/row helpers apply it, so callers pass 360 px units.
+#if SCREEN_RES<=240
+// Keep one-pixel strokes and tiny history samples visible after downscaling.
+#define S(v) (((v)*SCREEN_RES+((v)>=0?180:-180))/360)
+#else
 #define S(v) ((v)*SCREEN_RES/360)
-#if SCREEN_RES>=466
+#endif
+#if SCREEN_RES<=240
+#define F12 (&lv_font_montserrat_8)
+#define F14 (&lv_font_montserrat_10)
+#define F16 (&lv_font_montserrat_12)
+#define F20 (&lv_font_montserrat_14)
+#define FCALLOUT (&lv_font_montserrat_8)
+#define FTIMER (&lv_font_montserrat_22)
+#elif SCREEN_RES>=466
 #define F12 (&lv_font_montserrat_16)
 #define F14 (&lv_font_montserrat_18)
 #define F16 (&lv_font_montserrat_20)
@@ -161,13 +173,17 @@ static void huntDraw(lv_event_t* e){
   }
 }
 static const char* radarFamilyName(Family f){
+#if SCREEN_RES<=240
+  // Keep the family on one line, leaving the second line for signal/age.
+  switch(f){case Family::Axon:return "Axon";case Family::Meta:return "Glasses";case Family::Tracker:return "Find My";case Family::Skimmer:return "Serial";case Family::Camera:return "Camera";case Family::Alpr:return "ALPR";case Family::Deauth:return "Deauth";case Family::EvilTwin:return "SSID clash";default:break;}
+#endif
   switch(f){case Family::Axon:return "Axon / TASER";case Family::Meta:return "Camera glasses";case Family::Tracker:return "Find My / DULT";case Family::GoogleTag:return "Find Hub";case Family::Skimmer:return "Serial module";case Family::Camera:return "Camera vendor";case Family::Alpr:return "ALPR vendor";case Family::Drone:return "Drone RID";case Family::Deauth:return "Deauth burst";case Family::BleSpam:return "BLE burst";case Family::EvilTwin:return "SSID conflict";default:return dragon::familyName(f);}
 }
 static void callout(lv_draw_ctx_t* ctx,const Dot& dot,unsigned slot,const char* text,uint32_t c){
   auto b=dragon::radarLabelSlot(slot);int x=S(b.x),y=S(b.y),w=S(b.w),h=S(b.h);
   int edgeX=constrain(dot.x,x,x+w),edgeY=constrain(dot.y,y,y+h);
   line(ctx,dot.x,dot.y,edgeX,edgeY,dragon::RadarLabelBackground,S(4),255);
-  line(ctx,dot.x,dot.y,edgeX,edgeY,c,S(2),255);
+  line(ctx,dot.x,dot.y,edgeX,edgeY,c,std::max(2,S(2)),255);
   lv_draw_rect_dsc_t box;lv_draw_rect_dsc_init(&box);box.radius=S(4);box.bg_color=color(dragon::RadarLabelBackground);box.bg_opa=LV_OPA_COVER;
   box.border_color=color(c);box.border_opa=LV_OPA_80;box.border_width=1;
   lv_area_t area{(lv_coord_t)x,(lv_coord_t)y,(lv_coord_t)(x+w),(lv_coord_t)(y+h)};lv_draw_rect(ctx,&box,&area);
@@ -214,6 +230,9 @@ static void radarDraw(lv_event_t* e){
     if(changed||uint32_t(now-labelsAt)>=500){dragon::placeRadarLabels(points,dotCount,slots,preferred);labelsAt=now;priorCount=dotCount;for(int i=0;i<dotCount;++i)labelKeys[i]=dots[i].key;}
     for(int i=0;i<dotCount;++i){auto& c=contacts[dots[i].index];Family family=visibleFamily(c,now,detector.families);uint32_t age=now-c.seen;
       char state[24],text[64];if(age>=10000)snprintf(state,sizeof(state),"%s %lus AGO",c.match.confidence==Confidence::Low&&!trafficFresh(c,now)?"CLUE":"SEEN",(unsigned long)(age/1000));else snprintf(state,sizeof(state),"%s",c.match.confidence==Confidence::Low&&!trafficFresh(c,now)?"WEAK CLUE":age>=5000?"FADING":c.rssi>=-55?"STRONG":c.rssi>=-75?"MODERATE":"FAINT");
+#if SCREEN_RES<=240
+      if(age>=10000)snprintf(state,sizeof(state),"%lus ago",(unsigned long)(age/1000));
+#endif
       dots[i].labelSlot=slots[i];snprintf(text,sizeof(text),"%s\n%s",radarFamilyName(family),state);callout(ctx,dots[i],slots[i],text,dragon::familyColor(family));
     }
   }
@@ -232,7 +251,7 @@ static void radarTap(lv_event_t*){lv_point_t p;lv_indev_get_point(lv_indev_get_a
   if(idx>=0){selectContact(idx);go(Details);}}
 static void loadFiles(){
   fileCount=0;filesTruncated=false;if(!sdReady)return;
-  xSemaphoreTake(sdMutex,portMAX_DELAY);File dir=SD_MMC.open(directory);
+  xSemaphoreTake(sdMutex,portMAX_DELAY);File dir=CardFS.open(directory);
   if(dir&&dir.isDirectory()){File f=dir.openNextFile();while(f){if(fileCount>=96){filesTruncated=true;f.close();break;}String name=f.name();String path=directory=="/"?"/"+name:directory+"/"+name;files[fileCount++]={path,f.isDirectory(),uint32_t(f.size())};f.close();f=dir.openNextFile();}}dir.close();xSemaphoreGive(sdMutex);
 }
 static void build(){
@@ -249,7 +268,7 @@ static void build(){
     radarActivity=label(root,"",75,84,210,F12,0xffbc76);lv_obj_set_style_text_align(radarActivity,LV_TEXT_ALIGN_CENTER,0);legible(radarActivity);lv_obj_add_flag(radarActivity,LV_OBJ_FLAG_CLICKABLE);lv_obj_add_event_cb(radarActivity,action,LV_EVENT_CLICKED,(void*)116);
     trackingLabel=label(root,"TAP A SIGNAL",70,280,220,F12,theme.text);lv_obj_set_style_text_align(trackingLabel,LV_TEXT_ALIGN_CENTER,0);
     lv_obj_add_flag(trackingLabel,LV_OBJ_FLAG_CLICKABLE);lv_obj_add_event_cb(trackingLabel,action,LV_EVENT_CLICKED,(void*)57);
-    auto* targets=button(root,"TARGETS",98,301,82,32,96);
+    auto* targets=button(root,"TARGETS",90,301,90,32,96);
     auto* tools=button(root,"TOOLS",187,301,78,32,2);
     auto* quiet=button(root,detector.quiet?LV_SYMBOL_MUTE:LV_SYMBOL_VOLUME_MAX,270,257,38,34,97);
     radarPrevious=button(root,LV_SYMBOL_LEFT,86,258,32,24,122);radarNext=button(root,LV_SYMBOL_RIGHT,230,258,32,24,123);radarPageLabel=label(root,"",123,261,103,F12,theme.text);lv_obj_set_style_text_align(radarPageLabel,LV_TEXT_ALIGN_CENTER,0);
@@ -338,9 +357,11 @@ static void build(){
   }else if(page==Files){
     title("SD CARD",directory.c_str());loadFiles();body=scrollBody();
     if(!sdReady)label(body,BOARD_HAS_SD?"SD card unavailable.\nInsert FAT32 card and restart.":"This board has no SD card slot.",5,20,244);
-    else{row(body,".. / Parent",fileCount?"Tap a folder, MP3, WAV, or text file":"This folder is empty",0,39);for(int i=0;i<fileCount;++i){String name=files[i].path.substring(files[i].path.lastIndexOf('/')+1);String sub=files[i].dir?"Folder":String(files[i].size/1024)+" KB";row(body,name.c_str(),sub.c_str(),i+1,2000+i);}if(filesTruncated)label(body,"First 96 entries shown",5,(fileCount+1)*59,235);}
+    else{row(body,".. / Parent",fileCount?"Tap a folder or text file":"This folder is empty",0,39);for(int i=0;i<fileCount;++i){String name=files[i].path.substring(files[i].path.lastIndexOf('/')+1);String sub=files[i].dir?"Folder":String(files[i].size/1024)+" KB";row(body,name.c_str(),sub.c_str(),i+1,2000+i);}if(filesTruncated)label(body,"First 96 entries shown",5,(fileCount+1)*59,235);}
   }else if(page==Audio){
     title("AUDIO / HUNT",audioReady()?"Device melodies & signal feedback":"Speaker unavailable");body=scrollBody();int n=0;
+    if(!audioReady()){label(body,"No speaker on this board.\nRadar, visual alerts and\nRSSI hunting remain available.",6,12,244);}
+    else {
     row(body,alertSound?"Alert tones: ON":"Alert tones: OFF","Unique RTTTL melody per detector family",n++,78);
     String volume=String("Volume: ")+audioStatus().volume+"%";row(body,volume.c_str(),"Tap: 0 / 10 / 25 / 50 / 75 / 100%",n++,85);
     row(body,huntSound?"Hunt feedback: ON":"Hunt feedback: OFF","Pitch & cadence follow signal strength",n++,86);
@@ -349,6 +370,7 @@ static void build(){
     row(body,"Preview glasses alert","Short, simple chime",n++,94);
     row(body,"Customize with USB web UI","RTTTL editor beside Badge Studio",n++,95);
     row(body,"Stop current sound","Quiet mode mutes automatic feedback",n++,34);
+    }
   }else if(page==Settings){
     title("SETTINGS");body=scrollBody();int n=0;
     row(body,"Clock & date",rtcAvailable?"Set battery-backed RTC / local time":"Software clock / USB time sync",n++,133);
@@ -371,8 +393,8 @@ static void build(){
 #ifdef BOARD_STOPWATCH
     row(body,alertVibration?"Vibration: ON":"Vibration: OFF","Built-in StopWatch motor",n++,79);
 #endif
-    row(body,loggingEnabled&&sdReady?"SD event logging: ON":"SD event logging: OFF",sdReady?sessionPath.c_str():"Requires Spotpear SD card",n++,43);
-    row(body,captureEnabled?"PCAP: recording":"PCAP: stopped",sdReady?"Raw 802.11 / 16 MB per capture":"Requires Spotpear SD card",n++,24);
+    row(body,loggingEnabled&&sdReady?"SD event logging: ON":"SD event logging: OFF",sdReady?sessionPath.c_str():"Requires a mounted SD card",n++,43);
+    row(body,captureEnabled?"PCAP: recording":"PCAP: stopped",sdReady?"Raw 802.11 / 16 MB per capture":"Requires a mounted SD card",n++,24);
     row(body,"Boot to radar","Clear the saved badge startup choice",n++,55);
   }else if(page==Stopwatch){
     dismissNotice();title("STOPWATCH","Elapsed time continues off this page");
@@ -433,7 +455,7 @@ static void action(lv_event_t* e){
   lastInteraction=millis();
   int id=(intptr_t)lv_event_get_user_data(e);
   if(id>=2000 && id<2096){int i=id-2000;if(i>=fileCount)return;if(files[i].dir){directory=files[i].path;go(Files);page=Boot;}else{String ext=files[i].path;ext.toLowerCase();if(ext.endsWith(".mp3")||ext.endsWith(".wav")){audioPlay(files[i].path);go(Audio);}else{
-      xSemaphoreTake(sdMutex,portMAX_DELAY);File f=SD_MMC.open(files[i].path);String text;while(f && f.available() && text.length()<2048){char ch=f.read();text+=(ch=='\n'||ch=='\t'||(ch>=32&&ch<127))?ch:'.';}f.close();xSemaphoreGive(sdMutex);
+      xSemaphoreTake(sdMutex,portMAX_DELAY);File f=CardFS.open(files[i].path);String text;while(f && f.available() && text.length()<2048){char ch=f.read();text+=(ch=='\n'||ch=='\t'||(ch>=32&&ch<127))?ch:'.';}f.close();xSemaphoreGive(sdMutex);
       lv_obj_t* box=lv_msgbox_create(root,"FILE PREVIEW",text.c_str(),nullptr,true);lv_obj_set_size(box,S(260),S(225));lv_obj_center(box);
     }}return;}
   if(id>=6000 && id<6000+deviceRows){int i=findContact(deviceKeys[id-6000]);if(i>=0){selectContact(i);go(Details);}else{uiNotify("Target expired","Refresh the list or reopen it from History.",nullptr,false);}return;}
@@ -581,7 +603,11 @@ void uiLoop(){
       if(pages>1){char label[24];snprintf(label,sizeof(label),"%u / %u",radarPage+1,pages);lv_label_set_text(radarPageLabel,label);if(radarPage)lv_obj_clear_state(radarPrevious,LV_STATE_DISABLED);else lv_obj_add_state(radarPrevious,LV_STATE_DISABLED);if(radarPage+1<pages)lv_obj_clear_state(radarNext,LV_STATE_DISABLED);else lv_obj_add_state(radarNext,LV_STATE_DISABLED);}
       if(trackedContact>=0 && trackingLabel){auto& t=contacts[trackedContact];uint32_t age=millis()-t.seen;String line=age>10000?"SIGNAL LOST / HUNT":String("HUNT / ")+t.signal.direction();lv_label_set_text(trackingLabel,line.c_str());}
       lv_obj_invalidate(radar);int count=0;for(auto& c:contacts)if(radarVisible(c,millis()))++count;char s[96];int n=snprintf(s,sizeof(s),"%s %s / %d %s",radioEnabled?(blePhase?"BLE":"WI-FI"):"PAUSED",captureEnabled?"PCAP":"RX",count,count==1?"target":"targets");
-      int battery=batteryPercent();if(battery>=0)snprintf(s+n,sizeof(s)-n,"  /  %s%d%%",batteryCharging()?LV_SYMBOL_CHARGE " ":"",battery);lv_label_set_text(statusLabel,s);}
+      int battery=batteryPercent();if(battery>=0)snprintf(s+n,sizeof(s)-n,"  /  %s%d%%",batteryCharging()?LV_SYMBOL_CHARGE " ":"",battery);
+#ifdef BOARD_XIAO_ROUND
+      else snprintf(s+n,sizeof(s)-n," / %d%%",brightness);
+#endif
+      lv_label_set_text(statusLabel,s);}
     if(page==Diagnostics&&diagnosticsLabel){
       char text[360];snprintf(text,sizeof(text),"Wi-Fi frames: %lu\nBLE adverts: %lu\nQueue drops: %lu / peak %u\nMax processing: %lu us\nMax queue age: %lu ms\nContact slots: %u\nEvictions: %lu\nCache hits/misses: %lu/%lu\nFree heap: %u KB\nFree PSRAM: %u KB\nBLE: %s\n\nCounters restart at boot.\nHigher queue age means delayed\nRSSI and scan results.",wifiFrames,bleFrames,queueDrops,radioQueueHigh,radioMaxBatchUs,radioMaxLagMs,unsigned(MAX_CONTACTS),contactEvictions,contactCacheHits,contactCacheMisses,ESP.getFreeHeap()/1024,ESP.getFreePsram()/1024,activeBle?"Active / requests names":"Passive / listen only");lv_label_set_text(diagnosticsLabel,text);
     }

@@ -42,7 +42,7 @@ void wearableBegin(){
   if(prefs.getBool("auto",false))prefs.putBool("auto",false);
   boardSensorsBegin();
   auto* driver=lv_disp_get_default()->driver;
-  #ifdef BOARD_STOPWATCH
+  #if defined(BOARD_STOPWATCH) || defined(BOARD_XIAO_ROUND)
   // Its synchronous M5GFX transfer can consume the persistent PSRAM frame.
   constexpr uint32_t rotationCaps=MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT;
   #else

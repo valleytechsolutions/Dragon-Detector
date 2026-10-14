@@ -13,20 +13,25 @@ void macText(const uint8_t* m,char* out){snprintf(out,18,"%02X:%02X:%02X:%02X:%0
 static String quoted(const char* s){String o="\"";const char* start=s;while(*start==' '||*start=='\t')++start;if(*start && strchr("=+-@",*start))o+='\'';for(;*s;++s){if(*s=='"')o+='"';if(*s!='\r'&&*s!='\n')o+=*s;}return o+'"';}
 static bool openLog(){
   String p=sessionPath+"/events-"+String(segment++)+".csv";
-  eventFile=SD_MMC.open(p,FILE_WRITE);
+  eventFile=CardFS.open(p,FILE_WRITE);
   if(eventFile) eventFile.println("uptime_ms,event,radio,mac,name,rssi,channel,family,confidence,evidence");
   return bool(eventFile);
 }
 #if BOARD_HAS_SD
 static void mount(){
-  SD_MMC.setPins(SD_MMC_CLK_PIN,SD_MMC_CMD_PIN,SD_MMC_D0_PIN);
-  if(!SD_MMC.begin("/sdcard",true,false,SDMMC_FREQ_DEFAULT,8)){Serial.println("SD: not mounted; insert FAT32 card and restart");return;}
-  SD_MMC.mkdir("/dragon");SD_MMC.mkdir("/music");SD_MMC.mkdir("/recordings");
+#if defined(BOARD_SD_SPI)
+  extern bool boardMountCard();bool mounted=boardMountCard();
+#else
+  CardFS.setPins(SD_MMC_CLK_PIN,SD_MMC_CMD_PIN,SD_MMC_D0_PIN);
+  bool mounted=CardFS.begin("/sdcard",true,false,SDMMC_FREQ_DEFAULT,8);
+#endif
+  if(!mounted){Serial.println("SD: not mounted; insert FAT32 card and restart");return;}
+  CardFS.mkdir("/dragon");CardFS.mkdir("/music");CardFS.mkdir("/recordings");
   char s[40];snprintf(s,sizeof(s),"/dragon/session-%08lx",(unsigned long)esp_random());sessionPath=s;
-  SD_MMC.mkdir(sessionPath);loggingEnabled=false;
-  File info=SD_MMC.open(sessionPath+"/session.txt",FILE_WRITE);
+  CardFS.mkdir(sessionPath);loggingEnabled=false;
+  File info=CardFS.open(sessionPath+"/session.txt",FILE_WRITE);
   info.println("Dragon Detector " DRAGON_VERSION "\nTimes are milliseconds since boot, not UTC. Wi-Fi channels 1-11 and BLE alternate. Radar angles are decorative. RSSI is not distance. Signatures can be spoofed. Recording state of detected devices is unknown.");info.close();
-  Serial.printf("SD: %llu MB; session created\n",SD_MMC.cardSize()/1048576);
+  Serial.printf("SD: %llu MB; session created\n",CardFS.cardSize()/1048576);
   sdReady=true;
 }
 #else
@@ -60,7 +65,7 @@ bool setCapture(bool enabled){
   xSemaphoreTake(sdMutex,portMAX_DELAY);
   captureEnabled=false;if(pcapFile){pcapFile.flush();pcapFile.close();}
   if(enabled){
-    String p=sessionPath+"/capture-"+String(millis())+".pcap";pcapFile=SD_MMC.open(p,FILE_WRITE);
+    String p=sessionPath+"/capture-"+String(millis())+".pcap";pcapFile=CardFS.open(p,FILE_WRITE);
     // DLT_IEEE802_11, timestamps are monotonic uptime.
     const uint32_t h[]={0xa1b2c3d4,0x00040002,0,0,1024,105};
     if(pcapFile)captureEnabled=pcapFile.write((const uint8_t*)h,sizeof(h))==sizeof(h);

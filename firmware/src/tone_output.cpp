@@ -1,7 +1,11 @@
 // Original MIT PCM generator; ES8311 driver is separately Apache-2.0.
 #include "app.h"
 #include "board_pins.h"
-#ifdef BOARD_STOPWATCH
+#ifdef BOARD_XIAO_ROUND
+// The Seeed Round Display has no speaker, codec or buzzer pins.
+bool toneOutputBegin(){return false;}
+void toneOutput(uint16_t,uint16_t,uint8_t){}
+#elif defined(BOARD_STOPWATCH)
 #include <M5Unified.h>
 bool toneOutputBegin(){return M5.Speaker.begin();}
 void toneOutput(uint16_t hz,uint16_t ms,uint8_t volume){M5.Speaker.setVolume(unsigned(volume)*255/100);if(hz&&ms&&volume)M5.Speaker.tone(hz,ms);else M5.Speaker.stop();}

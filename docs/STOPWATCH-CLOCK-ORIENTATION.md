@@ -10,6 +10,8 @@ The timer uses a 64-bit monotonic microsecond clock and displays hundredths. Clo
 | Waveshare ESP32-S3-Touch-AMOLED-1.75C | BOOT button | Short PWR press | PCF85063, when detected |
 | Spotpear / Guition JC3636W518 | Touch Start / Pause | Touch Lap / Reset | Software clock |
 
+| Seeed XIAO ESP32-S3 + Round Display | BOOT or touch | Touch Lap / Reset | BM8563 / PCF8563-compatible |
+
 All boards have the same touch controls. Hardware stopwatch shortcuts apply only on the Stopwatch page. M5Stack navigation elsewhere retains yellow = radar and blue = Tools/Badge. Waveshare BOOT opens Tools outside Stopwatch; short PWR returns to radar. Long PWR retains the board's power-off behavior; it is not a lap shortcut.
 
 ## Set the clock
@@ -26,7 +28,7 @@ Open **Settings → Orientation** and choose **0°, 90°, 180° or 270° clockwi
 
 Version 0.9.1 uses manual orientation only. There is no automatic tilt rotation or motion-sensor polling. Fresh installations start upright at 0°; an update retains the last saved fixed angle and clears the old Auto preference.
 
-Rotation preserves AMOLED even-coordinate update windows, RGB565 byte order and LVGL's matching touch-coordinate transform. Waveshare and Spotpear use fixed DMA tile buffers. M5Stack uses two persistent PSRAM frames with its synchronous M5GFX transfer, reducing repeated radar drawing and freeing internal memory. No frame buffer is allocated on each turn. M5Stack touch transitions and timestamped hardware keys are buffered at 100 Hz, so a short press can be delivered after a redraw finishes.
+Rotation preserves AMOLED even-coordinate update windows, RGB565 byte order and LVGL's matching touch-coordinate transform. Waveshare and Spotpear use fixed DMA tile buffers. M5Stack and Seeed XIAO Round use two persistent PSRAM frames with synchronous display transfers, reducing repeated radar drawing and freeing internal memory. No frame buffer is allocated on each turn. M5Stack touch transitions and timestamped hardware keys are buffered at 100 Hz, so a short press can be delivered after a redraw finishes.
 
 ## USB commands
 

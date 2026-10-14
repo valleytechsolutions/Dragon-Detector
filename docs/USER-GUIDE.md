@@ -124,3 +124,7 @@ Additional USB commands: `radio active`, `radio passive`, `screen targets`, `scr
 ## Daily timing and orientation
 
 Tools → Daily → Stopwatch provides touch Start/Pause, Lap/Reset, and a lap list; hardware keys work while that page is open. Tools → Daily → Clock and Settings → Clock & date configure the local clock. Settings → Orientation saves a fixed 0°/90°/180°/270° angle. [Full stopwatch, RTC and orientation guide](STOPWATCH-CLOCK-ORIENTATION.md).
+
+## Seeed XIAO Round Display
+
+The 0.9.2 XIAO profile fits the same tools to 240×240. Use touch Tools/Home; BOOT starts/pauses Stopwatch or opens Tools elsewhere. Lap/reset use touch. Visual alerts and on-screen foxhunting are supported; there is no speaker. The Round Display SD slot supports opt-in CSV/PCAP and file browsing, while badges/history remain in internal flash. [Hardware and switch guide](XIAO-ROUND.md).

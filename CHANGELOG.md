@@ -1,5 +1,12 @@
 # Changes
 
+## 0.9.2 — Seeed XIAO Round Display
+
+- Add an 8 MB XIAO ESP32-S3 + Seeed Round Display profile with GC9A01 LCD, buffered CHSC6X touch/BOOT input, BM8563 RTC and shared-SPI microSD. Preserve existing card files; keep logging/capture opt-in.
+- Add native 240-pixel fonts/logo, full-frame PSRAM drawing, 240-pixel Badge Studio encoding and exact USB/manifest board identity. Visual alerts and RSSI hunting work without an onboard speaker.
+- Extend the web flasher, release checks, CI, hardware/SD guide and attributions to all four boards. Test 240-pixel badges and rotation along with existing detection fixtures.
+- Use 127-byte badge upload chunks and separated acknowledgements to avoid observed USB transfer stalls; verify CRC failure/interruption preserves the previous badge.
+
 ## 0.9.1 — Manual orientation, responsive touch and device colors
 
 - Use saved 0°/90°/180°/270° display orientation on every board. Remove automatic rotation, calibration and motion polling; clear old Auto preferences on update. Match touch coordinates to the chosen angle.
