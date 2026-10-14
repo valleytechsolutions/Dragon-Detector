@@ -1,144 +1,196 @@
-prefix,registered_vendor,family,confidence
-00:04:7D,Motorola Solutions Inc.,Alpr,Low
-00:18:85,Motorola Solutions Inc.,Alpr,Low
-00:1F:92,Motorola Solutions Inc.,Alpr,Low
-00:25:DF,"Axon Enterprise, Inc.",Axon,Medium
-00:40:8C,Axis Communications AB,Camera,Medium
-00:B4:63,Ring LLC,Ring,Medium
-00:BC:99,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-00:BF:15,Genetec Inc.,Alpr,Medium
-04:03:12,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-04:EE:CD,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-08:3B:C1,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-08:54:11,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-08:A1:89,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-08:CC:81,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-0C:75:D2,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-0C:BF:15,Genetec Inc.,Alpr,Medium
-0C:FA:22,Flipper Devices Inc,Flipper,Medium
-10:12:FB,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-10:74:6F,Motorola Solutions Malaysia Sdn. Bhd.,Alpr,Low
-18:68:CB,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-18:7F:88,Ring LLC,Ring,Medium
-18:80:25,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-24:0F:9B,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-24:28:FD,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-24:2B:D6,Ring LLC,Ring,Medium
-24:32:AE,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-24:48:45,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-24:B1:05,Prama Hikvision India Private Limited,Camera,Medium
-28:57:BE,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-2C:A5:9C,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-2C:AA:8E,Wyze Labs Inc,Camera,Medium
-34:09:62,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-34:3E:A4,Ring LLC,Ring,Medium
-38:47:12,"Luxottica Tristar (Dongguan) Optical Co.,Ltd",Meta,Low
-3C:1B:F8,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-3C:A0:70,Blink by Amazon,Camera,Medium
-40:AC:BF,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-40:B5:70,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-44:19:B6,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-44:47:CC,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-44:A6:42,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-48:62:64,Arlo Technology,Camera,Medium
-48:78:5B,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-4C:1F:86,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-4C:62:DF,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-4C:BD:8F,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-4C:CC:34,Motorola Solutions Inc.,Alpr,Low
-4C:F5:DC,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-50:E4:67,Ring LLC,Ring,Medium
-50:E5:38,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-54:8C:81,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-54:C4:15,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-54:E0:19,Ring LLC,Ring,Medium
-58:03:FB,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-58:50:ED,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-5C:34:5B,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-5C:47:5E,Ring LLC,Ring,Medium
-64:9A:63,Ring LLC,Ring,Medium
-64:DB:8B,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-68:6D:BC,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-70:1A:D5,Avigilon Alta,Camera,Medium
-70:AD:43,Blink by Amazon,Camera,Medium
-74:13:48,Blink by Amazon,Camera,Medium
-74:3F:C2,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-74:AB:93,Blink by Amazon,Camera,Medium
-7C:78:B2,Wyze Labs Inc,Camera,Medium
-80:48:2C,Wyze Labs Inc,Camera,Medium
-80:48:9F,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-80:7C:62,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-80:AA:1C,"Luxottica Tristar (Dongguan) Optical Co.,Ltd",Meta,Low
-80:BE:AF,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-80:F5:AE,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-84:94:59,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-84:9A:40,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-88:DE:39,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-8C:22:D2,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-8C:E7:48,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-90:48:6C,Ring LLC,Ring,Medium
-94:E1:AC,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-98:59:49,Luxottica Group S.P.A.,Meta,Low
-98:8B:0A,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-98:9D:E5,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-98:DF:82,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-98:F1:12,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-9C:76:13,Ring LLC,Ring,Medium
-9C:86:2B,Motorola Solutions Malaysia Sdn. Bhd.,Alpr,Low
-A0:FF:0C,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-A4:11:62,Arlo Technology,Camera,Medium
-A4:14:37,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-A4:29:02,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-A4:4B:D9,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-A4:A4:59,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-A4:D5:C2,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-AC:9F:C3,Ring LLC,Ring,Medium
-AC:B9:2F,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-AC:CB:51,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-AC:CC:8E,Axis Communications AB,Camera,Medium
-B0:FF:0D,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-B4:1E:52,Flock Safety,Flock,Medium
-B4:A3:82,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-B8:A4:4F,Axis Communications AB,Camera,Medium
-B8:E2:8C,Motorola Solutions Malaysia Sdn. Bhd.,Alpr,Low
-BC:29:78,Prama Hikvision India Private Limited,Camera,Medium
-BC:5E:33,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-BC:9B:5E,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-BC:AD:28,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-BC:BA:C2,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-C0:51:7E,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-C0:56:E3,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-C0:6D:ED,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-C4:2F:90,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-C4:DB:AD,Ring LLC,Ring,Medium
-C8:19:D8,Blink by Amazon,Camera,Medium
-C8:A7:02,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-CC:13:F3,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-CC:3B:FB,Ring LLC,Ring,Medium
-D0:3F:27,Wyze Labs Inc,Camera,Medium
-D4:E8:53,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-DC:07:F8,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-DC:D2:6A,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-E0:A7:00,Verkada Inc,Camera,Medium
-E0:BA:AD,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-E0:CA:3C,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-E0:DF:13,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-E4:D5:8B,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-E8:27:25,Axis Communications AB,Camera,Medium
-E8:A0:ED,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-EC:A9:71,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-EC:C8:9C,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-F0:74:C1,Blink by Amazon,Camera,Medium
-F0:C8:8B,Wyze Labs Inc,Camera,Medium
-F8:4D:FC,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-FC:9C:98,Arlo Technology,Camera,Medium
-FC:9F:FD,"Hangzhou Hikvision Digital Technology Co.,Ltd.",Camera,Medium
-34:D2:70,Amazon Technologies,Camera,Low
-F0:27:2D,Amazon Technologies,Camera,Low
-FC:65:DE,Amazon Technologies,Ring,Low
-68:37:E9,Amazon Technologies,Ring,Low
-A4:C1:38,Telink Semiconductor,Camera,Low
-B8:D7:AF,Murata,Camera,Low
-BC:DD:C2,Espressif,Camera,Low
-00:E0:4C,Realtek,Camera,Low
-00:1A:7D,cyber-blue,Skimmer,Low
+prefix,evidence,family,confidence
+00:03:7F,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+00:04:7D,Motorola Solutions OUI; product/activity unverified,Alpr,Low
+00:18:85,Motorola Solutions OUI; product/activity unverified,Alpr,Low
+00:1A:7D,"cyber-blue shared OUI; research hint only, product unknown",Skimmer,Low
+00:1F:92,Motorola Solutions OUI; product/activity unverified,Alpr,Low
+00:25:DF,"Axon Enterprise, Inc. OUI; product/activity unverified",Axon,Medium
+00:40:8C,Axis Communications AB OUI; product/activity unverified,Camera,Medium
+00:A0:D8,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+00:B4:63,Ring LLC OUI; product/activity unverified,Ring,Medium
+00:BC:99,Hikvision OUI; product/activity unverified,Camera,Medium
+00:BF:15,Genetec Inc. OUI; product/activity unverified,Alpr,Medium
+00:E0:4C,"Realtek shared OUI; research hint only, product unknown",Camera,Low
+00:F4:8D,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+04:03:12,Hikvision OUI; product/activity unverified,Camera,Medium
+04:EE:CD,Hikvision OUI; product/activity unverified,Camera,Medium
+08:3A:88,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+08:3B:C1,Hikvision OUI; product/activity unverified,Camera,Medium
+08:54:11,Hikvision OUI; product/activity unverified,Camera,Medium
+08:A1:89,Hikvision OUI; product/activity unverified,Camera,Medium
+08:CC:81,Hikvision OUI; product/activity unverified,Camera,Medium
+0C:75:D2,Hikvision OUI; product/activity unverified,Camera,Medium
+0C:BF:15,Genetec Inc. OUI; product/activity unverified,Alpr,Medium
+0C:FA:22,Flipper Devices Inc OUI; product/activity unverified,Flipper,Medium
+10:12:FB,Hikvision OUI; product/activity unverified,Camera,Medium
+10:74:6F,Motorola Solutions OUI; product/activity unverified,Alpr,Low
+14:5A:FC,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+14:B5:CD,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+18:68:CB,Hikvision OUI; product/activity unverified,Camera,Medium
+18:7F:88,Ring LLC OUI; product/activity unverified,Ring,Medium
+18:80:25,Hikvision OUI; product/activity unverified,Camera,Medium
+20:13:00,"Shared radio vendor OUI; shared/research clue, product unverified",Skimmer,Low
+24:0A:C4,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+24:0F:9B,Hikvision OUI; product/activity unverified,Camera,Medium
+24:28:FD,Hikvision OUI; product/activity unverified,Camera,Medium
+24:2B:D6,Ring LLC OUI; product/activity unverified,Ring,Medium
+24:32:AE,Hikvision OUI; product/activity unverified,Camera,Medium
+24:48:45,Hikvision OUI; product/activity unverified,Camera,Medium
+24:6F:28,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+24:B1:05,Prama Hikvision India Private Limited OUI; product/activity unverified,Camera,Medium
+24:B2:B9,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+28:24:FF,"Shared radio vendor OUI; shared/research clue, product unverified",Axon,Low
+28:57:BE,Hikvision OUI; product/activity unverified,Camera,Medium
+2C:A5:9C,Hikvision OUI; product/activity unverified,Camera,Medium
+2C:AA:8E,Wyze Labs Inc OUI; product/activity unverified,Camera,Medium
+30:AE:A4,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+34:09:62,Hikvision OUI; product/activity unverified,Camera,Medium
+34:3E:A4,Ring LLC OUI; product/activity unverified,Ring,Medium
+34:85:18,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+34:D2:70,"Amazon Technologies shared OUI; research hint only, product unknown",Camera,Low
+38:47:12,"Luxottica Tristar (Dongguan) Optical Co.,Ltd OUI; product/activity unverified",Meta,Low
+3C:1B:F8,Hikvision OUI; product/activity unverified,Camera,Medium
+3C:71:BF,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+3C:91:80,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+3C:A0:70,Blink by Amazon OUI; product/activity unverified,Camera,Medium
+40:AC:BF,Hikvision OUI; product/activity unverified,Camera,Medium
+40:B5:70,Hikvision OUI; product/activity unverified,Camera,Medium
+44:19:B6,Hikvision OUI; product/activity unverified,Camera,Medium
+44:47:CC,Hikvision OUI; product/activity unverified,Camera,Medium
+44:A6:42,Hikvision OUI; product/activity unverified,Camera,Medium
+48:62:64,Arlo Technology OUI; product/activity unverified,Camera,Medium
+48:78:5B,Hikvision OUI; product/activity unverified,Camera,Medium
+4C:1F:86,Hikvision OUI; product/activity unverified,Camera,Medium
+4C:62:DF,Hikvision OUI; product/activity unverified,Camera,Medium
+4C:69:05,"Shared radio vendor OUI; shared/research clue, product unverified",Camera,Low
+4C:BD:8F,Hikvision OUI; product/activity unverified,Camera,Medium
+4C:CC:34,Motorola Solutions OUI; product/activity unverified,Alpr,Low
+4C:F5:DC,Hikvision OUI; product/activity unverified,Camera,Medium
+50:E4:67,Ring LLC OUI; product/activity unverified,Ring,Medium
+50:E5:38,Hikvision OUI; product/activity unverified,Camera,Medium
+54:8C:81,Hikvision OUI; product/activity unverified,Camera,Medium
+54:C4:15,Hikvision OUI; product/activity unverified,Camera,Medium
+54:E0:19,Ring LLC OUI; product/activity unverified,Ring,Medium
+58:00:E3,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+58:03:FB,Hikvision OUI; product/activity unverified,Camera,Medium
+58:50:ED,Hikvision OUI; product/activity unverified,Camera,Medium
+58:8E:81,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+5C:34:5B,Hikvision OUI; product/activity unverified,Camera,Medium
+5C:47:5E,Ring LLC OUI; product/activity unverified,Ring,Medium
+5C:93:A2,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+64:6E:69,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+64:9A:63,Ring LLC OUI; product/activity unverified,Ring,Medium
+64:DB:8B,Hikvision OUI; product/activity unverified,Camera,Medium
+68:37:E9,"Amazon Technologies shared OUI; research hint only, product unknown",Ring,Low
+68:6D:BC,Hikvision OUI; product/activity unverified,Camera,Medium
+70:08:94,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+70:1A:D5,Avigilon Alta OUI; product/activity unverified,Camera,Medium
+70:AD:43,Blink by Amazon OUI; product/activity unverified,Camera,Medium
+70:C9:4E,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+74:13:48,Blink by Amazon OUI; product/activity unverified,Camera,Medium
+74:3F:C2,Hikvision OUI; product/activity unverified,Camera,Medium
+74:4C:A1,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+74:AB:93,Blink by Amazon OUI; product/activity unverified,Camera,Medium
+7C:78:B2,Wyze Labs Inc OUI; product/activity unverified,Camera,Medium
+80:30:49,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+80:48:2C,Wyze Labs Inc OUI; product/activity unverified,Camera,Medium
+80:48:9F,Hikvision OUI; product/activity unverified,Camera,Medium
+80:7C:62,Hikvision OUI; product/activity unverified,Camera,Medium
+80:AA:1C,"Luxottica Tristar (Dongguan) Optical Co.,Ltd OUI; product/activity unverified",Meta,Low
+80:BE:AF,Hikvision OUI; product/activity unverified,Camera,Medium
+80:F5:AE,Hikvision OUI; product/activity unverified,Camera,Medium
+84:94:59,Hikvision OUI; product/activity unverified,Camera,Medium
+84:9A:40,Hikvision OUI; product/activity unverified,Camera,Medium
+84:F3:EB,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+88:DE:39,Hikvision OUI; product/activity unverified,Camera,Medium
+8C:22:D2,Hikvision OUI; product/activity unverified,Camera,Medium
+8C:AA:B5,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+8C:E7:48,Hikvision OUI; product/activity unverified,Camera,Medium
+90:35:EA,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+90:48:6C,Ring LLC OUI; product/activity unverified,Ring,Medium
+94:08:53,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+94:B9:7E,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+94:E1:AC,Hikvision OUI; product/activity unverified,Camera,Medium
+98:59:49,Luxottica Group S.P.A. OUI; product/activity unverified,Meta,Low
+98:8B:0A,Hikvision OUI; product/activity unverified,Camera,Medium
+98:9D:E5,Hikvision OUI; product/activity unverified,Camera,Medium
+98:D3:00,"Shared radio vendor OUI; shared/research clue, product unverified",Skimmer,Low
+98:DF:82,Hikvision OUI; product/activity unverified,Camera,Medium
+98:F1:12,Hikvision OUI; product/activity unverified,Camera,Medium
+9C:2F:9D,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+9C:76:13,Ring LLC OUI; product/activity unverified,Ring,Medium
+9C:86:2B,Motorola Solutions OUI; product/activity unverified,Alpr,Low
+A0:FF:0C,Hikvision OUI; product/activity unverified,Camera,Medium
+A4:11:62,Arlo Technology OUI; product/activity unverified,Camera,Medium
+A4:14:37,Hikvision OUI; product/activity unverified,Camera,Medium
+A4:29:02,Hikvision OUI; product/activity unverified,Camera,Medium
+A4:4B:D9,Hikvision OUI; product/activity unverified,Camera,Medium
+A4:A4:59,Hikvision OUI; product/activity unverified,Camera,Medium
+A4:C1:38,"Telink Semiconductor shared OUI; research hint only, product unknown",Camera,Low
+A4:CF:12,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+A4:D5:C2,Hikvision OUI; product/activity unverified,Camera,Medium
+AC:67:B2,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+AC:9F:C3,Ring LLC OUI; product/activity unverified,Ring,Medium
+AC:B9:2F,Hikvision OUI; product/activity unverified,Camera,Medium
+AC:CB:51,Hikvision OUI; product/activity unverified,Camera,Medium
+AC:CC:8E,Axis Communications AB OUI; product/activity unverified,Camera,Medium
+B0:FF:0D,Hikvision OUI; product/activity unverified,Camera,Medium
+B4:1E:52,Flock Safety OUI; product/activity unverified,Flock,Medium
+B4:A3:82,Hikvision OUI; product/activity unverified,Camera,Medium
+B4:E6:2D,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+B8:1E:A4,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+B8:35:32,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+B8:A4:4F,Axis Communications AB OUI; product/activity unverified,Camera,Medium
+B8:D7:AF,"Murata shared OUI; research hint only, product unknown",Camera,Low
+B8:E2:8C,Motorola Solutions OUI; product/activity unverified,Alpr,Low
+BC:29:78,Prama Hikvision India Private Limited OUI; product/activity unverified,Camera,Medium
+BC:5E:33,Hikvision OUI; product/activity unverified,Camera,Medium
+BC:9B:5E,Hikvision OUI; product/activity unverified,Camera,Medium
+BC:AD:28,Hikvision OUI; product/activity unverified,Camera,Medium
+BC:BA:C2,Hikvision OUI; product/activity unverified,Camera,Medium
+BC:DD:C2,"Espressif shared OUI; research hint only, product unknown",Camera,Low
+C0:35:32,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+C0:49:EF,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+C0:51:7E,Hikvision OUI; product/activity unverified,Camera,Medium
+C0:56:E3,Hikvision OUI; product/activity unverified,Camera,Medium
+C0:6D:ED,Hikvision OUI; product/activity unverified,Camera,Medium
+C4:2F:90,Hikvision OUI; product/activity unverified,Camera,Medium
+C4:DB:AD,Ring LLC OUI; product/activity unverified,Ring,Medium
+C8:19:D8,Blink by Amazon OUI; product/activity unverified,Camera,Medium
+C8:A7:02,Hikvision OUI; product/activity unverified,Camera,Medium
+CC:13:F3,Hikvision OUI; product/activity unverified,Camera,Medium
+CC:3B:FB,Ring LLC OUI; product/activity unverified,Ring,Medium
+CC:50:E3,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+CC:DB:A7,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+D0:39:57,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+D0:3F:27,Wyze Labs Inc OUI; product/activity unverified,Camera,Medium
+D4:AD:FC,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+D4:E8:53,Hikvision OUI; product/activity unverified,Camera,Medium
+D8:F3:BC,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+DC:07:F8,Hikvision OUI; product/activity unverified,Camera,Medium
+DC:54:75,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+DC:D2:6A,Hikvision OUI; product/activity unverified,Camera,Medium
+E0:0A:F6,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+E0:4F:43,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+E0:A7:00,Verkada Inc OUI; product/activity unverified,Camera,Medium
+E0:BA:AD,Hikvision OUI; product/activity unverified,Camera,Medium
+E0:CA:3C,Hikvision OUI; product/activity unverified,Camera,Medium
+E0:DF:13,Hikvision OUI; product/activity unverified,Camera,Medium
+E4:05:40,"Shared radio vendor OUI; shared/research clue, product unverified",Axon,Low
+E4:AA:EA,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+E4:D5:8B,Hikvision OUI; product/activity unverified,Camera,Medium
+E8:27:25,Axis Communications AB OUI; product/activity unverified,Camera,Medium
+E8:9F:6D,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+E8:A0:ED,Hikvision OUI; product/activity unverified,Camera,Medium
+E8:D0:FC,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+EC:1B:BD,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+EC:A9:71,Hikvision OUI; product/activity unverified,Camera,Medium
+EC:C8:9C,Hikvision OUI; product/activity unverified,Camera,Medium
+F0:27:2D,"Amazon Technologies shared OUI; research hint only, product unknown",Camera,Low
+F0:74:C1,Blink by Amazon OUI; product/activity unverified,Camera,Medium
+F0:C8:8B,Wyze Labs Inc OUI; product/activity unverified,Camera,Medium
+F4:6A:DD,"Shared radio vendor OUI; shared/research clue, product unverified",Flock,Low
+F8:4D:FC,Hikvision OUI; product/activity unverified,Camera,Medium
+FC:65:DE,"Amazon Technologies shared OUI; research hint only, product unknown",Ring,Low
+FC:9C:98,Arlo Technology OUI; product/activity unverified,Camera,Medium
+FC:9F:FD,Hikvision OUI; product/activity unverified,Camera,Medium

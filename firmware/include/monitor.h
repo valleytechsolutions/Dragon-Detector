@@ -8,7 +8,7 @@ struct DeviceKey {
   bool operator==(const DeviceKey& b)const {return radio==b.radio && addressType==b.addressType && !memcmp(mac,b.mac,6);}
 };
 struct DetectorSettings {
-  uint32_t families=((1u<<unsigned(Family::Count))-1u)&~(1u<<unsigned(Family::IBeacon));
+  uint32_t families=(1u<<unsigned(Family::Count))-1u;
   Confidence minimum=Confidence::Medium;
   uint8_t autoQuiet=5;
   bool privacy=false,history=true,wakeAlert=true,quiet=false;
@@ -25,6 +25,17 @@ struct AlertGate {
     if(count && uint32_t(now-last)<(watched?10000u:30000u))return false;
     if(!watched && budget && count>=budget && !louder)return false;
     last=now;peak=std::max(peak,rssi);if(count<255)++count;return true;
+  }
+};
+// Six received disconnect frames in a rolling three-second window, including
+// changing/spoofed source addresses. A participant is not an identified sender.
+struct DisconnectMonitor {
+  uint32_t times[6]{},lastAlert=0;uint8_t count=0,next=0;bool alerted=false;
+  bool observe(uint32_t now){
+    times[next]=now;next=(next+1)%6;if(count<6)++count;
+    if(count==6 && uint32_t(now-times[next])<=3000 && (!alerted||uint32_t(now-lastAlert)>=15000)){
+      lastAlert=now;alerted=true;return true;
+    }return false;
   }
 };
 // A repeated, contemporaneous security mismatch is useful evidence. Multiple

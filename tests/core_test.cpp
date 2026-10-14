@@ -7,14 +7,16 @@
 #include <cassert>
 #include <vector>
 #include <cstdio>
+#include <string>
 using namespace dragon;
 static std::vector<uint8_t> name(const char* s){std::vector<uint8_t> p{uint8_t(strlen(s)+1),9};p.insert(p.end(),s,s+strlen(s));return p;}
 static void append(std::vector<uint8_t>& a,const std::vector<uint8_t>& b){a.insert(a.end(),b.begin(),b.end());}
 static Match ble(const std::vector<uint8_t>& p){auto f=parseBle(p.data(),p.size());assert(f.valid);return f.match;}
 #include "parity_test.h"
 #include "tones_test.h"
+#include "coverage_test.h"
 int main(){
-  parityTests();toneTests();
+  parityTests();toneTests();coverageTests();
   assert(!parseBle(nullptr,0).valid && !parseWifi(nullptr,0).valid);
   assert(ble({3,0xff,0x4d,3}).family==Family::Axon);
   assert(ble({3,3,0x81,0xfc}).confidence==Confidence::Medium);
@@ -23,10 +25,10 @@ int main(){
   assert(ble({3,3,0x6c,0xfe}).family==Family::Axon);
   assert(ble({3,0xff,0x75,0}).confidence==Confidence::None); // Samsung phone != SmartTag
   assert(ble({3,3,0x5a,0xfd}).family==Family::SmartTag);
-  assert(ble({3,3,0x5f,0xfd}).confidence==Confidence::None); // Meta app on a phone
+  assert(ble({3,3,0x5f,0xfd}).confidence==Confidence::Low); // Meta app on a phone: weak candidate only
   assert(ble({3,0xff,0x53,0x0d}).confidence==Confidence::Low);
   assert(ble({3,0xff,0x53,0x0d,3,3,0x5f,0xfd}).confidence==Confidence::Medium);
-  assert(ble({3,0xff,0xc8,9}).confidence==Confidence::None); // Generic module
+  assert(ble({3,0xff,0xc8,9}).confidence==Confidence::Low); // Generic module, explicitly unverified
   auto flock=name("Penguin-1234567890");append(flock,{3,0xff,0xc8,9});assert(ble(flock).family==Family::Flock);
   auto brokenName=name("Penguin-123x567890");append(brokenName,{3,0xff,0xc8,9});assert(ble(brokenName).confidence==Confidence::Low);
   const std::vector<uint8_t> biscuit={17,7,0x4b,0x91,0x31,0xc3,0xc9,0xc5,0xcc,0x8f,0x9e,0x45,0xb5,0x1f,0x01,0xc2,0xaf,0x4f};

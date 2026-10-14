@@ -26,11 +26,16 @@ extern const lv_img_dsc_t vts_logo;
 #define FCALLOUT F12
 #endif
 static const int CENTER=SCREEN_RES/2;
-enum Page {Boot,Radar,Menu,Devices,Details,Alerts,Channels,Files,Audio,Settings,About,Badge,Hunt,Detectors,History,HistoryDetail,Rules,Controls,Display};
+enum Page {Boot,Radar,Menu,Devices,Details,Alerts,Channels,Files,Audio,Settings,About,Badge,Hunt,Detectors,History,HistoryDetail,Rules,Controls,Display,Diagnostics};
 static Page page=Boot,pending=Boot;
 static lv_obj_t *root,*body,*statusLabel,*audioLabel,*audioMeter,*radar,*micBadge;
 static int menuTab=0,filter=0,selected=-1,filePage=0,brightness=100,historyPage=0;
 static HistoryRecord historySelection;
+static int devicePage=0,deviceRows=0,deviceTotal=0;
+static dragon::DeviceKey deviceKeys[10];
+static lv_obj_t* diagnosticsLabel=nullptr;
+static uint32_t radarPrepared=0;
+static int radarOrder[MAX_CONTACTS],radarCount=0;
 static dragon::DeviceKey historyKeys[10],controlKey,ruleKeys[RULE_LIMIT];
 static uint8_t historyFamilies[10]{};
 static uint8_t controlChannel=0;
@@ -46,7 +51,7 @@ static int outputBrightness=-1;
 static Preferences settings;
 static String directory="/";
 struct FileRow {String path;bool dir;uint32_t size;};static FileRow files[96];static int fileCount=0;static bool filesTruncated=false;
-struct Dot {int x,y,index;};static Dot dots[60];static int dotCount=0;
+struct Dot {int x,y,index;dragon::DeviceKey key;};static Dot dots[MAX_CONTACTS];static int dotCount=0;
 static lv_color_t color(uint32_t c){return lv_color_hex(c);}
 static uint32_t familyColor(Family f){switch(f){case Family::Flock:return 0xff6878;case Family::Axon:return 0xf5b565;case Family::Meta:return 0xb8a0ff;case Family::Pineapple:return 0xffff70;case Family::Pwnagotchi:return 0xff86db;case Family::Nyanbox:return 0x80eaff;case Family::Halehound:return 0xff582f;case Family::Tracker:return 0x99abff;case Family::Skimmer:return 0xffbb88;case Family::Ble:return 0x83def0;default:return 0xfcdc58;}}
 static lv_obj_t* label(lv_obj_t* parent,const char* text,int x,int y,int w=0,const lv_font_t* font=F14,uint32_t c=0xd9efe0){
@@ -118,12 +123,25 @@ static void radarDraw(lv_event_t* e){
   if(radioEnabled)for(int i=12;i>=0;--i){float a=angle-i*.022f;line(ctx,CENTER,CENTER,CENTER+cosf(a)*S(164),CENTER+sinf(a)*S(164),0x70ff5a,2,120-i*8);}
   disc(ctx,CENTER,CENTER,S(3),0xcafc9b);dotCount=0;
   // Display freshest contacts, oldest age limited to 30 s. Angle is a stable address hash, not a bearing.
-  int order[MAX_CONTACTS],n=0;for(size_t i=0;i<MAX_CONTACTS;++i)if(radarVisible(contacts[i],millis()) || (int(i)==trackedContact && millis()-contacts[i].seen<30000))order[n++]=i;
-  for(int i=0;i<n;++i)for(int j=i+1;j<n;++j){auto& a=contacts[order[i]];auto& b=contacts[order[j]];if(b.match.confidence>a.match.confidence || (b.match.confidence==a.match.confidence&&b.rssi>a.rssi))std::swap(order[i],order[j]);}
+  const uint32_t now=millis();
+  if(!radarPrepared || uint32_t(now-radarPrepared)>=250){
+    radarPrepared=now;radarCount=0;
+    for(size_t i=0;i<MAX_CONTACTS;++i)if(radarVisible(contacts[i],now))radarOrder[radarCount++]=i;
+    std::sort(radarOrder,radarOrder+radarCount,[now](int a,int b){
+      if(a==trackedContact||b==trackedContact)return a==trackedContact&&b!=trackedContact;
+      return preferContact(contacts[a],contacts[b],now);
+    });
+  }
   int callouts=0;const int u5=S(5),u6=S(6),u7=S(7),u8=S(8);
-  for(int k=0;k<n && dotCount<60;++k){int i=order[k];auto& c=contacts[i];uint32_t hash=2166136261u;for(uint8_t b:c.mac)hash=(hash^b)*16777619u;
-    float a=(hash%360)*.01745329f;int r=S(constrain((-c.rssi-25)*2,20,152));int x=CENTER+cosf(a)*r,y=CENTER+sinf(a)*r;uint32_t cc=familyColor(c.match.family);
-    uint8_t opacity=millis()-c.seen>10000?100:255;disc(ctx,x,y,S(9),cc,22);disc(ctx,x,y,S(4),cc,opacity);
+  for(int k=0;k<radarCount;++k){int i=radarOrder[k];auto& c=contacts[i];
+    if(!radarVisible(c,now))continue;
+    uint32_t hash=contactHash(contactKey(c));
+    float a=(hash%360)*.01745329f;int r=S(constrain((-c.rssi-25)*2,20,152));int x=CENTER+cosf(a)*r,y=CENTER+sinf(a)*r;uint32_t cc=familyColor(visibleFamily(c,now));
+    uint8_t opacity=now-c.seen>10000?100:255;
+    if(c.match.confidence==Confidence::Low && !trafficFresh(c,now)){
+      lv_draw_arc_dsc_t clue=arc;clue.color=color(cc);clue.opa=opacity;clue.width=2;lv_point_t point{(lv_coord_t)x,(lv_coord_t)y};lv_draw_arc(ctx,&clue,&point,S(5),0,359);
+    }else{disc(ctx,x,y,S(9),cc,22);disc(ctx,x,y,S(4),cc,opacity);}
+    if(i==trackedContact){lv_draw_arc_dsc_t lock=arc;lock.color=color(0xffffff);lock.width=2;lv_point_t point{(lv_coord_t)x,(lv_coord_t)y};lv_draw_arc(ctx,&lock,&point,S(15),0,359);}
     if(c.match.family==Family::Flock){line(ctx,x-u5,y-u6,x+u5,y-u6,cc,2);line(ctx,x-u5,y+u6,x+u5,y+u6,cc,2);}
     else if(c.match.family==Family::Meta){disc(ctx,x-u5,y,S(2),cc);disc(ctx,x+u5,y,S(2),cc);}
     else if(c.match.family==Family::Pwnagotchi || c.match.family==Family::Nyanbox){line(ctx,x-u5,y-u5,x-S(2),y-u8,cc,2);line(ctx,x+u5,y-u5,x+S(2),y-u8,cc,2);}
@@ -131,19 +149,19 @@ static void radarDraw(lv_event_t* e){
     if(c.wifiAlerts && millis()-c.lastWifiAlert<30000){lv_draw_arc_dsc_t d=arc;d.color=color(0xff5040);d.width=2;lv_point_t p{(lv_coord_t)x,(lv_coord_t)y};lv_draw_arc(ctx,&d,&p,S(12),0,359);}
     if(callouts<3 && ((c.wifiAlerts && millis()-c.lastWifiAlert<30000) || c.match.confidence>=Confidence::Low)){
       const char* text=(c.wifiAlerts && millis()-c.lastWifiAlert<30000)?dragon::familyName(c.trafficFamily):dragon::familyName(c.match.family);
-      int boxX=x<CENTER?S(226):S(16);int boxY=S(92+callouts*31);callout(ctx,x,y,boxX,boxY,text,(c.wifiAlerts && millis()-c.lastWifiAlert<30000)?0xff6655:cc);++callouts;
+      int boxX=x<CENTER?S(216):S(26);int boxY=S(92+callouts*31);callout(ctx,x,y,boxX,boxY,text,(c.wifiAlerts && millis()-c.lastWifiAlert<30000)?0xff6655:cc);++callouts;
     }
-    dots[dotCount++]={x,y,i};
+    dots[dotCount++]={x,y,i,contactKey(c)};
   }
 }
-static void radarTap(lv_event_t*){lv_point_t p;lv_indev_get_point(lv_indev_get_act(),&p);int nearest=S(18)*S(18),idx=-1;for(int i=0;i<dotCount;++i){int d=(dots[i].x-p.x)*(dots[i].x-p.x)+(dots[i].y-p.y)*(dots[i].y-p.y);if(d<nearest){nearest=d;idx=dots[i].index;}}if(idx>=0){selectContact(idx);go(Details);}}
+static void radarTap(lv_event_t*){lv_point_t p;lv_indev_get_point(lv_indev_get_act(),&p);int nearest=S(18)*S(18),idx=-1;for(int i=0;i<dotCount;++i){int d=(dots[i].x-p.x)*(dots[i].x-p.x)+(dots[i].y-p.y)*(dots[i].y-p.y);if(d<nearest && contactKey(contacts[dots[i].index])==dots[i].key){nearest=d;idx=dots[i].index;}}if(idx>=0){selectContact(idx);go(Details);}}
 static void loadFiles(){
   fileCount=0;filesTruncated=false;if(!sdReady)return;
   xSemaphoreTake(sdMutex,portMAX_DELAY);File dir=SD_MMC.open(directory);
   if(dir&&dir.isDirectory()){File f=dir.openNextFile();while(f){if(fileCount>=96){filesTruncated=true;f.close();break;}String name=f.name();String path=directory=="/"?"/"+name:directory+"/"+name;files[fileCount++]={path,f.isDirectory(),uint32_t(f.size())};f.close();f=dir.openNextFile();}}dir.close();xSemaphoreGive(sdMutex);
 }
 static void build(){
-  badgeUnload();page=pending;pageAt=millis();statusLabel=audioLabel=audioMeter=radar=trackingLabel=huntValue=huntMeta=huntGauge=huntGraph=nullptr;
+  badgeUnload();page=pending;pageAt=millis();statusLabel=audioLabel=audioMeter=radar=trackingLabel=huntValue=huntMeta=huntGauge=huntGraph=diagnosticsLabel=nullptr;radarPrepared=0;
   lv_obj_clean(root);lv_obj_set_style_bg_color(root,color(0x071510),0);
   if(page==Badge){lv_obj_set_style_bg_color(root,color(0x000000),0);badgeView(root);
   }else if(page==Radar){
@@ -151,9 +169,11 @@ static void build(){
     lv_obj_add_event_cb(radar,radarDraw,LV_EVENT_DRAW_MAIN,nullptr);lv_obj_add_event_cb(radar,radarTap,LV_EVENT_CLICKED,nullptr);
     auto* t=label(root,"DRAGON DETECTOR",62,37,236,F16,0xd6f49a);lv_obj_set_style_text_align(t,LV_TEXT_ALIGN_CENTER,0);lv_obj_clear_flag(t,LV_OBJ_FLAG_CLICKABLE);legible(t);
     statusLabel=label(root,"LISTENING",56,60,248,F12,0xa7c57f);lv_obj_set_style_text_align(statusLabel,LV_TEXT_ALIGN_CENTER,0);legible(statusLabel);
-    trackingLabel=label(root,"RSSI proximity / no bearing",50,280,260,F12,0xb3ca98);lv_obj_set_style_text_align(trackingLabel,LV_TEXT_ALIGN_CENTER,0);legible(trackingLabel);
+    trackingLabel=label(root,"Hollow = clue / RSSI, no bearing",50,280,260,F12,0xb3ca98);lv_obj_set_style_text_align(trackingLabel,LV_TEXT_ALIGN_CENTER,0);legible(trackingLabel);
     lv_obj_add_flag(trackingLabel,LV_OBJ_FLAG_CLICKABLE);lv_obj_add_event_cb(trackingLabel,action,LV_EVENT_CLICKED,(void*)57);
-    button(root,LV_SYMBOL_UP "  TOOLS",123,306,114,31,2);
+    button(root,"TARGETS",98,301,82,32,96);
+    button(root,LV_SYMBOL_UP " TOOLS",187,301,78,32,2);
+    button(root,detector.quiet?LV_SYMBOL_MUTE:LV_SYMBOL_VOLUME_MAX,270,249,38,34,97);
   }else if(page==Menu){
     title("DRAGON TOOLS");const char* tabs[]={"RECON","BADGE","SYSTEM"};
     for(int i=0;i<3;++i){auto* b=button(root,tabs[i],47+i*89,76,86,32,10+i);if(menuTab==i)lv_obj_set_style_bg_color(b,color(0x36582b),0);}
@@ -162,14 +182,23 @@ static void build(){
 
     if(menuTab==2){button(root,"Settings",60,126,240,48,40);button(root,"Signatures & limits",60,184,240,48,41);button(root,radioEnabled?"Pause radio":"Resume radio",79,243,202,44,42);}
   }else if(page==Devices){
-    title(filter==1?"WI-FI CONTACTS":"BLE CONTACTS","Observed in the last 60 seconds");body=scrollBody();int rowNo=0;
-    for(size_t i=0;i<MAX_CONTACTS;++i){auto& c=contacts[i];if(!c.used || (filter==1&&c.ble)||(filter==2&&!c.ble)||millis()-c.seen>60000)continue;
-      char mac[18],sub[96];displayMac(c.mac,mac);auto flags=deviceRules(contactKey(c));snprintf(sub,sizeof(sub),"%d dBm  %s%s",c.rssi,flags&RuleWatch?"WATCH / ":flags&RuleIgnore?"IGNORED / ":"",dragon::familyName(c.match.family));row(body,*c.name?displayName(c.name).c_str():mac,sub,rowNo++,1000+i,familyColor(c.match.family));}
-    if(!rowNo)label(body,"Listening...\nNo recent contacts",10,30,230);
-    button(root,LV_SYMBOL_REFRESH,217,307,42,33,25);
+    title(filter==0?"RADAR TARGETS":filter==1?"WI-FI CONTACTS":"BLE CONTACTS","Evidence first / strongest signal next");body=scrollBody(88,180);
+    int order[MAX_CONTACTS];deviceTotal=0;uint32_t now=millis();
+    for(size_t i=0;i<MAX_CONTACTS;++i){auto& c=contacts[i];if(!c.used || !c.packets || (filter==0&&!radarVisible(c,now)) || (filter==1&&c.ble)||(filter==2&&!c.ble)||now-c.seen>=60000)continue;order[deviceTotal++]=i;}
+    std::sort(order,order+deviceTotal,[now](int a,int b){return preferContact(contacts[a],contacts[b],now);});
+    devicePage=constrain(devicePage,0,deviceTotal?(deviceTotal-1)/10:0);deviceRows=0;
+    for(int k=devicePage*10;k<deviceTotal&&deviceRows<10;++k){auto& c=contacts[order[k]];deviceKeys[deviceRows]=contactKey(c);
+      char mac[18],sub[96];displayMac(c.mac,mac);auto flags=deviceRules(contactKey(c));
+      snprintf(sub,sizeof(sub),"%d dBm / %lus / %s%s",c.rssi,(unsigned long)((now-c.seen)/1000),flags&RuleWatch?"WATCH / ":flags&RuleIgnore?"IGNORED / ":c.match.confidence==Confidence::Low?"CLUE / ":"",dragon::familyName(visibleFamily(c,now)));
+      row(body,*c.name?displayName(c.name).c_str():mac,sub,deviceRows,6000+deviceRows,familyColor(visibleFamily(c,now)));++deviceRows;
+    }
+    if(!deviceRows)label(body,"Listening...\nNo recent targets",10,30,230);
+    button(root,"<",68,274,40,31,114);char pages[30];snprintf(pages,sizeof(pages),"%d/%d",devicePage+1,std::max(1,(deviceTotal+9)/10));label(root,pages,118,280,60,F12);
+    button(root,">",180,274,40,31,115);button(root,LV_SYMBOL_REFRESH,230,274,50,31,25);
   }else if(page==Details){
     title("CONTACT EVIDENCE");body=scrollBody(88,169);if(selectionValid()){auto& c=contacts[selected];char mac[18];displayMac(c.mac,mac);
       String s=(*c.name?displayName(c.name):String(mac))+"\n"+mac+"\n\n"+dragon::familyName(c.match.family)+"\n"+dragon::confidenceName(c.match.confidence)+"\n"+(detector.privacy?"Evidence hidden by privacy mode":c.match.evidence)+"\n\n"+String(c.rssi)+" dBm  |  "+(c.ble?"BLE":String("CH ")+c.channel)+"\n"+c.signal.quality()+" / "+c.signal.direction()+"\nLast seen "+String((millis()-c.seen)/1000)+"s ago\nFrames: "+String(c.packets);
+      if(trafficFresh(c,millis()))s+="\n\nTraffic: "+String(dragon::familyName(c.trafficFamily))+"\nGrouped traffic; source may be spoofed.";
       if(c.drone.valid && !detector.privacy){if(c.drone.hasId)s+="\nRemote ID: "+String(c.drone.id);if(c.drone.hasLocation){s+="\nAircraft: "+String(c.drone.latitude,6)+", "+String(c.drone.longitude,6)+"\nPosition age: "+String((millis()-c.drone.locationAt)/1000)+"s";if(c.drone.altitude>-1000)s+="\nAltitude WGS84: "+String(c.drone.altitude,1)+" m";if(c.drone.speed<255)s+="\nSpeed: "+String(c.drone.speed,1)+" m/s";}if(c.drone.hasOperator)s+="\nOperator location: "+String(c.drone.operatorLatitude,6)+", "+String(c.drone.operatorLongitude,6)+"\nOperator position age: "+String((millis()-c.drone.operatorAt)/1000)+"s";s+="\nBroadcast data; not authenticated.";}
       s+="\n\nIdentity and activity unverified. Signal strength is not distance.";
       label(body,s.c_str(),8,0,240);
@@ -188,8 +217,8 @@ static void build(){
       button(root,"Mark",62,272,76,31,58);button(root,"Target",144,272,76,31,59);button(root,"Stop",226,272,72,31,54);
     }
   }else if(page==Detectors){
-    title("DETECTION FILTERS","Confidence gates both radar and alerts");body=scrollBody();
-    row(body,detector.minimum==Confidence::Low?"Confidence: all hints":detector.minimum==Confidence::Medium?"Confidence: medium +":"Confidence: strong only","Tap: hints / medium+ / strong",0,62);
+    title("DETECTION FILTERS","All enabled clues appear on the radar");body=scrollBody();
+    row(body,detector.minimum==Confidence::Low?"Alerts: all hints":detector.minimum==Confidence::Medium?"Alerts: medium +":"Alerts: strong only","Sound/popups threshold; dots stay visible",0,62);
     for(unsigned i=2;i<unsigned(Family::Count);++i){auto f=Family(i);String text=String(detector.enabled(f)?"ON  ":"OFF  ")+dragon::familyName(f);row(body,text.c_str(),"Tap to enable or disable this family",i-1,4000+i);}
   }else if(page==Controls){
     title("TARGET CONTROLS");body=scrollBody();char mac[18];displayMac(controlKey.mac,mac);uint8_t flags=deviceRules(controlKey);
@@ -208,7 +237,7 @@ static void build(){
     std::sort(order,order+historyCount,[](int a,int b){return int32_t(historyRecords[a].sequence-historyRecords[b].sequence)>0;});
     historyPage=constrain(historyPage,0,int(historyCount?((historyCount-1)/10):0));historyRows=0;
     for(size_t k=historyPage*10;k<historyCount&&historyRows<10;++k){auto& r=historyRecords[order[k]];historyKeys[historyRows]=r.key;historyFamilies[historyRows]=r.family;char mac[18],sub[90];displayMac(r.key.mac,mac);snprintf(sub,sizeof(sub),"%s / peak %d dBm / %lu visits",dragon::familyName(Family(r.family)),r.peak,(unsigned long)r.encounters);row(body,*r.name?displayName(r.name).c_str():mac,sub,historyRows,3000+historyRows,familyColor(Family(r.family)));++historyRows;}
-    if(!historyCount)label(body,detector.history?"No confirmed observations yet.\nHistory waits for repeat evidence.":"Persistent history is disabled.\nEnable it in Settings.",6,28,244);
+    if(!historyCount)label(body,detector.history?"No observations saved yet.\nFirst matches are recorded.":"Persistent history is disabled.\nEnable it in Settings.",6,28,244);
     button(root,"<",70,274,40,31,110);button(root,"Events",116,274,84,31,22);button(root,">",206,274,40,31,111);button(root,"Clear",252,274,55,31,112);
   }else if(page==HistoryDetail){
     title("SAVED EVIDENCE");body=scrollBody(88,169);auto& r=historySelection;char mac[18];displayMac(r.key.mac,mac);
@@ -240,7 +269,9 @@ static void build(){
     title("SETTINGS");body=scrollBody();int n=0;
     row(body,"Display & timeouts","Brightness, dimming and screen off",n++,71);
     row(body,"Audio & hunt tones","Volume, target focus and RTTTL alerts",n++,31);
-    row(body,"Detection filters","Choose families and confidence",n++,61);
+    row(body,"Detection filters","Radar families / audible alert threshold",n++,61);
+    row(body,activeBle?"BLE scan: ACTIVE":"BLE scan: PASSIVE",activeBle?"Requests scan-response names; transmits":"Listen only; tap for scan-response names",n++,98);
+    row(body,"Radio health","Queue, memory and reception diagnostics",n++,99);
     row(body,"Watch / ignore list","Manage saved and snoozed addresses",n++,64);
     String quiet=detector.autoQuiet?String("Auto quiet: after ")+detector.autoQuiet:"Auto quiet: off";row(body,quiet.c_str(),"Re-alert at +7 dB; resets after 30 minutes",n++,72);
     row(body,detector.quiet?"Quiet mode: ON":"Quiet mode: OFF","Hide normal popups; continue history",n++,73);
@@ -263,9 +294,11 @@ static void build(){
     String off=detector.offSeconds?String("Screen off after ")+detector.offSeconds+" seconds":"Screen off: NEVER";row(body,off.c_str(),"Never / 30 / 60 / 120 / 300 / 600 s",3,82);
     row(body,detector.wakeAlert?"Wake on alert: ON":"Wake on alert: OFF","Touch or button also wakes the display",4,83);
     row(body,"Restore always-on defaults","100% brightness; no dimming or timeout",5,84);
+  }else if(page==Diagnostics){
+    title("RADIO HEALTH","Live reception and resource counters");body=scrollBody();diagnosticsLabel=label(body,"Reading...",6,0,244,F12);
   }else if(page==About){
     title("SIGNATURES & LIMITS");body=scrollBody();
-    label(body,"DRAGON DETECTOR 0.4\nDetection / hunt edition\n\nGreen radar / signal proximity.\nAngles are decorative.\nNo distance or direction.\n\nCandidates use repeated fresh\nevidence. Vendor-only hints\nare in the contact lists.\nTap a dot, then Hunt signal\nfor dedicated BLE or Wi-Fi.\n\nAirTag / Find My is a family\nmatch, not model or owner ID.\nBiscuit Pro / Ultra cannot be\ndistinguished from adverts.\nNo proof of malicious intent.\n\nHold badge: tools.\nAlways on at 100% by default.\nDisplay timeouts in Settings.\nUSB Badge Studio on GitHub.\n\nBy Your Pal Kal / Valleytech\nOriginal code: MIT.\nFlock Noir / Colonel Panic\nOUI Spy / Unified Blue\nMarauder: Just Call Me Koko\nSquachWatch feature reference\nOpenDroneID: Apache-2.0\nFull notices in CREDITS.md",5,0,244,F14);
+    label(body,"DRAGON DETECTOR 0.5\nDetection / hunt edition\n\nGreen radar / signal proximity.\nAngles are decorative.\nNo distance or direction.\n\nAll recognized clues appear.\nHollow dots: weak evidence.\nAlerts wait for repeat evidence.\nTap a dot, then Hunt signal\nfor dedicated BLE or Wi-Fi.\n\nAirTag / Find My is a family\nmatch, not model or owner ID.\nBiscuit Pro / Ultra cannot be\ndistinguished from adverts.\nNo proof of malicious intent.\n\nHold badge: tools.\nAlways on at 100% by default.\nDisplay timeouts in Settings.\nUSB Badge Studio on GitHub.\n\nBy Your Pal Kal / Valleytech\nOriginal code: MIT.\nFlock Noir / Colonel Panic\nOUI Spy / Unified Blue\nMarauder: Just Call Me Koko\nSquachWatch feature reference\nOpenDroneID: Apache-2.0\nFull notices in CREDITS.md",5,0,244,F14);
   }
   micBadge=label(root,"MIC REC",137,17,86,F12,0xff8585);lv_obj_set_style_text_align(micBadge,LV_TEXT_ALIGN_CENTER,0);legible(micBadge);lv_obj_add_flag(micBadge,LV_OBJ_FLAG_HIDDEN);
 }
@@ -276,6 +309,7 @@ static void action(lv_event_t* e){
       xSemaphoreTake(sdMutex,portMAX_DELAY);File f=SD_MMC.open(files[i].path);String text;while(f && f.available() && text.length()<2048){char ch=f.read();text+=(ch=='\n'||ch=='\t'||(ch>=32&&ch<127))?ch:'.';}f.close();xSemaphoreGive(sdMutex);
       lv_obj_t* box=lv_msgbox_create(root,"FILE PREVIEW",text.c_str(),nullptr,true);lv_obj_set_size(box,S(260),S(225));lv_obj_center(box);
     }}return;}
+  if(id>=6000 && id<6000+deviceRows){int i=findContact(deviceKeys[id-6000]);if(i>=0){selectContact(i);go(Details);}else{uiNotify("Target expired","Refresh the list or reopen it from History.",nullptr,false);}return;}
   if(id>=1000 && id<1000+(int)MAX_CONTACTS){selectContact(id-1000);go(Details);return;}
   if(id>=3000&&id<3000+historyRows){for(size_t i=0;i<historyCount;++i)if(historyRecords[i].key==historyKeys[id-3000]&&historyRecords[i].family==historyFamilies[id-3000]){historySelection=historyRecords[i];go(HistoryDetail);return;}go(History);page=Boot;return;}
   if(id>=4002&&id<4000+int(Family::Count)){detector.families^=1u<<(id-4000);detectorSave();go(Detectors);page=Boot;return;}
@@ -284,7 +318,7 @@ static void action(lv_event_t* e){
   switch(id){
     case 1:go(Radar);break;case 2:go(Menu);break;
     case 10:case 11:case 12:menuTab=id-10;go(Menu);page=Boot;break;
-    case 20:filter=1;go(Devices);break;case 21:filter=2;go(Devices);break;case 22:go(Alerts);break;case 23:go(Channels);break;
+    case 20:filter=1;devicePage=0;go(Devices);break;case 21:filter=2;devicePage=0;go(Devices);break;case 22:go(Alerts);break;case 23:go(Channels);break;
     case 24:setCapture(!captureEnabled);go(Settings);page=Boot;break;case 25:page=Boot;go(Devices);break;
     case 30:directory="/music";go(Files);break;case 31:go(Audio);break;case 32:directory="/";go(Files);break;
     case 33:audioRecord();break;case 34:audioStop();break;case 35:audioVolume(audioStatus().volume-10);break;case 36:audioVolume(audioStatus().volume+10);break;
@@ -335,6 +369,12 @@ static void action(lv_event_t* e){
     case 89:dismissNotice();break;
     case 90:if(noticeHasKey){auto key=noticeKey;dismissNotice();huntDevice(key);go(Hunt);}break;
     case 91:if(noticeHasKey){if(!(deviceRules(noticeKey)&RuleSnooze))toggleRule(noticeKey,RuleSnooze);dismissNotice();}break;
+    case 96:filter=0;devicePage=0;go(Devices);break;
+    case 97:detector.quiet=!detector.quiet;detectorSave();audioStop();go(Radar);page=Boot;break;
+    case 98:setActiveBle(!activeBle);go(Settings);page=Boot;break;
+    case 99:go(Diagnostics);break;
+    case 114:if(devicePage>0)--devicePage;go(Devices);page=Boot;break;
+    case 115:if((devicePage+1)*10<deviceTotal)++devicePage;go(Devices);page=Boot;break;
     case 110:if(historyPage>0)--historyPage;go(History);page=Boot;break;
     case 111:if(size_t((historyPage+1)*10)<historyCount)++historyPage;go(History);page=Boot;break;
     case 112:{static const char* buttons[]={"Cancel","Clear",""};auto* box=lv_msgbox_create(root,"CLEAR HISTORY?","Erase stored detections on this device? Active scanning can create new records.",buttons,true);lv_obj_set_width(box,S(260));lv_obj_center(box);lv_obj_add_event_cb(box,[](lv_event_t* event){auto* b=lv_event_get_current_target(event);if(lv_msgbox_get_active_btn(b)==1)historyClear();lv_msgbox_close(b);go(History);page=Boot;},LV_EVENT_VALUE_CHANGED,nullptr);break;}
@@ -360,7 +400,7 @@ bool uiTouch(bool pressed,int x,int y){
 }
 void uiShow(const String& name){
   lastInteraction=millis();
-  if(name=="badge")go(Badge);else if(name=="radar")go(Radar);else if(name=="menu")go(Menu);else if(name=="wifi"){filter=1;go(Devices);}else if(name=="ble"){filter=2;go(Devices);}else if(name=="audio")go(Audio);else if(name=="files")go(Files);else if(name=="alerts")go(Alerts);else if(name=="channels")go(Channels);else if(name=="about")go(About);else if(name=="settings")go(Settings);else if(name=="hunt")go(Hunt);else if(name=="detectors")go(Detectors);else if(name=="history")go(History);else if(name=="display")go(Display);
+  if(name=="badge")go(Badge);else if(name=="radar")go(Radar);else if(name=="menu")go(Menu);else if(name=="wifi"){filter=1;go(Devices);}else if(name=="ble"){filter=2;go(Devices);}else if(name=="audio")go(Audio);else if(name=="files")go(Files);else if(name=="alerts")go(Alerts);else if(name=="channels")go(Channels);else if(name=="about")go(About);else if(name=="settings")go(Settings);else if(name=="hunt")go(Hunt);else if(name=="detectors")go(Detectors);else if(name=="history")go(History);else if(name=="display")go(Display);else if(name=="health")go(Diagnostics);else if(name=="targets"){filter=0;devicePage=0;go(Devices);}
 }
 void uiBegin(){
   settings.begin("dd-ui",false);
@@ -390,11 +430,14 @@ void uiLoop(){
 #endif
     if(page==Radar && radar){
       if(trackedContact>=0 && trackingLabel){auto& t=contacts[trackedContact];uint32_t age=millis()-t.seen;String line=age>10000?String("Target stale / ")+age/1000+"s ago":String(t.rssi)+" dBm / "+t.signal.direction();lv_label_set_text(trackingLabel,line.c_str());}
-      lv_obj_invalidate(radar);int count=0;for(auto& c:contacts)if(radarVisible(c,millis()))++count;char s[96];int n=snprintf(s,sizeof(s),"%s %s / %d matches",radioEnabled?(trackedContact>=0?"TRACK":blePhase?"BLE":"WI-FI"):"PAUSED",captureEnabled?"PCAP":"RX",count);
+      lv_obj_invalidate(radar);int count=0;for(auto& c:contacts)if(radarVisible(c,millis()))++count;char s[96];int n=snprintf(s,sizeof(s),"%s %s / %d targets",radioEnabled?(trackedContact>=0?"TRACK":blePhase?"BLE":"WI-FI"):"PAUSED",captureEnabled?"PCAP":"RX",count);
       int battery=batteryPercent();if(battery>=0)snprintf(s+n,sizeof(s)-n,"  /  %s%d%%",batteryCharging()?LV_SYMBOL_CHARGE " ":"",battery);lv_label_set_text(statusLabel,s);}
+    if(page==Diagnostics&&diagnosticsLabel){
+      char text[360];snprintf(text,sizeof(text),"Wi-Fi frames: %lu\nBLE adverts: %lu\nQueue drops: %lu / peak %u\nMax processing: %lu us\nMax queue age: %lu ms\nContact slots: %u\nEvictions: %lu\nCache hits/misses: %lu/%lu\nFree heap: %u KB\nFree PSRAM: %u KB\nBLE: %s\n\nCounters restart at boot.\nHigher queue age means delayed\nRSSI and scan results.",wifiFrames,bleFrames,queueDrops,radioQueueHigh,radioMaxBatchUs,radioMaxLagMs,unsigned(MAX_CONTACTS),contactEvictions,contactCacheHits,contactCacheMisses,ESP.getFreeHeap()/1024,ESP.getFreePsram()/1024,activeBle?"Active / requests names":"Passive / listen only");lv_label_set_text(diagnosticsLabel,text);
+    }
     if(page==Hunt&&trackedContact>=0&&huntValue){auto& c=contacts[trackedContact];uint32_t age=millis()-c.seen;bool stale=age>=10000||!c.packets;
       char value[52],meta[128];if(stale)snprintf(value,sizeof(value),"%s",c.packets?"SIGNAL LOST":"SEARCHING");else snprintf(value,sizeof(value),"%d dBm  %s",c.rssi,c.signal.trend>0?LV_SYMBOL_UP:c.signal.trend<0?LV_SYMBOL_DOWN:"-");lv_label_set_text(huntValue,value);lv_bar_set_value(huntGauge,stale?-105:c.rssi,LV_ANIM_OFF);
-      if(stale)snprintf(meta,sizeof(meta),"Last heard %lus ago\nWaiting on %s",(unsigned long)(age/1000),c.ble?"BLE":channelLock?"saved Wi-Fi channel":"Wi-Fi channel sweep");
+      if(stale)snprintf(meta,sizeof(meta),"Last heard %lus ago\n%s",(unsigned long)(age/1000),c.ble?"Listening for BLE target":huntSweep(c,millis())?"Searching Wi-Fi channels 1-11":"Listening on saved channel");
       else if(c.trace.mark>-127)snprintf(meta,sizeof(meta),"%s / peak %d dBm\n%+d dB from mark / %s",c.signal.direction(),c.trace.peak,c.rssi-c.trace.mark,c.signal.quality());
       else snprintf(meta,sizeof(meta),"%s / peak %d dBm\n%s / MARK to compare",c.signal.direction(),c.trace.peak,c.signal.quality());
       lv_label_set_text(huntMeta,meta);lv_obj_invalidate(huntGraph);

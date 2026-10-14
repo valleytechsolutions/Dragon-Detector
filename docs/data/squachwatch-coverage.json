@@ -1,0 +1,677 @@
+{
+  "reference": "https://github.com/skizzophrenic/SquachWatch-CYD",
+  "commit": "a6167dbb0693963b5ad7022e7923cfb458d7676c",
+  "note": "Public address/protocol facts for independent regression tests, not copied application code. Apple company ID is tested with a valid Find My payload. Shared identifiers remain weak candidates. Runtime predicates have separate fixtures.",
+  "entries": [
+    {
+      "kind": "address",
+      "value": "00037F",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "00047D",
+      "family": "Alpr"
+    },
+    {
+      "kind": "address",
+      "value": "001885",
+      "family": "Alpr"
+    },
+    {
+      "kind": "address",
+      "value": "001A7D",
+      "family": "Skimmer"
+    },
+    {
+      "kind": "address",
+      "value": "001F92",
+      "family": "Alpr"
+    },
+    {
+      "kind": "address",
+      "value": "0025DF",
+      "family": "Axon"
+    },
+    {
+      "kind": "address",
+      "value": "00408C",
+      "family": "Camera"
+    },
+    {
+      "kind": "address",
+      "value": "00A0D8",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "00B463",
+      "family": "Ring"
+    },
+    {
+      "kind": "address",
+      "value": "00BF15",
+      "family": "Alpr"
+    },
+    {
+      "kind": "address",
+      "value": "00E04C",
+      "family": "Camera"
+    },
+    {
+      "kind": "address",
+      "value": "00F48D",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "021337",
+      "family": "Pineapple"
+    },
+    {
+      "kind": "address",
+      "value": "02C0CA",
+      "family": "Pineapple"
+    },
+    {
+      "kind": "address",
+      "value": "083A88",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "0CBF15",
+      "family": "Alpr"
+    },
+    {
+      "kind": "address",
+      "value": "0CFA22",
+      "family": "Flipper"
+    },
+    {
+      "kind": "address",
+      "value": "145AFC",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "14B5CD",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "187F88",
+      "family": "Ring"
+    },
+    {
+      "kind": "address",
+      "value": "201300",
+      "family": "Skimmer"
+    },
+    {
+      "kind": "address",
+      "value": "240AC4",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "242BD6",
+      "family": "Ring"
+    },
+    {
+      "kind": "address",
+      "value": "246F28",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "24B2B9",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "2824FF",
+      "family": "Axon"
+    },
+    {
+      "kind": "address",
+      "value": "2857BE",
+      "family": "Camera"
+    },
+    {
+      "kind": "address",
+      "value": "2CAA8E",
+      "family": "Camera"
+    },
+    {
+      "kind": "address",
+      "value": "30AEA4",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "343EA4",
+      "family": "Ring"
+    },
+    {
+      "kind": "address",
+      "value": "348518",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "34D270",
+      "family": "Camera"
+    },
+    {
+      "kind": "address",
+      "value": "3C71BF",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "3C9180",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "4419B6",
+      "family": "Camera"
+    },
+    {
+      "kind": "address",
+      "value": "4C6905",
+      "family": "Camera"
+    },
+    {
+      "kind": "address",
+      "value": "4CCC34",
+      "family": "Alpr"
+    },
+    {
+      "kind": "address",
+      "value": "50E467",
+      "family": "Ring"
+    },
+    {
+      "kind": "address",
+      "value": "54E019",
+      "family": "Ring"
+    },
+    {
+      "kind": "address",
+      "value": "5800E3",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "588E81",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "5C475E",
+      "family": "Ring"
+    },
+    {
+      "kind": "address",
+      "value": "5C93A2",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "646E69",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "649A63",
+      "family": "Ring"
+    },
+    {
+      "kind": "address",
+      "value": "6837E9",
+      "family": "Ring"
+    },
+    {
+      "kind": "address",
+      "value": "700894",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "701AD5",
+      "family": "Camera"
+    },
+    {
+      "kind": "address",
+      "value": "70C94E",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "744CA1",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "7C78B2",
+      "family": "Camera"
+    },
+    {
+      "kind": "address",
+      "value": "803049",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "826BF2",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "84F3EB",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "8CAAB5",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "9035EA",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "90486C",
+      "family": "Ring"
+    },
+    {
+      "kind": "address",
+      "value": "940853",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "94B97E",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "98D300",
+      "family": "Skimmer"
+    },
+    {
+      "kind": "address",
+      "value": "9C2F9D",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "9C7613",
+      "family": "Ring"
+    },
+    {
+      "kind": "address",
+      "value": "A4C138",
+      "family": "Camera"
+    },
+    {
+      "kind": "address",
+      "value": "A4CF12",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "AC67B2",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "AC9FC3",
+      "family": "Ring"
+    },
+    {
+      "kind": "address",
+      "value": "B41E52",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "B4E62D",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "B81EA4",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "B83532",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "B8A44F",
+      "family": "Camera"
+    },
+    {
+      "kind": "address",
+      "value": "B8D7AF",
+      "family": "Camera"
+    },
+    {
+      "kind": "address",
+      "value": "B8E28C",
+      "family": "Alpr"
+    },
+    {
+      "kind": "address",
+      "value": "BCDDC2",
+      "family": "Camera"
+    },
+    {
+      "kind": "address",
+      "value": "C03532",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "C049EF",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "C056E3",
+      "family": "Camera"
+    },
+    {
+      "kind": "address",
+      "value": "C4DBAD",
+      "family": "Ring"
+    },
+    {
+      "kind": "address",
+      "value": "CC3BFB",
+      "family": "Ring"
+    },
+    {
+      "kind": "address",
+      "value": "CC50E3",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "CCDBA7",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "D03957",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "D03F27",
+      "family": "Camera"
+    },
+    {
+      "kind": "address",
+      "value": "D4ADFC",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "D8F3BC",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "DC5475",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "E00AF6",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "E04F43",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "E0A700",
+      "family": "Camera"
+    },
+    {
+      "kind": "address",
+      "value": "E40540",
+      "family": "Axon"
+    },
+    {
+      "kind": "address",
+      "value": "E4AAEA",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "E89F6D",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "E8D0FC",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "EC1BBD",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "F0272D",
+      "family": "Camera"
+    },
+    {
+      "kind": "address",
+      "value": "F46ADD",
+      "family": "Flock"
+    },
+    {
+      "kind": "address",
+      "value": "FC65DE",
+      "family": "Ring"
+    },
+    {
+      "kind": "company",
+      "value": "004C",
+      "family": "Tracker"
+    },
+    {
+      "kind": "company",
+      "value": "01AB",
+      "family": "Meta"
+    },
+    {
+      "kind": "company",
+      "value": "03C2",
+      "family": "Meta"
+    },
+    {
+      "kind": "company",
+      "value": "058E",
+      "family": "Meta"
+    },
+    {
+      "kind": "company",
+      "value": "09C8",
+      "family": "Flock"
+    },
+    {
+      "kind": "company",
+      "value": "0D53",
+      "family": "Meta"
+    },
+    {
+      "kind": "company",
+      "value": "0E29",
+      "family": "Flipper"
+    },
+    {
+      "kind": "name",
+      "value": "BT04-A",
+      "family": "Skimmer"
+    },
+    {
+      "kind": "name",
+      "value": "FS Ext Battery",
+      "family": "Flock"
+    },
+    {
+      "kind": "name",
+      "value": "Flock_Setup",
+      "family": "Flock"
+    },
+    {
+      "kind": "name",
+      "value": "HC-03",
+      "family": "Skimmer"
+    },
+    {
+      "kind": "name",
+      "value": "HC-05",
+      "family": "Skimmer"
+    },
+    {
+      "kind": "name",
+      "value": "HC-06",
+      "family": "Skimmer"
+    },
+    {
+      "kind": "name",
+      "value": "RN42",
+      "family": "Skimmer"
+    },
+    {
+      "kind": "ssid",
+      "value": "AB2-",
+      "family": "Axon"
+    },
+    {
+      "kind": "ssid",
+      "value": "AB3-",
+      "family": "Axon"
+    },
+    {
+      "kind": "ssid",
+      "value": "AB4-",
+      "family": "Axon"
+    },
+    {
+      "kind": "ssid",
+      "value": "AXON-",
+      "family": "Axon"
+    },
+    {
+      "kind": "ssid",
+      "value": "FLOCK-",
+      "family": "Flock"
+    },
+    {
+      "kind": "ssid",
+      "value": "Pineapple_",
+      "family": "Pineapple"
+    },
+    {
+      "kind": "ssid",
+      "value": "flock-",
+      "family": "Flock"
+    },
+    {
+      "kind": "ssid",
+      "value": "pwned",
+      "family": "Pineapple"
+    },
+    {
+      "kind": "uuid",
+      "value": "1101",
+      "family": "Skimmer"
+    },
+    {
+      "kind": "uuid",
+      "value": "3081",
+      "family": "Flipper"
+    },
+    {
+      "kind": "uuid",
+      "value": "3082",
+      "family": "Flipper"
+    },
+    {
+      "kind": "uuid",
+      "value": "3083",
+      "family": "Flipper"
+    },
+    {
+      "kind": "uuid",
+      "value": "3100",
+      "family": "Raven"
+    },
+    {
+      "kind": "uuid",
+      "value": "3200",
+      "family": "Raven"
+    },
+    {
+      "kind": "uuid",
+      "value": "3300",
+      "family": "Raven"
+    },
+    {
+      "kind": "uuid",
+      "value": "3400",
+      "family": "Raven"
+    },
+    {
+      "kind": "uuid",
+      "value": "3500",
+      "family": "Raven"
+    },
+    {
+      "kind": "uuid",
+      "value": "FD5A",
+      "family": "SmartTag"
+    },
+    {
+      "kind": "uuid",
+      "value": "FD5F",
+      "family": "Meta"
+    },
+    {
+      "kind": "uuid",
+      "value": "FEAA",
+      "family": "GoogleTag"
+    },
+    {
+      "kind": "uuid",
+      "value": "FEEC",
+      "family": "Tile"
+    },
+    {
+      "kind": "uuid",
+      "value": "FEED",
+      "family": "Tile"
+    },
+    {
+      "kind": "uuid",
+      "value": "FFFA",
+      "family": "Drone"
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-# Validation status · 0.4.0
+# Validation status · 0.5.0
 
 This is an experimental development release. Automated signature checks and basic board checks do not establish field detection accuracy or all-day battery life.
 
@@ -6,7 +6,9 @@ All three board profiles compile locally: Spotpear JC3636W518, Waveshare 1.75C a
 
 ## Automated checks
 
-- Native C++ positive/negative fixtures cover all added detector families, dedicated/shared vendor prefixes, public/random BLE addresses, Axon manufacturer/services, Meta composite evidence, Flock probe roles, Biscuit shared-UUID exclusions, Google Find Hub framing, Tile, Raven, iBeacon opt-in, and drone Remote ID BLE/beacon/NAN messages encoded with the upstream library.
+- The 0.5 coverage ledger enumerates all 134 table entries in SquachWatch `a6167db`: each must be recognized and radar-visible even with strong-only audible alerts. Additional runtime-name, Apple pairing, changed-MAC Pwnagotchi, scan-response padding/boundary, address-cache collision/reuse, event-overlay, disconnect-window and lost-channel fixtures pass. See [the audit](COVERAGE-AUDIT.md).
+
+- Native C++ positive/negative fixtures cover all added detector families, dedicated/shared vendor prefixes, public/random BLE addresses, Axon manufacturer/services, Meta composite evidence, Flock probe roles, Biscuit shared-UUID exclusions, Google Find Hub framing, Tile, Raven, iBeacon defaults, and drone Remote ID BLE/beacon/NAN messages encoded with the upstream library.
 - Tracking tests cover signal spikes, reacquisition, timer rollover, history traces, alert cooldown/auto-quiet, SSID conflicts including binary SSIDs and mesh false positives, and display defaults.
 - 150,000 random inputs exercise both bounded radio parsers. A further 50,000 inputs exercise RTTTL parsing. The runner explicitly keeps assertions enabled in optimized builds. All 26 default melodies validate; tests also cover invalid notes/tempo/octaves, size and duration bounds, silence, queue coalescing/expiry/cooldown/rollover, and hunt pitch/cadence bounds. CI runs the native suite with AddressSanitizer and UndefinedBehaviorSanitizer as well.
 - Thirteen Node tests cover both image resolutions, RGB565/CRC, crop geometry, serial framing/disconnects/timeouts, acknowledged small transfers, and a full 512-row history export received in one USB chunk.

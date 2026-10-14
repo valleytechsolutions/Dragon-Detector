@@ -1,17 +1,17 @@
-# Detection evidence · 0.4.0
+# Detection evidence · 0.5.0
 
-Dragon Detector listens to Wi-Fi frames and BLE advertisements. It does not connect to, pair with, query, jam or identify a device owner. Names, MAC addresses and protocol fields can be imitated. Confidence describes the observed signature, never intent. An optional **Dragon fox** training transmitter is explicitly enabled and off at boot.
+Dragon Detector listens to Wi-Fi frames and BLE advertisements. It does not connect to, pair with, jam or identify a device owner. BLE is passive by default; optional active scanning transmits scan requests to collect advertised response data. Names, MAC addresses and protocol fields can be imitated. Confidence describes the observed signature, never intent. An optional **Dragon fox** training transmitter is explicitly enabled and off at boot.
 
 See the [SquachWatch category comparison](DETECTION-PARITY.md) for coverage, implementation choices and hardware limits, and the [user guide](USER-GUIDE.md) for controls.
 
 | Family | Evidence | Confidence and limits |
 |---|---|---|
-| Flock | Flock Safety B4:1E:52; accessory UUID e8ccbb38-9532-46a8-9fe5-1814df172e6f; Xuntong 09C8 + strict battery name; exact probe IE order/vendor bytes with research prefix | Registered vendor medium; accessory service strong; composites medium. Shared module OUIs and names weak. Accessory is not a verified camera. Samsung 48:27:EA and locally administered 82:6B:F2 excluded. |
+| Flock | Flock Safety B4:1E:52; accessory UUID e8ccbb38-9532-46a8-9fe5-1814df172e6f; Xuntong 09C8 + strict battery name; exact probe IE order/vendor bytes with research prefix | Registered vendor medium; accessory service strong; composites medium. Shared module OUIs and names weak. Accessory is not a verified camera. Samsung 48:27:EA excluded; 82:6B:F2 is a weak local-address pattern, never vendor attribution. |
 | Axon/TASER | 00:25:DF, company 034D, services FC81 / FE6B / FE6C, anchored names | Vendor/company/service medium, company + service strong, names weak. Model and recording unknown. |
-| Camera glasses | Luxottica 0D53 + Meta FD5F / FEB7 / FEB8; Snap 03C2 + FE45 | Composite medium; company/OUI/name clues weak; Meta service alone insufficient. |
-| Find My / DULT | Apple 004C, type 12, declared length 19, full minimum payload; FD44; DULT UUID | Medium family evidence; not necessarily AirTag, not a finding of unwanted tracking. |
+| Camera glasses | Luxottica 0D53 + Meta FD5F / FEB7 / FEB8; Snap 03C2 + FE45 | Composite medium; company/OUI/name clues weak; Meta service alone is a weak, unverified clue. |
+| Find My / DULT | Apple 004C, type 12, declared length 19, full minimum payload; FD44; DULT UUID | Medium Find My family evidence; Apple pairing-size forms additionally produce weak clues that may be AirPods. Not necessarily AirTag, not a finding of unwanted tracking. |
 | Samsung SmartTag | FD5A service | Medium; generic Samsung company ID does not match. |
-| Google Find Hub | FEAA service data, frame 40/41, 20/32-byte EID with optional flags | Strong format evidence; generic Eddystone and bare FEAA excluded. Legacy scanning can miss extended-only broadcasts. |
+| Google Find Hub | FEAA service data, frame 40/41, 20/32-byte EID with optional flags | Strong format evidence; generic Eddystone and bare FEAA are weak clues, not established trackers. Legacy scanning can miss extended-only broadcasts. |
 | Tile | FEED / FEEC services | Medium vendor-service evidence; owner/model unknown. |
 | Raven | Exact 3100, 3200, 3300, 3400, 3500 | Medium research signature, all five together strong; adjacent/range values excluded. Physical Raven validation pending. |
 | Ring | Ring LLC registered prefixes | Medium vendor evidence; shared Amazon blocks weak. Not every Ring product is a camera. |
@@ -20,11 +20,11 @@ See the [SquachWatch category comparison](DETECTION-PARITY.md) for coverage, imp
 | Serial/skimmer-like modules | HC-03/05/06/08, RN42, BT04-A, serial service and module prefix | Weak only; widely used benign modules. ESP32-S3 cannot hear Bluetooth Classic-only devices. |
 | Flipper | Company 0E29, registered 0C:FA:22, services 3080–3083 and appearance 8600 | Company/vendor or corroborated service medium; name/service alone weak. No activity inference. |
 | Biscuit / Pro / Ultra | Biscuit-prefixed name with optional 4fafc201-1fb5-459e-8fcc-c5c9c331914b | Name weak; name + service medium. Shared Arduino UUID alone excluded. Models not reliably distinguished. |
-| Pwnagotchi | DE:AD:BE:EF:DE:AD + named Pwnagotchi payload fields | Strong composite; still spoofable. |
+| Pwnagotchi | Peer name and handshake-counter fields, optional DE:AD:BE:EF:DE:AD | Medium payload evidence; fixed peer MAC composite strong, still spoofable. |
 | Pineapple / deauther, Nyanbox, HaleHound | Characteristic advertised names and inherited tool hints | Weak, spoofable; no product/behavior guarantee. |
-| Drone Remote ID | BLE FFFA, code 0D + counter + message; Wi-Fi FA0BBC/0D; NAN service descriptor | Strong decoded protocol. Bounds checked before Apache decoder. Coordinates/ID self-reported with separate age. No GPS fix for this detector. |
-| iBeacon | Full Apple 004C 02 15 payload and exact length | Strong format evidence; common benign beacon. Off by default. |
-| Wi-Fi disconnect burst | 20 deauth/disassociation observations in five seconds | Medium traffic evidence; retries suppressed, source spoofable. |
+| Drone Remote ID | BLE FFFA, code 0D + counter + message; Wi-Fi FA0BBC/0D; NAN service descriptor | Strong decoded protocol; bare FFFA service is weak. Bounds checked before Apache decoder. Coordinates/ID self-reported with separate age. No GPS fix for this detector. |
+| iBeacon | Full Apple 004C 02 15 payload and exact length | Strong format evidence; common benign beacon. Enabled by default; individually configurable. |
+| Wi-Fi disconnect burst | Six deauth/disassociation observations in a rolling three seconds across source addresses | Medium traffic evidence; retries suppressed, source spoofable. |
 | SSID conflict | Three observations per BSSID over at least 400 ms, same raw SSID, open/protected mismatch, concurrent freshness | Medium possible evil twin. Multiple BSSIDs or WPA2/WPA3 suite differences alone do not alert; legitimate configurations can trigger. |
 | BLE advert burst | 12 distinct pairing/tag addresses within five seconds | Medium aggregate traffic evidence. Crowds/rotating addresses can trigger; not labeled proven fake devices. |
 
@@ -32,15 +32,15 @@ Identifiers in the table are hexadecimal.
 
 ## Freshness and radio identity
 
-Signature candidates require two matching observations spread over 400 ms. Matching evidence expires after 30 seconds even if unrelated packets continue. Weaker packets cannot refresh a stronger classification. Default radar/alerts require medium confidence; weak hints can be enabled. Watch rules explicitly select an address of interest, including otherwise unclassified contacts.
+A first valid signature immediately appears on the radar and in history. Ordinary audible alerts require two matching observations spread over 400 ms. Matching evidence expires after 30 seconds even if unrelated packets continue. Weaker packets cannot refresh a stronger classification. Default audible alerts require medium confidence; weak clues stay visible as hollow dots. All detector families, including iBeacon, are enabled on fresh installs. Watch rules explicitly select an address of interest, including otherwise unclassified contacts.
 
-Vendor lookup uses public BLE addresses and globally assigned unicast Wi-Fi prefixes. Random/local addresses do not receive OUI attribution. BLE address type is part of the contact key. Rotating addresses stay separate; no owner, identity or following-person inference is made.
+Vendor lookup uses public BLE addresses and globally assigned unicast Wi-Fi prefixes. Random/local addresses do not receive OUI attribution. Three literal local Wi-Fi address patterns have separate, explicitly unverified clues. BLE address type is part of the contact key. Rotating addresses stay separate; no owner, identity or following-person inference is made.
 
-Balanced scanning alternates 3.3 seconds Wi-Fi and 3.3 seconds BLE. Wi-Fi hops US channels 1–11 every 350 ms; BLE uses passive legacy scanning with an 85/100 ms requested window. Dedicated hunt reduces other-radio coverage. Callback queues are bounded; USB status reports drops. Silent radios, Bluetooth Classic, extended-only BLE, 5/6 GHz and scan gaps limit coverage.
+Balanced scanning alternates 3.3 seconds Wi-Fi and 3.3 seconds BLE. Wi-Fi hops US channels 1–11 every 350 ms; BLE defaults to passive legacy scanning with an 85/100 ms requested window. Optional active mode requests scan responses, caps each one-second result list at 96 and processes both initial adverts and responses. Dedicated hunt reduces other-radio coverage. Callback queues are bounded; USB status reports drops. Silent radios, Bluetooth Classic, extended-only BLE, 5/6 GHz and scan gaps limit coverage.
 
 ## Signal estimation
 
-A five-sample median precedes elapsed-time exponential smoothing (0.6/1.8/4-second constant). Trend compares filtered values over four seconds using a ±3 dB threshold. A 15-second gap resets the estimate; ten-second absence marks a hunt stale. The 48-point trace samples at most twice per second. Peak and saved mark are relative signal references, not range calibration.
+A five-sample median precedes elapsed-time exponential smoothing (0.6/1.8/4-second constant). Trend compares filtered values over four seconds using a ±3 dB threshold. A 15-second gap resets the estimate; ten-second absence marks a hunt stale. A stale Wi-Fi hunt begins sweeping channels 1–11 after twelve seconds and locks again when its address is heard. The 48-point trace samples at most twice per second. Peak and saved mark are relative signal references, not range calibration.
 
 ## Sources
 

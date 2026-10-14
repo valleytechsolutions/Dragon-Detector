@@ -31,15 +31,31 @@ inline bool flockPrefix(const uint8_t* m){
  for(auto v:list)if(v==p)return true;return false;
 }
 inline Match addressHint(const uint8_t* mac,bool publicAddress,Match current){
- if(!publicAddress || (mac[0]&3) || current.confidence>=Confidence::Medium)return current;
+ if(!publicAddress || (mac[0]&1) || current.confidence>=Confidence::Medium)return current;
  uint32_t prefix=(uint32_t(mac[0])<<16)|(uint32_t(mac[1])<<8)|mac[2];
- for(auto& vendor:vendorPrefixes)if(vendor.prefix==prefix && vendor.confidence>current.confidence)return {vendor.family,vendor.confidence,vendor.evidence};
+ // These are literal, spoofable address patterns, never IEEE vendor assignments.
+ if(current.confidence==Confidence::None){
+   if(prefix==0x826bf2)return {Family::Flock,Confidence::Low,"Local address research pattern; no vendor or camera identity"};
+   if(prefix==0x02c0ca || prefix==0x021337)return {Family::Pineapple,Confidence::Low,"Local pentest address pattern; easily changed or spoofed"};
+ }
+ if(mac[0]&2)return current;
+ size_t lo=0,hi=sizeof(vendorPrefixes)/sizeof(*vendorPrefixes);
+ while(lo<hi){size_t mid=lo+(hi-lo)/2;if(vendorPrefixes[mid].prefix<prefix)lo=mid+1;else hi=mid;}
+ if(lo<sizeof(vendorPrefixes)/sizeof(*vendorPrefixes)){
+   const auto& vendor=vendorPrefixes[lo];if(vendor.prefix==prefix && vendor.confidence>current.confidence)return {vendor.family,vendor.confidence,vendor.evidence};
+ }
  if(current.confidence!=Confidence::None)return current;
  if(flockPrefix(mac))return {Family::Flock,Confidence::Low,"Flock research OUI; shared chip vendor possible"};
  return current;
 }
 inline Match named(const char* name, Family base) {
   if(equalName(name,"flock noir") || namedPrefix(name,"dragon detector"))return {base,Confidence::None,"detector dashboard, not a camera"};
+  if(base==Family::Ble){
+    bool serial=strlen(name)==10;for(size_t i=0;serial && i<10;++i)serial=isdigit((unsigned char)name[i]);
+    if(serial || equalName(name,"FS Ext Battery") || contains(name,"flock") || contains(name,"penguin") || contains(name,"pigvision"))return {Family::Flock,Confidence::Low,"Flock/battery name clue; arbitrary names are unverified"};
+    if(contains(name,"axon"))return {Family::Axon,Confidence::Low,"Axon name clue; arbitrary names are unverified"};
+    if(contains(name,"flipper"))return {Family::Flipper,Confidence::Low,"Flipper name clue; arbitrary names are unverified"};
+  }
   if(namedPrefix(name,"biscuit"))return {Family::Biscuit,Confidence::Low,"Biscuit name; Pro/Ultra model unverified"};
   if(namedPrefix(name,"flipper"))return {Family::Flipper,Confidence::Low,"Flipper name only; spoofable"};
   if(contains(name,"smarttag"))return {Family::SmartTag,Confidence::Low,"SmartTag advertised name only"};
@@ -54,9 +70,25 @@ inline Match named(const char* name, Family base) {
   if(namedPrefix(name,"ring"))return {Family::Ring,Confidence::Low,"Ring-like name; spoofable"};
   if(namedPrefix(name,"raven"))return {Family::Raven,Confidence::Low,"Raven name; service not observed"};
   if(namedPrefix(name,"penguin") || namedPrefix(name,"pigvision"))return {Family::Flock,Confidence::Low,"Flock research name; accessory/camera unverified"};
-  if(namedPrefix(name,"pwned") || namedPrefix(name,"deauther"))return {Family::Pineapple,Confidence::Low,"pentest/deauther-style name; hardware unverified"};
+  if(strlen(name)>=5 && tolower((unsigned char)name[0])=='p' && tolower((unsigned char)name[1])=='w' && tolower((unsigned char)name[2])=='n' && tolower((unsigned char)name[3])=='e' && tolower((unsigned char)name[4])=='d')return {Family::Pineapple,Confidence::Low,"pwned SSID/name prefix; hardware unverified"};
+  if(namedPrefix(name,"deauther"))return {Family::Pineapple,Confidence::Low,"deauther-style name; hardware unverified"};
   if(namedPrefix(name,"HC-03") || namedPrefix(name,"HC-05") || namedPrefix(name,"HC-06") || namedPrefix(name,"HC-08") || namedPrefix(name,"RN42") || namedPrefix(name,"BT04-A"))return {Family::Skimmer,Confidence::Low,"generic serial module; skimming not established"};
   return {base,Confidence::None,"no specific signature"};
+}
+// Bounded extraction from a peer beacon's text. A quoted, closed, printable
+// name and the peer counter key are required; MAC changes do not hide a peer.
+inline bool peerName(const uint8_t* data,size_t size,char* name,size_t cap){
+  if(!cap || !bytesContain(data,size,"\"pwnd_tot\""))return false;
+  for(size_t i=0;i+6<size;++i){
+    if(memcmp(data+i,"\"name\"",6))continue;
+    size_t p=i+6;while(p<size && (data[p]==' '||data[p]=='\t'))++p;
+    if(p==size || data[p++]!=':')continue;
+    while(p<size && (data[p]==' '||data[p]=='\t'))++p;
+    if(p==size || data[p++]!='"')continue;
+    size_t start=p;while(p<size && data[p]!='"'){if(data[p]<32||data[p]>126||data[p]=='\\')return false;++p;}
+    if(p==size||p==start)return false;
+    safeText(name,cap,data+start,p-start);return true;
+  }return false;
 }
 struct WifiFrame {
   bool valid=false, beacon=false, probe=false, deauth=false, disassoc=false, eapol=false, protectedFrame=false, retry=false;
@@ -115,8 +147,11 @@ inline WifiFrame parseWifi(const uint8_t* p,size_t n) {
     }
     // Adapted from Marauder beaconSnifferCallback/processPwnagotchiBeacon.
     const uint8_t pwn[]={0xde,0xad,0xbe,0xef,0xde,0xad};
-    if(f.beacon && !memcmp(f.source,pwn,6) && bytesContain(p+36,n-36,"\"pwnd_tot\"") && bytesContain(p+36,n-36,"\"name\""))
-      f.match={Family::Pwnagotchi,Confidence::Strong,"Marauder peer MAC + Pwnagotchi fields; spoofable"};
+    char peer[33]{};
+    if(f.beacon && peerName(p+36,n-36,peer,sizeof(peer))){
+      f.match={Family::Pwnagotchi,!memcmp(f.source,pwn,6)?Confidence::Strong:Confidence::Medium,"Pwnagotchi peer name + counter fields; spoofable"};
+      memcpy(f.name,peer,sizeof(peer));
+    }
     else if(f.match.confidence==Confidence::None && f.source[0]==0 && f.source[1]==0x13 && f.source[2]==0x37)
       f.match={Family::Pineapple,Confidence::Low,"Marauder OUI heuristic; Pager model unverified"};
   }
@@ -131,11 +166,15 @@ inline WifiFrame parseWifi(const uint8_t* p,size_t n) {
   return f;
 }
 struct BleFrame { bool valid=false, applePopup=false, fastPair=false, swiftPair=false; uint16_t company=0xffff; char name[64]{}; Match match{Family::Ble,Confidence::None,"BLE advertisement"}; DroneInfo drone; };
-inline BleFrame parseBle(const uint8_t* p,size_t n) {
-  BleFrame f; if(!p || !n)return f; bool xuntong=false,lux=false,meta=false,findmy=false,flipper=false,metaService=false,dult=false,axonCompany=false,axonService=false,smarttag=false,biscuit=false,flockService=false;
-  bool snap=false,snapService=false,flipperCompany=false,raven=false,tile=false,google=false,ibeacon=false,serial=false,fox=false;uint8_t ravenServices=0;uint16_t appearance=0;
+inline BleFrame parseBle(const uint8_t* p,size_t n,size_t advLength=0) {
+  BleFrame f; if(!p || !n || advLength>n)return f; bool xuntong=false,lux=false,meta=false,findmy=false,flipper=false,metaService=false,dult=false,axonCompany=false,axonService=false,smarttag=false,biscuit=false,flockService=false;
+  bool snap=false,snapService=false,flipperCompany=false,raven=false,tile=false,google=false,ibeacon=false,serial=false,fox=false;
+  bool googleService=false,droneService=false,applePairing=false,ibeaconExtra=false;uint8_t ravenServices=0;uint16_t appearance=0;
   for(size_t o=0;o<n;) {
-    uint8_t l=p[o++]; if(!l)break; if(l>n-o)return f; uint8_t t=p[o]; const uint8_t* d=p+o+1; size_t z=l-1;
+    // NimBLE concatenates ADV and SCAN_RSP. Zero padding terminates only its
+    // own segment; malformed lengths must never consume the next segment.
+    size_t segmentEnd=advLength && o<advLength?advLength:n;
+    uint8_t l=p[o++]; if(!l){o=segmentEnd;continue;} if(l>segmentEnd-o)return f; uint8_t t=p[o]; const uint8_t* d=p+o+1; size_t z=l-1;
     if((t==2||t==3) && z%2)return f;
     if((t==6||t==7) && z%16)return f;
     if(t==0x16 && z<2)return f;
@@ -146,12 +185,15 @@ inline BleFrame parseBle(const uint8_t* p,size_t n) {
       uint16_t id=d[0]|uint16_t(d[1])<<8; f.company=id;axonCompany|=id==0x034d;
       xuntong|=id==0x09c8; lux|=id==0x0d53; meta|=id==0x01ab || id==0x058e;
       snap|=id==0x03c2;flipperCompany|=id==0x0e29;
-      ibeacon|=id==0x004c && z==25 && d[2]==2 && d[3]==0x15;
+      ibeacon|=id==0x004c && z>=25 && d[2]==2 && d[3]==0x15;
+      ibeaconExtra|=id==0x004c && z>25 && d[2]==2 && d[3]==0x15;
+      applePairing|=id==0x004c && z==29;
       if(id==0x004c && z>=4){ f.applePopup|=d[2]==0x07 || d[2]==0x0f; findmy|=d[2]==0x12 && d[3]==0x19 && z>=29; }
       f.swiftPair|=id==0x0006 && z>=3 && d[2]==3;
     }
     if((t==2 || t==3 || t==0x16) && z>=2) { size_t limit=t==0x16?2:z; for(size_t j=0;j+1<limit;j+=2) { uint16_t uuid=d[j]|uint16_t(d[j+1])<<8; f.fastPair|=uuid==0xfe2c;findmy|=uuid==0xfd44;flipper|=uuid>=0x3080&&uuid<=0x3083;axonService|=uuid==0xfc81||uuid==0xfe6b||uuid==0xfe6c;smarttag|=uuid==0xfd5a;metaService|=uuid==0xfd5f||uuid==0xfeb7||uuid==0xfeb8;
       snapService|=uuid==0xfe45;tile|=uuid==0xfeed||uuid==0xfeec;serial|=uuid==0x1101;
+      googleService|=uuid==0xfeaa;droneService|=uuid==0xfffa;
       if(uuid>=0x3100 && uuid<=0x3500 && (uuid&0xff)==0){raven=true;ravenServices|=1u<<((uuid>>8)-0x31);}
     } }
     if(t==0x16 && z>=3) {
@@ -191,10 +233,17 @@ inline BleFrame parseBle(const uint8_t* p,size_t n) {
   else if(findmy)f.match={Family::Tracker,Confidence::Medium,"Find My protocol; may be AirTag or another accessory"};
   else if(dult)f.match={Family::Tracker,Confidence::Medium,"DULT tracker service; owner unknown"};
   else if(flipper || flipperCompany)f.match={Family::Flipper,flipperCompany||appearance==0x8600?Confidence::Medium:Confidence::Low,"Flipper service/company; activity unverified"};
-  else if(ibeacon)f.match={Family::IBeacon,Confidence::Strong,"iBeacon format; common benign proximity beacon"};
+  else if(ibeacon)f.match={Family::IBeacon,ibeaconExtra?Confidence::Low:Confidence::Strong,"iBeacon format; common benign proximity beacon"};
   else if(serial && f.match.confidence==Confidence::None)f.match={Family::Skimmer,Confidence::Low,"serial service; common benign module, not proof of a skimmer"};
   else if(lux && f.match.confidence==Confidence::None)f.match={Family::Meta,Confidence::Low,"Luxottica company only; product unverified"};
   else if((snap||meta) && f.match.confidence==Confidence::None)f.match={Family::Meta,Confidence::Low,"Meta/Snap company only; glasses not established"};
+  else if(f.match.confidence==Confidence::None){
+    if(metaService)f.match={Family::Meta,Confidence::Low,"Meta service only; glasses/recording not established"};
+    else if(xuntong)f.match={Family::Flock,Confidence::Low,"Xuntong module company; camera or battery unverified"};
+    else if(googleService)f.match={Family::GoogleTag,Confidence::Low,"FEAA shared with Eddystone beacons; Find Hub tracker unverified"};
+    else if(droneService)f.match={Family::Drone,Confidence::Low,"FFFA service; no valid aircraft Remote ID decoded"};
+    else if(applePairing)f.match={Family::Tracker,Confidence::Low,"Apple pairing-size advert; may be AirTag, AirPods or other accessory"};
+  }
   return f;
 }
 // Fixed observation window; an alert is traffic evidence, never proof of intent.

@@ -15,16 +15,16 @@ static void parityTests(){
   for(uint16_t uuid:{0x3101,0x3102,0x3180,0x3301,0x34ff})assert(ble(ad(3,{uint8_t(uuid),uint8_t(uuid>>8)})).family==Family::Ble);
   assert(ble(ad(3,{0,0x31,0,0x32,0,0x33,0,0x34,0,0x35})).confidence==Confidence::Strong);
   assert(ble(ad(0x16,{0x12,0x18,0,0x31})).family==Family::Ble); // payload is not a service list
-  for(size_t n:{23,24,35,36}){std::vector<uint8_t> d(n);d[0]=0xaa;d[1]=0xfe;d[2]=0x40;assert(ble(ad(0x16,d)).family==Family::GoogleTag);d[2]=0x41;assert(ble(ad(0x16,d)).family==Family::GoogleTag);for(uint8_t type:{0,0x10,0x20,0x30}){d[2]=type;assert(ble(ad(0x16,d)).confidence==Confidence::None);}}
-  assert(ble({3,3,0xaa,0xfe}).confidence==Confidence::None);
-  assert(ble({4,0x16,0xaa,0xfe,0x40}).confidence==Confidence::None);
+  for(size_t n:{23,24,35,36}){std::vector<uint8_t> d(n);d[0]=0xaa;d[1]=0xfe;d[2]=0x40;assert(ble(ad(0x16,d)).family==Family::GoogleTag);d[2]=0x41;assert(ble(ad(0x16,d)).family==Family::GoogleTag);for(uint8_t type:{0,0x10,0x20,0x30}){d[2]=type;assert(ble(ad(0x16,d)).confidence==Confidence::Low);}}
+  assert(ble({3,3,0xaa,0xfe}).confidence==Confidence::Low);
+  assert(ble({4,0x16,0xaa,0xfe,0x40}).confidence==Confidence::Low);
   assert(ble({3,3,0xed,0xfe}).family==Family::Tile);assert(ble({3,3,0xec,0xfe}).family==Family::Tile);
   assert(ble({3,0xff,0xc2,3}).confidence==Confidence::Low);
   assert(ble({3,0xff,0xc2,3,3,3,0x45,0xfe}).confidence==Confidence::Medium);
   assert(ble({3,0xff,0x29,0x0e}).family==Family::Flipper);
   std::vector<uint8_t> ib(25);ib[0]=0x4c;ib[2]=2;ib[3]=0x15;
   assert(ble(ad(0xff,ib)).family==Family::IBeacon);ib.pop_back();assert(ble(ad(0xff,ib)).confidence==Confidence::None);
-  assert(!DetectorSettings{}.enabled(Family::IBeacon));
+  assert(DetectorSettings{}.enabled(Family::IBeacon));
   assert(DetectorSettings{}.dimSeconds==0 && DetectorSettings{}.offSeconds==0);
   assert(named("Flockhart Home",Family::Wifi).confidence==Confidence::None);
   for(const char* s:{"HC-03","HC-05","HC-06","RN42","BT04-A"})assert(named(s,Family::Ble).family==Family::Skimmer);
@@ -34,7 +34,7 @@ static void parityTests(){
   assert(addressHint(ringMac,true,none).family==Family::Ring);assert(addressHint(flipperMac,true,none).family==Family::Flipper);
   assert(addressHint(ringMac,false,none).confidence==Confidence::None);
   const uint8_t samsung[]={0x48,0x27,0xea,1,2,3},sonos[]={0,0x0e,0x58,1,2,3},local[]={0x82,0x6b,0xf2,1,2,3};
-  assert(addressHint(samsung,true,none).confidence==Confidence::None);assert(addressHint(sonos,true,none).confidence==Confidence::None);assert(addressHint(local,true,none).confidence==Confidence::None);
+  assert(addressHint(samsung,true,none).confidence==Confidence::None);assert(addressHint(sonos,true,none).confidence==Confidence::None);assert(addressHint(local,true,none).confidence==Confidence::Low);
   auto a=beacon(1,true),b=beacon(2,true),open=beacon(3,false);
   auto fa=parseWifi(a.data(),a.size()),fb=parseWifi(b.data(),b.size()),fo=parseWifi(open.data(),open.size());
   assert(fa.valid&&fa.security==5&&fo.valid&&fo.security==0);
@@ -54,7 +54,7 @@ static void parityTests(){
   ODID_BasicID_encoded encoded;assert(encodeBasicIDMessage(&encoded,&id)==ODID_SUCCESS);
   std::vector<uint8_t> message((uint8_t*)&encoded,(uint8_t*)&encoded+25),service{0xfa,0xff,0x0d,7};append(service,message);
   auto drone=parseBle(ad(0x16,service).data(),ad(0x16,service).size());assert(drone.valid&&drone.match.family==Family::Drone&&drone.drone.hasId&&!strcmp(drone.drone.id,"TEST-DRONE-123"));
-  service[2]=0;assert(ble(ad(0x16,service)).confidence==Confidence::None);service[2]=0x0d;service.pop_back();assert(ble(ad(0x16,service)).confidence==Confidence::None);
+  service[2]=0;assert(ble(ad(0x16,service)).confidence==Confidence::Low);service[2]=0x0d;service.pop_back();assert(ble(ad(0x16,service)).confidence==Confidence::Low);
   std::vector<uint8_t> pack{0xf2,25,1};append(pack,message);DroneInfo decoded;assert(decodeDrone(pack.data(),pack.size(),decoded));
   auto bad=pack;bad[2]=9;assert(!decodeDrone(bad.data(),bad.size(),decoded));bad=pack;bad[1]=24;assert(!decodeDrone(bad.data(),bad.size(),decoded));
   for(size_t n=0;n<pack.size();++n)assert(!decodeDrone(pack.data(),n,decoded));

@@ -6,7 +6,7 @@
 
 **[Open the web flasher & detector tools](https://valleytechsolutions.github.io/DragonBall-Z-Radar/)** · [Install guide](docs/FLASHING.md) · [Controls](docs/USER-GUIDE.md) · [Detection evidence](docs/DETECTION.md) · [Credits](CREDITS.md)
 
-Version **0.4.0** is an experimental development release. See [what has actually been tested](docs/VALIDATION.md) before installing. The flasher requires desktop Chrome/Edge, HTTPS, a USB data cable, and the exact board selection; it stays disabled if matching release files are unavailable.
+Version **0.5.0** is an experimental development release. See [what has actually been tested](docs/VALIDATION.md) before installing. The flasher requires desktop Chrome/Edge, HTTPS, a USB data cable, and the exact board selection; it stays disabled if matching release files are unavailable.
 
 ## Choose the exact board
 
@@ -26,12 +26,14 @@ Photographs are manufacturer-hosted identification images, not pictures of this 
 
 ## A radar you can wear
 
-- **The reference's detection categories:** Flock, Axon/TASER, Raven, camera glasses, Find My/DULT, SmartTag, Google Find Hub, Tile, Ring/camera/ALPR vendors, decoded drone Remote ID, iBeacon, pentest devices, disconnect bursts and SSID security conflicts. [Coverage and comparison](docs/DETECTION-PARITY.md).
-- **Dragon Hunt:** dedicated target listening, filtered dBm, signal history, peak, trend, stability, a saved comparison mark, and stale-target handling. Optional Dragon fox beacons support board-to-board training; transmission starts only when explicitly enabled.
+- **Audited signature coverage:** all 134 table entries in the pinned SquachWatch reference have recognition and radar tests. Includes Flock, Axon/TASER, Raven, camera glasses, Find My/DULT, SmartTag, Google Find Hub, Tile, Ring/camera/ALPR vendors, decoded drone Remote ID, iBeacon, pentest devices, disconnect bursts and SSID security conflicts. [Coverage and comparison](docs/DETECTION-PARITY.md).
+- **All recognized candidates on radar:** first sightings appear immediately; hollow dots distinguish weak clues. A paged Targets list, quick quiet toggle and live radio-health screen make crowded areas easier to navigate.
+- **Dragon Hunt:** dedicated target listening, filtered dBm, signal history, peak, trend, stability, a saved comparison mark, and automatic channel searching for stale Wi-Fi targets. Optional Dragon fox beacons support board-to-board training; transmission starts only when explicitly enabled.
 - **Useful alert controls:** per-family and confidence filters, persistent watch/ignore rules, temporary snooze, repeat-alert suppression, quiet mode and grouped advertisement bursts.
 - **Local detection history:** 512 address/radio/family records, bounded flash journal, encounters and peak signal. Connect USB to synchronize UTC and download CSV through the [detector tools](https://valleytechsolutions.github.io/DragonBall-Z-Radar/#detector).
 - **Your requested display defaults:** 100% brightness, always on, no automatic dimming. Settings offers independent dim and screen-off timers, dim level and wake-on-alert.
 - **Hear the hunt:** 26 original device-family melodies, a distinct Axon alert and double heartbeat, signal-dependent pitch/cadence, and a lost-signal cue. Edit, preview, silence or reset RTTTL tones in the [USB audio editor](https://valleytechsolutions.github.io/DragonBall-Z-Radar/#sound).
+- **More room for reception:** 384 contacts in PSRAM, bounded packet processing, indexed packet queues and faster lookups across every board. Passive BLE is the default; optional active scanning requests response-only names.
 - **Shared firmware:** all three profiles use the same detection, tracking, history, controls and release pipeline. All profiles have synthesized RTTTL speaker alerts. StopWatch adds haptics; Spotpear adds optional SD CSV/PCAP.
 - **Existing image badge:** browser crop/position/zoom, CRC-checked USB upload and saved-image startup are retained. Further badge work is deferred for this detection release.
 
@@ -62,15 +64,15 @@ Browser capture of the Badge Studio editor. This is a crop preview, not a photog
 1. Open the [web flasher](https://valleytechsolutions.github.io/DragonBall-Z-Radar/), select the exact board, and choose **Fresh install** for your first current installation. This replaces stored files. Back up existing firmware first.
 2. Connect USB and follow the installer. Reset when finished if necessary.
 3. Open **Detector tools** on the same page to sync UTC, export history, or set display timers. On the device, tap a radar dot → **Hunt signal**, or use Tools → History.
-4. Set detector families and confidence in Tools → Detectors. A target’s Controls page offers watch, ignore and snooze. Badge Studio is still available separately.
+4. Set detector families and the audible-alert threshold in Tools → Detectors. Weak clues remain visible when the alert threshold is raised. A target’s Controls page offers watch, ignore and snooze. Badge Studio is still available separately.
 
-Use **Update** only for an existing 0.3.x or 0.4.x installation on the same board. Split update images preserve NVS and the badge filesystem. A merged factory BIN writes at **0x0** and resets stored settings/files. [Full recovery and manual flashing instructions](docs/FLASHING.md).
+Use **Update** only for an existing 0.3.x, 0.4.x or 0.5.x installation on the same board. Split update images preserve NVS and the badge filesystem. A merged factory BIN writes at **0x0** and resets stored settings/files. [Full recovery and manual flashing instructions](docs/FLASHING.md).
 
 ## Repository map
 
 | Path | Purpose |
 |---|---|
-| [firmware](firmware) | Current 0.4.x shared application and board adapters |
+| [firmware](firmware) | Current 0.5.x shared application and board adapters |
 | [platformio.ini](platformio.ini) | Pinned board profiles and build dependencies |
 | [web](web) | GitHub Pages flasher, USB detector tools and existing Badge Studio |
 | [tools](tools) | Build, package and validate releases |

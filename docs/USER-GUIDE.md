@@ -1,14 +1,14 @@
-# Daily detection and hunting · 0.4.0
+# Daily detection and hunting · 0.5.0
 
 The radar starts at **100% brightness with no automatic dimming or screen-off timeout**. It listens passively on 2.4 GHz Wi-Fi and Bluetooth LE. The optional training fox transmitter is off at every boot.
 
 ## Radar and evidence
 
-The default **medium+** filter shows repeated, fresh signature evidence. Select **Tools → Detectors** to change the minimum confidence or individual families. iBeacon starts disabled. Weak names and shared chip-vendor clues can be inspected in Wi-Fi/Bluetooth contacts or enabled with the all-hints threshold.
+Every enabled signature appears from its first valid sighting. **Hollow dots are weak clues**; filled dots indicate stronger evidence. Select **Tools → Detectors** to change individual families or the **audible alert threshold** (medium+ by default). Raising that threshold does not hide weaker radar clues. All families, including iBeacon, start enabled. Existing customized family masks are retained; the previous untouched default gains iBeacon.
 
-Tap a marker or contact for its signal, evidence, confidence and last observation. Remote ID contacts show decoded aircraft/operator coordinates when broadcast; these fields have their own age and are self-reported. Hidden/silent devices and scan gaps can produce an empty radar. A signature does not establish intent or recording.
+Use **TARGETS** for a ten-row paged list ordered by evidence and signal; refresh to update it. Tap the radar speaker icon for quick quiet mode. Tap a marker or contact for its signal, evidence, confidence and last observation. Remote ID contacts show decoded aircraft/operator coordinates when broadcast; these fields have their own age and are self-reported. Hidden/silent devices and scan gaps can produce an empty radar. A signature does not establish intent or recording.
 
-**Settings → Radar** switches between candidates and all contacts. Disabled families and ignored addresses remain suppressed on the radar. Angle is a stable visual arrangement, not a bearing; radius represents signal strength, not distance.
+**Settings → Radar** switches between candidates and all contacts. Disabled families and ignored addresses remain suppressed; explicitly watched addresses stay visible unless ignored. Angle is a stable visual arrangement, not a bearing; radius represents signal strength, not distance.
 
 ## Hunt a signal
 
@@ -16,6 +16,8 @@ Tap a marker or contact for its signal, evidence, confidence and last observatio
 2. BLE hunts dedicate reception to BLE. Wi-Fi hunts lock to the last observed channel, or sweep Wi-Fi if the channel is unknown. Other-radio coverage is paused while hunting.
 3. Walk and compare dBm, signal trend and the trace. A less negative value is stronger. **Mark** saves the current filtered value for comparison. The peak and stability label help distinguish a sustained change from a spike.
 4. After ten seconds without reception, the gauge reports signal lost. The filter/trace reset after a long gap; the selected slot cannot be silently replaced by another device.
+A Wi-Fi target absent for twelve seconds triggers a channel sweep; reception locks to its new channel when it returns. This follows its saved address, not a guessed identity after address rotation.
+
 5. **Stop** restores balanced Wi-Fi/BLE scanning. Returning home keeps the hunt active; tap its radar status or Tools → Hunt to return.
 
 Settings offers Fast (0.6 s), Balanced (1.8 s) and Steady (4 s) smoothing after the median filter. RSSI depends on power, antenna orientation, walls and body shielding. The arrow means rising/falling signal, not a compass direction. A target that rotates its BLE address may be lost; unrelated addresses are not merged.
@@ -37,7 +39,7 @@ Normal cards disappear after ten seconds; watch cards remain until dismissed. Ca
 
 Tools → **History** shows up to 512 unique address/radio/family records, newest first. Records contain evidence, peak/last signal and encounter count. More than one family can be retained for the same address. History is enabled by default and uses internal flash on all three boards, with record CRC and bounded journals. Updates are queued to limit write traffic; abrupt power loss can lose recent pending updates. Old journal records eventually rotate out. **Clear** asks before removing stored records; active scanning can create new ones afterward.
 
-Open [Detector tools](https://valleytechsolutions.github.io/DragonBall-Z-Radar/#detector) in desktop Chrome/Edge. Connect a running 0.4.x board to synchronize UTC and download a CSV. Close other serial monitors first. Without a clock sync since boot, records explicitly use boot-relative time. Clock sync affects new observations; it does not invent dates for older records.
+Open [Detector tools](https://valleytechsolutions.github.io/DragonBall-Z-Radar/#detector) in desktop Chrome/Edge. Connect a running 0.4.x or newer board to synchronize UTC and download a CSV. Close other serial monitors first. Without a clock sync since boot, records explicitly use boot-relative time. Clock sync affects new observations; it does not invent dates for older records.
 
 Display privacy masks names/addresses and hides evidence/coordinates on screen. It does not alter stored or exported data. CSV includes the full records. Export briefly pauses reception. No account or cloud upload is involved.
 
@@ -100,3 +102,11 @@ RTTTL bounds: 512 characters, 96 notes, 15 seconds total; duration divisors 1/2/
 Speaker adapters: Waveshare 1.75C uses its ES8311, I2S GPIO 16/9/45/8 and amplifier GPIO 46; Spotpear uses I2S GPIO 18/16/17 and amplifier GPIO 48; StopWatch uses M5Unified's speaker. Connect a suitable speaker where the board only supplies a speaker connector. No microphone recording or MP3 decoder is enabled.
 
 USB commands: `tone settings`, `tone config <enabled 0|1> <volume 0..100> <hunt 0|1> <focus -1..25>`, `tone get <family>`, `tone set <family> <RTTTL or ->`, `tone preview <family> <RTTTL or ->`, `tone play <family>`, `tone reset <family>`, `tone stop`. Family IDs follow `Family` in `detection.h`; Axon is 3 and glasses is 4. A dash selects silence. Commands longer than 600 bytes are rejected rather than executed after truncation.
+
+## Reception and diagnostics
+
+**Settings → BLE scan** switches Passive/Active. Passive listens only. Active sends scan requests to obtain response-only names; it does not connect or pair. Some devices ignore requests. Active mode bounds and renews its result cache each second. Wi-Fi remains passive in both modes.
+
+**Settings → Radio health** shows received Wi-Fi/BLE counts, queue drops/occupancy, worst processing time, queue lag, contact evictions and available memory. Counters reset at boot. Increasing drops/lag indicates reception pressure; a paused radio or a dedicated hunt also reduces coverage. There are 384 live contact slots shared across the radios; history remains 512 address/radio/family records.
+
+Additional USB commands: `radio active`, `radio passive`, `screen targets`, `screen health`. `status` includes `RADIO_STATS`. They use the same settings and screens as the device controls.

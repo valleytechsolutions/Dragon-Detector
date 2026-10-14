@@ -48,10 +48,15 @@ static bool focusEligible(const Contact& c,uint32_t now){
 static int target(uint32_t now){
  if(trackedContact>=0)return trackedContact;
  if(audioFocus<0)return -1;
+ static uint32_t checkedAt=0;static int cached=-1,cachedFocus=-2;
+ if(cachedFocus==audioFocus && uint32_t(now-checkedAt)<150){
+   return cached>=0&&focusEligible(contacts[cached],now)?cached:-1;
+ }
+ checkedAt=now;cachedFocus=audioFocus;
  int best=-1;
  for(unsigned i=0;i<MAX_CONTACTS;++i){auto& c=contacts[i];if(!focusEligible(c,now))continue;if(best<0||c.signal.value()>contacts[best].signal.value())best=i;}
  if(best>=0&&lastTarget>=0&&lastTarget<int(MAX_CONTACTS)){auto& c=contacts[lastTarget];if(contactKey(c)==lastKey&&focusEligible(c,now)&&c.signal.value()+6>=contacts[best].signal.value())best=lastTarget;}
- return best;
+ cached=best;return best;
 }
 void audioLoop(){
  uint32_t now=millis();bool enabled=ready&&alertSound&&!detector.quiet&&radioEnabled&&status.volume;

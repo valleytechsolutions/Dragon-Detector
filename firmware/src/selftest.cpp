@@ -13,7 +13,7 @@ void runSelfTests(){
   uint8_t meta[]={3,0xff,0x53,0x0d};check(parseBle(meta,4).match.family==Family::Meta,"Luxottica parsed");
   uint8_t broken[]={20,0xff,0x53,0x0d};check(!parseBle(broken,4).valid,"invalid AD rejected");
   uint8_t fake[]={5,9,0xff,0xc8,9,'X'};check(parseBle(fake,6).match.family==Family::Ble,"manufacturer bytes inside name ignored");
-  uint8_t generic[]={3,0xff,0xc8,9};check(parseBle(generic,4).match.family==Family::Ble,"generic Xuntong not camera");
+  uint8_t generic[]={3,0xff,0xc8,9};check(parseBle(generic,4).match.confidence==Confidence::Low,"generic Xuntong only weak clue");
   uint8_t flock[24]={3,0xff,0xc8,9,19,9};memcpy(flock+6,"Penguin-1234567890",18);
   check(parseBle(flock,24).match.family==Family::Flock,"Marauder Flock composite");
   uint8_t fast[]={3,3,0x2c,0xfe};check(parseBle(fast,4).fastPair,"Fast Pair UUID");

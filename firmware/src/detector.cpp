@@ -24,7 +24,7 @@ static constexpr uint32_t HISTORY_MAGIC=0x34484444;
 static uint32_t checksum(const HistoryRecord& r){return dragon::crc32((const uint8_t*)&r,offsetof(HistoryRecord,checksum))^0xffffffffu;}
 uint32_t wallTime(){return epochBase?epochBase+uint32_t((esp_timer_get_time()-epochAt)/1000000):0;}
 void setWallTime(uint32_t epoch){epochBase=epoch;epochAt=esp_timer_get_time();}
-dragon::DeviceKey contactKey(const Contact& c){dragon::DeviceKey k;memcpy(k.mac,c.mac,6);k.radio=c.ble?1:0;k.addressType=c.ble?c.addressType:0;return k;}
+dragon::DeviceKey contactKey(const Contact& c){return keyOf(c);}
 uint8_t deviceRules(const dragon::DeviceKey& key){for(auto& r:rules)if(r.flags&&r.key==key)return r.flags;return 0;}
 bool ruleAt(size_t i,dragon::DeviceKey& key,uint8_t& flags){if(i>=RULE_LIMIT||!rules[i].flags)return false;key=rules[i].key;flags=rules[i].flags;return true;}
 bool toggleRule(const dragon::DeviceKey& key,DeviceRule flag){
@@ -38,6 +38,7 @@ bool toggleRule(const dragon::DeviceKey& key,DeviceRule flag){
 void detectorSave(){
   prefs.putUInt("schema",1);prefs.putBytes("settings",&detector,sizeof(detector));
   prefs.putBool("sound",alertSound);prefs.putBool("vibrate",alertVibration);
+  prefs.putBool("active-ble",activeBle);
 }
 void displayMac(const uint8_t* mac,char* out){macText(mac,out);if(detector.privacy)strcpy(out+9,"XX:XX:XX");}
 String displayName(const char* name){if(!detector.privacy)return String(name);return strlen(name)>3?String(name).substring(0,3)+"...":String(name);}
@@ -50,6 +51,13 @@ static int historySlot(const dragon::DeviceKey& key,uint8_t family){
 void detectorBegin(){
   bootId=esp_random();prefs.begin("dd-detect",false);
   if(prefs.getUInt("schema",0)==1 && prefs.getBytesLength("settings")==sizeof(detector))prefs.getBytes("settings",&detector,sizeof(detector));
+  // Upgrade the previous untouched default mask, preserving customized masks.
+  if(!prefs.getBool("coverage-v05",false)){
+    const uint32_t oldDefault=((1u<<unsigned(Family::Count))-1u)&~(1u<<unsigned(Family::IBeacon));
+    if(detector.families==oldDefault)detector.families|=1u<<unsigned(Family::IBeacon);
+    prefs.putBytes("settings",&detector,sizeof(detector));prefs.putUInt("schema",1);prefs.putBool("coverage-v05",true);
+  }
+  activeBle=prefs.getBool("active-ble",false);
   if(unsigned(detector.minimum)<1||unsigned(detector.minimum)>3)detector.minimum=Confidence::Medium;
   if(detector.autoQuiet!=0&&detector.autoQuiet!=5&&detector.autoQuiet!=10)detector.autoQuiet=5;
   if(detector.smoothingMs<600||detector.smoothingMs>4000)detector.smoothingMs=1800;
@@ -86,7 +94,7 @@ void historyObserve(const Contact& c,Family family,Confidence confidence,const c
   bool changed=first||r.family!=unsigned(family)||r.confidence!=unsigned(confidence)||strcmp(r.evidence,evidence);
   if(first){r={};r.magic=HISTORY_MAGIC;r.key=contactKey(c);r.firstEpoch=epoch;r.firstUptime=now;}
   if(encounter)++r.encounters;
-  r.lastEpoch=epoch;r.lastUptime=now;r.boot=bootId;r.family=unsigned(family);r.confidence=unsigned(confidence);r.channel=c.channel;r.rssi=c.rssi;r.peak=std::max<int16_t>(r.peak,c.rssi);
+  r.lastEpoch=epoch;r.lastUptime=now;r.boot=bootId;r.family=unsigned(family);r.confidence=unsigned(confidence);r.channel=c.channel;r.rssi=c.rssi;r.peak=std::max<int16_t>(r.peak,std::max<int16_t>(c.rssi,c.trace.peak));
   strlcpy(r.name,c.name,sizeof(r.name));strlcpy(r.evidence,evidence,sizeof(r.evidence));
   if(changed||encounter||!persistedAt[i]||uint32_t(now-persistedAt[i])>=60000){dirty[i]=true;r.sequence=++sequence;persistedAt[i]=now;}
 }
@@ -122,7 +130,9 @@ bool historyExport(){
 }
 bool emitDetection(Contact& c,Family family,Confidence confidence,const char* evidence,bool force){
   if(!detector.enabled(family))return false;
-  historyObserve(c,family,confidence,evidence);
+  // Bound the 512-record history search under high packet rates; first family
+  // changes are immediate, continuing RSSI/encounter updates at most once/sec.
+  if(c.historyFamily!=family || uint32_t(millis()-c.historyAt)>=1000){historyObserve(c,family,confidence,evidence);c.historyAt=millis();c.historyFamily=family;}
   uint8_t flags=deviceRules(contactKey(c));bool watch=flags&RuleWatch;
   if(flags&(RuleIgnore|RuleSnooze))return false;
   if(!watch && confidence<detector.minimum)return false;
@@ -134,6 +144,7 @@ bool emitDetection(Contact& c,Family family,Confidence confidence,const char* ev
   return true;
 }
 bool detectorCommand(const String& cmd){
+  if(cmd=="radio active"||cmd=="radio passive"){setActiveBle(cmd=="radio active");Serial.printf("RADIO_MODE active_ble=%u\n",activeBle);return true;}
   if(cmd=="history export"){bool scanning=radioEnabled;setRadio(false);if(!historyExport())Serial.println("HISTORY_ERROR");setRadio(scanning);return true;}
   if(cmd=="history clear"){historyClear();Serial.printf("HISTORY_COUNT %u\n",unsigned(historyCount));return true;}
   if(cmd.startsWith("time ")){unsigned long epoch=0;char extra;if(sscanf(cmd.c_str(),"time %lu %c",&epoch,&extra)==1&&epoch>=1700000000ul&&epoch<=4102444800ul){setWallTime(epoch);Serial.println("TIME_OK");}else Serial.println("TIME_ERROR");return true;}

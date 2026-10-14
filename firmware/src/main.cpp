@@ -13,6 +13,7 @@ static void health(){
     millis(),ESP.getFreeHeap(),ESP.getFreePsram(),count,wifiFrames,bleFrames,alertTotal,queueDrops,storageDrops,malformedFrames,wifiChannel,blePhase?"BLE":"WIFI",sdReady?"OK":"MISSING",unsigned(audioStatus().mode));
   Serial.printf("DISPLAY %dx%d\n",lv_disp_get_hor_res(nullptr),lv_disp_get_ver_res(nullptr));
   Serial.printf("RUNTIME reset=%d stack_free=%u\n",esp_reset_reason(),unsigned(uxTaskGetStackHighWaterMark(nullptr)));
+  Serial.printf("RADIO_STATS capacity=%u queue_high=%u batch_us=%lu lag_ms=%lu evictions=%lu cache_hits=%lu cache_misses=%lu active_ble=%u\n",unsigned(MAX_CONTACTS),radioQueueHigh,radioMaxBatchUs,radioMaxLagMs,contactEvictions,contactCacheHits,contactCacheMisses,activeBle);
   if(batteryPercent()>=0)Serial.printf("BATTERY %d%% %s\n",batteryPercent(),batteryCharging()?"charging":"discharging");
 }
 static void command(const String& c){
@@ -59,9 +60,12 @@ void setup(){
   // The native USB CDC default is only 256 bytes. Reserve room before begin()
   // so flash writes cannot overflow incoming, acknowledged image chunks.
   Serial.setRxBufferSize(4096);
-  Serial.begin(115200);delay(500);Serial.println("DRAGON DETECTOR 0.4.0 / " BOARD_NAME " / boot");
+  Serial.begin(115200);delay(500);Serial.println("DRAGON DETECTOR 0.5.0 / " BOARD_NAME " / boot");
   Serial.printf("Flash=%u PSRAM=%u reset=%d\n",ESP.getFlashChipSize(),ESP.getPsramSize(),esp_reset_reason());
   if(ESP.getPsramSize()<4*1024*1024){Serial.println("FATAL: expected octal PSRAM");while(true)delay(100);}
+  contacts.data=(Contact*)ps_malloc(MAX_CONTACTS*sizeof(Contact));
+  if(!contacts.data){Serial.println("FATAL: contact storage allocation failed");while(true)delay(100);}
+  for(size_t i=0;i<MAX_CONTACTS;++i)new(&contacts[i]) Contact{};
   runSelfTests();boardBegin();uiBegin();
   uint32_t at=millis();while(millis()-at<1600){uiLoop();delay(5);}
   storageBegin();badgeInit();audioBegin();detectorBegin();radioBegin();Serial.println("DRAGON READY");health();
