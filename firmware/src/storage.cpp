@@ -25,7 +25,7 @@ static void mount(){
   char s[40];snprintf(s,sizeof(s),"/dragon/session-%08lx",(unsigned long)esp_random());sessionPath=s;
   SD_MMC.mkdir(sessionPath);loggingEnabled=false;
   File info=SD_MMC.open(sessionPath+"/session.txt",FILE_WRITE);
-  info.println("Dragon Detector 0.5.0\nTimes are milliseconds since boot, not UTC. Wi-Fi channels 1-11 and BLE alternate. Radar angles are decorative. RSSI is not distance. Signatures can be spoofed. Recording state of detected devices is unknown.");info.close();
+  info.println("Dragon Detector " DRAGON_VERSION "\nTimes are milliseconds since boot, not UTC. Wi-Fi channels 1-11 and BLE alternate. Radar angles are decorative. RSSI is not distance. Signatures can be spoofed. Recording state of detected devices is unknown.");info.close();
   Serial.printf("SD: %llu MB; session created\n",SD_MMC.cardSize()/1048576);
   sdReady=true;
 }

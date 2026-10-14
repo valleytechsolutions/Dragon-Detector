@@ -3,6 +3,7 @@ from pathlib import Path
 import hashlib,json,re
 from urllib.parse import unquote
 ROOT=Path(__file__).resolve().parents[1]
+VERSION=re.search(r'#define DRAGON_VERSION "([0-9.]+)"',(ROOT/'firmware/include/version.h').read_text()).group(1)
 for md in [ROOT/'README.md',ROOT/'CREDITS.md',*ROOT.glob('docs/*.md')]:
     for target in re.findall(r'!?\[[^\]]*\]\(([^\s)]+)',md.read_text(encoding='utf-8')):
         if '://' in target or target.startswith('#'):continue
@@ -12,7 +13,7 @@ for board in ('spotpear','waveshare','stopwatch'):
     records={name:sha for sha,name in (line.split() for line in (folder/'SHA256SUMS.txt').read_text().splitlines())}
     for mode in ('factory','update'):
         manifest=json.loads((folder/f'{mode}.json').read_text(encoding='utf-8'))
-        assert manifest['version']=='0.5.0'
+        assert manifest['version']==VERSION
         parts=manifest['builds'][0]['parts'];end=0
         for part in parts:
             file=folder/part['path'];assert file.parent==folder and file.exists()

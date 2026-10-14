@@ -1,9 +1,9 @@
 """Build matching board images and ESP Web Tools manifests; never use device dumps."""
 from pathlib import Path
-import argparse, csv, hashlib, json, os, shutil, subprocess, sys
+import argparse, csv, hashlib, json, os, re, shutil, subprocess, sys
 ROOT=Path(__file__).resolve().parents[1]
 BOARDS={'spotpear':('Spotpear JC3636W518','spotpear'),'waveshare':('Waveshare ESP32-S3-Touch-AMOLED-1.75C','spotpear'),'stopwatch':('M5Stack StopWatch C152','m5stack-stopwatch')}
-VERSION='0.5.0'
+VERSION=re.search(r'#define DRAGON_VERSION "([0-9.]+)"',(ROOT/'firmware/include/version.h').read_text()).group(1)
 
 def run(*args):subprocess.run([sys.executable,*args],cwd=ROOT,check=True)
 def build(board,skip):

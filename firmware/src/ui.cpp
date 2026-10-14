@@ -172,7 +172,7 @@ static void build(){
     trackingLabel=label(root,"Hollow = clue / RSSI, no bearing",50,280,260,F12,0xb3ca98);lv_obj_set_style_text_align(trackingLabel,LV_TEXT_ALIGN_CENTER,0);legible(trackingLabel);
     lv_obj_add_flag(trackingLabel,LV_OBJ_FLAG_CLICKABLE);lv_obj_add_event_cb(trackingLabel,action,LV_EVENT_CLICKED,(void*)57);
     button(root,"TARGETS",98,301,82,32,96);
-    button(root,LV_SYMBOL_UP " TOOLS",187,301,78,32,2);
+    button(root,"TOOLS",187,301,78,32,2);
     button(root,detector.quiet?LV_SYMBOL_MUTE:LV_SYMBOL_VOLUME_MAX,270,249,38,34,97);
   }else if(page==Menu){
     title("DRAGON TOOLS");const char* tabs[]={"RECON","BADGE","SYSTEM"};

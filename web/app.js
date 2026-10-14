@@ -2,6 +2,7 @@ import {BadgeSerial} from './serial.js';
 import {encodeBadge, cropGeometry, fitCircleZoom} from './badge-codec.js';
 import {uploadBadge} from './badge-transfer.js';
 import {readHistory} from './detector-transfer.js';
+import {parseBadgeInfo,hasDetectorTools} from './firmware-compat.js';
 const $ = id => document.getElementById(id);
 const models = {spotpear:'Spotpear / Guition JC3636W518',waveshare:'Waveshare ESP32-S3-Touch-AMOLED-1.75C',stopwatch:'M5Stack StopWatch C152'};
 let board = '', releaseReady = false, request = 0;
@@ -20,7 +21,7 @@ async function chooseBoard(next) {
     if(revision !== request)return;
     if(!data.builds?.length || data.builds[0].chipFamily!=='ESP32-S3')throw new Error('Invalid release manifest.');
     $('installer').setAttribute('manifest', manifest); releaseReady = true;
-    $('board-status').textContent = `${data.version} · ${mode==='factory'?'Fresh installation replaces saved history and badge files.':'Update preserves history, badges and settings; requires this board’s existing 0.3.x / 0.4.x layout.'}`;
+    $('board-status').textContent = `${data.version} · ${mode==='factory'?'Fresh installation replaces saved history and badge files.':'Update preserves history, badges and settings; requires this board’s existing 0.3.x / 0.4.x / 0.5.x layout.'}`;
     $('download').href = `firmware/${board}/SHA256SUMS.txt`; $('download').textContent='Firmware file checksums'; $('download').hidden=false;
     $('install-message').textContent='Confirm your board, then connect its USB port.';
   } catch(error) {
@@ -37,7 +38,7 @@ $('install-mode').onchange=()=>{if(board)chooseBoard(board);};
 const canvas=$('preview'), ctx=canvas.getContext('2d',{willReadFrequently:true});
 let photo=null, size=466, zoom=1, offsetX=0, offsetY=0, serial=null, busy=false, firmwareVersion='';
 function controls(){
-  for(const id of ['history-export','show-radar','sync-time','display-save','sound-save','tone-load','tone-save','tone-preview','tone-reset','tone-stop'])$(id).disabled=busy||!serial||!firmwareVersion.startsWith('0.4.');
+  for(const id of ['history-export','show-radar','sync-time','display-save','sound-save','tone-load','tone-save','tone-preview','tone-reset','tone-stop'])$(id).disabled=busy||!serial||!hasDetectorTools(firmwareVersion);
   $('connect').disabled=$('detector-connect').disabled=busy||!!serial;
   $('disconnect').disabled=$('detector-disconnect').disabled=busy;
   $('disconnect').hidden=$('detector-disconnect').hidden=!serial;
@@ -78,19 +79,19 @@ $('connect').onclick=async()=>{
   try {
     link=new BadgeSerial(await navigator.serial.requestPort());await link.open();await link.write('badge info');
     const line=await link.wait(s=>s.startsWith('BADGE_INFO '));
-    const match=/^BADGE_INFO (0\.[34]\.\d+) (360|466) READY (.+)$/.exec(line);
+    const match=parseBadgeInfo(line);
     if(!match)throw new Error('Install the current firmware using the matching board profile first.');
-    serial=link;firmwareVersion=match[1];const previous=size;size=Number(match[2]);canvas.width=canvas.height=size;offsetX*=size/previous;offsetY*=size/previous;
+    serial=link;firmwareVersion=match.version;const previous=size;size=match.size;canvas.width=canvas.height=size;offsetX*=size/previous;offsetY*=size/previous;
     $('device-label').textContent=`${size} × ${size} · CONNECTED`;$('disconnect').hidden=false;
-    $('studio-status').textContent=`${match[3]} is ready. Choose and position your image.`;draw();
-    if(firmwareVersion.startsWith('0.4.')){
+    $('studio-status').textContent=`${match.board} is ready. Choose and position your image.`;draw();
+    if(hasDetectorTools(firmwareVersion)){
       await link.write(`time ${Math.floor(Date.now()/1000)}`);await link.wait(s=>s==='TIME_OK');
       await link.write('display status');const config=await link.wait(s=>s.startsWith('DISPLAY_SETTINGS '));
       const values=/brightness=(\d+) output=-?\d+ dim=(\d+) off=(\d+) dim_level=(\d+)/.exec(config);
       if(values)for(const [i,id] of ['display-brightness','display-dim','display-off','display-level'].entries()){const value=values[i+1];if(!Array.from($(id).options).some(o=>o.value===value))$(id).add(new Option(value,value));$(id).value=value;}
       await loadAudio(link);
-      $('detector-status').textContent=`${match[3]} connected. UTC clock synchronized. History stays on your device until you download it.`;
-    }else $('detector-status').textContent='Connected to 0.3.x. Update to 0.4.x for history and detector controls.';
+      $('detector-status').textContent=`${match.board} connected. UTC clock synchronized. History stays on your device until you download it.`;
+    }else $('detector-status').textContent='Connected to 0.3.x. Update to the current firmware for history and detector controls.';
   }catch(error){if(link)await link.close();serial=null;firmwareVersion='';$('studio-status').textContent=error.message;$('detector-status').textContent=error.message;}
   finally{busy=false;draw();}
 };

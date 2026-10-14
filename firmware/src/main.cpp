@@ -60,7 +60,7 @@ void setup(){
   // The native USB CDC default is only 256 bytes. Reserve room before begin()
   // so flash writes cannot overflow incoming, acknowledged image chunks.
   Serial.setRxBufferSize(4096);
-  Serial.begin(115200);delay(500);Serial.println("DRAGON DETECTOR 0.5.0 / " BOARD_NAME " / boot");
+  Serial.begin(115200);delay(500);Serial.println("DRAGON DETECTOR " DRAGON_VERSION " / " BOARD_NAME " / boot");
   Serial.printf("Flash=%u PSRAM=%u reset=%d\n",ESP.getFlashChipSize(),ESP.getPsramSize(),esp_reset_reason());
   if(ESP.getPsramSize()<4*1024*1024){Serial.println("FATAL: expected octal PSRAM");while(true)delay(100);}
   contacts.data=(Contact*)ps_malloc(MAX_CONTACTS*sizeof(Contact));

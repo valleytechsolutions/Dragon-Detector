@@ -4,6 +4,16 @@ import {crc32,encodeBadge,cropGeometry,fitCircleZoom} from '../web/badge-codec.j
 import {BadgeSerial} from '../web/serial.js';
 import {uploadBadge,BADGE_CHUNK_SIZE} from '../web/badge-transfer.js';
 import {readHistory} from '../web/detector-transfer.js';
+import {parseBadgeInfo,hasDetectorTools} from '../web/firmware-compat.js';
+
+test('USB handshake accepts current/legacy boards and enables tools for 0.4/0.5',()=>{
+  for(const version of ['0.3.1','0.4.0','0.5.0'])for(const size of [360,466]){
+    assert.deepEqual(parseBadgeInfo(`BADGE_INFO ${version} ${size} READY Test board`),{version,size,board:'Test board'});
+    assert.equal(hasDetectorTools(version),!version.startsWith('0.3.'));
+  }
+  for(const line of ['BADGE_INFO 0.5.0 466 NO_STORAGE Board','BADGE_INFO 0.50.0 466 READY Board','BADGE_INFO 0.5.0 240 READY Board','BADGE_INFO 1.0.0 466 READY Board'])assert.equal(parseBadgeInfo(line),null);
+  assert.equal(hasDetectorTools('0.50.0'),false);
+});
 test('CRC matches firmware IEEE CRC-32 wire contract',()=>assert.equal(crc32(new TextEncoder().encode('123456789')),0xcbf43926));
 for(const size of [360,466])test(`DDB1 ${size}: header, exact size and RGB565 byte order`,()=>{
   const p=new Uint8Array(size*size*4);p.set([255,0,0,255,0,255,0,255,0,0,255,255]);const b=encodeBadge(p,size);

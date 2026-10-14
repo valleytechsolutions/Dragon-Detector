@@ -8,6 +8,7 @@
 #include "tracking.h"
 #include "monitor.h"
 #include "contacts.h"
+#include "version.h"
 
 using dragon::Family;
 using dragon::Confidence;
