@@ -58,7 +58,7 @@ static void parityTests(){
   std::vector<uint8_t> pack{0xf2,25,1};append(pack,message);DroneInfo decoded;assert(decodeDrone(pack.data(),pack.size(),decoded));
   auto bad=pack;bad[2]=9;assert(!decodeDrone(bad.data(),bad.size(),decoded));bad=pack;bad[1]=24;assert(!decodeDrone(bad.data(),bad.size(),decoded));
   for(size_t n=0;n<pack.size();++n)assert(!decodeDrone(pack.data(),n,decoded));
-  auto rid=beacon(8,false);std::vector<uint8_t> vendor{0xfa,0x0b,0xbc,0x0d,0};append(vendor,pack);append(rid,ad(221,vendor));assert(parseWifi(rid.data(),rid.size()).match.family==Family::Drone);
+  auto rid=beacon(8,false);std::vector<uint8_t> vendor{0xfa,0x0b,0xbc,0x0d,0};append(vendor,pack);append(rid,{221,uint8_t(vendor.size())});append(rid,vendor);assert(parseWifi(rid.data(),rid.size()).match.family==Family::Drone);auto malformedRid=rid;++malformedRid[43];assert(!parseWifi(malformedRid.data(),malformedRid.size()).valid);
   auto nan=std::vector<uint8_t>(24);nan[0]=0xd0;append(nan,{4,9,0x50,0x6f,0x9a,0x13,3,uint8_t(11+pack.size()),0,0x88,0x69,0x19,0x9d,0x92,9,1,0,0x10,uint8_t(1+pack.size()),7});append(nan,pack);
   assert(parseWifi(nan.data(),nan.size()).match.family==Family::Drone);nan[31]=255;assert(parseWifi(nan.data(),nan.size()).match.family!=Family::Drone);
   ODID_Location_data location;odid_initLocationData(&location);location.Latitude=40.1234567;location.Longitude=-73.7654321;location.AltitudeGeo=42;location.SpeedHorizontal=6.5;

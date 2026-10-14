@@ -10,5 +10,5 @@ flags=['-O1','-g','-fsanitize=address,undefined','-fno-omit-frame-pointer'] if a
 lib=root/'lib/opendroneid/src'
 obj=root/'.work'/'opendroneid.o'
 subprocess.run(cc+flags+['-std=c11','-DODID_DISABLE_PRINTF','-I'+str(lib),'-c',str(lib/'opendroneid.c'),'-o',str(obj)],check=True,cwd=root)
-subprocess.run(compiler+flags+['-std=c++17','-I'+str(root/'firmware/include'),'-I'+str(lib),str(root/'tests/core_test.cpp'),str(obj),'-o',str(out)],check=True,cwd=root)
+subprocess.run(compiler+flags+['-UNDEBUG','-std=c++17','-I'+str(root/'firmware/include'),'-I'+str(lib),str(root/'tests/core_test.cpp'),str(obj),'-o',str(out)],check=True,cwd=root)
 subprocess.run([str(out)],check=True,cwd=root)

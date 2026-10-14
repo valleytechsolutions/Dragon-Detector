@@ -1,3 +1,6 @@
+#ifdef NDEBUG
+#error Native test assertions must be enabled
+#endif
 #include "detection.h"
 #include "tracking.h"
 #include "monitor.h"
