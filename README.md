@@ -26,6 +26,10 @@ Photographs are manufacturer-hosted identification images, not pictures of this 
 
 ## A radar you can wear
 
+![Dragon Detector 0.5 radar captured from the attached Waveshare renderer](media/radar-v05.png)
+
+*Actual 466×466 LVGL render from Waveshare 1.75C, not a panel photograph. Targets opens the paged list; the speaker button toggles quiet mode.*
+
 - **Audited signature coverage:** all 134 table entries in the pinned SquachWatch reference have recognition and radar tests. Includes Flock, Axon/TASER, Raven, camera glasses, Find My/DULT, SmartTag, Google Find Hub, Tile, Ring/camera/ALPR vendors, decoded drone Remote ID, iBeacon, pentest devices, disconnect bursts and SSID security conflicts. [Coverage and comparison](docs/DETECTION-PARITY.md).
 - **All recognized candidates on radar:** first sightings appear immediately; hollow dots distinguish weak clues. A paged Targets list, quick quiet toggle and live radio-health screen make crowded areas easier to navigate.
 - **Dragon Hunt:** dedicated target listening, filtered dBm, signal history, peak, trend, stability, a saved comparison mark, and automatic channel searching for stale Wi-Fi targets. Optional Dragon fox beacons support board-to-board training; transmission starts only when explicitly enabled.
