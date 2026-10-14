@@ -92,7 +92,7 @@ The **[USB audio editor](https://valleytechsolutions.github.io/DragonBall-Z-Rada
 
 1. Connect in Detector tools. Choose a detector family and load its saved melody.
 2. Edit a single ASCII RTTTL line such as `Axon:d=16,o=5,b=180:c,e,g,c6,g,e,8c6`.
-3. Preview explicitly on the board speaker, or save without playing. An empty melody silences that family. Restore default removes the override.
+3. Preview explicitly on the board speaker, or save without playing. An empty melody silences that family’s detection melody; hunt feedback has a separate switch. Restore default removes the override.
 4. Save the audio settings separately for master enable, volume, hunt feedback and focus.
 
 RTTTL bounds: 512 characters, 96 notes, 15 seconds total; duration divisors 1/2/4/8/16/32, octaves 4–7, tempo 25–900, sharps and dotted notes, `p` rests. Invalid input leaves the saved tone unchanged. Preferences and custom melodies survive restart. Preview intentionally works with automatic alerts disabled or quiet mode enabled, at the **saved** volume. Stop ends the current sound; disable automatic alerts to remain silent. Badge images retain their separate crop/upload controls.

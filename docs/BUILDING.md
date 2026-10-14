@@ -8,7 +8,7 @@ python -m platformio run -e spotpear -e waveshare -e stopwatch
 python tools/build_release.py --skip-build
 ```
 
-The pinned pioarduino platform provides Arduino ESP32 and ESP-IDF. Each board requires 8 MB octal PSRAM. The Waveshare board's flash is deliberately addressed as 16 MB for the existing partition layout. Firmware uses one shared application in `firmware/`; only display/power adapters vary.
+The pinned pioarduino platform provides Arduino ESP32 and ESP-IDF. Each board requires 8 MB octal PSRAM. The Waveshare board's flash is deliberately addressed as 16 MB for the existing partition layout. Firmware uses one shared application in `firmware/`; display/power and speaker-output adapters vary.
 
 `tools/build_release.py` builds a blank badge filesystem, checks image/partition sizes, generates split factory/update manifests, merges a factory image, verifies every merged segment, rejects embedded workstation paths, and writes SHA-256 checksums plus source-commit metadata. Do not publish manually renamed binaries from a different board.
 
@@ -20,7 +20,7 @@ python tools/test_core.py --cxx g++
 python tools/test_core.py --cxx g++ --sanitize
 ```
 
-On Windows without a native compiler, install `ziglang==0.13.0` and run `python tools/test_core.py` without `--cxx`. The packet tests include positive and negative fixtures, bounds checks, rollover, RSSI outliers/reacquisition, CRC consistency and 150,000 random inputs. CI additionally runs AddressSanitizer and UndefinedBehaviorSanitizer.
+On Windows without a native compiler, install `ziglang==0.13.0` and run `python tools/test_core.py` without `--cxx`. The packet tests include positive and negative fixtures, bounds checks, rollover, RSSI outliers/reacquisition, CRC consistency 150,000 random radio inputs and 50,000 random RTTTL inputs. The runner explicitly keeps test assertions enabled in optimized builds. CI additionally runs AddressSanitizer and UndefinedBehaviorSanitizer.
 
 ## Local web preview
 
