@@ -1,4 +1,4 @@
-# Validation status · 0.7.0
+# Validation status · 0.8.0
 
 This is an experimental development release. Automated signature checks and basic board checks do not establish field detection accuracy or all-day battery life.
 
@@ -11,9 +11,19 @@ All three board profiles compile locally: Spotpear JC3636W518, Waveshare 1.75C a
 - Native C++ positive/negative fixtures cover all added detector families, dedicated/shared vendor prefixes, public/random BLE addresses, Axon manufacturer/services, Meta composite evidence, Flock probe roles, Biscuit shared-UUID exclusions, Google Find Hub framing, Tile, Raven, iBeacon defaults, and drone Remote ID BLE/beacon/NAN messages encoded with the upstream library.
 - Tracking tests cover signal spikes, reacquisition, timer rollover, history traces, alert cooldown/auto-quiet, SSID conflicts including binary SSIDs and mesh false positives, and display defaults.
 - 150,000 random inputs exercise both bounded radio parsers. A further 50,000 inputs exercise RTTTL parsing. The runner explicitly keeps assertions enabled in optimized builds. All 26 default melodies validate; tests also cover invalid notes/tempo/octaves, size and duration bounds, silence, queue coalescing/expiry/cooldown/rollover, and hunt pitch/cadence bounds. CI runs the native suite with AddressSanitizer and UndefinedBehaviorSanitizer as well.
-- Sixteen Node tests cover both image resolutions, RGB565/CRC, crop geometry, serial framing/disconnects/timeouts, acknowledged small transfers, a full 512-row history export received in one USB chunk, compatible 0.3/0.4/0.5/0.6/0.7 USB handshakes/tool availability, radar preference loading and acknowledged saves, and the independently pinned web installer dependency.
+- Twenty Node tests cover both image resolutions, RGB565/CRC, crop geometry, serial framing/disconnects/timeouts, acknowledged small transfers, a full 512-row history export received in one USB chunk, compatible 0.3/0.4/0.5/0.6/0.7/0.8 USB handshakes/tool availability, radar preference loading and acknowledged saves, the independently pinned web installer dependency, exact board identity, manifest offsets/erase policy, rotated/mirrored safe-circle fitting and board-scaled pan controls.
 - The release packager checks partition sizes, every merged image segment, checksums and workstation-path exclusion. Manifests identify the exact board and distinguish fresh installs from updates.
 - Browser QA checked detector/audio settings at mobile and desktop widths, 26 family choices, disabled disconnected controls, display defaults, and absence of JavaScript errors. Badge image selection/cropping was checked in 0.3.1. Hardware USB tests use host scripts implementing the same protocol; browser USB permission-picker and end-to-end upload remain unverified.
+
+## StopWatch C152 · 0.8 hardware and Badge Studio checks · 2026-10-14
+
+- Saved a private 16 MB recovery image before updating the attached StopWatch. Its partition layout matched the current profile. Wrote only the application at `0x10000`, hash-verified by esptool, retaining NVS and the existing filesystem. USB reports `BADGE_INFO 0.8.0 466 READY`; the on-device self-test passes 17/17.
+- The owner initially reported visible radar but unresponsive touch. The revised adapter removes a pre-init I²C scan and explicitly maps native CST820B coordinates to the centered display canvas. The owner then confirmed Tools/Wi-Fi/Home taps and yellow/blue buttons work. USB recorded seven touch presses delivered to LVGL and four menu actions. Swipe-to-open is removed on every profile; list scrolling and buttons remain.
+- Eight CRC-verified 434,312-byte captures covered three radar themes, the uploaded badge, preservation after bad CRC and interrupted transfer, badge startup after a real restart, and final radar. The 434,320-byte badge came from the real browser's BWM1 PNG export, was encoded as RGB565 and uploaded using acknowledged 128-byte chunks. Its rendered pixels matched, allowing the intentional ±2px idle badge shift. Invalid CRC and an incomplete transfer preserved the accepted image.
+- Wi-Fi/BLE reception continued during short passive/active runs with zero queue/storage drops and malformed-frame counts. Active reception reported 114,020 bytes free internal heap, 7,495,984 bytes free PSRAM and 2,448 bytes minimum loop stack margin after the transfer/restart checks. These are short desktop checks, not endurance or saturation results.
+- Speaker initialization and a brief glasses-family preview at 100% volume succeeded. Final preferences are green theme, labels/recent signals on, passive BLE, candidate scope, volume/brightness 100%, no dim/off timer, alerts enabled. The BWM1 badge remains saved; startup and current view return to radar. Haptics and battery endurance were not independently measured.
+- Browser QA at desktop and 390px mobile widths checked image selection, board-specific 360/466px previews, rotation/mirroring, keyboard nudging, safe-circle fit, clean PNG download, guides, disabled disconnected controls and no horizontal overflow or JavaScript errors. All three factory/update board selections load validated manifests and reset confirmation when changed. The in-app browser did not expose a usable USB chooser; browser-to-hardware installation/upload remains unverified. Physical flashing and USB upload/recovery checks used host tools, not a simulated browser port.
+- Local native coverage still passes all 134 pinned reference facts and parser/tracker/radar/audio fixtures; all three board profiles build and all 20 Node tests pass. No new controlled field trial against every named product is claimed.
 
 ## Radar and protocol checks added in 0.7
 
@@ -77,6 +87,6 @@ A complete 434,320-byte RGB565 badge upload matched the LVGL screenshot pixel-fo
 
 ## Remaining hardware limits
 
-Spotpear and StopWatch still require physical testing, including speakers, buttons and haptics. Full touch alignment, maximum-volume acoustic quality, battery runtime and long-duration stability are unverified. No controlled field trial against every named product has been performed. Axon vendor evidence can include other Axon/TASER equipment; glasses and tracker models cannot always be distinguished. Radar angle is decorative and RSSI is not a measured distance or bearing.
+Spotpear still requires physical testing. StopWatch has the basic 0.8 checks above; its haptics remain unverified. Full touch-edge calibration, maximum-volume acoustic quality, battery runtime and long-duration stability remain unverified on all profiles. No controlled field trial against every named product has been performed. Axon vendor evidence can include other Axon/TASER equipment; glasses and tracker models cannot always be distinguished. Radar angle is decorative and RSSI is not a measured distance or bearing.
 
 Historical 0.1/0.2 reports apply to their archived board projects only.

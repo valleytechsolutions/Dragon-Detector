@@ -62,6 +62,8 @@ static void selectContact(int i){selected=i;memcpy(selectedMac,contacts[i].mac,6
 static bool selectionValid(){return selected>=0 && contacts[selected].used && !memcmp(selectedMac,contacts[selected].mac,6) && selectedBle==contacts[selected].ble && selectedType==contacts[selected].addressType;}
 static lv_obj_t* trackingLabel=nullptr;
 static uint32_t pageAt=0,lastUpdate=0,lastInteraction=0;
+static uint32_t inputActions=0;
+static int lastInputAction=-1;
 static int outputBrightness=-1;
 static Preferences settings;
 static String directory="/";
@@ -353,6 +355,7 @@ static void build(){
   micBadge=label(root,"MIC REC",137,17,86,F12,0xff8585);lv_obj_set_style_text_align(micBadge,LV_TEXT_ALIGN_CENTER,0);legible(micBadge);lv_obj_add_flag(micBadge,LV_OBJ_FLAG_HIDDEN);
 }
 static void action(lv_event_t* e){
+  ++inputActions;lastInputAction=int(intptr_t(lv_event_get_user_data(e)));
   lastInteraction=millis();
   int id=(intptr_t)lv_event_get_user_data(e);
   if(id>=2000 && id<2096){int i=id-2000;if(i>=fileCount)return;if(files[i].dir){directory=files[i].path;go(Files);page=Boot;}else{String ext=files[i].path;ext.toLowerCase();if(ext.endsWith(".mp3")||ext.endsWith(".wav")){audioPlay(files[i].path);go(Audio);}else{
@@ -438,21 +441,12 @@ static void action(lv_event_t* e){
     case 200:trackContact(-1);pending=page;page=Boot;break;
   }
 }
-bool uiTouch(bool pressed,int x,int y){
+bool uiTouch(bool pressed,int,int){
   static bool consumeWake=false;
   if(pressed && outputBrightness==0)consumeWake=true;
   if(pressed)lastInteraction=millis();
   if(consumeWake){if(!pressed)consumeWake=false;return false;}
-  static bool was=false;static int sx,sy,lx,ly;static uint32_t start;
-  if(pressed){if(!was){sx=x;sy=y;start=millis();}lx=x;ly=y;}
-  else if(was && millis()-start<1500){
-    int dx=lx-sx,dy=ly-sy;
-    // Raw gestures must never consume a scroll on list/detail screens. Only the
-    // full-screen radar owns the bottom-edge shortcut. Menu tabs are buttons,
-    // so no global horizontal/downward gesture is needed there.
-    if(page==Radar && sy>S(285) && dy<-S(55) && abs(dy)>abs(dx))go(Menu);
-  }
-  was=pressed;
+  // Navigation uses visible Tools/Home buttons. Leave drags to LVGL lists.
   return true;
 }
 void uiShow(const String& name){
@@ -523,6 +517,7 @@ void uiLoop(){
 
 void uiKey(bool home){lastInteraction=millis();go(home?Radar:page==Menu?Badge:Menu);}
 bool uiCommand(const String& cmd){
+  if(cmd=="ui status"){Serial.printf("UI_STATUS page=%u actions=%lu last_action=%d\n",unsigned(page),inputActions,lastInputAction);return true;}
   if(cmd=="radar status"){Serial.printf("RADAR_SETTINGS theme=%u labels=%u recent=%u page=%u pages=%u plotted=%u\n",radarTheme,radarLabels,radarRecent,radarPage+1,radarLabels?dragon::radarPages(radarCount):1,dotCount);return true;}
   if(cmd=="radar scope all"||cmd=="radar scope candidates"){candidatesOnly=cmd.endsWith("candidates");settings.putBool("candidates",candidatesOnly);radarPage=0;radarPrepared=0;Serial.printf("RADAR_SCOPE %s\n",candidatesOnly?"candidates":"all");return true;}
   if(cmd=="radar labels on"||cmd=="radar labels off"){radarLabels=cmd.endsWith("on");radarPage=0;settings.putBool("radar-labels",radarLabels);Serial.printf("RADAR_LABELS %u\n",radarLabels);return true;}

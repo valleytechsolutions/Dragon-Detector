@@ -1,4 +1,4 @@
-# Daily detection and hunting · 0.7.0
+# Daily detection and hunting · 0.8.0
 
 The radar starts at **100% brightness with no automatic dimming or screen-off timeout**. It listens passively on 2.4 GHz Wi-Fi and Bluetooth LE. The optional training fox transmitter is off at every boot.
 
@@ -47,7 +47,7 @@ Normal cards disappear after ten seconds; watch cards remain until dismissed. Ca
 
 Tools → **History** shows up to 512 unique address/radio/family records, newest first. Records contain evidence, peak/last signal and encounter count. More than one family can be retained for the same address. History is enabled by default and uses internal flash on all three boards, with record CRC and bounded journals. Updates are queued to limit write traffic; abrupt power loss can lose recent pending updates. Old journal records eventually rotate out. **Clear** asks before removing stored records; active scanning can create new ones afterward.
 
-Open [Detector tools](https://valleytechsolutions.github.io/DragonBall-Z-Radar/#detector) in desktop Chrome/Edge. Connect a running 0.4.x or newer board to synchronize UTC and download a CSV. Close other serial monitors first. Without a clock sync since boot, records explicitly use boot-relative time. Clock sync affects new observations; it does not invent dates for older records.
+Open [Detector tools](https://valleytechsolutions.github.io/Dragon-Detector/#detector) in desktop Chrome/Edge. Connect a running 0.4.x or newer board to synchronize UTC and download a CSV. Close other serial monitors first. Without a clock sync since boot, records explicitly use boot-relative time. Clock sync affects new observations; it does not invent dates for older records.
 
 Display privacy masks names/addresses and hides evidence/coordinates on screen. It does not alter stored or exported data. CSV includes the full records. Export briefly pauses reception. No account or cloud upload is involved.
 
@@ -57,11 +57,13 @@ Spotpear additionally supports optional SD event CSV and bounded 16 MB PCAP capt
 
 **Settings → Display & timeouts** provides brightness, dim-after, dim level, screen-off-after and wake-on-alert. Both timers default to **Never**. **Restore always-on defaults** sets 100% brightness and disables both timers. The web detector tools can save the same settings. Reception continues when the screen dims or turns off. Touch wakes a dark display; the waking touch is consumed so it does not accidentally press a hidden button.
 
-Tap Tools or swipe upward from the radar's bottom edge. Lists scroll normally. Waveshare BOOT toggles radar/tools. StopWatch yellow returns to radar; blue opens tools and, from tools, opens badge.
+Tap **Tools** to open the menu and **Home** to return to radar. There is no swipe-to-open gesture; lists still scroll normally. Waveshare BOOT toggles radar/tools. StopWatch yellow returns to radar; blue opens tools and, from tools, opens badge.
 
 ## Existing image badge
 
-[Badge Studio](https://valleytechsolutions.github.io/DragonBall-Z-Radar/#studio) still accepts PNG/JPEG/WebP, with drag, zoom, center, fit and background controls. It detects 360/466 sizing and transfers CRC-checked RGB565 over USB. A failed upload preserves the prior image. Hold the displayed image for tools; Settings → Boot to radar restores radar startup. Images are local to browser/device. Further badge features are deferred for this release.
+[Badge Studio](https://valleytechsolutions.github.io/Dragon-Detector/#studio) accepts PNG/JPEG/WebP (up to 20 MB and 40 megapixels). Choose the exact board to preview its 360×360 or 466×466 circle before connecting. Images initially fit completely inside a small safe margin. Choose **Fill circle** to crop edge-to-edge, then drag or zoom. Rotate 90° in either direction, mirror, center, or reset the crop. Fine positioning offers horizontal/vertical sliders and one-pixel arrow buttons; hold Shift for ten pixels. The focused preview accepts arrow keys too. Board changes preserve relative positioning. Alignment guides are preview-only and never become part of the image.
+
+**Download badge preview** saves a circular PNG. **Connect your badge** identifies the exact firmware model and locks the matching size, then **Upload** sends CRC-checked RGB565 directly over USB. A failed or interrupted transfer preserves the previous image. A successful upload enables badge startup. Hold the displayed image for Tools; Settings → Boot to radar restores radar startup. Images remain local to the browser/device.
 
 ## USB diagnostics
 
@@ -98,7 +100,7 @@ Open **Settings → Audio & hunt tones** for the speaker switch, volume, hunt fe
 
 Higher, faster pulses mean a stronger filtered RSSI: approximately two seconds at -95 dBm down to 250 ms at -35 dBm. A rising/falling second chirp follows the signal trend. Axon uses a distinctive double heartbeat plus its own acquisition melody. After twelve seconds without observations, heartbeat feedback stops and a falling two-note cue plays once. Signal changes can also result from shielding, orientation and reflections; this is not measured distance or bearing.
 
-The **[USB audio editor](https://valleytechsolutions.github.io/DragonBall-Z-Radar/#sound)** sits beside Badge Studio:
+The **[USB audio editor](https://valleytechsolutions.github.io/Dragon-Detector/#sound)** sits beside Badge Studio:
 
 1. Connect in Detector tools. Choose a detector family and load its saved melody.
 2. Edit a single ASCII RTTTL line such as `Axon:d=16,o=5,b=180:c,e,g,c6,g,e,8c6`.

@@ -11,7 +11,7 @@ This directory supplies a cover image and instructions. The BIN is stored once i
 | Name | Dragon Detector - M5Stack StopWatch |
 | Version | 0.2.0 |
 | Device | M5Stack StopWatch C152 |
-| GitHub | https://github.com/valleytechsolutions/DragonBall-Z-Radar |
+| GitHub | https://github.com/valleytechsolutions/Dragon-Detector |
 | Firmware | [StopWatch factory BIN](../../hardware/m5stack-stopwatch/release/Dragon-Detector-StopWatch-v0.2.0-factory-0x0.bin) |
 | Flash address | 0x0 |
 | Flash size | 16 MB |

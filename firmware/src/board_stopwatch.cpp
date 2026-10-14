@@ -1,7 +1,6 @@
 #include "app.h"
 #include <M5Unified.h>
 #include <lvgl.h>
-#include <Wire.h>
 
 extern bool uiTouch(bool,int,int);
 static lv_disp_draw_buf_t drawBuffer;
@@ -9,15 +8,22 @@ static lv_disp_drv_t displayDriver;
 static bool injected=false,injectedPress=false;
 static int injectedX=0,injectedY=0;
 static uint32_t vibrationUntil=0,lastFeedback=0,lastAlert=0;
+static uint32_t touchPresses=0,touchSamples=0,lvglPresses=0;
+static int lastTouchX=0,lastTouchY=0,lastRawX=0,lastRawY=0;
+void stopwatchTouchStatus(){Serial.printf("TOUCH_STATUS enabled=%d irq=%d samples=%lu presses=%lu lvgl=%lu xy=%d,%d raw=%d,%d\n",M5.Touch.isEnabled(),digitalRead(13),touchSamples,touchPresses,lvglPresses,lastTouchX,lastTouchY,lastRawX,lastRawY);}
 bool alertSound=true,alertVibration=true;
 void boardBegin(){
-  Wire.begin(47,48,100000);Serial.print("I2C before M5:");for(int a=8;a<120;++a){Wire.beginTransmission(a);if(Wire.endTransmission()==0)Serial.printf(" %02x",a);}Serial.println();Wire.end();
   auto cfg=M5.config();cfg.internal_spk=true;cfg.internal_mic=false;
   cfg.fallback_board=m5::board_t::board_M5StopWatch;M5.begin(cfg);
   // CO5300's M5 driver exposes a 468x468 transfer canvas around the 466px panel.
   if(M5.getBoard()!=m5::board_t::board_M5StopWatch || M5.Display.width()<466 || M5.Display.width()>468){
     Serial.printf("FATAL: StopWatch display not identified board=%d expected=%d size=%dx%d gfx=%d\n",int(M5.getBoard()),int(m5::board_t::board_M5StopWatch),M5.Display.width(),M5.Display.height(),int(M5.Display.getBoard()));while(true)delay(100);
   }
+  // This CST820B reports native 466px coordinates. Explicitly map them into
+  // the centered transfer canvas; the library's generic touch scaling can
+  // otherwise stretch the outer controls beyond their visible positions.
+  float touchMap[6]={1,0,float((M5.Display.width()-466)/2),0,1,float((M5.Display.height()-466)/2)};
+  M5.Display.panel()->setCalibrateAffine(touchMap);
   M5.Display.setBrightness(150);M5.Display.fillScreen(TFT_BLACK);
   Serial.printf("BOARD StopWatch display=%dx%d touch=%d keys=2,1\n",M5.Display.width(),M5.Display.height(),M5.Touch.isEnabled());
 }
@@ -29,6 +35,7 @@ static void readTouch(lv_indev_drv_t*,lv_indev_data_t* d){
   else {auto t=M5.Touch.getDetail();pressed=M5.Touch.getCount() && t.isPressed();x=t.x-(M5.Display.width()-466)/2;y=t.y-(M5.Display.height()-466)/2;}
   d->state=pressed?LV_INDEV_STATE_PR:LV_INDEV_STATE_REL;
   if(pressed){d->point.x=constrain(x,0,465);d->point.y=constrain(y,0,465);}
+  static bool was=false;if(pressed&&!was)++lvglPresses;was=pressed;
   if(!uiTouch(pressed,x,y))d->state=LV_INDEV_STATE_REL;
 }
 void scr_lvgl_init(){
@@ -48,6 +55,8 @@ void scr_lvgl_init(){
 }
 void boardLoop(){
   M5.update();
+  auto detail=M5.Touch.getDetail();const bool touching=M5.Touch.getCount()&&detail.isPressed();static bool was=false;
+  if(touching){++touchSamples;lastTouchX=detail.x;lastTouchY=detail.y;auto raw=M5.Touch.getTouchPointRaw();lastRawX=raw.x;lastRawY=raw.y;if(!was)++touchPresses;}was=touching;
   if(M5.BtnA.wasPressed()){Serial.println("KEY A radar");uiKey(true);}
   if(M5.BtnB.wasClicked()){Serial.println("KEY B navigation");uiKey(false);}
   if(vibrationUntil && int32_t(millis()-vibrationUntil)>=0){M5.Power.setVibration(0);vibrationUntil=0;}

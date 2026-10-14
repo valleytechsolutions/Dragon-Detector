@@ -25,3 +25,7 @@ Battery percentage is available through Waveshare AXP2101 and M5Stack power APIs
 | StopWatch | M5Unified speaker | Board-specific wiring managed by the pinned library; vibration is independent |
 
 Use the board's suitable speaker connection; a bare board with no speaker connected cannot produce sound. The Waveshare owner confirmed audible output. Spotpear and StopWatch audio are build-verified only. RTTTL melodies are synthesized locally, and no microphone input is enabled. Fresh installs use 100% speaker volume and 100% display brightness with no dim/off timers; both remain configurable.
+
+## StopWatch input diagnostics
+
+On current StopWatch firmware, USB `touch status` reports controller samples and LVGL press counts; `ui status` reports page/action counters. These are read-only diagnostic summaries and do not inject taps. Native 466px touch positions align with the centered display canvas. Navigation uses Tools/Home taps and yellow/blue buttons; swipe-to-open is disabled.

@@ -7,6 +7,8 @@ import {readHistory} from '../web/detector-transfer.js';
 import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools} from '../web/firmware-compat.js';
 import {readRadarSettings,saveRadarSettings} from '../web/radar-transfer.js';
 import {readFileSync} from 'node:fs';
+import {boardProfiles,connectedProfile,validateManifest} from '../web/board-profiles.js';
+import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan} from '../web/badge-editor.js';
 
 test('firmware release updates preserve the independently pinned installer dependency',()=>{
   const html=readFileSync(new URL('../web/index.html',import.meta.url),'utf8');
@@ -14,11 +16,11 @@ test('firmware release updates preserve the independently pinned installer depen
 });
 
 test('USB handshake accepts current/legacy boards and gates detector/activity tools',()=>{
-  for(const version of ['0.3.1','0.4.0','0.5.0','0.5.1','0.6.0','0.7.0'])for(const size of [360,466]){
+  for(const version of ['0.3.1','0.4.0','0.5.0','0.5.1','0.6.0','0.7.0','0.8.0'])for(const size of [360,466]){
     assert.deepEqual(parseBadgeInfo(`BADGE_INFO ${version} ${size} READY Test board`),{version,size,board:'Test board'});
     assert.equal(hasDetectorTools(version),!version.startsWith('0.3.'));
-    assert.equal(hasActivityTools(version),/^0\.[67]\./.test(version));
-    assert.equal(hasRadarTools(version),version.startsWith('0.7.'));
+    assert.equal(hasActivityTools(version),/^0\.[678]\./.test(version));
+    assert.equal(hasRadarTools(version),/^0\.[78]\./.test(version));
   }
   for(const line of ['BADGE_INFO 0.5.0 466 NO_STORAGE Board','BADGE_INFO 0.50.0 466 READY Board','BADGE_INFO 0.5.0 240 READY Board','BADGE_INFO 1.0.0 466 READY Board'])assert.equal(parseBadgeInfo(line),null);
   assert.equal(hasDetectorTools('0.50.0'),false);
@@ -109,4 +111,44 @@ test('history export rejects storage failure, timeout and disconnect with cleanu
     if(mode==='storage')port.emit('HISTORY_ERROR\n');if(mode==='disconnect')port.end();
     await assert.rejects(result,/unavailable|timed out|disconnected/);assert.equal(serial.listeners.size,0);await serial.close();
   }
+});
+
+test('same-resolution boards are distinguished by exact USB identity',()=>{
+ for(const [board,p] of Object.entries(boardProfiles)){
+  assert.equal(connectedProfile({board:p.firmwareName,size:p.size}),board);
+  assert.equal(connectedProfile({board:p.firmwareName,size:240}),null);
+ }
+ assert.equal(connectedProfile({board:'Unrecognized AMOLED',size:466}),null);
+});
+
+test('flasher rejects wrong boards, partitions, remote paths and destructive update manifests',()=>{
+ for(const [board,p] of Object.entries(boardProfiles))for(const mode of ['factory','update']){
+  const parts=[{path:'bootloader.bin',offset:0},{path:'partitions.bin',offset:0x8000},{path:'boot_app0.bin',offset:0xe000},{path:'firmware.bin',offset:0x10000}];
+  if(mode==='factory')parts.push({path:'littlefs.bin',offset:p.filesystemOffset});
+  const good={name:`Dragon Detector — ${p.firmwareName} (${mode})`,version:'0.8.0',new_install_prompt_erase:mode==='factory',builds:[{chipFamily:'ESP32-S3',parts}]};
+  assert.equal(validateManifest(good,board,mode),good);
+  for(const mutate of [d=>d.name+=' wrong',d=>d.builds[0].chipFamily='ESP32',d=>d.builds[0].parts[3].offset=0,d=>d.builds[0].parts[3].path='https://example.com/firmware.bin',d=>d.builds[0].parts.push(d.builds[0].parts[0]),d=>d.builds[0].parts.pop(),d=>d.new_install_prompt_erase=!d.new_install_prompt_erase,d=>d.version='0.9.0']){
+   const bad=structuredClone(good);mutate(bad);assert.throws(()=>validateManifest(bad,board,mode),/manifest/);
+  }
+  if(mode==='factory'){const bad=structuredClone(good);bad.builds[0].parts[4].offset=p.filesystemOffset===0x810000?0xc10000:0x810000;assert.throws(()=>validateManifest(bad,board,mode));}
+ }
+});
+
+test('rotated and mirrored badge fits preserve every image corner within the safe circle',()=>{
+ for(const size of [360,466])for(const [w,h] of [[800,400],[400,800],[466,466],[2000,50]])for(const turns of [-1,0,1,2,3,4])for(const mirror of [false,true]){
+  const g=badgeTransform(w,h,size,{zoom:fitBadgeZoom(w,h,size,turns),turns,mirror});
+  for(const x of [-w/2,w/2])for(const y of [-h/2,h/2]){
+   const dx=g.scale*(x*g.mirror*Math.cos(g.angle)-y*Math.sin(g.angle)),dy=g.scale*(x*g.mirror*Math.sin(g.angle)+y*Math.cos(g.angle));
+   assert.ok(Math.hypot(dx,dy)<=size*.47+1e-8);
+  }
+  const fill=badgeTransform(w,h,size,{turns});assert.ok(w*fill.scale>=size&&h*fill.scale>=size);
+ }
+});
+
+test('badge positioning scales with preview size, survives board changes and stays bounded',()=>{
+ const start={x:10,y:10,ox:0,oy:0};
+ assert.deepEqual(panFromPointer(start,{x:110,y:60},233,466),{x:200,y:100});
+ assert.deepEqual(panFromPointer(start,{x:9999,y:-9999},233,466),{x:466,y:-466});
+ const pan=rescalePan(46.6,-93.2,466,360);assert.ok(Math.abs(pan.x-36)<1e-8);assert.ok(Math.abs(pan.y+72)<1e-8);
+ const back=rescalePan(pan.x,pan.y,360,466);assert.ok(Math.abs(back.x-46.6)<1e-8);
 });

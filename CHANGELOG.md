@@ -1,5 +1,14 @@
 # Changes
 
+
+## 0.8.0 · StopWatch and Badge Studio
+
+- Rename the repository to Dragon-Detector and update flasher, guide and source links.
+- Add exact-board badge previews, whole-image fit by default, rotate/mirror, precise pan/nudge controls, preview-only alignment guides, reset and circular PNG export. USB locks the detected model and resolution.
+- Validate flasher board names, partition offsets, image paths and erase policy; retain the independently pinned ESP Web Tools 10.4.0.
+- Remove the pre-initialization StopWatch I²C bus scan, map CST820B coordinates to the native panel, and add bounded USB input diagnostics. Keep yellow/blue buttons and visible Tools/Home navigation; remove swipe-to-open across all profiles.
+- Preserve detection, RSSI hunting, family tones and the 100% brightness/volume defaults with no dim/off timers. All 134 pinned reference signature facts retain recognition/radar coverage.
+
 ## 0.7.0 — radar themes, complete labels and recent signals
 
 - Add persistent Green radar, Dragon Ball and Black/gold/red themes with animated sweep and pulsing live dots. Green is the default; all retain the BWM1 logo and RX/count/battery. Rings remain unnumbered and radius uses filtered RSSI.

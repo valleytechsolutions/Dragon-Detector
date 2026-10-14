@@ -68,6 +68,9 @@ static void command(const String& c){
   if(badgeCommand(c) || detectorCommand(c) || audioCommand(c) || uiCommand(c))return;
   if(c=="status"){health();Serial.printf("SESSION %s\n",sessionPath.c_str());}
   else if(c=="selftest")runSelfTests();
+#ifdef BOARD_STOPWATCH
+  else if(c=="touch status"){extern void stopwatchTouchStatus();stopwatchTouchStatus();}
+#endif
   else if(c=="pause")setRadio(false);
   else if(c=="resume")setRadio(true);
   else if(c=="record")audioRecord();
