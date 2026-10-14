@@ -29,3 +29,7 @@ Use the board's suitable speaker connection; a bare board with no speaker connec
 ## StopWatch input diagnostics
 
 On current StopWatch firmware, USB `touch status` reports controller samples and LVGL press counts; `ui status` reports page/action counters. These are read-only diagnostic summaries and do not inject taps. Native 466px touch positions align with the centered display canvas. Navigation uses Tools/Home taps and yellow/blue buttons; swipe-to-open is disabled.
+
+## Clock, motion and timing controls · 0.9
+
+[M5Stack StopWatch official documentation](https://docs.m5stack.com/en/core/StopWatch) identifies the RX8130CE RTC, BMI270 IMU and GPIO 2/1 yellow/blue keys. [Waveshare 1.75C documentation](https://docs.waveshare.com/ESP32-S3-Touch-AMOLED-1.75C) describes the onboard RTC/IMU and programmable BOOT/PWR buttons; the adapter probes PCF85063 (0x51) and QMI8658 on its existing SDA15/SCL14 bus and reads short PWR events from AXP2101. Missing hardware keeps automatic rotation/RTC persistence unavailable. The Spotpear JC3636W518 profile has no supported RTC/IMU and uses touch timing controls, a software clock and manual rotation. [User guide](STOPWATCH-CLOCK-ORIENTATION.md).

@@ -1,8 +1,9 @@
+import {localClockEpoch,setClock,readWearable,setOrientation} from './wearable-transfer.js';
 import {BadgeSerial} from './serial.js';
 import {encodeBadge} from './badge-codec.js';
 import {uploadBadge} from './badge-transfer.js';
 import {readHistory} from './detector-transfer.js';
-import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools} from './firmware-compat.js?v=0.8.0';
+import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasWearableTools} from './firmware-compat.js?v=0.9.0';
 import {readRadarSettings,saveRadarSettings} from './radar-transfer.js';
 import {boardProfiles,connectedProfile,validateManifest} from './board-profiles.js';
 import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan} from './badge-editor.js';
@@ -34,7 +35,7 @@ async function chooseBoard(next) {
     const data = validateManifest(await response.json(),board,mode);
     if(revision !== request)return;
     $('installer').setAttribute('manifest', manifest); releaseReady = true;
-    $('board-status').textContent = `${data.version} · ${mode==='factory'?'Fresh installation replaces saved history and badge files.':'Update preserves history, badges and settings; requires this board’s existing 0.3.x / 0.4.x / 0.5.x / 0.6.x / 0.7.x / 0.8.x layout.'}`;
+    $('board-status').textContent = `${data.version} · ${mode==='factory'?'Fresh installation replaces saved history and badge files.':'Update preserves history, badges and settings; requires this board’s existing 0.3.x / 0.4.x / 0.5.x / 0.6.x / 0.7.x / 0.8.x / 0.9.x layout.'}`;
     $('download').href = `firmware/${board}/SHA256SUMS.txt`; $('download').textContent='Firmware file checksums'; $('download').hidden=false;
     $('install-message').textContent='Confirm your board, then connect its USB port.';
   } catch(error) {
@@ -59,6 +60,7 @@ function setBadgeProfile(id){
   $('badge-board').value=id;draw();
 }
 function controls(){
+  for(const id of ['show-stopwatch','show-clock','clock-save','clock-sync','orientation-save','orientation-calibrate'])$(id).disabled=busy||!serial||!hasWearableTools(firmwareVersion);
   $('show-activity').disabled=busy||!serial||!hasActivityTools(firmwareVersion);
   $('radar-save').disabled=busy||!serial||!hasRadarTools(firmwareVersion);
   for(const id of ['history-export','show-radar','sync-time','display-save','sound-save','tone-load','tone-save','tone-preview','tone-reset','tone-stop'])$(id).disabled=busy||!serial||!hasDetectorTools(firmwareVersion);
@@ -137,11 +139,12 @@ $('connect').onclick=async()=>{
     $('device-label').textContent=`${size} × ${size} · CONNECTED`;$('disconnect').hidden=false;
     $('studio-status').textContent=`${match.board} is ready. Choose and position your image.`;draw();
     if(hasDetectorTools(firmwareVersion)){
-      await link.write(`time ${Math.floor(Date.now()/1000)}`);await link.wait(s=>s==='TIME_OK');
+      await link.write(`time ${Math.floor(Date.now()/1000)}`);if(await link.wait(s=>s==='TIME_OK'||s==='TIME_ERROR')!=='TIME_OK')throw new Error('Clock sync failed. Check the RTC.');
       await link.write('display status');const config=await link.wait(s=>s.startsWith('DISPLAY_SETTINGS '));
       const values=/brightness=(\d+) output=-?\d+ dim=(\d+) off=(\d+) dim_level=(\d+)/.exec(config);
       if(values)for(const [i,id] of ['display-brightness','display-dim','display-off','display-level'].entries()){const value=values[i+1];if(!Array.from($(id).options).some(o=>o.value===value))$(id).add(new Option(value,value));$(id).value=value;}
       await loadAudio(link);
+      if(hasWearableTools(firmwareVersion))await loadWearable(link);
       if(hasRadarTools(firmwareVersion)){const radar=await readRadarSettings(link);$('radar-theme').value=radar.theme;$('radar-labels').checked=radar.labels;$('radar-recent').checked=radar.recent;}
       $('detector-status').textContent=`${match.board} connected. UTC clock synchronized. History stays on your device until you download it.`;
     }else $('detector-status').textContent='Connected to 0.3.x. Update to the current firmware for history and detector controls.';
@@ -175,7 +178,7 @@ $('history-export').onclick=()=>detectorAction(async link=>{
   const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download=`dragon-detections-${new Date().toISOString().slice(0,10)}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);
   $('detector-status').textContent='History downloaded. Scanning has resumed.';
 });
-$('sync-time').onclick=()=>detectorAction(async link=>{await link.write(`time ${Math.floor(Date.now()/1000)}`);await link.wait(s=>s==='TIME_OK');$('detector-status').textContent='UTC clock synchronized for new history entries.';});
+$('sync-time').onclick=()=>detectorAction(async link=>{await link.write(`time ${Math.floor(Date.now()/1000)}`);if(await link.wait(s=>s==='TIME_OK'||s==='TIME_ERROR')!=='TIME_OK')throw new Error('Clock sync failed. Check the RTC.');$('detector-status').textContent='UTC clock synchronized for new history entries.';});
 $('show-radar').onclick=()=>detectorAction(async link=>{await link.write('screen radar');$('detector-status').textContent='Radar view selected.';});
 $('show-activity').onclick=()=>detectorAction(async link=>{await link.write('screen activity');$('detector-status').textContent='Radio Activity selected on the board: deauthentication and BLE spam evidence.';});
 $('radar-save').onclick=()=>detectorAction(async link=>{await saveRadarSettings(link,{theme:$('radar-theme').value,labels:$('radar-labels').checked,recent:$('radar-recent').checked});$('detector-status').textContent='Radar theme, labels and recent-signal preferences saved on your detector.';});
@@ -199,3 +202,15 @@ $('tone-save').onclick=()=>audioAction(async link=>{const value=editorTone();awa
 $('tone-preview').onclick=()=>audioAction(async link=>{await toneReply(link,`tone preview ${$('tone-family').value} ${editorTone()}`);$('sound-status').textContent='Preview requested on the board speaker at its saved volume.';});
 $('tone-reset').onclick=()=>audioAction(async link=>{await toneReply(link,`tone reset ${$('tone-family').value}`);await loadTone(link);$('sound-status').textContent='Default melody restored.';});
 $('tone-stop').onclick=()=>audioAction(async link=>{await toneReply(link,'tone stop');$('sound-status').textContent='Current sound stopped. Disable automatic alerts to stay silent.';});
+
+async function loadWearable(link){
+  const state=await readWearable(link);$('clock-offset').value=state.offset;
+  if(state.valid)$('clock-local').value=new Date((state.epoch+state.offset*60)*1000).toISOString().slice(0,19);
+  $('orientation-mode').value=state.orientation;$('orientation-mode').querySelector('[value="auto"]').disabled=!state.imu;
+  $('wearable-status').textContent=`${state.rtc?'RTC detected · saved time survives restart':'Software clock · set again after restart'}. ${state.imu?'Motion sensor available.':'No supported motion sensor; use a fixed angle.'}`;
+}
+$('clock-sync').onclick=()=>detectorAction(async link=>{await setClock(link,Math.floor(Date.now()/1000),-new Date().getTimezoneOffset());await loadWearable(link);$('detector-status').textContent='Computer time and current UTC offset saved.';});
+$('clock-save').onclick=()=>detectorAction(async link=>{const offset=Number($('clock-offset').value);await setClock(link,localClockEpoch($('clock-local').value,offset),offset);await loadWearable(link);$('detector-status').textContent='Local clock saved. Stopwatch elapsed time is unchanged.';});
+$('orientation-save').onclick=()=>detectorAction(async link=>{await setOrientation(link,$('orientation-mode').value);await loadWearable(link);$('detector-status').textContent='Orientation preference saved.';});
+$('orientation-calibrate').onclick=()=>detectorAction(async link=>{await link.write('orientation calibrate');const reply=await link.wait(s=>s==='ORIENTATION_OK'||s.startsWith('ORIENTATION_ERROR'));if(reply!=='ORIENTATION_OK')throw new Error('Hold the display upright and still for 1.2 seconds, then try again.');$('detector-status').textContent='Current upright reference saved.';});
+for(const page of ['stopwatch','clock'])$('show-'+page).onclick=()=>detectorAction(async link=>{await link.write('screen '+page);$('detector-status').textContent=page==='clock'?'Clock displayed.':'Stopwatch displayed. Tap Start, then Lap; Home leaves it running.';});

@@ -65,7 +65,7 @@ static void health(){
   if(batteryPercent()>=0)Serial.printf("BATTERY %d%% %s\n",batteryPercent(),batteryCharging()?"charging":"discharging");
 }
 static void command(const String& c){
-  if(badgeCommand(c) || detectorCommand(c) || audioCommand(c) || uiCommand(c))return;
+  if(badgeCommand(c) || wearableCommand(c) || detectorCommand(c) || audioCommand(c) || uiCommand(c))return;
   if(c=="status"){health();Serial.printf("SESSION %s\n",sessionPath.c_str());}
   else if(c=="selftest")runSelfTests();
 #ifdef BOARD_STOPWATCH
@@ -114,12 +114,12 @@ void setup(){
   contacts.data=(Contact*)ps_malloc(MAX_CONTACTS*sizeof(Contact));
   if(!contacts.data){Serial.println("FATAL: contact storage allocation failed");while(true)delay(100);}
   for(size_t i=0;i<MAX_CONTACTS;++i)new(&contacts[i]) Contact{};
-  runSelfTests();boardBegin();uiBegin();
+  runSelfTests();boardBegin();uiBegin();wearableBegin();
   uint32_t at=millis();while(millis()-at<1600){uiLoop();delay(5);}
   storageBegin();badgeInit();audioBegin();detectorBegin();radioBegin();Serial.println("DRAGON READY");health();
 }
 void loop(){
-  boardLoop();radioLoop();storageLoop();detectorLoop();audioLoop();uiLoop();badgeLoop();
+  boardLoop();radioLoop();storageLoop();detectorLoop();audioLoop();uiLoop();wearableLoop();badgeLoop();
   while(Serial.available()){char c=Serial.read();if(c=='\n'){serialLine.trim();if(serialOverflow)Serial.println("COMMAND_ERROR too long");else command(serialLine);serialLine="";serialOverflow=false;}else if(serialLine.length()<600)serialLine+=c;else serialOverflow=true;}
   if(millis()-lastHealth>10000){lastHealth=millis();health();}
   delay(2);

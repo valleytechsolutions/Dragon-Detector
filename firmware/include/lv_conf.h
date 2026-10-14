@@ -18,6 +18,7 @@
 #define LV_FONT_MONTSERRAT_18 1
 #define LV_FONT_MONTSERRAT_20 1
 #define LV_FONT_MONTSERRAT_26 1
+#define LV_FONT_MONTSERRAT_40 1
 #define LV_FONT_DEFAULT &lv_font_montserrat_18
 #else
 #define LV_FONT_MONTSERRAT_12 1
@@ -26,6 +27,7 @@
 #define LV_FONT_MONTSERRAT_16 1
 #define LV_FONT_MONTSERRAT_20 1
 #define LV_FONT_MONTSERRAT_24 1
+#define LV_FONT_MONTSERRAT_32 1
 #define LV_FONT_DEFAULT &lv_font_montserrat_14
 #endif
 #define LV_USE_LOG 0

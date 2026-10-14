@@ -11,11 +11,14 @@
 #include <TouchDrvCSTXXX.hpp>
 #define XPOWERS_CHIP_AXP2101
 #include <XPowersLib.h>
+#include <SensorQMI8658.hpp>
+#include <time.h>
 
 static esp_lcd_panel_io_handle_t panelIo=nullptr;
 static esp_lcd_panel_handle_t panel=nullptr;
 static TouchDrvCST92xx touch;
 static XPowersPMU power;
+static SensorQMI8658 imu;
 static bool touchReady=false,powerReady=false;
 static volatile bool touchIrq=false;
 static void IRAM_ATTR onTouch(){touchIrq=true;}
@@ -57,7 +60,7 @@ bool batteryCharging(){return powerReady && power.isCharging();}
 void scr_lvgl_init(){
   Wire.begin(IIC_SDA,IIC_SCL);Wire.setClock(400000);
   powerReady=power.begin(Wire,AXP2101_SLAVE_ADDRESS,IIC_SDA,IIC_SCL);
-  if(powerReady){power.disableIRQ(XPOWERS_AXP2101_ALL_IRQ);power.clearIrqStatus();power.enableBattDetection();power.enableBattVoltageMeasure();power.enableVbusVoltageMeasure();}
+  if(powerReady){power.disableIRQ(XPOWERS_AXP2101_ALL_IRQ);power.clearIrqStatus();power.enableIRQ(XPOWERS_AXP2101_PKEY_SHORT_IRQ);power.enableBattDetection();power.enableBattVoltageMeasure();power.enableVbusVoltageMeasure();}
   Serial.printf("PMU: %s\n",powerReady?"AXP2101 ready":"AXP2101 not found");
 
   spi_bus_config_t bus{};bus.sclk_io_num=LCD_SCLK;bus.data0_io_num=LCD_SDIO0;bus.data1_io_num=LCD_SDIO1;
@@ -93,4 +96,43 @@ void scr_lvgl_init(){
   lv_indev_drv_init(&indev_drv);
   indev_drv.type=LV_INDEV_TYPE_POINTER;indev_drv.read_cb=touchRead;
   lv_indev_drv_register(&indev_drv);
+}
+
+void boardBegin(){pinMode(BTN_PIN,INPUT_PULLUP);}
+void boardLoop(){
+  // Debounce BOOT independently of the display refresh cadence.
+  static bool raw=false,stable=false;static uint32_t changed=0,polled=0;
+  uint32_t now=millis();bool down=digitalRead(BTN_PIN)==LOW;
+  if(down!=raw){raw=down;changed=now;}
+  if(raw!=stable&&now-changed>=25){stable=raw;if(stable&&!uiStopwatchKey(true))uiShow("menu");}
+  if(powerReady&&now-polled>=50){polled=now;power.getIrqStatus();bool lap=power.isPekeyShortPressIrq();power.clearIrqStatus();if(lap&&!uiStopwatchKey(false))uiKey(true);}
+}
+// Small checked I2C reads avoid accepting an uninitialized RTC date after a
+// failed bus transaction. PCF85063 time is stored in UTC, 24-hour mode.
+static bool rtcRead(uint8_t reg,uint8_t* data,size_t count){
+  Wire.beginTransmission(0x51);Wire.write(reg);if(Wire.endTransmission(false)!=0)return false;
+  if(Wire.requestFrom(uint8_t(0x51),uint8_t(count))!=count)return false;
+  for(size_t i=0;i<count;++i)data[i]=Wire.read();return true;
+}
+static bool rtcWrite(uint8_t reg,const uint8_t* data,size_t count){Wire.beginTransmission(0x51);Wire.write(reg);Wire.write(data,count);return Wire.endTransmission()==0;}
+void boardSensorsBegin(){
+  uint8_t ctrl=0;rtcAvailable=rtcRead(0,&ctrl,1);
+  imuAvailable=imu.begin(Wire,QMI8658_L_SLAVE_ADDRESS,IIC_SDA,IIC_SCL);
+  if(imuAvailable){imu.configAccelerometer(SensorQMI8658::ACC_RANGE_2G,SensorQMI8658::ACC_ODR_62_5Hz,SensorQMI8658::LPF_MODE_0);imu.enableAccelerometer();}
+}
+bool boardReadAcceleration(float& x,float& y,float& z){return imuAvailable&&imu.getDataReady()&&imu.getAccelerometer(x,y,z);}
+static int decodeBcd(uint8_t v){return (v&15)<=9&&(v>>4)<=9?(v>>4)*10+(v&15):-1;}
+bool boardReadRtc(uint32_t& epoch){
+  uint8_t ctrl=0,b[7]{};if(!rtcAvailable||!rtcRead(0,&ctrl,1)||(ctrl&0x22)||!rtcRead(4,b,7)||(b[0]&0x80))return false;
+  dragon::Calendar d{2000+decodeBcd(b[6]),decodeBcd(b[5]&31),decodeBcd(b[3]&63),decodeBcd(b[2]&63),decodeBcd(b[1]&127),decodeBcd(b[0]&127)};
+  epoch=dragon::dateEpoch(d);return epoch!=0;
+}
+bool boardWriteRtc(uint32_t epoch){
+  if(!rtcAvailable)return false;time_t value=epoch;struct tm t{};gmtime_r(&value,&t);
+  auto bcd=[](int v){return uint8_t((v/10)*16+v%10);};
+  uint8_t ctrl=0;if(!rtcRead(0,&ctrl,1))return false;ctrl=(ctrl&~2)|0x20;
+  if(!rtcWrite(0,&ctrl,1))return false;
+  uint8_t b[]={bcd(t.tm_sec),bcd(t.tm_min),bcd(t.tm_hour),bcd(t.tm_mday),uint8_t(t.tm_wday),bcd(t.tm_mon+1),bcd(t.tm_year%100)};
+  bool written=rtcWrite(4,b,7);ctrl&=~0x20;bool restarted=rtcWrite(0,&ctrl,1);
+  uint32_t readback=0;return written&&restarted&&boardReadRtc(readback)&&readback>=epoch&&readback-epoch<=1;
 }

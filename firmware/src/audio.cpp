@@ -100,7 +100,9 @@ bool audioCommand(const String& c){
  Serial.println("TONE_ERROR command");return true;
 }
 #ifndef BOARD_STOPWATCH
+#ifndef BOARD_AMOLED_175C
 void boardBegin(){}
 void boardLoop(){}
+#endif
 bool alertSound=true,alertVibration=false;
 #endif

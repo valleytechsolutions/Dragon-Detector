@@ -148,7 +148,7 @@ bool detectorCommand(const String& cmd){
   if(cmd=="radio active"||cmd=="radio passive"){setActiveBle(cmd=="radio active");Serial.printf("RADIO_MODE active_ble=%u\n",activeBle);return true;}
   if(cmd=="history export"){bool scanning=radioEnabled;setRadio(false);if(!historyExport())Serial.println("HISTORY_ERROR");setRadio(scanning);return true;}
   if(cmd=="history clear"){historyClear();Serial.printf("HISTORY_COUNT %u\n",unsigned(historyCount));return true;}
-  if(cmd.startsWith("time ")){unsigned long epoch=0;char extra;if(sscanf(cmd.c_str(),"time %lu %c",&epoch,&extra)==1&&epoch>=1700000000ul&&epoch<=4102444800ul){setWallTime(epoch);Serial.println("TIME_OK");}else Serial.println("TIME_ERROR");return true;}
+  if(cmd.startsWith("time ")){unsigned long epoch=0;char extra;if(sscanf(cmd.c_str(),"time %lu %c",&epoch,&extra)==1&&configureClock(epoch))Serial.println("TIME_OK");else Serial.println("TIME_ERROR");return true;}
   if(cmd=="detector status"){Serial.printf("DETECTOR history=%u storage=%s minimum=%u mask=%08lx tracked=%d fox=%u\n",unsigned(historyCount),historyReady?"OK":"MISSING",unsigned(detector.minimum),(unsigned long)detector.families,trackedContact,foxTransmit());return true;}
   if(cmd=="hunt stop"){trackContact(-1);uiShow("radar");Serial.println("HUNT_STOPPED");return true;}
   if(cmd.startsWith("hunt ")){unsigned type=0,channel=0,bytes[6]{};char kind[8],extra;int n=sscanf(cmd.c_str(),"hunt %7s %u %x:%x:%x:%x:%x:%x %u %c",kind,&type,&bytes[0],&bytes[1],&bytes[2],&bytes[3],&bytes[4],&bytes[5],&channel,&extra);

@@ -16,11 +16,11 @@ test('firmware release updates preserve the independently pinned installer depen
 });
 
 test('USB handshake accepts current/legacy boards and gates detector/activity tools',()=>{
-  for(const version of ['0.3.1','0.4.0','0.5.0','0.5.1','0.6.0','0.7.0','0.8.0'])for(const size of [360,466]){
+  for(const version of ['0.3.1','0.4.0','0.5.0','0.5.1','0.6.0','0.7.0','0.8.0','0.9.0'])for(const size of [360,466]){
     assert.deepEqual(parseBadgeInfo(`BADGE_INFO ${version} ${size} READY Test board`),{version,size,board:'Test board'});
     assert.equal(hasDetectorTools(version),!version.startsWith('0.3.'));
-    assert.equal(hasActivityTools(version),/^0\.[678]\./.test(version));
-    assert.equal(hasRadarTools(version),/^0\.[78]\./.test(version));
+    assert.equal(hasActivityTools(version),/^0\.[6789]\./.test(version));
+    assert.equal(hasRadarTools(version),/^0\.[789]\./.test(version));
   }
   for(const line of ['BADGE_INFO 0.5.0 466 NO_STORAGE Board','BADGE_INFO 0.50.0 466 READY Board','BADGE_INFO 0.5.0 240 READY Board','BADGE_INFO 1.0.0 466 READY Board'])assert.equal(parseBadgeInfo(line),null);
   assert.equal(hasDetectorTools('0.50.0'),false);
@@ -127,7 +127,7 @@ test('flasher rejects wrong boards, partitions, remote paths and destructive upd
   if(mode==='factory')parts.push({path:'littlefs.bin',offset:p.filesystemOffset});
   const good={name:`Dragon Detector — ${p.firmwareName} (${mode})`,version:'0.8.0',new_install_prompt_erase:mode==='factory',builds:[{chipFamily:'ESP32-S3',parts}]};
   assert.equal(validateManifest(good,board,mode),good);
-  for(const mutate of [d=>d.name+=' wrong',d=>d.builds[0].chipFamily='ESP32',d=>d.builds[0].parts[3].offset=0,d=>d.builds[0].parts[3].path='https://example.com/firmware.bin',d=>d.builds[0].parts.push(d.builds[0].parts[0]),d=>d.builds[0].parts.pop(),d=>d.new_install_prompt_erase=!d.new_install_prompt_erase,d=>d.version='0.9.0']){
+  for(const mutate of [d=>d.name+=' wrong',d=>d.builds[0].chipFamily='ESP32',d=>d.builds[0].parts[3].offset=0,d=>d.builds[0].parts[3].path='https://example.com/firmware.bin',d=>d.builds[0].parts.push(d.builds[0].parts[0]),d=>d.builds[0].parts.pop(),d=>d.new_install_prompt_erase=!d.new_install_prompt_erase,d=>d.version='0.10.0']){
    const bad=structuredClone(good);mutate(bad);assert.throws(()=>validateManifest(bad,board,mode),/manifest/);
   }
   if(mode==='factory'){const bad=structuredClone(good);bad.builds[0].parts[4].offset=p.filesystemOffset===0x810000?0xc10000:0x810000;assert.throws(()=>validateManifest(bad,board,mode));}

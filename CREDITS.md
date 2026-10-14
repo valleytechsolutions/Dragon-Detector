@@ -46,7 +46,7 @@ Source code and pinned build recipes are provided for the application and linked
 
 ## Historical releases and media
 
-The root previously contained a GPL-3.0 license because the Spotpear multimedia build included **ESP8266Audio**. Those existing `hardware/` source trees and binaries keep their original licenses and notices. [The previous root GPL text is preserved](docs/licenses/LEGACY-GPL-3.0.txt). ESP8266Audio is **not compiled into any current 0.3.x/0.4.x/0.5.x/0.6.x/0.7.x/0.8.x build**. This MIT change applies to the owner's current original code; it is not a claim that retained GPL material became MIT.
+The root previously contained a GPL-3.0 license because the Spotpear multimedia build included **ESP8266Audio**. Those existing `hardware/` source trees and binaries keep their original licenses and notices. [The previous root GPL text is preserved](docs/licenses/LEGACY-GPL-3.0.txt). ESP8266Audio is **not compiled into any current 0.3.x/0.4.x/0.5.x/0.6.x/0.7.x/0.8.x/0.9.x build**. This MIT change applies to the owner's current original code; it is not a claim that retained GPL material became MIT.
 
 Hardware and vendor configuration credits: **Spotpear / Guition**, **Waveshare**, **M5Stack**, **Espressif**. VTS artwork and the [BWM1 radar emblem](media/BWM1-official.png) were supplied by the project owner. The original PNG is retained unchanged; tools/encode_radar_logo.py creates native-size RGB565/alpha display assets. Brand/trademark rights remain with their respective owners. The 0.6 traffic monitors, RSSI time sampling and gap-aware trace are original implementations, informed by the credited protocol and workflow references. Manufacturer photographs remain with their owners and are linked for identification. Promotional artwork is not a hardware photograph. UI/browser screenshots describe their capture method and version. Dragon Ball is visual inspiration; no affiliation, endorsement, or trademark rights are granted by the software license.
 
@@ -55,3 +55,7 @@ The 0.7 classic grid, yellow dots and center marker are original LVGL drawing co
 The Green and Black/gold/red themes, sweep animation, bounded label placement, six-contact radar pages and explicitly aged recent markers are original Dragon Detector implementations. Theme screenshots are captures of its own LVGL renderer; private local identifiers are not published.
 
 The 0.8 Badge Studio transforms, per-board previews, guides, PNG export and manifest validation are original application code. StopWatch touch, display, audio and power handling use the pinned M5Unified/M5GFX drivers credited above; the board adapter supplies its native-coordinate mapping. No additional third-party image editor or image-processing dependency is bundled.
+
+## 0.9 daily tools
+
+Stopwatch/lap arithmetic, calendar validation, stable orientation filtering, rotation buffering and USB clock controls are original MIT application code. RTC/IMU integration uses the already-credited M5Unified BMI270/RX8130 drivers and SensorLib QMI8658 driver. Waveshare PCF85063 register access follows the manufacturer register specification; AXP2101 short-button events use XPowersLib. No new third-party library is added. Hardware sources are listed in [HARDWARE.md](docs/HARDWARE.md).

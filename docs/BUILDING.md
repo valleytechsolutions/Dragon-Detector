@@ -15,7 +15,7 @@ The pinned pioarduino platform provides Arduino ESP32 and ESP-IDF. Each board re
 ## Tests
 
 ```
-node --test tests/web.test.js
+node --test tests/web.test.js tests/wearable-web.test.js
 python tools/test_core.py --cxx g++
 python tools/test_core.py --cxx g++ --sanitize
 ```

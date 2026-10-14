@@ -1,5 +1,13 @@
 # Changes
 
+## 0.9.0 — Stopwatch, clock and steady orientation
+
+- Add a monotonic stopwatch with start/pause, guarded reset, 50 recent split/total laps and background timing. Map M5Stack yellow/blue and Waveshare BOOT/short PWR; provide touch controls on every board.
+- Add hardware RTC read/write with validation and readback, local date/time editing, fixed UTC offsets and USB clock configuration. Preserve UTC detection history and keep timing independent of wall-clock changes.
+- Add filtered automatic rotation with a 1.2-second stable hold, flat/diagonal/motion rejection, touch suppression and cooldown. Save fixed angles, current-orientation lock and upright calibration. Fresh installs remain upright/locked.
+- Use bounded display-tile rotation buffers and matching touch transforms; add native model tests and web clock/rotation protocol tests.
+- Update the flasher, daily-tools documentation and hardware attribution.
+
 
 ## 0.8.0 · StopWatch and Badge Studio
 

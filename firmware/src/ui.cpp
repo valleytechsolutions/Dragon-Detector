@@ -20,6 +20,7 @@ extern const lv_img_dsc_t radar_logo;
 #define F16 (&lv_font_montserrat_20)
 #define F20 (&lv_font_montserrat_26)
 #define FCALLOUT (&lv_font_montserrat_14)
+#define FTIMER (&lv_font_montserrat_40)
 #else
 #define F12 (&lv_font_montserrat_12)
 #define F14 (&lv_font_montserrat_14)
@@ -27,9 +28,10 @@ extern const lv_img_dsc_t radar_logo;
 #define F20 (&lv_font_montserrat_20)
 // Two lines must fit the 26px inner height of a 360px-panel callout.
 #define FCALLOUT (&lv_font_montserrat_10)
+#define FTIMER (&lv_font_montserrat_32)
 #endif
 static const int CENTER=SCREEN_RES/2;
-enum Page {Boot,Radar,Menu,Devices,Details,Alerts,Channels,Files,Audio,Settings,About,Badge,Hunt,Detectors,History,HistoryDetail,Rules,Controls,Display,Diagnostics,Activity,RadarStyle};
+enum Page {Boot,Radar,Menu,Devices,Details,Alerts,Channels,Files,Audio,Settings,About,Badge,Hunt,Detectors,History,HistoryDetail,Rules,Controls,Display,Diagnostics,Activity,RadarStyle,Stopwatch,Laps,Clock,ClockEdit,Orientation};
 static Page page=Boot,pending=Boot;
 static lv_obj_t *root,*body,*statusLabel,*audioLabel,*audioMeter,*radar,*micBadge;
 static int menuTab=0,filter=0,selected=-1,filePage=0,brightness=100,historyPage=0;
@@ -66,6 +68,11 @@ static uint32_t inputActions=0;
 static int lastInputAction=-1;
 static int outputBrightness=-1;
 static Preferences settings;
+static lv_obj_t *timerValue=nullptr,*timerState=nullptr,*timerLap=nullptr,*timerStartButton=nullptr,*timerSecondary=nullptr,*clockValue=nullptr,*clockDate=nullptr,*editValue=nullptr,*editPreview=nullptr,*editField=nullptr;
+static dragon::Calendar editDate;
+static int editIndex=0,editOffset=0;
+static lv_obj_t* resetBox=nullptr;
+static const char* dateFields[]={"YEAR","MONTH","DAY","HOUR","MINUTE","SECOND","UTC OFFSET"};
 static String directory="/";
 struct FileRow {String path;bool dir;uint32_t size;};static FileRow files[96];static int fileCount=0;static bool filesTruncated=false;
 struct Dot {int x,y,index;dragon::DeviceKey key;int labelSlot=-1;};static Dot dots[MAX_CONTACTS];static int dotCount=0;
@@ -82,6 +89,7 @@ static lv_obj_t* button(lv_obj_t* parent,const char* text,int x,int y,int w,int 
 }
 static void dismissNotice(){if(notice){lv_obj_del(notice);notice=nullptr;}}
 void uiNotify(const char* text,const char* detail,const dragon::DeviceKey* key,bool watched){
+  if(page==Stopwatch||page==ClockEdit)return; // Timing/edit controls stay usable; audio/history continue.
   if(notice && (noticeWatch||!watched))return;
   dismissNotice();noticeAt=millis();noticeWatch=watched;noticeHasKey=key!=nullptr;if(key)noticeKey=*key;
   if(detector.wakeAlert)lastInteraction=millis();
@@ -105,6 +113,33 @@ static lv_obj_t* scrollBody(int y=91,int h=211){
 static void row(lv_obj_t* parent,const char* top,const char* bottom,int index,int id,uint32_t c=0xd9efe0){
   auto* b=button(parent,"",1,index*59,256,54,id);auto* heading=label(b,top,0,0,231,F14,c);auto* detail=label(b,bottom,0,22,231,F12,0x88a995);
   lv_label_set_long_mode(heading,LV_LABEL_LONG_DOT);lv_obj_set_height(heading,S(19));lv_label_set_long_mode(detail,LV_LABEL_LONG_DOT);lv_obj_set_height(detail,S(17));
+}
+static void centered(lv_obj_t* o){lv_obj_set_style_text_align(o,LV_TEXT_ALIGN_CENTER,0);}
+static void durationText(char* out,size_t length,uint64_t us){
+  uint64_t cs=us/10000;unsigned h=cs/360000;
+  if(h)snprintf(out,length,"%u:%02u:%02u.%02u",h,unsigned(cs/6000%60),unsigned(cs/100%60),unsigned(cs%100));
+  else snprintf(out,length,"%02u:%02u.%02u",unsigned(cs/6000),unsigned(cs/100%60),unsigned(cs%100));
+}
+static void updateTimer(){
+  if(!timerValue)return;char text[48],lap[90],split[40];durationText(text,sizeof(text),stopwatch.elapsed(stopwatchNow()));lv_label_set_text(timerValue,text);
+  lv_obj_set_style_text_font(timerValue,stopwatch.elapsed(stopwatchNow())>=360000000000ull?F20:FTIMER,0);
+  lv_label_set_text(timerState,stopwatch.running?"RUNNING  /  RADIO LISTENING":"PAUSED  /  READY");
+  lv_label_set_text(lv_obj_get_child(timerStartButton,0),stopwatch.running?"PAUSE":"START");
+  lv_label_set_text(lv_obj_get_child(timerSecondary,0),stopwatch.running?"LAP":"RESET");
+  if(auto* l=stopwatch.newest()){durationText(split,sizeof(split),l->split);snprintf(lap,sizeof(lap),"LAP %lu   %s",l->number,split);}else strcpy(lap,"No laps yet");lv_label_set_text(timerLap,lap);
+}
+static void resetStopwatch(){
+  if(stopwatch.running||!stopwatch.elapsed(stopwatchNow())||resetBox)return;
+  static const char* choices[]={"Keep","Reset",""};
+  resetBox=lv_msgbox_create(root,"RESET STOPWATCH?","Clear elapsed time and all laps?",choices,true);lv_obj_set_width(resetBox,S(260));lv_obj_center(resetBox);
+  lv_obj_add_event_cb(resetBox,[](lv_event_t* e){auto* box=lv_event_get_current_target(e);if(lv_msgbox_get_active_btn(box)==1)stopwatch.reset();lv_msgbox_close(box);resetBox=nullptr;updateTimer();},LV_EVENT_VALUE_CHANGED,nullptr);
+  lv_obj_add_event_cb(resetBox,[](lv_event_t*){resetBox=nullptr;},LV_EVENT_DELETE,nullptr);
+}
+static void updateDateEditor(){
+  char value[40],preview[110];int values[]={editDate.year,editDate.month,editDate.day,editDate.hour,editDate.minute,editDate.second,editOffset};
+  if(editIndex==6)snprintf(value,sizeof(value),"%c%02d:%02d",editOffset<0?'-':'+',abs(editOffset)/60,abs(editOffset)%60);else snprintf(value,sizeof(value),"%02d",values[editIndex]);
+  snprintf(preview,sizeof(preview),"%04d-%02d-%02d   %02d:%02d:%02d\nUTC%c%02d:%02d",editDate.year,editDate.month,editDate.day,editDate.hour,editDate.minute,editDate.second,editOffset<0?'-':'+',abs(editOffset)/60,abs(editOffset)%60);
+  lv_label_set_text(editValue,value);lv_label_set_text(editField,dateFields[editIndex]);lv_label_set_text(editPreview,preview);
 }
 static void line(lv_draw_ctx_t* ctx,int x1,int y1,int x2,int y2,uint32_t c,int width=1,int opa=255){
   lv_draw_line_dsc_t d;lv_draw_line_dsc_init(&d);d.color=color(c);d.width=width;d.opa=opa;lv_point_t a{(lv_coord_t)x1,(lv_coord_t)y1},b{(lv_coord_t)x2,(lv_coord_t)y2};lv_draw_line(ctx,&d,&a,&b);
@@ -199,6 +234,7 @@ static void loadFiles(){
   if(dir&&dir.isDirectory()){File f=dir.openNextFile();while(f){if(fileCount>=96){filesTruncated=true;f.close();break;}String name=f.name();String path=directory=="/"?"/"+name:directory+"/"+name;files[fileCount++]={path,f.isDirectory(),uint32_t(f.size())};f.close();f=dir.openNextFile();}}dir.close();xSemaphoreGive(sdMutex);
 }
 static void build(){
+  timerValue=timerState=timerLap=timerStartButton=timerSecondary=clockValue=clockDate=editValue=editPreview=editField=nullptr;
   badgeUnload();page=pending;pageAt=millis();statusLabel=audioLabel=audioMeter=radar=trackingLabel=huntValue=huntMeta=huntGauge=huntGraph=diagnosticsLabel=activityLabel=radarActivity=nullptr;radarPrepared=0;
   radarPrevious=radarNext=radarPageLabel=nullptr;lv_obj_clean(root);lv_obj_set_style_bg_color(root,color(0x071510),0);
   if(page==Badge){lv_obj_set_style_bg_color(root,color(0x000000),0);badgeView(root);
@@ -218,10 +254,10 @@ static void build(){
     for(auto* b:{targets,tools,quiet,radarPrevious,radarNext}){lv_obj_set_style_bg_color(b,color(theme.panel),0);lv_obj_set_style_bg_opa(b,LV_OPA_80,0);lv_obj_set_style_border_color(b,color(theme.ring),0);lv_obj_set_style_border_opa(b,LV_OPA_60,0);}
     for(auto* b:{radarPrevious,radarNext}){lv_obj_set_style_pad_all(b,0,0);lv_obj_add_flag(b,LV_OBJ_FLAG_HIDDEN);}lv_obj_add_flag(radarPageLabel,LV_OBJ_FLAG_HIDDEN);
   }else if(page==Menu){
-    title("DRAGON TOOLS");const char* tabs[]={"RECON","BADGE","SYSTEM"};
+    title("DRAGON TOOLS");const char* tabs[]={"RECON","DAILY","SYSTEM"};
     for(int i=0;i<3;++i){auto* b=button(root,tabs[i],47+i*89,76,86,32,10+i);if(menuTab==i)lv_obj_set_style_bg_color(b,color(0x36582b),0);}
     if(menuTab==0){button(root,"Wi-Fi",57,119,119,49,20);button(root,"Bluetooth",184,119,119,49,21);button(root,"History",57,176,119,49,60);button(root,"Hunt",184,176,119,49,57);button(root,"Detectors",57,233,119,45,61);button(root,"Activity",184,233,119,45,116);}
-    if(menuTab==1){button(root,"Show my badge",59,120,242,48,50);button(root,"USB badge editor",59,178,242,48,51);button(root,LV_SYMBOL_DIRECTORY "  SD files",79,242,202,43,32);}
+    if(menuTab==1){button(root,"Stopwatch",57,119,119,49,130);button(root,"Clock",184,119,119,49,133);button(root,"My badge",57,176,119,49,50);button(root,"Badge editor",184,176,119,49,51);button(root,LV_SYMBOL_DIRECTORY "  SD files",79,242,202,43,32);}
 
     if(menuTab==2){button(root,"Settings",60,126,240,48,40);button(root,"Signatures & limits",60,184,240,48,41);button(root,radioEnabled?"Pause radio":"Resume radio",79,243,202,44,42);}
   }else if(page==Devices){
@@ -313,6 +349,8 @@ static void build(){
     row(body,"Stop current sound","Quiet mode mutes automatic feedback",n++,34);
   }else if(page==Settings){
     title("SETTINGS");body=scrollBody();int n=0;
+    row(body,"Clock & date",rtcAvailable?"Set battery-backed RTC / local time":"Software clock / USB time sync",n++,133);
+    row(body,"Orientation",orientation.automatic?"Stable tilt / automatic":"Locked / choose a fixed angle",n++,135);
     row(body,"Display & timeouts","Brightness, dimming and screen off",n++,71);
     row(body,"Radar theme & labels",radarThemeNames[radarTheme],n++,117);
     row(body,"Audio & hunt tones","Volume, target focus and RTTTL alerts",n++,31);
@@ -334,6 +372,40 @@ static void build(){
     row(body,loggingEnabled&&sdReady?"SD event logging: ON":"SD event logging: OFF",sdReady?sessionPath.c_str():"Requires Spotpear SD card",n++,43);
     row(body,captureEnabled?"PCAP: recording":"PCAP: stopped",sdReady?"Raw 802.11 / 16 MB per capture":"Requires Spotpear SD card",n++,24);
     row(body,"Boot to radar","Clear the saved badge startup choice",n++,55);
+  }else if(page==Stopwatch){
+    dismissNotice();title("STOPWATCH","Elapsed time continues off this page");
+    timerState=label(root,"",50,98,260,F12,0xaad86e);centered(timerState);
+    timerValue=label(root,"00:00.00",33,130,294,FTIMER,0xe8ffac);centered(timerValue);
+    timerLap=label(root,"",50,184,260,F14);centered(timerLap);
+    timerStartButton=button(root,"START",55,220,122,47,131);timerSecondary=button(root,"LAP",184,220,122,47,132);
+    button(root,"LAPS",70,278,70,28,134);button(root,"TOOLS",220,278,70,28,2);updateTimer();
+  }else if(page==Laps){
+    title("LAPS","Latest 50 retained / split + total");body=scrollBody(91,178);
+    char top[80],sub[70],split[40],total[40];
+    for(size_t i=0;i<stopwatch.retained();++i){auto* lap=stopwatch.newest(i);durationText(split,sizeof(split),lap->split);durationText(total,sizeof(total),lap->total);snprintf(top,sizeof(top),"LAP %lu    %s",lap->number,split);snprintf(sub,sizeof(sub),"Total %s",total);row(body,top,sub,i,130);}
+    if(!stopwatch.retained())label(body,"Start the timer, then tap LAP.\nLaps exclude paused time.\nTimer and laps reset at reboot.",8,22,240);
+    button(root,"Back to timer",91,272,178,32,130);
+  }else if(page==Clock){
+    title("CLOCK",rtcAvailable?"Battery-backed RTC / local time":"Software clock / resets at reboot");
+    clockValue=label(root,"--:--:--",35,115,290,FTIMER,0xe8ffac);centered(clockValue);
+    clockDate=label(root,"Set time or sync over USB",45,170,270,F14);centered(clockDate);
+    button(root,"Set date & time",73,232,214,44,136);button(root,"TOOLS",220,287,70,28,2);
+  }else if(page==ClockEdit){
+    dismissNotice();title("SET LOCAL TIME","Changes apply only when you save");
+    editPreview=label(root,"",49,87,262,F12);centered(editPreview);
+    editField=label(root,"",55,136,250,F14,0xaad86e);centered(editField);
+    editValue=label(root,"",95,162,170,FTIMER);centered(editValue);
+    auto* minus=button(root,"-",48,162,42,46,137);auto* plus=button(root,"+",270,162,42,46,138);
+    lv_obj_add_event_cb(minus,action,LV_EVENT_LONG_PRESSED_REPEAT,(void*)137);lv_obj_add_event_cb(plus,action,LV_EVENT_LONG_PRESSED_REPEAT,(void*)138);
+    button(root,"< FIELD",65,221,109,35,139);button(root,"FIELD >",185,221,109,35,140);
+    button(root,"Cancel",73,269,100,33,133);button(root,"Save",185,269,100,33,141);updateDateEditor();
+  }else if(page==Orientation){
+    title("ORIENTATION");body=scrollBody();int n=0;
+    row(body,orientation.automatic?"Auto rotate: ON":"Auto rotate: OFF",imuAvailable?"1.2s stable tilt / ignores touch & motion":"No supported accelerometer found",n++,142);
+    row(body,"Lock current orientation","Keep this angle, including after restart",n++,143);
+    for(int r=0;r<4;++r){char text[50];snprintf(text,sizeof(text),"Lock at %d degrees",r*90);row(body,text,"Clockwise from the native display",n++,144+r);}
+    if(imuAvailable)row(body,"Set upright reference","Hold upright and still for 1.2s, then tap",n++,148);
+    row(body,"How auto rotation works","Flat / diagonal / moving: keep current angle",n++,149);
   }else if(page==RadarStyle){
     title("RADAR STYLE");body=scrollBody();int n=0;
     for(int i=0;i<3;++i){String name=String(radarTheme==i?LV_SYMBOL_OK "  ":"")+radarThemeNames[i];row(body,name.c_str(),i==0?"Emerald grid / yellow signals":i==1?"Green phosphor / rings and live sweep":"Dark field / gold targets / red sweep",n++,118+i);}
@@ -369,6 +441,25 @@ static void action(lv_event_t* e){
   if(id>=5000&&id<5000+int(RULE_LIMIT)){controlKey=ruleKeys[id-5000];controlChannel=0;go(Controls);return;}
   if(id>=201 && id<=211){trackedContact=-1;channelLock=id-200;setRadio(true);go(Channels);page=Boot;return;}
   switch(id){
+    case 130:go(Stopwatch);break;
+    case 131:if(!resetBox){stopwatch.toggle(stopwatchNow());updateTimer();}break;
+    case 132:if(!resetBox){if(stopwatch.running)stopwatch.lap(stopwatchNow());else resetStopwatch();updateTimer();}break;
+    case 133:go(Clock);break;
+    case 134:go(Laps);break;
+    case 135:go(Orientation);break;
+    case 136:clockLocal(editDate);editOffset=clockOffsetMinutes;editIndex=0;go(ClockEdit);break;
+    case 137:case 138:{
+      int delta=id==138?1:-1;int* fields[]={&editDate.year,&editDate.month,&editDate.day,&editDate.hour,&editDate.minute,&editDate.second,&editOffset};
+      int low[]={2000,1,1,0,0,0,-720},high[]={2099,12,dragon::monthDays(editDate.year,editDate.month),23,59,59,840};
+      int& value=*fields[editIndex];value+=delta*(editIndex==6?15:1);if(value>high[editIndex])value=low[editIndex];if(value<low[editIndex])value=high[editIndex];editDate.day=std::min(editDate.day,dragon::monthDays(editDate.year,editDate.month));updateDateEditor();break;
+    }
+    case 139:case 140:editIndex=(editIndex+(id==140?1:6))%7;updateDateEditor();break;
+    case 141:{int64_t epoch=int64_t(dragon::dateEpoch(editDate))-editOffset*60;if(dragon::validEpoch(epoch)&&configureClock(epoch)){configureClockOffset(editOffset);go(Clock);}else {lv_label_set_text(editPreview,"Could not save time.\nCheck date / RTC connection.");}break;}
+    case 142:if(!configureOrientation(orientation.automatic?int(((4-orientation.rotation)&3)*90):-1))uiNotify("AUTO UNAVAILABLE","No supported motion sensor or rotation buffer.",nullptr,false);else{go(Orientation);page=Boot;}break;
+    case 143:configureOrientation(((4-orientation.rotation)&3)*90);go(Orientation);page=Boot;break;
+    case 144:case 145:case 146:case 147:configureOrientation((id-144)*90);go(Orientation);page=Boot;break;
+    case 148:uiNotify(calibrateOrientation()?"REFERENCE SAVED":"HOLD STILL","Hold the display upright (not flat) for 1.2 seconds before setting its upright reference.",nullptr,false);break;
+    case 149:uiNotify("STEADY ROTATION","Auto waits 1.2s at a clear angle, ignores motion, flat positions and touch, and waits between turns. Fixed angles are saved.",nullptr,false);break;
     case 1:go(Radar);break;case 2:go(Menu);break;
     case 10:case 11:case 12:menuTab=id-10;go(Menu);page=Boot;break;
     case 20:filter=1;devicePage=0;go(Devices);break;case 21:filter=2;devicePage=0;go(Devices);break;case 22:go(Alerts);break;case 23:go(Channels);break;
@@ -442,6 +533,7 @@ static void action(lv_event_t* e){
   }
 }
 bool uiTouch(bool pressed,int,int){
+  orientationTouch(pressed);
   static bool consumeWake=false;
   if(pressed && outputBrightness==0)consumeWake=true;
   if(pressed)lastInteraction=millis();
@@ -450,6 +542,7 @@ bool uiTouch(bool pressed,int,int){
   return true;
 }
 void uiShow(const String& name){
+  if(name=="stopwatch"){go(Stopwatch);return;}if(name=="clock"){go(Clock);return;}if(name=="orientation"){go(Orientation);return;}if(name=="laps"){go(Laps);return;}
   if(name=="radar-style"){go(RadarStyle);return;}
   lastInteraction=millis();
   if(name=="activity"){go(Activity);return;}
@@ -478,11 +571,9 @@ void uiLoop(){
   if(notice&&!noticeWatch&&millis()-noticeAt>=10000)dismissNotice();
   if(page==Boot && pending==Boot && millis()-pageAt>2200)pending=Radar;
   if(page!=pending)build();
-  if(millis()-lastUpdate>100){lastUpdate=millis();if(micBadge){if(audioStatus().mode==AudioMode::Recording)lv_obj_clear_flag(micBadge,LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(micBadge,LV_OBJ_FLAG_HIDDEN);}
-#ifdef BOARD_AMOLED_175C
-    // BOOT is the hardware fallback for navigation: radar <-> tools.
-    static bool buttonWas=false;bool buttonDown=digitalRead(BTN_PIN)==LOW;if(buttonDown && !buttonWas && page!=Boot){lastInteraction=millis();go(page==Radar?Menu:Radar);}buttonWas=buttonDown;
-#endif
+  if(millis()-lastUpdate>(page==Stopwatch?50:100)){lastUpdate=millis();if(micBadge){if(audioStatus().mode==AudioMode::Recording)lv_obj_clear_flag(micBadge,LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(micBadge,LV_OBJ_FLAG_HIDDEN);}
+    if(page==Stopwatch)updateTimer();
+    if(page==Clock&&clockValue){dragon::Calendar d;clockLocal(d);char value[40],date[100];snprintf(value,sizeof(value),"%02d:%02d:%02d",d.hour,d.minute,d.second);snprintf(date,sizeof(date),"%04d-%02d-%02d\nUTC%c%02d:%02d",d.year,d.month,d.day,clockOffsetMinutes<0?'-':'+',abs(clockOffsetMinutes)/60,abs(clockOffsetMinutes)%60);lv_label_set_text(clockValue,wallTime()?value:"--:--:--");lv_label_set_text(clockDate,wallTime()?date:"Set time or sync over USB");}
     if(page==Radar && radar){
       bool deauth=detector.enabled(Family::Deauth)&&trafficStatus.disconnectActive(millis()),spam=detector.enabled(Family::BleSpam)&&trafficStatus.bleActive(millis());
       lv_label_set_text(radarActivity,deauth&&spam?"DEAUTH + BLE BURST  >":deauth?"DEAUTH ACTIVITY  >":spam?"BLE SPAM CANDIDATE  >":"");
@@ -516,6 +607,12 @@ void uiLoop(){
 }
 
 void uiKey(bool home){lastInteraction=millis();go(home?Radar:page==Menu?Badge:Menu);}
+bool uiStopwatchKey(bool start){
+  if(page!=Stopwatch||pending!=Stopwatch)return false;lastInteraction=millis();
+  if(resetBox)return true;
+  if(start)stopwatch.toggle(stopwatchNow());else if(stopwatch.running)stopwatch.lap(stopwatchNow());else resetStopwatch();
+  updateTimer();return true;
+}
 bool uiCommand(const String& cmd){
   if(cmd=="ui status"){Serial.printf("UI_STATUS page=%u actions=%lu last_action=%d\n",unsigned(page),inputActions,lastInputAction);return true;}
   if(cmd=="radar status"){Serial.printf("RADAR_SETTINGS theme=%u labels=%u recent=%u page=%u pages=%u plotted=%u\n",radarTheme,radarLabels,radarRecent,radarPage+1,radarLabels?dragon::radarPages(radarCount):1,dotCount);return true;}

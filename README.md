@@ -6,14 +6,14 @@
 
 **[Open the web flasher & detector tools](https://valleytechsolutions.github.io/Dragon-Detector/)** · [Install guide](docs/FLASHING.md) · [Controls](docs/USER-GUIDE.md) · [Detection evidence](docs/DETECTION.md) · [Credits](CREDITS.md)
 
-Version **0.8.0** is an experimental development release. See [what has actually been tested](docs/VALIDATION.md) before installing. The flasher requires desktop Chrome/Edge, HTTPS, a USB data cable, and the exact board selection; it stays disabled if matching release files are unavailable.
+Version **0.9.0** is an experimental development release. See [what has actually been tested](docs/VALIDATION.md) before installing. The flasher requires desktop Chrome/Edge, HTTPS, a USB data cable, and the exact board selection; it stays disabled if matching release files are unavailable.
 
 ## Choose the exact board
 
 | Board | Display | Controls | Build |
 |---|---|---|---|
 | **Spotpear / Guition JC3636W518** | 360×360 round LCD | Touch | `spotpear` |
-| **Waveshare ESP32-S3-Touch-AMOLED-1.75C** | 466×466 round AMOLED | Touch + BOOT key | `waveshare` |
+| **Waveshare ESP32-S3-Touch-AMOLED-1.75C** | 466×466 round AMOLED | Touch + BOOT / short PWR | `waveshare` |
 | **M5Stack StopWatch C152** | 466×466 round AMOLED | Touch + yellow/blue keys, haptics | `stopwatch` |
 
 The Waveshare **C variant** has different reset wiring from the non-C 1.75. Firmware is not interchangeable just because a board contains an ESP32-S3. [Board details and manufacturer links](docs/HARDWARE.md).
@@ -45,6 +45,16 @@ Photographs are manufacturer-hosted identification images, not pictures of this 
 
 **A detected signature does not prove malicious intent, ownership, recording state or a particular product model.** AirTag/Find My family matches may be another compatible accessory; Biscuit Pro and Ultra are not reliably distinguishable from their shared advertisements. Radar radius reflects filtered signal strength, not measured distance. Angle is decorative, not direction. These radios cannot detect silent devices, Bluetooth Classic, or 5/6 GHz Wi-Fi.
 
+## Stopwatch, clock and orientation
+
+**Tools → Daily** now includes a real start/pause/lap stopwatch and a clock. M5Stack yellow/blue and Waveshare BOOT/short PWR operate timing controls; every board also has touch buttons. The latest 50 laps remain available while detection keeps running. Settings provides RTC date/time and local UTC offset, stable-tilt automatic rotation on supported IMUs, and saved orientation locks on all three boards. [Controls, behavior and hardware limits](docs/STOPWATCH-CLOCK-ORIENTATION.md).
+
+| Stopwatch · 0.9 | Clock · 0.9 |
+|---|---|
+| ![Stopwatch with elapsed time and touch controls](media/stopwatch-timer-v09.png) | ![Clock with local date and UTC offset](media/stopwatch-clock-v09.png) |
+
+Actual logical renderer captures from the attached M5Stack. Automatic rotation is opt-in and waits for a steady tilt; fresh installations stay locked upright. [Clock and orientation web controls](https://valleytechsolutions.github.io/Dragon-Detector/#detector) are available after connecting firmware 0.9.
+
 ## Choose your radar
 
 | Dragon Ball | Black / gold / red |
@@ -73,7 +83,7 @@ Open **Settings → Audio & hunt tones** on the device, or connect to the [USB a
 
 Choose your board → compose your image → connect and upload. Images initially fit inside the circle with a small margin; choose Fill circle for a full-screen crop. Rotate/mirror, keyboard nudging, alignment guides and downloadable previews work before connecting a device. Guides are never uploaded. [Open Badge Studio](https://valleytechsolutions.github.io/Dragon-Detector/#studio). This is a browser capture, not a panel photograph.
 
-The 0.8 M5Stack adapter uses native touch coordinates and direct Tools/Home taps. Yellow returns to radar; blue opens Tools, or Badge from Tools. Upward-swipe navigation has been removed on all boards; lists still scroll normally.
+The 0.8 M5Stack adapter uses native touch coordinates and direct Tools/Home taps. Outside Stopwatch, yellow returns to radar; blue opens Tools, or Badge from Tools. Upward-swipe navigation has been removed on all boards; lists still scroll normally.
 
 | M5Stack radar · 0.8 | M5Stack saved badge · 0.8 |
 |---|---|
@@ -88,13 +98,13 @@ Actual 466×466 renderer captures from the attached StopWatch. The owner confirm
 3. Open **Detector tools** on the same page to sync UTC, export history, or set display timers. On the device, tap a radar dot → **Hunt signal**, or use Tools → History.
 4. Set detector families and the audible-alert threshold in Tools → Detectors. Weak clues remain visible when the alert threshold is raised. A target’s Controls page offers watch, ignore and snooze. Badge Studio is still available separately.
 
-Use **Update** only for an existing 0.3.x, 0.4.x, 0.5.x, 0.6.x, 0.7.x or 0.8.x installation on the same board. Split update images preserve NVS and the badge filesystem. A merged factory BIN writes at **0x0** and resets stored settings/files. [Full recovery and manual flashing instructions](docs/FLASHING.md).
+Use **Update** only for an existing 0.3.x, 0.4.x, 0.5.x, 0.6.x, 0.7.x, 0.8.x or 0.9.x installation on the same board. Split update images preserve NVS and the badge filesystem. A merged factory BIN writes at **0x0** and resets stored settings/files. [Full recovery and manual flashing instructions](docs/FLASHING.md).
 
 ## Repository map
 
 | Path | Purpose |
 |---|---|
-| [firmware](firmware) | Current 0.8.x shared application and board adapters |
+| [firmware](firmware) | Current 0.9.x shared application and board adapters |
 | [platformio.ini](platformio.ini) | Pinned board profiles and build dependencies |
 | [web](web) | GitHub Pages flasher, USB detector tools and Badge Studio |
 | [tools](tools) | Build, package and validate releases |

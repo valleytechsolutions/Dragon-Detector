@@ -1,4 +1,4 @@
-# Daily detection and hunting · 0.8.0
+# Daily detection and hunting · 0.9.0
 
 The radar starts at **100% brightness with no automatic dimming or screen-off timeout**. It listens passively on 2.4 GHz Wi-Fi and Bluetooth LE. The optional training fox transmitter is off at every boot.
 
@@ -120,3 +120,7 @@ USB commands: `tone settings`, `tone config <enabled 0|1> <volume 0..100> <hunt 
 **Settings → Radio health** shows received Wi-Fi/BLE counts, queue drops/occupancy, worst processing time, queue lag, contact evictions and available memory. Counters reset at boot. Increasing drops/lag indicates reception pressure; a paused radio or a dedicated hunt also reduces coverage. There are 384 live contact slots shared across the radios; history remains 512 address/radio/family records.
 
 Additional USB commands: `radio active`, `radio passive`, `screen targets`, `screen health`. `status` includes `RADIO_STATS`. They use the same settings and screens as the device controls.
+
+## Daily timing and orientation
+
+Tools → Daily → Stopwatch provides touch Start/Pause, Lap/Reset, and a lap list; hardware keys work while that page is open. Tools → Daily → Clock and Settings → Clock & date configure the local clock. Settings → Orientation offers steady automatic rotation or saved fixed angles. [Full stopwatch, RTC and orientation guide](STOPWATCH-CLOCK-ORIENTATION.md).

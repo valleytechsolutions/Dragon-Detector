@@ -1,6 +1,7 @@
 #include "app.h"
 #include <M5Unified.h>
 #include <lvgl.h>
+#include <time.h>
 
 extern bool uiTouch(bool,int,int);
 static lv_disp_draw_buf_t drawBuffer;
@@ -57,8 +58,8 @@ void boardLoop(){
   M5.update();
   auto detail=M5.Touch.getDetail();const bool touching=M5.Touch.getCount()&&detail.isPressed();static bool was=false;
   if(touching){++touchSamples;lastTouchX=detail.x;lastTouchY=detail.y;auto raw=M5.Touch.getTouchPointRaw();lastRawX=raw.x;lastRawY=raw.y;if(!was)++touchPresses;}was=touching;
-  if(M5.BtnA.wasPressed()){Serial.println("KEY A radar");uiKey(true);}
-  if(M5.BtnB.wasClicked()){Serial.println("KEY B navigation");uiKey(false);}
+  if(M5.BtnA.wasPressed()){if(!uiStopwatchKey(true))uiKey(true);}
+  if(M5.BtnB.wasPressed()){if(!uiStopwatchKey(false))uiKey(false);}
   if(vibrationUntil && int32_t(millis()-vibrationUntil)>=0){M5.Power.setVibration(0);vibrationUntil=0;}
   if(alertTotal!=lastAlert){lastAlert=alertTotal;if(!detector.quiet && millis()-lastFeedback>10000){lastFeedback=millis();
     if(alertVibration){M5.Power.setVibration(100);vibrationUntil=millis()+80;}
@@ -67,3 +68,19 @@ void boardLoop(){
 
 int batteryPercent(){static uint32_t at=0;static int value=-1;if(!at || millis()-at>5000){at=millis();value=M5.Power.getBatteryLevel();}return value;}
 bool batteryCharging(){return M5.Power.isCharging();}
+
+void boardSensorsBegin(){rtcAvailable=M5.Rtc.isEnabled();imuAvailable=M5.Imu.isEnabled();}
+bool boardReadAcceleration(float& x,float& y,float& z){return imuAvailable&&M5.Imu.getAccel(&x,&y,&z);}
+bool boardReadRtc(uint32_t& epoch){
+  if(!rtcAvailable||M5.Rtc.getVoltLow())return false;
+  m5::rtc_datetime_t d;if(!M5.Rtc.getDateTime(&d))return false;
+  dragon::Calendar date{d.date.year,d.date.month,d.date.date,d.time.hours,d.time.minutes,d.time.seconds};
+  epoch=dragon::dateEpoch(date);return epoch!=0;
+}
+bool boardWriteRtc(uint32_t epoch){
+  time_t value=epoch;struct tm t{};gmtime_r(&value,&t);m5::rtc_datetime_t d(t);
+  if(!rtcAvailable||!M5.Rtc.getRtcInstancePtr()->setDateTime(&d.date,&d.time))return false;
+  // Clear the latched low-voltage indication after an explicit time setting.
+  if(!M5.In_I2C.bitOff(0x32,0x1D,0x80,400000))return false;
+  uint32_t readback=0;return boardReadRtc(readback)&&readback>=epoch&&readback-epoch<=1;
+}

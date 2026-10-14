@@ -12,6 +12,6 @@ export function validateManifest(data,board,mode){
   const expected=[['bootloader.bin',0],['partitions.bin',0x8000],['boot_app0.bin',0xe000],['firmware.bin',0x10000]];
   if(mode==='factory')expected.push(['littlefs.bin',profile.filesystemOffset]);
   const build=data?.builds?.[0];
-  if(data?.name!==`Dragon Detector — ${profile.firmwareName} (${mode})`||!/^0\.[3-8]\.\d+$/.test(data.version)||data.new_install_prompt_erase!==(mode==='factory')||data.builds?.length!==1||build?.chipFamily!=='ESP32-S3'||build.parts?.length!==expected.length||expected.some(([path,offset],i)=>build.parts[i]?.path!==path||build.parts[i]?.offset!==offset))throw new Error('Firmware manifest does not match this exact board and installation type.');
+  if(data?.name!==`Dragon Detector — ${profile.firmwareName} (${mode})`||!/^0\.[3-9]\.\d+$/.test(data.version)||data.new_install_prompt_erase!==(mode==='factory')||data.builds?.length!==1||build?.chipFamily!=='ESP32-S3'||build.parts?.length!==expected.length||expected.some(([path,offset],i)=>build.parts[i]?.path!==path||build.parts[i]?.offset!==offset))throw new Error('Firmware manifest does not match this exact board and installation type.');
   return data;
 }
