@@ -21,6 +21,14 @@ Profile* profile=nullptr;fs::LittleFSFS recon;
 char message[120]="Select an owned BLE peripheral to inspect",selectedName[48]{};
 uint8_t selectedMac[6]{},selectedType=0;
 NimBLEClient* client=nullptr;
+std::atomic<int> disconnectReason{0};std::atomic<bool> pairingRequested{false};
+class ClientCallbacks:public NimBLEClientCallbacks {
+ void onDisconnect(NimBLEClient*,int reason) override{disconnectReason=reason;}
+ // NimBLE's defaults submit 123456 or accept numeric comparison. The lab
+ // has no pairing UI, so never submit those implicit credentials/approvals.
+ void onPassKeyEntry(NimBLEConnInfo&) override{pairingRequested=true;if(client)client->disconnect();}
+ void onConfirmPasskey(NimBLEConnInfo& info,uint32_t) override{pairingRequested=true;NimBLEDevice::injectConfirmPasskey(info,false);if(client)client->disconnect();}
+} clientCallbacks;
 NimBLERemoteCharacteristic* remote[MaxAttributes]{};
 NimBLECharacteristic* local[MaxAttributes]{};
 StaticSemaphore_t readControl;SemaphoreHandle_t readDone=nullptr;
@@ -67,6 +75,7 @@ void discover(){
  init(*profile,selectedName);memcpy(profile->mac,selectedMac,6);profile->addressType=selectedType;
  for(unsigned i=0;i<CacheCount;++i){auto& a=advertisements[i];if(a.used&&a.type==selectedType&&!memcmp(a.mac,selectedMac,6)){profile->advertisementLength=a.length;profile->scanBoundary=a.boundary;memcpy(profile->advertisement,a.data,a.length);break;}}
  char mac[18];macText(selectedMac,mac);client=NimBLEDevice::createClient();if(!client){say("Cannot allocate BLE client");stopWorker();return;}rebind=true;
+ disconnectReason=0;pairingRequested=false;client->setClientCallbacks(&clientCallbacks,false);
  client->setConnectTimeout(7000);client->setConnectionParams(24,40,0,200);
  // A peer may negotiate MTU first. NimBLE 2.3.6 otherwise reports EALREADY
  // as a failed connection. Discovery and long reads also work at MTU 23.
@@ -92,7 +101,7 @@ void discover(){
    c->deleteDescriptors(); // do not retain overlapping discovery vectors
   }
  }
- if(cancelled||!client->isConnected()){say("Disconnected. Partial snapshot retained; radar resumed.");profile->flags|=1;stopWorker();return;}
+ if(cancelled||!client->isConnected()){if(pairingRequested)say("Pairing requires user input; partial snapshot retained. Radar resumed.");else{snprintf(message,sizeof(message),"Disconnected (%d). Partial snapshot retained; radar resumed.",disconnectReason.load());++revision;}profile->flags|=1;stopWorker();return;}
  snprintf(message,sizeof(message),"Connected / %u attributes%s",profile->count,profile->flags?" / PARTIAL":"");++revision;state=Monitoring;
 }
 uint32_t properties(uint8_t p){return (p&1?NIMBLE_PROPERTY::BROADCAST:0)|(p&2?NIMBLE_PROPERTY::READ:0)|(p&4?NIMBLE_PROPERTY::WRITE_NR:0)|(p&8?NIMBLE_PROPERTY::WRITE:0)|(p&16?NIMBLE_PROPERTY::NOTIFY:0)|(p&32?NIMBLE_PROPERTY::INDICATE:0);}
