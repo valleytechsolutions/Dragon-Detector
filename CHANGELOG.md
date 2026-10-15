@@ -1,5 +1,15 @@
 # Changes
 
+## 0.10.0 — Waveshare modes and radio toolkit
+
+- Eight persistent listening modes with live switching, focused radar/audio and dedicated passive surveys.
+- AP/client inventory, 24 bounded Wi-Fi/BLE transmission tools, freshness checks, explicit review, timeout and Stop/Home cleanup.
+- 2 MB PSRAM capture studio; Radiotap Wi-Fi PCAP and raw BLE advertisement CSV; atomic flash saves and checked USB downloads.
+- Persistent SSID playlists, local-source/CSA controls and on-device capture deletion. Menu allocations use PSRAM; advertised AP channels remain stable during adjacent-channel reception.
+- Modes/toolkit touch screens and desktop controls. Existing GATT lab, badges, settings and storage layout preserved.
+- Native packet/mode/capture tests and web protocol/0.10 compatibility checks. Hardware results and unavailable upstream features are explicit in the guides.
+
+
 ## 0.9.8 — Waveshare BLE Lab and 32 MB storage
 
 - Original MIT BLE Lab: passive advertisement inspector, explicit GATT discovery/read, notification/indication monitoring, local event logs, saved DDG1 profiles, USB import/export and structural/value comparison.

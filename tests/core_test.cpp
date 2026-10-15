@@ -21,7 +21,9 @@ static Match ble(const std::vector<uint8_t>& p){auto f=parseBle(p.data(),p.size(
 #include "wearable_test.h"
 #include "axon_test.h"
 #include "ble_profile_test.h"
+#include "recon_test.h"
 int main(){
+  reconTests();
   bleProfileTests();
   axonTests();
   wearableTests();

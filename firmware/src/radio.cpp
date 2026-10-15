@@ -1,8 +1,10 @@
 #include "app.h"
 #include "ble_lab.h"
+#include "recon.h"
 #include <WiFi.h>
 #include <NimBLEDevice.h>
 #include <esp_wifi.h>
+#include <esp_event.h>
 #include <esp_timer.h>
 #include <atomic>
 #include <nimble/porting/nimble/include/nimble/nimble_port.h>
@@ -13,8 +15,9 @@ bool radioEnabled=true,blePhase=false,candidatesOnly=true;
 bool radarRecent=true;
 int trackedContact=-1;
 bool radarVisible(const Contact& c,uint32_t now){
+ if(!reconAccepts(c.match.family,c.ble))return false;
  uint8_t flags=deviceRules(contactKey(c));
- return candidateVisible(c,now,detector,!candidatesOnly,flags&RuleIgnore,flags&RuleWatch) || (radarRecent&&recentCandidateVisible(c,now,detector,flags&RuleIgnore,flags&RuleWatch));
+ return candidateVisible(c,now,detector,!candidatesOnly||reconAll(),flags&RuleIgnore,flags&RuleWatch) || (radarRecent&&recentCandidateVisible(c,now,detector,flags&RuleIgnore,flags&RuleWatch));
 }
 bool activeBle=false;
 uint32_t radioMaxBatchUs=0,radioMaxLagMs=0,contactEvictions=0,contactCacheHits=0,contactCacheMisses=0;
@@ -54,6 +57,7 @@ static void countAxon(dragon::AxonEvidence clue,bool ble,bool payloadValid,uint3
 
 
 static NimBLEScan* scanner;
+static bool configuredActive=false;
 // NimBLE 2.3.6 stop/start/clearResults can free the advertised device that its
 // host task is still delivering. Serialize scanner mutations on that same host
 // queue, including ordinary radio phase changes and USB transfer pauses.
@@ -69,7 +73,7 @@ static struct {
 static void scanOnHost(ble_npl_event*){
   if(scanRequest.action==ScanAction::Start)scanRequest.ok=scanner->start(scanRequest.duration,false,true);
   else if(scanRequest.action==ScanAction::Stop)scanRequest.ok=scanner->stop();
-  else {scanner->clearResults();scanner->setActiveScan(scanRequest.active);scanner->setMaxResults(0);scanRequest.ok=true;}
+  else {scanner->clearResults();scanner->setActiveScan(scanRequest.active);configuredActive=scanRequest.active;scanner->setMaxResults(0);scanRequest.ok=true;}
   xSemaphoreGive(scanRequest.done);
 }
 // Only the application task submits requests; no BLE callback waits on itself.
@@ -90,7 +94,7 @@ unsigned recentDisconnects(){return disconnects.recent(millis());}
 static bool fox=false;
 bool foxTransmit(){return fox;}
 void setFoxTransmit(bool enabled){
-  if(bleLabOwnsRadio())return;
+  if(bleLabOwnsRadio()||reconOwnsRadio())return;
   if(!scanner)return;
   auto* advertising=NimBLEDevice::getAdvertising();advertising->stop();fox=false;
   if(enabled){
@@ -112,7 +116,7 @@ static void wifiRx(void* buffer,wifi_promiscuous_pkt_type_t type){
   o.original=p->rx_ctrl.sig_len-4;
   // Without PCAP, a data frame only needs its maximum MAC header + LLC for
   // EAPOL and source-address clues. Management bodies remain complete.
-  o.len=std::min<size_t>(o.original,type==WIFI_PKT_DATA&&!captureEnabled?48:sizeof(o.data));
+  o.len=std::min<size_t>(o.original,type==WIFI_PKT_DATA&&!captureEnabled&&!reconRecording()?48:sizeof(o.data));
   o.rssi=p->rx_ctrl.rssi;o.channel=p->rx_ctrl.channel;
   memcpy(o.data,p->payload,o.len);
   enqueueObservation(index,priority);
@@ -120,7 +124,7 @@ static void wifiRx(void* buffer,wifi_promiscuous_pkt_type_t type){
 class BleCallbacks:public NimBLEScanCallbacks {
   void onDiscovered(const NimBLEAdvertisedDevice* d) override {
     // In active mode, don't lose devices which never send a scan response.
-    if(activeBle && d->isScannable())onResult(d);
+    if(configuredActive && d->isScannable())onResult(d);
   }
   void onResult(const NimBLEAdvertisedDevice* d) override {
     auto addr=d->getAddress();uint8_t mac[6];for(int i=0;i<6;++i)mac[i]=addr.getBase()->val[5-i];
@@ -201,6 +205,8 @@ static void checkBleBurst(Contact& participant,const Observation& o,uint8_t grou
 }
 static void process(const Observation& o){
   if(o.kind==0){
+    reconWifi(o.data,o.len,o.original,o.us,o.rssi,o.channel);
+    if(reconOwnsRadio())return;
     ++wifiFrames;if(o.channel<14)++channelFrames[o.channel];
     writePcap(o.data,o.len,o.original,o.us);
     // Header evidence survives an incomplete body, but partial SSID/security
@@ -233,6 +239,8 @@ static void process(const Observation& o){
       }
     }
   }else{
+    reconBle(o.mac,o.addressType,o.rssi,o.data,o.len,o.advLength,o.at);
+    if(reconOwnsRadio())return;
     ++bleFrames;bleLabObserve(o.mac,o.addressType,o.rssi,o.data,o.len,o.advLength,o.at);if(o.len!=o.original){++malformedFrames;return;}
     bool payloadValid=false;auto f=dragon::parseBleObservation(o.data,o.len,o.advLength,o.mac,o.addressType,payloadValid);
     if(!payloadValid)++malformedFrames;if(!f.valid)return;
@@ -251,6 +259,12 @@ void radioBegin(){
   priorityQueue=xQueueCreateStatic(QUEUE_SIZE,1,priorityMemory,&priorityControl);
   freeSlots=xQueueCreateStatic(QUEUE_SIZE,1,freeMemory,&freeControl);
   for(uint8_t i=0;i<QUEUE_SIZE;++i)xQueueSend(freeSlots,&i,0);
+  // STA transmit sessions publish driver events even without joining a network.
+  // The passive NULL interface did not require the default event loop.
+#ifdef BOARD_AMOLED_175C
+  esp_err_t eventResult=esp_event_loop_create_default();
+  if(eventResult!=ESP_OK&&eventResult!=ESP_ERR_INVALID_STATE){radioEnabled=false;addAlert("Wi-Fi event loop failed",esp_err_to_name(eventResult));return;}
+#endif
   wifi_init_config_t cfg=WIFI_INIT_CONFIG_DEFAULT();
   esp_err_t result=esp_wifi_init(&cfg);
   if(result==ESP_OK)result=esp_wifi_set_storage(WIFI_STORAGE_RAM);
@@ -261,19 +275,22 @@ void radioBegin(){
   wifi_promiscuous_filter_t filter{WIFI_PROMIS_FILTER_MASK_MGMT|WIFI_PROMIS_FILTER_MASK_DATA};
   esp_wifi_set_promiscuous_filter(&filter);esp_wifi_set_promiscuous_rx_cb(wifiRx);esp_wifi_set_channel(1,WIFI_SECOND_CHAN_NONE);
   NimBLEDevice::init("");scanner=NimBLEDevice::getScan();scanner->setScanCallbacks(&bleCallbacks,true);
-  scanner->setActiveScan(activeBle);scanner->setInterval(100);scanner->setWindow(100);scanner->setMaxResults(0);
+  configuredActive=activeBle&&reconMode()==dragon::ReconMode::Radar;scanner->setActiveScan(configuredActive);scanner->setInterval(100);scanner->setWindow(100);scanner->setMaxResults(0);
   scanRequest.done=xSemaphoreCreateBinaryStatic(&scanRequest.semaphore);
   ble_npl_event_init(&scanRequest.event,scanOnHost,nullptr);
   setRadio(true);
   Serial.println("RADIO ready: BLE-first 2200ms / Wi-Fi 2200ms; channels 1-11; Axon reserved queue");
 }
 void setRadio(bool enabled){
-  if(bleLabOwnsRadio())return;
+  if(bleLabOwnsRadio()||reconOwnsRadio())return;
   if(!queue || !scanner)return;
   if(!enabled && fox)setFoxTransmit(false);
   radioEnabled=enabled;scanCommand(ScanAction::Stop);esp_wifi_set_promiscuous(false);
+  // A stopped tool must not turn its queued test traffic into radar alerts.
+  uint8_t pendingIndex;while(xQueueReceive(priorityQueue,&pendingIndex,0)==pdTRUE)xQueueSend(freeSlots,&pendingIndex,0);
+  while(xQueueReceive(queue,&pendingIndex,0)==pdTRUE)xQueueSend(freeSlots,&pendingIndex,0);
   uint32_t now=millis();lastHop=lastAccounting=now;
-  bool wifiHunt=trackedContact>=0&&!contacts[trackedContact].ble;
+  bool wifiHunt=(trackedContact>=0&&!contacts[trackedContact].ble)||(trackedContact<0&&reconRadio()==1);
   blePhase=enabled&&!wifiHunt;schedule.begin(now,blePhase,wifiChannel);
   if(blePhase&&!scanCommand(ScanAction::Start,activeBle?1000:dragon::RadioSchedule::BleMs)){
     blePhase=false;schedule.begin(now,false,wifiChannel);addAlert("BLE scan failed","Wi-Fi listening resumed");
@@ -294,6 +311,12 @@ void radioLoop(){
   queueDrops=drops.load();
   uint32_t now=millis(),elapsed=now-lastAccounting;lastAccounting=now;
   if(!radioEnabled || !scanner)return;
+  if(trackedContact<0&&reconRadio()){
+    if(reconRadio()==2){if(!scanner->isScanning())scanCommand(ScanAction::Start,10000);bleListenMs+=elapsed;return;}
+    wifiListenMs+=elapsed;channelDwellMs[wifiChannel]+=elapsed;
+    if(now-lastHop>=dragon::RadioSchedule::HopMs){lastHop=now;uint8_t c=channelLock?channelLock:(wifiChannel%11)+1;if(esp_wifi_set_channel(c,WIFI_SECOND_CHAN_NONE)==ESP_OK)wifiChannel=c;}
+    return;
+  }
   if(trackedContact>=0 && contacts[trackedContact].ble){
     if(!blePhase){esp_wifi_set_promiscuous(false);blePhase=true;scanCommand(ScanAction::Start,activeBle?1000:10000);}
     if(!scanner->isScanning())scanCommand(ScanAction::Start,activeBle?1000:10000);
@@ -316,7 +339,7 @@ void radioLoop(){
 }
 
 void trackContact(int index){
- if(bleLabOwnsRadio())return;
+ if(bleLabOwnsRadio()||reconOwnsRadio())return;
  if(index<0 || index>=int(MAX_CONTACTS) || !contacts[index].used){trackedContact=-1;channelLock=0;setRadio(true);return;}
  trackedContact=index;channelLock=contacts[index].ble?0:contacts[index].channel;setRadio(true);
  if(channelLock && esp_wifi_set_channel(channelLock,WIFI_SECOND_CHAN_NONE)==ESP_OK)wifiChannel=channelLock;
@@ -329,17 +352,18 @@ bool huntDevice(const dragon::DeviceKey& key,uint8_t channel){
 }
 
 void setActiveBle(bool enabled){
-  if(bleLabOwnsRadio())return;
+  if(bleLabOwnsRadio()||reconOwnsRadio())return;
   activeBle=enabled;detectorSave();
   if(!scanner)return;
   bool listening=radioEnabled;setRadio(false);
-  scanCommand(ScanAction::Configure,0,enabled);setRadio(listening);
+  scanCommand(ScanAction::Configure,0,enabled&&reconMode()==dragon::ReconMode::Radar);setRadio(listening);
 }
 
 #ifdef BOARD_AMOLED_175C
+void radioApplyMode(){if(bleLabOwnsRadio()||reconOwnsRadio()||!scanner)return;setRadio(false);scanCommand(ScanAction::Configure,0,reconMode()==dragon::ReconMode::Radar?activeBle:false);setRadio(true);}
 void radioRebindBle(){
   NimBLEDevice::init("");scanner=NimBLEDevice::getScan();scanner->setScanCallbacks(&bleCallbacks,true);
-  scanner->setActiveScan(activeBle);scanner->setInterval(100);scanner->setWindow(100);scanner->setMaxResults(0);
+  configuredActive=activeBle&&reconMode()==dragon::ReconMode::Radar;scanner->setActiveScan(configuredActive);scanner->setInterval(100);scanner->setWindow(100);scanner->setMaxResults(0);
   ble_npl_event_init(&scanRequest.event,scanOnHost,nullptr);
 }
 #endif

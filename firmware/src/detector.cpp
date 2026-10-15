@@ -1,4 +1,5 @@
 #include "app.h"
+#include "recon.h"
 #include <Preferences.h>
 #include <LittleFS.h>
 #include <esp_timer.h>
@@ -147,6 +148,7 @@ bool emitDetection(Contact& c,Family family,Confidence confidence,const char* ev
   // changes are immediate, continuing RSSI/encounter updates at most once/sec.
   if(c.historyFamily!=family || uint32_t(millis()-c.historyAt)>=1000){historyObserve(c,family,confidence,evidence);c.historyAt=millis();c.historyFamily=family;}
   uint8_t flags=deviceRules(contactKey(c));bool watch=flags&RuleWatch;
+  if(!reconAccepts(family,c.ble)&&!watch)return false;
   if(flags&(RuleIgnore|RuleSnooze))return false;
   // Trackers remain visible and logged, but only an explicit watch rule alerts.
   if(dragon::trackerFamily(family)&&!watch)return false;

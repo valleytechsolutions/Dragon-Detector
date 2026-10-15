@@ -1,6 +1,22 @@
-# Validation status · 0.9.8
+# Validation status · 0.10.0
 
 This is an experimental development release. Automated signature checks and basic board checks do not establish field detection accuracy or all-day battery life.
+
+## Waveshare modes and radio toolkit · 0.10.0 · 2026-10-15
+
+- Saved a fresh private 32 MB recovery image before the update. Flashed only the application at `0x10000`, with esptool hash verification. NVS, both filesystems and partition addresses remain unchanged. The 434,320-byte badge retained CRC32 `1e889380` and its startup preference; saved radar/audio/display/orientation preferences and the pre-upgrade GATT profile passed production USB checks. The Uno Q was left untouched.
+- All eight mode transitions and 30 menu/radar transitions passed without reset. All 23 on-device self-tests passed. The menu captures below are CRC-checked logical 466×466 LVGL frames, not photographs or a new physical touch confirmation. The owner stepped away before confirming this release's menus.
+- Wi-Fi Radiotap PCAP and BLE advertisement CSV recordings saved to recon flash and exported byte-for-byte with verified checksums. One run produced 26,029-byte PCAP and 20,126-byte CSV files. The production JavaScript transport also downloaded both formats. A generated test capture was removed without removing other files. Saved SSID list replacement, duplicate suppression and persistence across application flashing/restart passed.
+- A short AP-scoped run on the owner's explicitly selected network accepted three frames, observed one matching EAPOL frame, stopped at its timeout and restored scanning. One-frame authentication/probe sessions and Home cancellation of a named-beacon test also passed without driver errors. This does **not** establish client disconnection, complete handshake capture, password recovery or effectiveness of every attack. Client-specific tools and the remaining experimental formats have construction/bounds tests, not verified peer effects.
+- A separate laptop received seven synthetic Flipper-format BLE advertiser addresses during a five-second run. This verifies advertisement transmission/reception, not an effect on a real Flipper. Broad Apple/Samsung/pairing disruption tests were not performed against surrounding devices.
+- The existing controlled GATT peripheral again yielded all 63 attributes with no partial flag, characteristic/descriptor reads, a successful CCCD subscription and live notifications. Local GATT emulation passed read/write/notify/descriptor checks after radio testing. The real owner's Flipper remains detected on radar; full Flipper GATT capture/emulation remains unverified.
+- The initial transmit test exposed a missing Wi-Fi event loop. STA sessions now initialize it. Adjacent-channel reception also exposed unstable AP channel selection; inventory now prefers DS/HT beacon channel information and passed repeated channel sweeps without channel flapping. Wi-Fi capture's callback flag is atomic. Stale AP/client selections and radio ownership are checked before starting.
+- LVGL menu allocations use PSRAM on Waveshare; the DMA display tile remains internal. The application stack is 12 KB. A fresh post-update passive run had about 54,988 bytes internal heap free, 7,720,804 bytes PSRAM free and 6,448 bytes minimum loop-stack margin, with increasing BLE/Wi-Fi counters and zero receive drops. The capture/menu run also had zero drops and 5,184 bytes minimum stack margin. These are short bench measurements, not crowded-field or battery-life guarantees. Earlier diagnostic runs and screenshot transfers are not latency benchmarks.
+- Native regressions cover all eight mode definitions, all 24 bounded builders, complete beacon IE preservation, AP/client identities, advertised channels, Radiotap layout, 70,000 BLE payload cases and existing detector/tracker/fuzz fixtures. All 134 pinned detection facts and 43 web tests pass. Five board profiles built during development; release CI builds each profile from the published source and validates image offsets/hashes. Physical testing applies only to the connected Waveshare.
+
+| Listening modes | Radio toolkit |
+|---|---|
+| ![Waveshare modes, logical display capture](../media/waveshare-modes-v010.png) | ![Waveshare toolkit, logical display capture](../media/waveshare-toolkit-v010.png) |
 
 ## Waveshare BLE Lab and 32 MB · 0.9.8 · 2026-10-15
 

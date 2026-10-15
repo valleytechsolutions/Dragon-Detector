@@ -1,5 +1,6 @@
 // Dragon BLE Lab. Original MIT implementation; no third-party firmware code.
 #include "ble_lab.h"
+#include "recon.h"
 #ifdef BOARD_AMOLED_175C
 #include "app.h"
 #include <NimBLEDevice.h>
@@ -137,8 +138,8 @@ void worker(void*){for(;;){xSemaphoreTake(jobReady,portMAX_DELAY);Job run=job;
   say(ok?(run==Read?"Value refreshed":"Subscribed; notifications appear in Events"):"Operation rejected / may require pairing or permission");state=Monitoring;
  }else if(run!=None){say("Connection no longer available");stopWorker();}
  }}
-bool start(Job next,unsigned index=0){if(!profile||!workerTask||working()||finished)return false;
- if(next==Discover||next==Clone){if(owned)return false;resumeRadio=radioEnabled;setRadio(false);owned=true;cancelled=false;eventCount=eventHead=0;eventDrops=0;}
+bool start(Job next,unsigned index=0){if(!profile||!workerTask||working()||finished||reconOwnsRadio())return false;
+ if(next==Discover||next==Clone){if(owned)return false;reconStop();resumeRadio=radioEnabled;setRadio(false);owned=true;cancelled=false;eventCount=eventHead=0;eventDrops=0;}
  else if(next!=Stop&&state!=Monitoring)return false;
  job=next;jobIndex=index;state=Working;say(next==Discover?"Connecting...":next==Clone?"Building local GATT peripheral...":next==Stop?"Stopping lab / restoring radar...":"Request pending...");xSemaphoreGive(jobReady);return true;}
 String path(const char* name){return String("/profiles/")+name+".ddg";}
@@ -158,6 +159,8 @@ String hex(const uint8_t* p,size_t n,size_t limit=32){String s;char b[4];for(siz
 const char* stateName(){switch(state.load()){case Working:return "BUSY";case Monitoring:return "CONNECTED";case Emulating:return "EMULATING";case Failed:return "ERROR";default:return "IDLE";}}
 }
 bool bleLabOwnsRadio(){return owned.load();}
+fs::FS* bleLabStorage(){return storeReady&&!owned?&recon:nullptr;}
+bool bleLabStorageSpace(size_t n){return storeReady&&!owned&&recon.totalBytes()-recon.usedBytes()>=n;}
 void bleLabSelect(const uint8_t* mac,uint8_t type,const char* name){if(owned)return;memcpy(selectedMac,mac,6);selectedType=type;strlcpy(selectedName,name,sizeof(selectedName));++revision;}
 void bleLabObserve(const uint8_t* mac,uint8_t type,int rssi,const uint8_t* data,size_t len,size_t boundary,uint32_t at){if(!advertisements||owned||len>MaxAdvertisement||boundary>len)return;
  if(!advertisementValid(data,boundary)||!advertisementValid(data+boundary,len-boundary))return;

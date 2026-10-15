@@ -4,10 +4,19 @@
 #define LV_COLOR_DEPTH 16
 #define LV_COLOR_16_SWAP 1
 #define LV_MEM_CUSTOM 1
+#ifdef BOARD_AMOLED_175C
+// Long recon lists must not consume the internal heap needed by both radios.
+// The board driver allocates its DMA display tile separately.
+#define LV_MEM_CUSTOM_INCLUDE "lv_memory.h"
+#define LV_MEM_CUSTOM_ALLOC dragon_lv_alloc
+#define LV_MEM_CUSTOM_FREE heap_caps_free
+#define LV_MEM_CUSTOM_REALLOC dragon_lv_realloc
+#else
 #define LV_MEM_CUSTOM_INCLUDE <stdlib.h>
 #define LV_MEM_CUSTOM_ALLOC malloc
 #define LV_MEM_CUSTOM_FREE free
 #define LV_MEM_CUSTOM_REALLOC realloc
+#endif
 #define LV_TICK_CUSTOM 1
 #define LV_TICK_CUSTOM_INCLUDE "Arduino.h"
 #define LV_TICK_CUSTOM_SYS_TIME_EXPR (millis())

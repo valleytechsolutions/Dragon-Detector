@@ -41,3 +41,5 @@ A fourth profile, `xiao_round`, supports the 240×240 GC9A01/CHSC6X expansion wi
 ## Waveshare 1.28 Lite
 
 The `waveshare_lite` profile supports the **non-touch ESP32-S3-LCD-1.28**, with 16 MB flash, 2 MB quad-SPI PSRAM and a 240×240 GC9A01 panel. This is a dedicated always-on passive radar with automatic pages, no audio, touch, menus, badge, clock or persistent history. [Wiring, behavior and recovery](WAVESHARE-LITE.md).
+
+Waveshare AMOLED 1.75C also supports the 0.10.0 [mode launcher and radio toolkit](RADIO-TOOLKIT.md). Its 32 MB partition layout is unchanged from 0.9.8. The other profiles do not compile the toolkit or raw-frame adapter.

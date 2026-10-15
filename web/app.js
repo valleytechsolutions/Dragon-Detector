@@ -1,14 +1,15 @@
-import {decodeProfile,exportProfile,exportLog,importProfile,labLines,safeProfileName} from './ble-lab.js?v=0.9.8-2';
-import {localClockEpoch,setClock,readWearable,setOrientation} from './wearable-transfer.js?v=0.9.8';
+import {hasReconTools,reconLines,exportCapture,captureName} from './recon-transfer.js?v=0.10.0';
+import {decodeProfile,exportProfile,exportLog,importProfile,labLines,safeProfileName} from './ble-lab.js?v=0.10.0';
+import {localClockEpoch,setClock,readWearable,setOrientation} from './wearable-transfer.js?v=0.10.0';
 import {deviceQuery} from './device-query.js';
-import {BadgeSerial} from './serial.js?v=0.9.8';
+import {BadgeSerial} from './serial.js?v=0.10.0';
 import {encodeBadge} from './badge-codec.js';
-import {uploadBadge} from './badge-transfer.js?v=0.9.8';
+import {uploadBadge} from './badge-transfer.js?v=0.10.0';
 import {readHistory} from './detector-transfer.js';
-import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasWearableTools} from './firmware-compat.js?v=0.9.8';
-import {readRadarSettings,saveRadarSettings} from './radar-transfer.js?v=0.9.8';
-import {boardProfiles,connectedProfile,validateManifest,supportsBadge} from './board-profiles.js?v=0.9.8';
-import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan,drawBadgeText} from './badge-editor.js?v=0.9.8';
+import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasWearableTools} from './firmware-compat.js?v=0.10.0';
+import {readRadarSettings,saveRadarSettings} from './radar-transfer.js?v=0.10.0';
+import {boardProfiles,connectedProfile,validateManifest,supportsBadge} from './board-profiles.js?v=0.10.0';
+import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan,drawBadgeText} from './badge-editor.js?v=0.10.0';
 const $ = id => document.getElementById(id);
 const models = Object.fromEntries(Object.entries(boardProfiles).map(([id,p])=>[id,p.name]));
 let board = '', releaseReady = false, request = 0;
@@ -62,8 +63,9 @@ function setBadgeProfile(id){
   $('badge-board').value=id;draw();
 }
 function controls(){
-  const labReady=!!serial&&deviceProfile==='waveshare'&&/^0\.9\.(?:[8-9]|\d{2,})$/.test(firmwareVersion);
+  const labReady=!!serial&&deviceProfile==='waveshare'&&/^0\.(?:9\.(?:[8-9]|\d{2,})|10\.\d+)$/.test(firmwareVersion);
   document.querySelectorAll('#ble-lab button').forEach(b=>b.disabled=busy||!labReady);
+  document.querySelectorAll('#radio-tools button').forEach(b=>b.disabled=busy||!serial||deviceProfile!=='waveshare'||!hasReconTools(firmwareVersion));
   const lite=!!boardProfiles[deviceProfile]?.lite;
   for(const id of ['show-stopwatch','show-clock','clock-save','clock-sync','orientation-save'])$(id).disabled=busy||!serial||lite||!hasWearableTools(firmwareVersion);
   $('show-activity').disabled=busy||!serial||lite||!hasActivityTools(firmwareVersion);
@@ -277,3 +279,26 @@ $('lab-clone').onclick=()=>{if(confirm('Start a local GATT peripheral from the w
 $('lab-initialize').onclick=()=>{if(confirm('Initialize the new upper 16 MB BLE Lab partition? Badge, history and settings stay in the lower half. Old data in the upper half will be replaced.'))labAction(l=>labCommand(l,'lab storage initialize'));};
 
 $('lab-log-download').onclick=()=>labAction(async l=>{const csv=await exportLog(l,$('lab-log-file').value==='previous'),url=URL.createObjectURL(new Blob([csv],{type:'text/csv'})),a=document.createElement('a');a.href=url;a.download='dragon-ble-events.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);$('lab-output').textContent='Saved event log downloaded.';});
+
+async function reconAction(fn){if(!serial||busy||deviceProfile!=='waveshare'||!hasReconTools(firmwareVersion))return;busy=true;controls();try{await fn(serial);}catch(e){$('recon-output').textContent=e.message;}finally{busy=false;controls();}}
+async function reconDo(link,command){const rows=await reconLines(link,command);$('recon-output').textContent=rows.join('\n');return rows;}
+for(const [id,command] of Object.entries({'recon-open':'screen modes','recon-status':'tool status','recon-stop':'tool stop','recon-record-wifi':'recon capture wifi','recon-record-ble':'recon capture ble','recon-record-stop':'recon capture stop','recon-save':'recon capture save'}))$(id).onclick=()=>reconAction(async l=>{if(command.startsWith('screen ')){await l.write(command);$('recon-output').textContent='Modes opened on the display.';}else await reconDo(l,command);});
+$('recon-mode-save').onclick=()=>reconAction(l=>reconDo(l,'mode set '+Number($('recon-mode').value)));
+$('recon-tool-list').onclick=()=>reconAction(async l=>{const rows=await reconDo(l,'tool list');$('recon-tool').replaceChildren(new Option('Choose a test',''));for(const row of rows){const m=/^TOOL (\d+) ble=(\d) ap=(\d) client=(\d) (.+)$/.exec(row);if(m)$('recon-tool').add(new Option(m[5],m[1]));}});
+$('recon-ap-list').onclick=()=>reconAction(async l=>{await reconDo(l,'mode set 4');const rows=await reconDo(l,'tool aps');$('recon-ap').replaceChildren(new Option('Choose a fresh network',''));for(const row of rows){const m=/^TOOL_AP (\d+) (\S+) ch=(\d+) rssi=(-?\d+) age=(\d+) security=(\d+) name=(.*)$/.exec(row);if(m&&Number(m[5])<30)$('recon-ap').add(new Option(`${m[7]||'Hidden SSID'} · ${m[2]} · CH ${m[3]} · ${m[4]} dBm`,m[2]+' '+m[3]));}});
+$('recon-ap-select').onclick=()=>reconAction(async l=>{if($('recon-ap').value==='')throw new Error('Choose a network first.');await reconDo(l,'tool ap '+$('recon-ap').value);$('recon-client').replaceChildren(new Option('AP scope / no individual client',''));});
+$('recon-client-list').onclick=()=>reconAction(async l=>{const rows=await reconDo(l,'tool clients');$('recon-client').replaceChildren(new Option('AP scope / no individual client',''));for(const row of rows){const m=/^TOOL_CLIENT (\d+) (\S+) rssi=(-?\d+) age=(\d+)$/.exec(row);if(m&&Number(m[4])<30)$('recon-client').add(new Option(`${m[2]} · ${m[3]} dBm`,m[2]));}});
+$('recon-client-select').onclick=()=>reconAction(l=>reconDo(l,$('recon-client').value===''?'tool client clear':'tool client '+$('recon-client').value));
+$('recon-start').onclick=()=>reconAction(async l=>{const id=$('recon-tool').value;if(id==='')throw new Error('Load and choose a test first.');const target=await reconLines(l,'tool target'),label=$('recon-tool').selectedOptions[0].textContent;if(!confirm(`Start ${label}?\n${target.filter(s=>s.startsWith('RECON_TARGET')).join('\n')}\n${$('recon-seconds').value} seconds at ${$('recon-rate').value} requested frames/sec. Radar pauses until Stop or timeout.`))return;for(const [name,max] of [['seconds',60],['rate',100]]){const n=Number($('recon-'+name).value);if(!Number.isInteger(n)||n<1||n>max)throw new Error('Invalid duration or rate.');await reconDo(l,`tool ${name} ${n}`);}await reconDo(l,'tool start '+Number(id));});
+$('recon-ssid-add').onclick=()=>reconAction(l=>{const name=$('recon-ssid').value;if(!/^[ -~]{1,32}$/.test(name))throw new Error('SSID must be 1–32 printable ASCII characters.');return reconDo(l,'tool ssid add '+name);});
+$('recon-discard').onclick=()=>{if(confirm('Discard the unsaved capture in RAM? Saved captures stay intact.'))reconAction(l=>reconDo(l,'recon capture discard'));};
+$('recon-files').onclick=()=>reconAction(async l=>{const rows=await reconDo(l,'recon files');$('recon-file').replaceChildren(new Option('Choose a saved capture',''));for(const row of rows){const m=/^RECON_SAVED (\S+) (\d+)$/.exec(row);if(m){try{captureName(m[1]);$('recon-file').add(new Option(`${m[1]} · ${m[2]} bytes`,m[1]));}catch{}}}});
+$('recon-download').onclick=()=>reconAction(async l=>{const name=captureName($('recon-file').value),data=await exportCapture(l,name,p=>{$('recon-output').textContent=`Downloading ${p}%`;});const url=URL.createObjectURL(new Blob([data])),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);$('recon-output').textContent='Capture downloaded; length and CRC verified.';});
+$('recon-remove').onclick=()=>{const name=$('recon-file').value;if(name&&confirm(`Delete saved capture ${name}?`))reconAction(l=>reconDo(l,'recon remove '+captureName(name)));};
+
+$('recon-target-status').onclick=()=>reconAction(l=>reconDo(l,'tool target'));
+$('recon-target-clear').onclick=()=>reconAction(async l=>{await reconDo(l,'tool target clear');await reconDo(l,'tool target');});
+$('recon-local-save').onclick=()=>reconAction(async l=>{const name=$('recon-local-name').value,ch=Number($('recon-local-channel').value);if(!/^[ -~]{1,32}$/.test(name)||!Number.isInteger(ch)||ch<1||ch>11)throw new Error('Use a printable SSID and channel 1–11.');await reconDo(l,'tool target clear');await reconDo(l,'tool name '+name);await reconDo(l,'tool channel '+ch);await reconDo(l,'tool target');});
+$('recon-destination-save').onclick=()=>reconAction(l=>{const ch=Number($('recon-destination').value);if(!Number.isInteger(ch)||ch<1||ch>11)throw new Error('Use channel 1–11.');return reconDo(l,'tool destination '+ch);});
+$('recon-ssid-list').onclick=()=>reconAction(l=>reconDo(l,'tool ssid list'));
+$('recon-ssid-clear').onclick=()=>{if(confirm('Clear the saved SSID playlist?'))reconAction(l=>reconDo(l,'tool ssid clear'));};

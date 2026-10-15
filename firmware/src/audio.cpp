@@ -1,5 +1,6 @@
 // MIT: synthesized RTTTL alerts; no legacy MP3 decoder or microphone capture.
 #include "app.h"
+#include "recon.h"
 #include "tones.h"
 #include <Preferences.h>
 static Preferences prefs;
@@ -52,22 +53,23 @@ void audioAlert(Family family){if(ready&&alertSound&&!detector.quiet&&status.vol
     queue.pending&=~(1u<<unsigned(family));queue.played|=1u<<unsigned(family);queue.last[unsigned(family)]=millis();start(toneText(unsigned(family)).c_str());
   }else queue.request(unsigned(family),millis());
 }}
-static bool focusMatches(Family f){return int(f)==audioFocus||(audioFocus==int(Family::Flock)&&(f==Family::Alpr||f==Family::Raven));}
+static int effectiveFocus(){auto m=reconMode();return m==dragon::ReconMode::Axon?int(Family::Axon):m==dragon::ReconMode::Alpr?int(Family::Flock):m==dragon::ReconMode::Sky?int(Family::Drone):audioFocus;}
+static bool focusMatches(Family f){return int(f)==effectiveFocus()||(effectiveFocus()==int(Family::Flock)&&(f==Family::Alpr||f==Family::Raven));}
 static bool focusEligible(const Contact& c,uint32_t now){
  if(!c.used||now-c.seen>12000||(deviceRules(contactKey(c))&(RuleIgnore|RuleSnooze)))return false;
- if(audioFocus>=int(Family::Deauth)&&audioFocus<=int(Family::BleSpam))return int(c.trafficFamily)==audioFocus&&detector.enabled(c.trafficFamily)&&c.wifiAlerts&&now-c.lastWifiAlert<=12000;
+ if(effectiveFocus()>=int(Family::Deauth)&&effectiveFocus()<=int(Family::BleSpam))return int(c.trafficFamily)==effectiveFocus()&&detector.enabled(c.trafficFamily)&&c.wifiAlerts&&now-c.lastWifiAlert<=12000;
  if(!focusMatches(c.match.family)||!detector.enabled(c.match.family))return false;
- if(audioFocus<=int(Family::Ble))return c.packets>=2&&now-c.firstSeen>=400;
+ if(effectiveFocus()<=int(Family::Ble))return c.packets>=2&&now-c.firstSeen>=400;
  return now-c.matchedAt<=12000&&((dragon::signatureAlertReady(c.match,c.matchHits,c.matchSince,c.matchedAt,axonPriority)&&dragon::alertConfidenceAllowed(c.match,detector.minimum,axonPriority))||(deviceRules(contactKey(c))&RuleWatch));
 }
 static int target(uint32_t now){
  if(trackedContact>=0)return trackedContact;
- if(audioFocus<0)return -1;
+ if(effectiveFocus()<0)return -1;
  static uint32_t checkedAt=0;static int cached=-1,cachedFocus=-2;
- if(cachedFocus==audioFocus && uint32_t(now-checkedAt)<150){
+ if(cachedFocus==effectiveFocus() && uint32_t(now-checkedAt)<150){
    return cached>=0&&focusEligible(contacts[cached],now)?cached:-1;
  }
- checkedAt=now;cachedFocus=audioFocus;
+ checkedAt=now;cachedFocus=effectiveFocus();
  int best=-1;
  for(unsigned i=0;i<MAX_CONTACTS;++i){auto& c=contacts[i];if(!focusEligible(c,now))continue;if(best<0||c.signal.value()>contacts[best].signal.value())best=i;}
  if(best>=0&&lastTarget>=0&&lastTarget<int(MAX_CONTACTS)){auto& c=contacts[lastTarget];if(contactKey(c)==lastKey&&focusEligible(c,now)&&c.signal.value()+6>=contacts[best].signal.value())best=lastTarget;}

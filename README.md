@@ -6,7 +6,13 @@
 
 **[Open the web flasher & detector tools](https://valleytechsolutions.github.io/Dragon-Detector/)** · [Install guide](docs/FLASHING.md) · [Controls](docs/USER-GUIDE.md) · [Detection evidence](docs/DETECTION.md) · [Credits](CREDITS.md)
 
-Version **0.9.8** adds a [BLE Lab](docs/BLE-LAB.md) and uses all **32 MB** on Waveshare AMOLED 1.75C: advertisement inspection, GATT discovery, notification monitoring, saved/imported/exported profiles, comparison and local GATT peripheral emulation. Update preserves the existing badge, history and settings partitions. Radar remains the normal scanning mode; active lab operations temporarily pause it. The other four board profiles retain their existing hardware layouts. [Validation and limits](docs/VALIDATION.md).
+Version **0.10.0** adds [selectable modes and a radio toolkit](docs/RADIO-TOOLKIT.md) to the **32 MB Waveshare AMOLED 1.75C**: Axon/ALPR/drone focus, continuous Wi-Fi/BLE surveys, 24 timed transmission tools, AP/client selection, and flash-backed Wi-Fi PCAP/BLE CSV capture. [BLE Lab](docs/BLE-LAB.md), radar, badge, stopwatch and manual orientation remain available. Update preserves badge, history, settings, GATT profiles and saved captures. Active tools temporarily own the shared radio; Stop restores scanning. This is not complete Marauder parity. [Validation and limits](docs/VALIDATION.md).
+
+| Waveshare listening modes | Waveshare radio toolkit |
+|---|---|
+| ![Modes on Waveshare](media/waveshare-modes-v010.png) | ![Radio toolkit on Waveshare](media/waveshare-toolkit-v010.png) |
+
+Logical display captures from 0.10.0. [Open Radio tools](https://valleytechsolutions.github.io/Dragon-Detector/#radio-tools).
 
 ## Choose the exact board
 

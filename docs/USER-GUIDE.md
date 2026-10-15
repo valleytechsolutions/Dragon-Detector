@@ -1,4 +1,4 @@
-# Daily detection and hunting · 0.9.8
+# Daily detection and hunting · 0.10.0
 
 This guide covers the four full-feature boards. The non-touch Waveshare ESP32-S3-LCD-1.28 has a dedicated [Lite radar guide](WAVESHARE-LITE.md); it has no menus, settings or badge mode.
 
@@ -140,3 +140,7 @@ Tools → Daily → Stopwatch provides touch Start/Pause, Lap/Reset, and a lap l
 ## Seeed XIAO Round Display
 
 The 0.9.2 XIAO profile fits the same tools to 240×240. Use touch Tools/Home; BOOT starts/pauses Stopwatch or opens Tools elsewhere. Lap/reset use touch. Visual alerts and on-screen foxhunting are supported; there is no speaker. The Round Display SD slot supports opt-in CSV/PCAP and file browsing, while badges/history remain in internal flash. [Hardware and switch guide](XIAO-ROUND.md).
+
+## Waveshare selectable modes and timed tools
+
+Open **Tools → Recon → Modes** for Dragon radar, Axon watch, ALPR watch, Sky watch, Wi-Fi survey, BLE survey and capture modes. **Radio tools** opens inventory, timed transmission tests and Capture Studio. Focused audio respects your saved quiet/volume preferences. Home stops active testing. See the [complete radio-toolkit guide](RADIO-TOOLKIT.md) for capture formats, targets, commands and actual limitations.
