@@ -51,8 +51,8 @@ static void axonTests(){
   assert(alertConfidenceAllowed(medium,Confidence::Strong,true));
   assert(!signatureAlertReady(medium,1,100,100,false));
   assert(!alertConfidenceAllowed(medium,Confidence::Strong,false));
-  assert(!signatureAlertReady(weak,1,100,100,true));
-  assert(!alertConfidenceAllowed(weak,Confidence::Medium,true));
+  assert(signatureAlertReady(weak,1,100,100,true));
+  assert(alertConfidenceAllowed(weak,Confidence::Strong,true));
   assert(signatureAlertReady(weak,2,0xfffffff0,500,false));
   assert(!signatureAlertReady({Family::Tracker,Confidence::Medium,"fixture"},1,100,100,true));
   Contact contact;contact.used=true;contact.ble=true;contact.packets=contact.matchHits=1;contact.match=medium;contact.seen=contact.matchedAt=100;
@@ -73,5 +73,22 @@ static void axonTests(){
   for(unsigned i=0;i<50000;++i){for(auto& b:data){rng^=rng<<13;rng^=rng>>17;rng^=rng<<5;b=rng;}size_t size=rng%sizeof(data);size_t split=(rng>>8)%(size+2);
     parseBleObservation(data,size,split,random,1,valid);parseWifiObservation(data,size,i&1,valid);
   }
-  puts("PASS: Axon transport signatures, malformed-tail recovery, weak compatibility clues, first-hit alert policy and 11-channel schedule; 50000 transport fuzz inputs");
+  // Every AXEOFF match must reach the priority queue and first-hit alert, even
+  // when its evidence is an arbitrary 128-bit UUID or a random-address prefix.
+  for(uint16_t id:{0xfc81,0xfe6b,0xfe6c})for(unsigned width:{4u,16u})for(uint8_t kind:{uint8_t(width==4?4:6),uint8_t(width==4?5:7)}){
+    auto data=serviceField(id,width,kind);data[width==16?2:4]^=1;
+    auto e=inspectAxonBle(data.data(),data.size(),0,random,1);assert(e.detected());
+    auto m=observation(data,random,1).match;assert(m.family==Family::Axon&&signatureAlertReady(m,1,0,0,true)&&alertConfidenceAllowed(m,Confidence::Strong,true));
+  }
+  assert(inspectAxonBle(nullptr,0,0,publicMac,1).detected());
+  for(const char* name:{"AB2-123","AB3-123","AB4-123","AXON-123"}){
+    std::vector<uint8_t> data{uint8_t(strlen(name)+1),9};data.insert(data.end(),name,name+strlen(name));
+    assert(inspectAxonBle(data.data(),data.size(),0,random,1).detected());
+    std::vector<uint8_t> packet(36);packet[0]=0x80;memcpy(packet.data()+10,other,6);append(packet,{0,uint8_t(strlen(name))});packet.insert(packet.end(),name,name+strlen(name));
+    assert(inspectAxonWifi(packet.data(),packet.size()).detected());
+    assert(parseWifiObservation(packet.data(),packet.size(),false,valid).match.family==Family::Axon);
+    packet.erase(packet.begin()+24,packet.begin()+36);packet[0]=0x40;
+    assert(!inspectAxonWifi(packet.data(),packet.size()).detected());
+  }
+  puts("PASS: AXEOFF match/queue/first-alert parity, Axon SSIDs, malformed-tail recovery, 11-channel schedule; 50000 transport fuzz inputs");
 }

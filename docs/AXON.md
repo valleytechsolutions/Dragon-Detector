@@ -1,35 +1,28 @@
-# Axon detection and priority alerts · 0.9.3
+# Axon detection and priority alerts · 0.9.6
 
-Use **Tools → Detectors → Axon priority: ON** (the default). Keep the Axon / TASER family enabled. A first received registered Axon identifier creates the usual radar contact, local history entry and unique Axon alert. Priority allows medium-confidence Axon vendor evidence to alert even when the general alert threshold is set to strong-only. Quiet mode, sound settings, ignored/snoozed addresses, family filters and per-contact cooldowns still apply. Turning priority off restores the general confidence threshold and two-observation / 400 ms alert rule.
+Axon is the highest-priority device family. With **Axon priority: ON** (default), every recognized Axon match receives reserved packet capacity and can alert on its first received observation, even with strong-only filtering for other devices. It wins the primary radar tag, protected contact retention, notification priority and speaker playback. The normal radar remains a balanced 2.2-second BLE / 2.2-second Wi-Fi scan across channels 1–11. BLE now requests a 100/100 ms passive window.
 
-The signal identifies **Axon/TASER equipment**, which can include body cameras, Fleet and other products. It does not identify the exact model, owner or recording state.
+## Reference match parity
 
-## Evidence
+The match conditions independently implement the public facts in [Colonel Panic's AXEOFF](https://github.com/colonelpanichacks/oui-spy-unified-blue/blob/6e5e2829540925ff1ab5fa6d0d365378818ed56e/src/raw/axeoff.cpp):
 
-| Received evidence | Interpretation |
-|---|---|
-| BLE manufacturer company `034D` | Medium-confidence TASER/Axon vendor evidence, including random addresses |
-| Service `FC81`, `FE6B` or `FE6C` | Medium-confidence assigned service, in 16-bit, zero-extended 32-bit or exact Bluetooth Base UUID form; lists and service data are supported |
-| Company plus assigned service | Stronger combined signature |
-| Public BLE address or Wi-Fi probe/beacon source beginning `00:25:DF` | Medium-confidence Axon vendor evidence |
-| Random BLE address with that prefix, or arbitrary UUID containing those digits in AXEOFF's tested position | Weak compatibility clue only; no registered vendor attribution and no priority-alert exemption |
+- Manufacturer company `034D` (little-endian advertising bytes `4D 03`).
+- Service `FC81`, `FE6B` or `FE6C`, including AXEOFF's partial 32/128-bit UUID match. Service-data encodings are also accepted.
+- BLE address prefix `00:25:DF`, including random-address types.
+- Wi-Fi transmitter prefix `00:25:DF`; probes and beacons match AXEOFF, with additional probe-response/data/management coverage.
 
-This last distinction matters when comparing with [Colonel Panic's AXEOFF implementation](https://github.com/colonelpanichacks/oui-spy-unified-blue/blob/6e5e2829540925ff1ab5fa6d0d365378818ed56e/src/raw/axeoff.cpp). Its broad UUID substring and address checks can also match unregistered custom UUIDs or random addresses. Dragon Detector displays these as weak clues, rather than silently dropping them or claiming a confirmed camera. Name-only and shared radio-vendor clues also remain weak.
+The priority path also accepts SquachWatch's Axon name patterns (`Axon`, `AB2`, `AB3`, `AB4`) and public/source address patterns `28:24:FF` / `E4:05:40`. Names from directed probe requests do not identify their transmitter. Complete bounded fields can survive an unrelated malformed tail; incomplete fields do not supply identifiers.
 
-Registered address evidence does not depend on an advertised name or nonempty BLE payload. A complete, bounded manufacturer/service field remains usable if an unrelated trailing field is malformed. A valid Wi-Fi source header remains usable when its SSID/security elements cannot be decoded. Incomplete fields themselves never supply an identifier; rejected payloads remain counted in diagnostics.
+The radar shows the family name and signal strength, without CLUE or hint wording. Evidence details retain the actual match and confidence: a shared module address, custom UUID or name match is not upgraded into proof of a specific body-camera model or recording state. This reflects the reference signatures' specificity, rather than hiding their detections.
 
-## Listening and diagnostics
+## Alerts and crowded environments
 
-Normal radar now starts with BLE and alternates 2.2-second BLE and Wi-Fi phases. Wi-Fi's planned 200 ms dwell covers channels 1–11 per slice. BLE requests an 85/100 ms passive window. There are still radio gaps; a short burst can fall entirely outside its listening period. Dedicated Hunt continues to favor its selected radio. This release does not enable simultaneous Wi-Fi/BLE scanning.
+Axon, Flipper, Flock/ALPR, camera glasses, Ring, other camera families and drones alert on first recognized evidence. Axon priority OFF restores the general confidence/repeat gate for Axon. Family switches, ignored/snoozed addresses, repeat cooldowns, quiet mode and sound settings still apply. Quiet mode must be OFF to hear the alert. AirTag/Find My, SmartTag, Google tags, Tile and iBeacon remain visible/logged but do not automatically sound or show cards unless explicitly watched.
 
-Registered Axon observations have reserved packet capacity and are processed before ordinary traffic. USB `status` reports overall drops. `axon status` reports enabled/priority settings, signature counters, alert count, reserved-queue drops and maximum Axon processing lag. These counters reset at reboot; local history persists. `recovered` counts observations whose independent Axon evidence remained usable despite an empty or invalid full payload. `weak` counts broad compatibility matches, not confirmed cameras. No queue can guarantee reception under unlimited traffic.
+Axon interrupts a lower-priority melody/card. Other cards queue by priority for up to 30 seconds. Radar pages are removed; every retained visible contact has a dot. Up to six priority tags fit on the full display (four on Lite), and tapping a dot reveals its tag. Live higher-priority contacts cannot be evicted by new lower-priority addresses.
 
-USB commands:
+## Diagnostics
 
-```
-axon status
-axon priority on
-axon priority off
-```
+`axon status` reports received signatures, queue drops, maximum processing lag and alert count. `weak` remains the serial-compatible counter for broad UUID/address/name research matches; these now receive priority. `axon priority on|off` saves the first-hit behavior. `detector quiet off|on` saves the sound/card quiet setting. `radar status` reports one page, plotted count and primary contact index.
 
-For a field comparison, leave both detectors listening normally and record AXEOFF's match type/identifier and Dragon Detector's `axon status` plus history. A beep alone cannot establish that the devices received the same packet. No real Axon body camera was available for controlled validation of 0.9.3; see [the validation record](VALIDATION.md).
+Host fixtures verify matching and prioritization. Real-camera reception still requires a repeat field test against the same camera and reference detectors; synthetic over-air tests are recorded separately in [VALIDATION.md](VALIDATION.md).

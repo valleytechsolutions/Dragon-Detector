@@ -5,6 +5,7 @@
 #include <Preferences.h>
 #include <lvgl.h>
 extern const lv_img_dsc_t vts_logo;
+extern bool badgeStockPixels(uint8_t*,size_t);
 static bool ready=false;
 static uint8_t* pixels=nullptr;
 static lv_img_dsc_t image;
@@ -12,11 +13,11 @@ static lv_obj_t* picture=nullptr;
 static Preferences prefs;
 static bool validHeader(const uint8_t* h){return !memcmp(h,"DDB1",4) && (h[4]|h[5]<<8)==SCREEN_RES && (h[6]|h[7]<<8)==SCREEN_RES;}
 static bool load(){
-  if(!ready)return false;File f=LittleFS.open("/badges/active.rgb565");uint8_t h[8];
+  File f;if(ready && LittleFS.exists("/badges/active.rgb565"))f=LittleFS.open("/badges/active.rgb565");uint8_t h[8];
   size_t size=SCREEN_RES*SCREEN_RES*2;
-  if(!f || f.size()!=size+8 || f.read(h,8)!=8 || !validHeader(h)){f.close();return false;}
+  bool saved=f && f.size()==size+8 && f.read(h,8)==8 && validHeader(h);
   uint8_t* next=(uint8_t*)ps_malloc(size);
-  bool ok=next && f.read(next,size)==size;f.close();if(!ok){free(next);return false;}
+  bool ok=next && (saved?f.read(next,size)==size:badgeStockPixels(next,size));f.close();if(!ok){free(next);return false;}
   lv_img_cache_invalidate_src(&image);if(pixels)free(pixels);pixels=next;image={};
   image.header.cf=LV_IMG_CF_TRUE_COLOR;image.header.w=SCREEN_RES;image.header.h=SCREEN_RES;image.data_size=size;image.data=pixels;
   if(picture)lv_img_set_src(picture,&image);return true;
@@ -43,36 +44,46 @@ void badgeLoop(){
   static uint32_t shifted=0;if(picture && millis()-shifted>60000){shifted=millis();int d=int((shifted/60000)%5)-2;lv_obj_align(picture,LV_ALIGN_CENTER,d,-d);}
 }
 bool badgeCommand(const String& c){
+  if(c=="badge checksum"){File f=ready?LittleFS.open("/badges/active.rgb565"):File();uint32_t crc=0xffffffff;size_t size=f?f.size():0;uint8_t b[512];while(f&&f.available()){size_t n=f.read(b,sizeof(b));if(!n)break;crc=dragon::crc32(b,n,crc);}f.close();Serial.printf("BADGE_CHECKSUM bytes=%u crc=%08lx boot=%u\n",unsigned(size),crc^0xffffffff,prefs.getBool("boot",false));return true;}
   if(c=="badge info"){Serial.printf("BADGE_INFO " DRAGON_VERSION " %d %s %s\n",SCREEN_RES,ready?"READY":"NO_STORAGE",BOARD_NAME);return true;}
   if(c=="badge show"){uiShow("badge");return true;}
   if(c=="badge boot on" || c=="badge boot off"){prefs.putBool("boot",c.endsWith("on"));Serial.println("BADGE_OK");return true;}
   if(!c.startsWith("badge upload "))return false;
   unsigned long length=0,checksum=0;char extra;
   if(sscanf(c.c_str(),"badge upload %lu %lx %c",&length,&checksum,&extra)!=2 || length!=8+SCREEN_RES*SCREEN_RES*2 || !ready || LittleFS.totalBytes()-LittleFS.usedBytes()<length+16384){Serial.println("BADGE_ERROR size or storage");return true;}
-  LittleFS.remove("/badges/upload.part");File f=LittleFS.open("/badges/upload.part",FILE_WRITE);
+  if(LittleFS.exists("/badges/upload.part"))LittleFS.remove("/badges/upload.part");File f=LittleFS.open("/badges/upload.part",FILE_WRITE);
   if(!f){Serial.println("BADGE_ERROR open");return true;}
   bool enabled=radioEnabled;setRadio(false);Serial.println("BADGE_READY");
-  uint8_t buffer[1024],header[8]{};size_t received=0;uint32_t crc=0xffffffffu,last=millis();bool ok=true;
+  static uint8_t buffer[1024];uint8_t header[8]{};size_t received=0;uint32_t crc=0xffffffffu,last=millis(),lastAck=last;bool ok=true;
   while(received<length && millis()-last<5000){
-    size_t available=Serial.available();if(!available){delay(1);continue;}
+    size_t available=Serial.available();if(!available){
+      // A Windows native USB packet can stall even with short writes. Repeat
+      // the cumulative ACK to release it; never ask the host to resend pixels.
+      // Keep the original inactivity deadline so unplugged uploads still abort.
+      if(millis()-lastAck>=250){
+        if(received)Serial.printf("\nBADGE_ACK %u\n\n",unsigned(received));else Serial.println("\nBADGE_READY\n");
+        lastAck=millis();
+      }
+      delay(1);continue;
+    }
     size_t n=Serial.readBytes(buffer,std::min(sizeof(buffer),std::min(available,size_t(length-received))));
     if(received<8)memcpy(header+received,buffer,std::min(n,8-received));
     crc=dragon::crc32(buffer,n,crc);if(f.write(buffer,n)!=n){ok=false;break;}
     // Terminate ACK bursts with a short USB packet. Multiple 16-byte ACKs can
     // otherwise fill a native USB-JTAG packet and stall Windows at a boundary.
-    received+=n;last=millis();Serial.printf("BADGE_ACK %u\n\n",unsigned(received));
+    received+=n;last=lastAck=millis();Serial.printf("BADGE_ACK %u\n\n",unsigned(received));delay(1);
   }
   f.flush();f.close();
   if(!ok||received!=length)Serial.printf("BADGE_TRANSFER received=%u expected=%lu write_ok=%u\n",unsigned(received),length,ok);
   ok=ok && received==length && (crc^0xffffffffu)==checksum && validHeader(header);
   if(ok){
-    LittleFS.remove("/badges/previous.rgb565");
+    if(LittleFS.exists("/badges/previous.rgb565"))LittleFS.remove("/badges/previous.rgb565");
     bool had=LittleFS.exists("/badges/active.rgb565");
     if(had)ok=LittleFS.rename("/badges/active.rgb565","/badges/previous.rgb565");
     if(ok)ok=LittleFS.rename("/badges/upload.part","/badges/active.rgb565");
     if(!ok && had && !LittleFS.exists("/badges/active.rgb565"))LittleFS.rename("/badges/previous.rgb565","/badges/active.rgb565");
   }
   if(!ok)LittleFS.remove("/badges/upload.part");
-  setRadio(enabled);Serial.println(ok?"BADGE_OK":"BADGE_ERROR transfer or checksum");
-  if(ok){prefs.putBool("boot",true);load();uiShow("badge");}return true;
+  if(ok){prefs.putBool("boot",true);if(picture)load();uiShow("badge");}
+  setRadio(enabled);Serial.println(ok?"\nBADGE_OK\n":"\nBADGE_ERROR transfer or checksum\n");return true;
 }

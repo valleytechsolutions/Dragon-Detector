@@ -1,22 +1,26 @@
-# Daily detection and hunting · 0.9.4
+# Daily detection and hunting · 0.9.8
 
 This guide covers the four full-feature boards. The non-touch Waveshare ESP32-S3-LCD-1.28 has a dedicated [Lite radar guide](WAVESHARE-LITE.md); it has no menus, settings or badge mode.
 
 The radar starts at **100% brightness with no automatic dimming or screen-off timeout**. It listens passively on 2.4 GHz Wi-Fi and Bluetooth LE. The optional training fox transmitter is off at every boot.
 
+## Waveshare BLE Lab
+
+On the 32 MB Waveshare AMOLED 1.75C, open **Tools → Recon → BLE Lab** to inspect advertisements, discover GATT services, read values, monitor notifications, save profiles and emulate a local test peripheral. The [BLE Lab guide](BLE-LAB.md) explains the workflow and storage upgrade. Radar reception pauses during a connection or emulation, and resumes on Stop/Home. Merely opening the lab leaves radar listening active.
+
 ## Radar and evidence
 
-Every enabled signature appears from its first valid sighting. **Hollow dots are weak clues**; filled dots indicate stronger evidence. Select **Tools → Detectors** to change individual families or the **audible alert threshold** (medium+ by default). Raising that threshold does not hide weaker radar clues. All families, including iBeacon, start enabled. Existing customized family masks are retained; the previous untouched default gains iBeacon.
+Every enabled signature appears from its first valid sighting. **All live devices use filled family-colored dots**; trackers use smaller dots. Select **Tools → Detectors** to change individual families or the **audible alert threshold** (medium+ by default). The threshold applies to non-priority families; evidence specificity remains available in details. All families, including iBeacon, start enabled. Existing customized family masks are retained; the previous untouched default gains iBeacon.
 
-**Axon priority** is on by default in Tools → Detectors. It alerts immediately on a registered Axon vendor/service clue, even with the general threshold set to strong-only. It honors quiet, ignore/snooze, family filters and cooldowns. Turn it off to use the general threshold and repeat rule for Axon too. [Evidence, AXEOFF comparison and diagnostics](AXON.md).
+**Axon priority** is on by default in Tools → Detectors. It alerts immediately on any recognized Axon signature, even with the general threshold set to strong-only. It honors quiet, ignore/snooze, family filters and cooldowns. Turn it off to use the general threshold and repeat rule for Axon too. [Evidence, AXEOFF comparison and diagnostics](AXON.md).
 
-Use **TARGETS** for a ten-row paged list ordered by evidence and signal; refresh to update it. Tap the radar speaker icon for quick quiet mode. Tap a marker or contact for its signal, evidence, confidence and last observation. Remote ID contacts show decoded aircraft/operator coordinates when broadcast; these fields have their own age and are self-reported. Hidden/silent devices and scan gaps can produce an empty radar. A signature does not establish intent or recording.
+Use **TARGETS** for a ten-row paged list ordered by family priority, freshness and signal; refresh to update it. Tap the radar speaker icon for quick quiet mode. Tap a marker or contact for its signal, evidence, confidence and last observation. Remote ID contacts show decoded aircraft/operator coordinates when broadcast; these fields have their own age and are self-reported. Hidden/silent devices and scan gaps can produce an empty radar. A signature does not establish intent or recording.
 
 **Settings → Radar** switches between candidates and all contacts. Disabled families and ignored addresses remain suppressed; explicitly watched addresses stay visible unless ignored. Angle is a stable visual arrangement, not a bearing; radius represents signal strength, not distance.
 
 The BWM1 emblem replaces the radar heading. RX mode, total radar contacts and battery percentage (where a fuel gauge exists) remain below it. **Settings → Radar theme & labels** offers Green radar (default), Dragon Ball, and Black / gold / red. The sweep animates and live dots pulse; rings have no numbered distance scale.
 
-Every plotted dot has a device-family label and leader by default. Tap either to open its evidence. Six targets fit each labeled radar page; previous/next appears when needed. Weak identities say WEAK CLUE. After ten seconds without reception, labels show last-seen age while preserving weak-clue wording. Recent signals remain for up to two minutes with segmented muted markers, unless this option is disabled. A stale dot is not a live signal; alerts and hunt feedback retain their freshness rules. Switch labels off to show all dots together.
+Every visible contact stays on one radar as a family-colored dot; there are no radar pages. Axon receives the primary tag and leader line. Flipper, Flock/ALPR, camera glasses, Ring, other cameras and drones receive automatic tags next. Up to six tags fit on full boards (four on Lite); additional contacts remain visible as dots. AirTag/Find My, SmartTag, Google tags, Tile and iBeacon have smaller dots and no automatic tags or sounds. Tap any dot to reveal its tag and leader for ten seconds; tap the selected dot/tag again for details and Hunt. Tapping a tracker does not displace Axon's primary tag. Details retain the actual received evidence and its specificity; the radar has no CLUE or hint labels.
 
 Inward means stronger filtered RSSI. The triangle and sweep do not indicate heading. Detailed dBm readings remain on contact and Hunt screens. [Check a Flipper or Pineapple Pager](DEVICE-CHECKS.md).
 
@@ -63,7 +67,11 @@ Spotpear additionally supports optional SD event CSV and bounded 16 MB PCAP capt
 
 Tap **Tools** to open the menu and **Home** to return to radar. There is no swipe-to-open gesture; lists still scroll normally. Waveshare BOOT toggles radar/tools. StopWatch yellow returns to radar; blue opens tools and, from tools, opens badge.
 
-## Existing image badge
+## Image and text badge
+
+In the 0.9.7 studio, **Use BWM stock badge** loads the supplied logo centered and sized to fill the round display with a small edge margin. Full-board firmware uses this stock image when no custom badge is saved. Existing custom badges remain in place after an application update.
+
+Expand **Add text to your image** for up to three lines, text size, vertical position and color. Text has a black outline for contrast and stays within the round screen. It is included in the USB upload and PNG download. Clear the text box for an image-only badge. Use matching 0.9.7 firmware for the Bluetooth reset and USB acknowledgment fixes; an automatic clock-sync failure no longer blocks the studio connection.
 
 [Badge Studio](https://valleytechsolutions.github.io/Dragon-Detector/#studio) accepts PNG/JPEG/WebP (up to 20 MB and 40 megapixels). Choose the exact board to preview its 360×360 or 466×466 circle before connecting. Images initially fit completely inside a small safe margin. Choose **Fill circle** to crop edge-to-edge, then drag or zoom. Rotate 90° in either direction, mirror, center, or reset the crop. Fine positioning offers horizontal/vertical sliders and one-pixel arrow buttons; hold Shift for ten pixels. The focused preview accepts arrow keys too. Board changes preserve relative positioning. Alignment guides are preview-only and never become part of the image.
 
@@ -98,7 +106,7 @@ resume
 
 ## Audio alerts and foxhunting
 
-Open **Settings → Audio & hunt tones** for the speaker switch, volume, hunt feedback and automatic family focus. Fresh installs enable audio at 100% volume; updates preserve the previous sound switch. Each of the 26 detector families has a distinct original RTTTL melody. Alert filtering, ignore/snooze rules and auto-quiet still apply. Per-family duplicate requests coalesce, with a four-second cooldown and ten-second queue expiry, so packets do not restart a melody. Quiet mode and volume zero mute automatic audio, including watched devices.
+Open **Settings → Audio & hunt tones** for the speaker switch, volume, hunt feedback and automatic family focus. Fresh installs enable audio at 100% volume; updates preserve the previous sound switch. Each of the 26 detector families has a distinct original RTTTL melody. Priority families alert on the first recognized match. Other alert filtering, ignore/snooze rules and auto-quiet still apply. Ordinary tracker detections stay silent unless explicitly watched. Axon preempts lower-priority audio and notification cards. Per-family duplicate requests coalesce, with a four-second cooldown and ten-second queue expiry, so packets do not restart a melody. Quiet mode and volume zero mute automatic audio, including watched devices.
 
 **Hunt feedback** follows the manually selected device. With no manually selected target, **Audio focus** can automatically follow the strongest fresh matching candidate; a six-dB margin reduces switching between similar signals. The on-board focus choices are Axon, Flock/ALPR/Raven and camera glasses; the web editor exposes all families. Focus changes the heartbeat target; other enabled families still retain their alert melodies. Audio focus uses the normal balanced Wi-Fi/BLE scan. Select a specific contact and tap Hunt to dedicate reception to that radio/channel.
 

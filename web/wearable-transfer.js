@@ -1,3 +1,4 @@
+import {deviceQuery} from './device-query.js';
 export function localClockEpoch(value,offset){
   const m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(value);
   if(!m||!Number.isInteger(offset)||offset< -720||offset>840)throw new Error('Choose a valid local date/time and UTC offset.');
@@ -16,8 +17,8 @@ export async function setClock(link,epoch,offset){
   if(await link.wait(s=>s==='CLOCK_OK'||s.startsWith('CLOCK_ERROR'))!=='CLOCK_OK')throw new Error('Time was set, but the UTC offset could not be saved.');
 }
 export async function readWearable(link){
-  await link.write('clock status');const c=await link.wait(s=>s.startsWith('CLOCK_STATUS '));
-  await link.write('orientation status');const o=await link.wait(s=>s.startsWith('ORIENTATION_STATUS '));
+  const c=await deviceQuery(link,'clock status',s=>s.startsWith('CLOCK_STATUS '));
+  const o=await deviceQuery(link,'orientation status',s=>s.startsWith('ORIENTATION_STATUS '));
   const clock=/^CLOCK_STATUS rtc=([01]) valid=([01]) epoch=(\d+) offset=(-?\d+)$/.exec(c);
   const manual=/^ORIENTATION_STATUS manual=1 degrees=(0|90|180|270)$/.exec(o);
   const legacy=/^ORIENTATION_STATUS imu=[01] auto=[01] degrees=(0|90|180|270) /.exec(o);

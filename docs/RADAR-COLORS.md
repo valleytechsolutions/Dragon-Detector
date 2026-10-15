@@ -2,7 +2,7 @@
 
 Every device family has a fixed color shared by its dot, leader and label in all three themes. Open **Settings → Radar theme & labels → Device color legend** to see them on the device.
 
-Labels use a solid dark background and opaque leaders with a dark outline, including on the brighter Dragon Ball theme. Weak evidence remains a hollow marker; older signals use segmented markers and last-seen text. Color identifies a family, not confidence, malicious intent or exact product model. Products sharing an indistinguishable signature, such as Biscuit Pro/Ultra, share their family color.
+Labels use a solid dark background and opaque leaders with a dark outline, including on the brighter Dragon Ball theme. Live contacts use filled dots; trackers use smaller dots. Older signals use segmented markers. Color identifies a family, not confidence, malicious intent or exact product model. Products sharing an indistinguishable signature, such as Biscuit Pro/Ultra, share their family color.
 
 | Family | Color |
 |---|---|

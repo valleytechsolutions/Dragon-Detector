@@ -1,7 +1,9 @@
+import {deviceQuery} from './device-query.js';
 export async function readRadarSettings(link){
-  await link.write('radar status');
-  const line=await link.wait(s=>s.startsWith('RADAR_SETTINGS '));
-  const m=/^RADAR_SETTINGS theme=([012]) labels=([01]) recent=([01]) page=\d+ pages=\d+ plotted=\d+$/.exec(line);
+  const line=await deviceQuery(link,'radar status',s=>s.startsWith('RADAR_SETTINGS '));
+  // 0.9.6 removed paging and added the selected primary target. Accept both
+  // known schemas so reading radar preferences cannot block badge connection.
+  const m=/^RADAR_SETTINGS theme=([012]) labels=([01]) recent=([01]) (?:page=\d+ pages=\d+ plotted=\d+|pages=1 plotted=\d+ primary=-?\d+)$/.exec(line);
   if(!m)throw new Error('Invalid radar settings response.');
   return {theme:['dragon','green','gold'][Number(m[1])],labels:m[2]==='1',recent:m[3]==='1'};
 }

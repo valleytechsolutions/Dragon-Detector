@@ -6,17 +6,17 @@
 
 **[Open the web flasher & detector tools](https://valleytechsolutions.github.io/Dragon-Detector/)** · [Install guide](docs/FLASHING.md) · [Controls](docs/USER-GUIDE.md) · [Detection evidence](docs/DETECTION.md) · [Credits](CREDITS.md)
 
-Version **0.9.5** refines the [Waveshare 1.28 Lite radar](docs/WAVESHARE-LITE.md), with larger text, a refined instrument-style radar, four targets per automatic page and a fixed always-on display. It retains the 0.9.3 improvements to [Axon detection and priority alerts](docs/AXON.md): first-hit vendor alerts, reserved receive capacity, shorter listening gaps and AXEOFF compatibility clues. It is an experimental development release; see [what has actually been tested](docs/VALIDATION.md). The flasher requires desktop Chrome/Edge, HTTPS, a USB data cable, and the exact board selection; it stays disabled if matching release files are unavailable.
+Version **0.9.8** adds a [BLE Lab](docs/BLE-LAB.md) and uses all **32 MB** on Waveshare AMOLED 1.75C: advertisement inspection, GATT discovery, notification monitoring, saved/imported/exported profiles, comparison and local GATT peripheral emulation. Update preserves the existing badge, history and settings partitions. Radar remains the normal scanning mode; active lab operations temporarily pause it. The other four board profiles retain their existing hardware layouts. [Validation and limits](docs/VALIDATION.md).
 
 ## Choose the exact board
 
 | Board | Display | Controls | Build |
 |---|---|---|---|
 | **Spotpear / Guition JC3636W518** | 360×360 round LCD | Touch | `spotpear` |
-| **Waveshare ESP32-S3-Touch-AMOLED-1.75C** | 466×466 round AMOLED | Touch + BOOT / short PWR | `waveshare` |
+| **Waveshare ESP32-S3-Touch-AMOLED-1.75C** | 466×466 round AMOLED · **32 MB / BLE Lab** | Touch + BOOT / short PWR | `waveshare` |
 | **M5Stack StopWatch C152** | 466×466 round AMOLED | Touch + yellow/blue keys, haptics | `stopwatch` |
 | **Seeed XIAO ESP32-S3 + Round Display** | 240×240 round LCD | Touch + BOOT, microSD, RTC; no speaker | `xiao_round` |
-| **Waveshare ESP32-S3-LCD-1.28 — Lite** | 240×240 round LCD | **Radar only:** no touch/audio; full brightness, automatic target pages | `waveshare_lite` |
+| **Waveshare ESP32-S3-LCD-1.28 — Lite** | 240×240 round LCD | **Radar only:** no touch/audio; full brightness, all contacts on one radar | `waveshare_lite` |
 
 The Waveshare **C variant** has different reset wiring from the non-C 1.75. Firmware is not interchangeable just because a board contains an ESP32-S3. [Board details and manufacturer links](docs/HARDWARE.md).
 
@@ -40,9 +40,9 @@ Logical 240×240 captures from the connected XIAO, not panel photographs.
 
 *Green radar theme with animated sweep, labeled signals and owner-supplied BWM1 logo. Inward means stronger filtered RSSI, with no numerical distance scale. Actual 466×466 LVGL render from M5Stack StopWatch C152, not a panel photograph. Targets opens the paged list; the speaker button toggles quiet mode.*
 
-- **Three radar themes:** Green radar (default), Dragon Ball, and Black / gold / red. Each of the 26 device families has its own fixed color for dots, labels and leaders, with a [color legend](docs/RADAR-COLORS.md). Animated sweep, pulsing signals, a label and leader for every plotted dot, and six labeled targets per page. Tap the label or dot for evidence and Hunt; choose your theme in Settings or the USB web tools.
+- **Three radar themes:** Green radar (default), Dragon Ball, and Black / gold / red. Each of the 26 device families has its own fixed color for dots, labels and leaders, with a [color legend](docs/RADAR-COLORS.md). Animated sweep, pulsing signals, automatic priority tags and tap-to-reveal tracker tags. All contacts share one radar; tap a selected dot again for evidence and Hunt; choose your theme in Settings or the USB web tools.
 - **Audited signature coverage:** all 134 table entries in the pinned SquachWatch reference have recognition and radar tests. Includes Flipper, Wi-Fi Pineapple, Pwnagotchi, nyanBOX, Biscuit, Flock, Axon/TASER, Raven, camera glasses, Find My/DULT, SmartTag, Google Find Hub, Tile, Ring/camera/ALPR vendors, decoded drone Remote ID, iBeacon, pentest devices, disconnect bursts and SSID security conflicts. [Coverage and comparison](docs/DETECTION-PARITY.md).
-- **All recognized candidates on radar:** first sightings appear immediately; hollow dots distinguish weak clues. Intermittent signals remain for up to two minutes with a segmented marker and explicit last-seen age. A paged Targets list, quick quiet toggle and live radio-health screen make crowded areas easier to navigate.
+- **All recognized candidates on radar:** first sightings appear immediately; device types use fixed colors and trackers use smaller dots. Intermittent signals remain for up to two minutes with a segmented marker and explicit last-seen age. A paged Targets list, quick quiet toggle and live radio-health screen make crowded areas easier to navigate.
 - **Traffic awareness:** Wi-Fi deauthentication/disassociation bursts and BLE pairing/tag spam candidates, with a radar activity banner, counts, protocol/channel evidence and a dedicated Activity screen. See [how traffic detection works](docs/RADAR-AND-ACTIVITY.md).
 - **Dragon Hunt:** dedicated target listening, filtered dBm, signal history, peak, trend, stability, a saved comparison mark, and automatic channel searching for stale Wi-Fi targets. Optional Dragon fox beacons support board-to-board training; transmission starts only when explicitly enabled.
 - **Useful alert controls:** per-family and confidence filters, persistent watch/ignore rules, temporary snooze, repeat-alert suppression, quiet mode and grouped advertisement bursts.

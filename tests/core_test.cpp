@@ -20,7 +20,9 @@ static Match ble(const std::vector<uint8_t>& p){auto f=parseBle(p.data(),p.size(
 #include "radar_layout_test.h"
 #include "wearable_test.h"
 #include "axon_test.h"
+#include "ble_profile_test.h"
 int main(){
+  bleProfileTests();
   axonTests();
   wearableTests();
   radarLayoutTests();
@@ -76,15 +78,5 @@ int main(){
   assert((crc32(check+4,5,crc32(check,4))^0xffffffffu)==0xcbf43926u);
   uint32_t rng=0x12345678;uint8_t fuzz[1100];volatile unsigned sink=0;
   for(unsigned i=0;i<150000;++i){for(auto& c:fuzz){rng^=rng<<13;rng^=rng>>17;rng^=rng<<5;c=rng;}size_t n=rng%sizeof(fuzz);auto w=parseWifi(fuzz,n);auto v=parseBle(fuzz,n);sink=sink+unsigned(w.valid)+unsigned(v.valid);}
-  RadarAutoPager pager;
-  assert(pager.update(3,100)==0);assert(pager.update(3,7099)==0);
-  assert(pager.update(3,7100)==1);assert(pager.update(3,14100)==2);
-  assert(pager.update(2,14101)==0);assert(pager.update(2,21100)==0);
-  assert(pager.update(2,21101)==1);assert(pager.update(2,28101)==0);
-  assert(pager.update(0,28102)==0);assert(pager.update(1,50000)==0);
-  assert(pager.update(2,56999)==0);assert(pager.update(2,57000)==1);
-  RadarAutoPager wrapPager;assert(wrapPager.update(2,0xfffffff0u)==0);
-  assert(wrapPager.update(2,6983)==0);assert(wrapPager.update(2,6984)==1);
-  puts("PASS: Lite paging, shrink/growth, empty state and millis rollover");
   puts("PASS: detector positive/negative fixtures, truncation, CRC, tracking spikes/reacquisition/rollover, 150000 fuzz inputs");
 }

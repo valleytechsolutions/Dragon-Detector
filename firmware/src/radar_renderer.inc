@@ -1,11 +1,15 @@
 // Shared by full UI and the radar-only Lite UI. Coordinates use the 360px design.
 #ifdef BOARD_RADAR_LITE
-static constexpr unsigned RadarRenderPageSize=dragon::LiteRadarPageSize;
+static constexpr unsigned RadarRenderLabelLimit=dragon::LiteRadarLabelLimit;
 static constexpr bool RadarRenderLite=true;
 #else
-static constexpr unsigned RadarRenderPageSize=dragon::RadarPageSize;
+static constexpr unsigned RadarRenderLabelLimit=dragon::RadarLabelLimit;
 static constexpr bool RadarRenderLite=false;
 #endif
+static dragon::DeviceKey radarSelectedKey;
+static bool radarHasSelection=false;
+static uint32_t radarSelectedAt=0;
+static int radarPrimary=-1;
 static void line(lv_draw_ctx_t* ctx,int x1,int y1,int x2,int y2,uint32_t c,int width=1,int opa=255){
   lv_draw_line_dsc_t d;lv_draw_line_dsc_init(&d);d.color=color(c);d.width=width;d.opa=opa;lv_point_t a{(lv_coord_t)x1,(lv_coord_t)y1},b{(lv_coord_t)x2,(lv_coord_t)y2};lv_draw_line(ctx,&d,&a,&b);
 }
@@ -39,7 +43,7 @@ static void callout(lv_draw_ctx_t* ctx,const Dot& dot,unsigned slot,const char* 
   }
 #else
   lv_draw_rect_dsc_t box;lv_draw_rect_dsc_init(&box);box.radius=S(4);box.bg_color=color(dragon::RadarLabelBackground);box.bg_opa=LV_OPA_COVER;
-  box.border_color=color(c);box.border_opa=LV_OPA_80;box.border_width=1;
+  box.border_color=color(c);box.border_opa=LV_OPA_80;box.border_width=dot.index==radarPrimary?2:1;
   lv_area_t area{(lv_coord_t)x,(lv_coord_t)y,(lv_coord_t)(x+w),(lv_coord_t)(y+h)};lv_draw_rect(ctx,&box,&area);
   lv_draw_label_dsc_t d;lv_draw_label_dsc_init(&d);d.color=color(c);d.font=FCALLOUT;
   lv_area_t textArea{(lv_coord_t)(x+S(4)),(lv_coord_t)(y+S(3)),(lv_coord_t)(x+w-S(4)),(lv_coord_t)(y+h-S(3))};
@@ -49,14 +53,10 @@ static void callout(lv_draw_ctx_t* ctx,const Dot& dot,unsigned slot,const char* 
 }
 static void radarDraw(lv_event_t* e){
   auto* ctx=lv_event_get_draw_ctx(e);const auto& theme=radarPalettes[radarTheme];
-#ifdef BOARD_RADAR_LITE
   // LVGL may render several internal-RAM tiles for one frame. Advance signal
   // positions just once so leader lines and dots cannot disagree across tiles.
   const uint32_t now=radarFrameAt;
   static uint32_t plotFrame=UINT32_MAX;const bool advancePlot=plotFrame!=now;plotFrame=now;
-#else
-  const uint32_t now=millis();constexpr bool advancePlot=true;
-#endif
 #ifdef BOARD_RADAR_LITE
   if(liteBackdrop.data){lv_draw_img_dsc_t d;lv_draw_img_dsc_init(&d);lv_area_t a{0,0,SCREEN_RES-1,SCREEN_RES-1};lv_draw_img(ctx,&d,&a,&liteBackdrop);}
   else disc(ctx,CENTER,CENTER,S(178),theme.bottom);
@@ -85,36 +85,38 @@ static void radarDraw(lv_event_t* e){
     radarPrepared=now;radarCount=0;
     for(size_t i=0;i<MAX_CONTACTS;++i)if(radarVisible(contacts[i],now))radarOrder[radarCount++]=i;
     std::sort(radarOrder,radarOrder+radarCount,[now](int a,int b){if(a==trackedContact||b==trackedContact)return a==trackedContact&&b!=trackedContact;
-      bool staleA=uint32_t(now-contacts[a].seen)>=30000,staleB=uint32_t(now-contacts[b].seen)>=30000;if(staleA!=staleB)return !staleA;return preferContact(contacts[a],contacts[b],now);});
+      return preferContact(contacts[a],contacts[b],now);});
   }
-  const unsigned pages=radarLabels?dragon::radarPages(radarCount,RadarRenderPageSize):1;if(radarPage>=pages)radarPage=pages-1;
-  #ifdef BOARD_RADAR_LITE
-  // No touch/buttons: every page gets a complete seven-second viewing period.
-  static dragon::RadarAutoPager pager;radarPage=pager.update(pages,now);
-#endif
-  dotCount=0;unsigned first=radarLabels?radarPage*RadarRenderPageSize:0,last=radarLabels?std::min<unsigned>(first+RadarRenderPageSize,radarCount):radarCount;
-  for(unsigned k=first;k<last;++k){int i=radarOrder[k];auto& c=contacts[i];if(!radarVisible(c,now))continue;
+  if(radarHasSelection&&uint32_t(now-radarSelectedAt)>=10000)radarHasSelection=false;
+  dotCount=0;
+  for(unsigned k=0;k<unsigned(radarCount);++k){int i=radarOrder[k];auto& c=contacts[i];if(!radarVisible(c,now))continue;
     float target=c.signal.count?dragon::radarRadius(c.signal.smooth):158.f;if(!c.plotRadius)c.plotRadius=target;else if(advancePlot)c.plotRadius+=(target-c.plotRadius)*.35f;
     auto plot=dragon::radarPlotPoint(c.plotRadius,c.radarX,c.radarY);dots[dotCount++]={S(plot.x),S(plot.y),i,contactKey(c)};
   }
-  if(radarLabels){dragon::RadarPoint points[RadarRenderPageSize];uint8_t preferred[RadarRenderPageSize];
-    static dragon::DeviceKey labelKeys[RadarRenderPageSize];static uint8_t slots[RadarRenderPageSize];static int priorCount=0;static uint32_t labelsAt=0;bool changed=priorCount!=dotCount;
-    for(int i=0;i<dotCount;++i){points[i]={dots[i].x*360/SCREEN_RES,dots[i].y*360/SCREEN_RES};preferred[i]=255;if(i>=priorCount||!(labelKeys[i]==dots[i].key))changed=true;for(int j=0;j<priorCount;++j)if(labelKeys[j]==dots[i].key)preferred[i]=slots[j];}
-    if(changed||uint32_t(now-labelsAt)>=500){dragon::placeRadarLabels(points,dotCount,slots,preferred,RadarRenderLite);labelsAt=now;priorCount=dotCount;for(int i=0;i<dotCount;++i)labelKeys[i]=dots[i].key;}
-    for(int i=0;i<dotCount;++i){auto& c=contacts[dots[i].index];Family family=visibleFamily(c,now,detector.families);uint32_t age=now-c.seen;
-      char state[24],text[64];if(age>=10000)snprintf(state,sizeof(state),"%s %lus AGO",c.match.confidence==Confidence::Low&&!trafficFresh(c,now)?"CLUE":"SEEN",(unsigned long)(age/1000));else snprintf(state,sizeof(state),"%s",c.match.confidence==Confidence::Low&&!trafficFresh(c,now)?"WEAK CLUE":age>=5000?"FADING":c.rssi>=-55?"STRONG":c.rssi>=-75?"MODERATE":"FAINT");
-#if SCREEN_RES<=240
-      if(age>=10000)snprintf(state,sizeof(state),"%lus ago",(unsigned long)(age/1000));
-#endif
-      dots[i].labelSlot=slots[i];snprintf(text,sizeof(text),"%s\n%s",radarFamilyName(family),state);callout(ctx,dots[i],slots[i],text,dragon::familyColor(family));
-    }
-  }
-  for(int i=0;i<dotCount;++i){auto& dot=dots[i];auto& c=contacts[dot.index];int x=dot.x,y=dot.y;uint32_t age=now-c.seen;uint8_t opacity=std::max<uint8_t>(205,dragon::radarOpacity(age));uint32_t deviceColor=dragon::familyColor(visibleFamily(c,now,detector.families));
-    disc(ctx,x,y,S(8),dragon::RadarLabelBackground);
-    if(age>=30000 || (c.match.confidence==Confidence::Low&&!trafficFresh(c,now))){auto clue=arc;clue.color=color(deviceColor);clue.opa=opacity;clue.width=S(2);lv_point_t point{(lv_coord_t)x,(lv_coord_t)y};
-      if(age>=30000)for(int a=0;a<360;a+=90)lv_draw_arc(ctx,&clue,&point,S(6),a,a+48);else lv_draw_arc(ctx,&clue,&point,S(5),0,359);
-    }else{unsigned pulse=radioEnabled?unsigned((now+contactHash(contactKey(c)))%1800):900;pulse=pulse>900?1800-pulse:pulse;disc(ctx,x,y,S(9),deviceColor,unsigned(opacity)*(25+pulse/20)/255);disc(ctx,x,y,S(5),deviceColor,opacity);disc(ctx,x-S(1),y-S(1),S(2),0xffffff,opacity);}
+  // Paint low-priority dots first so a coincident tracker cannot cover Axon.
+  for(int i=dotCount-1;i>=0;--i){auto& dot=dots[i];auto& c=contacts[dot.index];int x=dot.x,y=dot.y;uint32_t age=now-c.seen;uint8_t opacity=std::max<uint8_t>(205,dragon::radarOpacity(age));Family family=visibleFamily(c,now,detector.families);uint32_t deviceColor=dragon::familyColor(family);
+    bool tracker=dragon::trackerFamily(family);disc(ctx,x,y,S(tracker?4:8),dragon::RadarLabelBackground);
+    if(age>=30000){auto stale=arc;stale.color=color(deviceColor);stale.opa=opacity;stale.width=S(2);lv_point_t point{(lv_coord_t)x,(lv_coord_t)y};
+      for(int a=0;a<360;a+=90)lv_draw_arc(ctx,&stale,&point,S(6),a,a+48);
+    }else if(tracker){disc(ctx,x,y,S(3),deviceColor,opacity);}
+    else{unsigned pulse=radioEnabled?unsigned((now+contactHash(contactKey(c)))%1800):900;pulse=pulse>900?1800-pulse:pulse;disc(ctx,x,y,S(9),deviceColor,unsigned(opacity)*(25+pulse/20)/255);disc(ctx,x,y,S(5),deviceColor,opacity);disc(ctx,x-S(1),y-S(1),S(2),0xffffff,opacity);}
     if(dot.index==trackedContact || (detector.enabled(c.trafficFamily)&&trafficFresh(c,now))){auto lock=arc;lock.color=color(dot.index==trackedContact?theme.text:0xff5040);lock.opa=220;lock.width=2;lv_point_t point{(lv_coord_t)x,(lv_coord_t)y};lv_draw_arc(ctx,&lock,&point,S(12),0,359);}
+  }
+  // Dots are never paginated. Named leaders belong to priority devices and
+  // the tapped contact; trackers otherwise consume no text or leader space.
+  static dragon::RadarLabelCandidate candidates[MAX_CONTACTS];
+  unsigned labels[RadarRenderLabelLimit];
+  for(int i=0;i<dotCount;++i){auto& c=contacts[dots[i].index];candidates[i]={c.match.family,uint32_t(now-c.seen)>=30000,radarHasSelection&&dots[i].key==radarSelectedKey};}
+  unsigned labelCount=dragon::selectRadarLabels(candidates,dotCount,labels,RadarRenderLabelLimit,radarLabels);
+  radarPrimary=labelCount?dots[labels[0]].index:-1;
+  dragon::RadarPoint points[RadarRenderLabelLimit];uint8_t preferred[RadarRenderLabelLimit];
+  static dragon::DeviceKey labelKeys[RadarRenderLabelLimit];static uint8_t slots[RadarRenderLabelLimit];static unsigned priorCount=0;
+  for(unsigned j=0;j<labelCount;++j){auto& dot=dots[labels[j]];points[j]={dot.x*360/SCREEN_RES,dot.y*360/SCREEN_RES};preferred[j]=255;for(unsigned k=0;k<priorCount;++k)if(labelKeys[k]==dot.key)preferred[j]=slots[k];}
+  dragon::placeRadarLabels(points,labelCount,slots,preferred,RadarRenderLite);priorCount=labelCount;
+  for(unsigned j=0;j<labelCount;++j){auto& dot=dots[labels[j]];labelKeys[j]=dot.key;dot.labelSlot=slots[j];auto& c=contacts[dot.index];uint32_t age=now-c.seen;
+    char state[24],text[64];if(age>=10000)snprintf(state,sizeof(state),"%lus ago",(unsigned long)(age/1000));else snprintf(state,sizeof(state),"%d dBm",c.rssi);
+    Family family=c.match.family;snprintf(text,sizeof(text),"%s\n%s",radarFamilyName(family),state);callout(ctx,dot,slots[j],text,dragon::familyColor(family));
+    disc(ctx,dot.x,dot.y,S(5),dragon::familyColor(family));
   }
   // Decorative center cursor, not a compass. Keep it above the sweep/labels.
 #ifdef BOARD_RADAR_LITE

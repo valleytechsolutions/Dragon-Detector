@@ -68,3 +68,9 @@ Thanks to **Seeed Studio** for the XIAO ESP32-S3 and Round Display hardware, sch
 ### Waveshare ESP32-S3-LCD-1.28 Lite
 
 The independent board adapter follows Waveshare's [official board documentation](https://docs.waveshare.com/ESP32-S3-LCD-1.28) and [schematic](https://files.waveshare.com/wiki/ESP32-S3-LCD-1.28/Esp32-s3-lcd-.128-sch.pdf). It uses the same pinned MIT-licensed TFT_eSPI dependency as XIAO Round. The shared Dragon Detector code remains MIT; no third-party port source was incorporated.
+
+## BLE Lab / 0.9.8
+
+**[Matthew KuKanich / ChimeraBLE](https://github.com/MatthewKuKanich/ChimeraBLE)** inspired the advertisement-inspection, GATT exploration, snapshot and peripheral-emulation workflows. Its published README was used as a feature reference. Dragon Detector's BLE Lab, DDG1 format, comparison logic, bounded queues, storage layout and interfaces are independently written MIT code. No ChimeraBLE GPL firmware source or its Wireshark-derived OUI database is bundled or relicensed. Thanks to Matthew for the research and workflow ideas.
+
+BLE operations use the already-credited **NimBLE-Arduino / h2zero** Apache-2.0 library and its bundled Apache/Mynewt components. GATT roles and attributes follow the public Bluetooth protocol; UUIDs alone do not prove a product's identity. LittleFS uses the framework's existing BSD-3-Clause implementation. The opt-in Windows test script uses Bleak (MIT) and PyWinRT (MIT) as host tools; they are not linked into the firmware. The demo GATT service, values and test traffic are original synthetic fixtures.

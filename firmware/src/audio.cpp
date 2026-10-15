@@ -46,7 +46,12 @@ void audioRecord(){snprintf(status.message,sizeof(status.message),"Microphone re
 AppAudioStatus audioStatus(){return status;}
 bool audioReady(){return ready;}
 void audioBeep(){start("Test:d=16,o=6,b=180:c,e,g",true);}
-void audioAlert(Family family){if(ready&&alertSound&&!detector.quiet&&status.volume)queue.request(unsigned(family),millis());}
+void audioAlert(Family family){if(ready&&alertSound&&!detector.quiet&&status.volume){
+  // Axon can interrupt a lower-priority melody immediately; retain cooldown.
+  if(family==Family::Axon&&!(queue.played&(1u<<unsigned(family))&&uint32_t(millis()-queue.last[unsigned(family)])<4000)){
+    queue.pending&=~(1u<<unsigned(family));queue.played|=1u<<unsigned(family);queue.last[unsigned(family)]=millis();start(toneText(unsigned(family)).c_str());
+  }else queue.request(unsigned(family),millis());
+}}
 static bool focusMatches(Family f){return int(f)==audioFocus||(audioFocus==int(Family::Flock)&&(f==Family::Alpr||f==Family::Raven));}
 static bool focusEligible(const Contact& c,uint32_t now){
  if(!c.used||now-c.seen>12000||(deviceRules(contactKey(c))&(RuleIgnore|RuleSnooze)))return false;

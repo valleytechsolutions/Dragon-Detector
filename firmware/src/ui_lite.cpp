@@ -16,12 +16,11 @@ static constexpr RadarPalette radarPalettes[]={
 };
 static constexpr unsigned radarTheme=1;
 static constexpr bool radarLabels=true;
-static unsigned radarPage=0;
 static uint32_t radarPrepared=0;
 static int radarOrder[MAX_CONTACTS],radarCount=0;
 static uint32_t radarFrameAt=0;
 struct Dot {int x,y,index;dragon::DeviceKey key;int labelSlot=-1;};
-static Dot dots[dragon::LiteRadarPageSize];static int dotCount=0;
+static Dot dots[MAX_CONTACTS];static int dotCount=0;
 static lv_color_t color(uint32_t c){return lv_color_hex(c);}
 static lv_img_dsc_t liteBackdrop;
 // Paint immutable instrument geometry once. Keep the internal display tile free
@@ -72,9 +71,7 @@ void uiLoop(){
     const bool deauth=trafficStatus.disconnectActive(now),spam=trafficStatus.bleActive(now);
     lv_label_set_text(activity,deauth&&spam?"DEAUTH + BLE BURST":deauth?"DEAUTH ACTIVITY":spam?"BLE SPAM CANDIDATE":"");
     if(deauth||spam)lv_obj_clear_flag(activity,LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(activity,LV_OBJ_FLAG_HIDDEN);
-    const unsigned pages=dragon::radarPages(radarCount,dragon::LiteRadarPageSize);
-    if(pages>1)snprintf(value,sizeof(value),"RSSI   /   PAGE %02u : %02u",radarPage+1,pages);
-    else snprintf(value,sizeof(value),"%s",radarCount?"RSSI  /  STRONGER INWARD":"SCANNING  /  BLE + WI-FI");
+    snprintf(value,sizeof(value),"%s",radarCount?"RSSI  /  STRONGER INWARD":"SCANNING  /  BLE + WI-FI");
     lv_label_set_text(pageLabel,value);
     if(!noticeAt||uint32_t(now-noticeAt)>5000)lv_obj_add_flag(notice,LV_OBJ_FLAG_HIDDEN);
   }
@@ -87,7 +84,7 @@ void uiShow(const String&){} void uiKey(bool){}
 bool uiStopwatchKey(bool,uint64_t){return false;}
 bool uiCommand(const String& c){
   if(c=="ui status"){Serial.printf("UI_STATUS page=radar lite=1 frames=%lu backdrop=%u frame_ms=83\n",frames,liteBackdrop.data?1:0);return true;}
-  if(c=="radar status"){Serial.printf("RADAR_SETTINGS theme=1 labels=1 recent=1 page=%u pages=%u plotted=%u auto_page_ms=7000\n",radarPage+1,dragon::radarPages(radarCount,dragon::LiteRadarPageSize),dotCount);return true;}
+  if(c=="radar status"){Serial.printf("RADAR_SETTINGS theme=1 labels=1 recent=1 pages=1 plotted=%u primary=%d\n",dotCount,radarPrimary);return true;}
   if(c=="display status"){Serial.println("DISPLAY_SETTINGS brightness=100 output=100 dim=0 off=0 dim_level=0 wake=0");return true;}
   return false;
 }

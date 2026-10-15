@@ -2,20 +2,23 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <math.h>
+#include "detection.h"
 
 namespace dragon {
-constexpr unsigned RadarPageSize=6;
-constexpr unsigned LiteRadarPageSize=4;
+constexpr unsigned RadarLabelLimit=6;
+constexpr unsigned LiteRadarLabelLimit=4;
 struct RadarPoint {int x,y;};
-struct RadarAutoPager {
-  unsigned page=0;uint32_t changed=0;bool started=false;
-  unsigned update(unsigned pages,uint32_t now){
-    if(!pages)pages=1;
-    if(!started||page>=pages||pages==1){page=0;changed=now;started=true;}
-    else if(uint32_t(now-changed)>=7000){page=(page+1)%pages;changed=now;}
-    return page;
-  }
-};
+// All contacts are plotted. Only automatic callouts are bounded by panel area.
+struct RadarLabelCandidate {Family family;bool stale=false,selected=false;};
+inline unsigned selectRadarLabels(const RadarLabelCandidate* candidates,unsigned count,unsigned* labels,unsigned limit,bool automatic=true){
+  unsigned used=0;
+  auto add=[&](unsigned i){if(used>=limit)return;for(unsigned j=0;j<used;++j)if(labels[j]==i)return;labels[used++]=i;};
+  // Axon owns the primary tag even while the user inspects a tracker.
+  if(automatic)for(unsigned i=0;i<count;++i)if(candidates[i].family==Family::Axon&&!candidates[i].stale){add(i);break;}
+  for(unsigned i=0;i<count;++i)if(candidates[i].selected)add(i);
+  if(automatic)for(unsigned i=0;i<count&&used<limit;++i)if(!candidates[i].stale&&importantFamily(candidates[i].family))add(i);
+  return used;
+}
 // Keep markers clear of the logo/status and bottom controls. Only the
 // decorative angle changes; radius still represents exactly the same RSSI.
 inline RadarPoint radarPlotPoint(float radius,float unitX,float unitY){
@@ -28,13 +31,12 @@ inline RadarLabelBox radarLabelSlot(unsigned slot,bool lite=false){
   if(lite)return {30+int(slot%2)*160,105+int(slot/2)*59,140,46};
   return {30+int(slot%3)*103,102+int(slot/3)*40,94,32};
 }
-inline unsigned radarPages(unsigned count,unsigned perPage=RadarPageSize){return count?(count+perPage-1)/perPage:1;}
 // Fixed, non-overlapping slots keep every plotted target labeled on a small
 // round display. Prefer short leaders and avoid covering any target marker.
 // Coordinates are logical 360px units; the renderer scales both resolutions.
 inline void placeRadarLabels(const RadarPoint* points,unsigned count,uint8_t* slots,const uint8_t* preferred=nullptr,bool lite=false){
   uint16_t used=0;
-  const unsigned limit=lite?LiteRadarPageSize:RadarPageSize,slotCount=lite?6:12;
+  const unsigned limit=lite?LiteRadarLabelLimit:RadarLabelLimit,slotCount=lite?4:6;
   for(unsigned i=0;i<count&&i<limit;++i){int best=0;int64_t bestCost=INT64_MAX;
     for(unsigned slot=0;slot<slotCount;++slot){if(used&(1u<<slot))continue;auto b=radarLabelSlot(slot,lite);
       int edgeX=points[i].x<b.x?b.x:points[i].x>b.x+b.w?b.x+b.w:points[i].x;

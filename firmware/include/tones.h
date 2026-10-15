@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <string.h>
+#include "detection.h"
 namespace dragon {
 constexpr size_t TONE_TEXT_MAX=512,TONE_NOTES_MAX=96;
 struct ToneNote {uint16_t hz=0,ms=0;};
@@ -61,7 +62,10 @@ struct ToneQueue {
  uint32_t pending=0,played=0,requested[26]{},last[26]{};
  void clear(){pending=0;}
  void request(unsigned family,uint32_t now){if(family>=26||(played&(1u<<family)&&now-last[family]<4000))return;if(!(pending&(1u<<family)))requested[family]=now;pending|=1u<<family;}
- int take(uint32_t now){for(unsigned i=0;i<26;++i)if(pending&(1u<<i)){pending&=~(1u<<i);if(now-requested[i]>10000)continue;played|=1u<<i;last[i]=now;return int(i);}return -1;}
+ int take(uint32_t now){int best=-1;for(unsigned i=0;i<26;++i)if(pending&(1u<<i)){
+   if(now-requested[i]>10000){pending&=~(1u<<i);continue;}
+   if(best<0||familyPriority(Family(i))>familyPriority(Family(best)))best=i;
+ }if(best>=0){pending&=~(1u<<best);played|=1u<<best;last[best]=now;}return best;}
 };
 inline unsigned huntInterval(int rssi){rssi=rssi<-95?-95:rssi>-35?-35:rssi;return 2000-unsigned(rssi+95)*1750/60;}
 inline unsigned huntPitch(int rssi){rssi=rssi<-95?-95:rssi>-35?-35:rssi;return 440+unsigned(rssi+95)*1320/60;}

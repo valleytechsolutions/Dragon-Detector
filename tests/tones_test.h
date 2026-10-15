@@ -9,6 +9,8 @@ static void toneTests(){
   std::string tooLong(513,'a');assert(!parseTone(tooLong.c_str(),m));std::string tooMany="a:d=32,b=900:";for(int i=0;i<97;++i)tooMany+=(i?",c":"c");assert(!parseTone(tooMany.c_str(),m));
   ToneQueue q;q.request(3,100);q.request(3,200);q.request(4,200);assert(q.take(300)==3&&q.take(300)==4&&q.take(300)==-1);q.request(3,500);assert(q.take(600)==-1);q.request(3,4400);assert(q.take(15000)==-1);q.request(26,16000);assert(q.take(16000)==-1);
   ToneQueue wrap;wrap.request(2,0xffffff00);assert(wrap.take(0xffffff01)==2);wrap.request(2,100);assert(wrap.take(101)==-1);wrap.request(2,5000);assert(wrap.take(5001)==2);
+  ToneQueue priority;for(Family f:{Family::Tracker,Family::SmartTag,Family::Ring,Family::Flipper,Family::Axon})priority.request(unsigned(f),100);
+  assert(priority.take(101)==int(Family::Axon));assert(priority.take(101)==int(Family::Flipper));assert(priority.take(101)==int(Family::Ring));
   assert(huntInterval(-95)==2000&&huntInterval(-35)==250&&huntPitch(-95)==440&&huntPitch(-35)==1760);for(int r=-126;r<0;++r){assert(huntInterval(r)>=huntInterval(r+1));assert(huntPitch(r)<=huntPitch(r+1));}
   uint32_t rng=123;for(int n=0;n<50000;++n){std::string text;for(unsigned j=0;j<unsigned(n)%515;++j){rng^=rng<<13;rng^=rng>>17;rng^=rng<<5;text+=char(1+rng%127);}parseTone(text.c_str(),m);}
   puts("PASS: 26 RTTTL presets, validation/bounds, tone queue cooldown/expiry/rollover, hunt mapping, 50000 tone fuzz inputs");

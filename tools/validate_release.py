@@ -20,9 +20,11 @@ for board in ('spotpear','waveshare','stopwatch','xiao_round','waveshare_lite'):
             assert part['offset']>=end,'Overlapping segments'
             payload=file.read_bytes();assert hashlib.sha256(payload).hexdigest()==records[file.name]
             end=part['offset']+len(payload)
-            assert end<=(0x800000 if board=='xiao_round' else 0x1000000),'Image exceeds physical flash'
+            assert end<=(0x2000000 if board=='waveshare' else 0x800000 if board=='xiao_round' else 0x1000000),'Image exceeds physical flash'
         offsets=[p['offset'] for p in parts]
         assert 0x9000 not in offsets,'NVS must not be explicitly written'
-        assert len(parts)==(5 if mode=='factory' else 4)
+        assert len(parts)==((6 if board=='waveshare' else 5) if mode=='factory' else 4)
+        if mode=='update':assert all(p['offset']<0xc10000 for p in parts),'Update must preserve both filesystems'
+        if board=='waveshare' and mode=='factory':assert parts[-1]=={'path':'reconfs.bin','offset':0x1000000}
     print(f'PASS {board}: both manifests, checksums, image paths and nonoverlapping offsets')
 print('PASS current documentation links')

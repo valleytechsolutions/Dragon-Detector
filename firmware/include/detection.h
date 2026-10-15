@@ -14,6 +14,20 @@ inline const char* familyName(Family f) {
   static const char* n[] = {"Wi-Fi", "BLE", "Flock", "Axon / TASER", "Camera glasses", "Pineapple", "Pwnagotchi", "Nyanbox", "HaleHound", "Find My / DULT", "Serial module", "Flipper", "Biscuit", "SmartTag", "Raven", "Google Find Hub", "Tile", "Ring", "Camera vendor", "ALPR vendor", "Drone Remote ID", "iBeacon", "Disconnect burst", "SSID conflict", "BLE advert burst", "Dragon fox"};
   return unsigned(f)<unsigned(Family::Count)?n[unsigned(f)]:"Unknown";
 }
+// Shared ordering for radar, contact retention, notification and sound queues.
+inline bool trackerFamily(Family f){return f==Family::Tracker||f==Family::SmartTag||f==Family::GoogleTag||f==Family::Tile||f==Family::IBeacon;}
+inline unsigned familyPriority(Family f){
+  switch(f){
+    case Family::Axon:return 100;
+    case Family::Flipper:return 90;
+    case Family::Flock:case Family::Alpr:return 85;
+    case Family::Meta:case Family::Drone:return 80;
+    case Family::Ring:case Family::Camera:return 75;
+    case Family::Wifi:case Family::Ble:return 20;
+    default:return trackerFamily(f)?10:50;
+  }
+}
+inline bool importantFamily(Family f){return familyPriority(f)>=75;}
 #include "vendor_prefixes.h"
 inline const char* confidenceName(Confidence c) { return c==Confidence::Strong ? "strong signature" : c==Confidence::Medium ? "medium confidence" : c==Confidence::Low ? "weak indicator" : "unclassified"; }
 inline bool contains(const char* haystack, const char* needle) {
@@ -52,9 +66,9 @@ inline Match named(const char* name, Family base) {
   if(equalName(name,"flock noir") || namedPrefix(name,"dragon detector"))return {base,Confidence::None,"detector dashboard, not a camera"};
   if(base==Family::Ble){
     bool serial=strlen(name)==10;for(size_t i=0;serial && i<10;++i)serial=isdigit((unsigned char)name[i]);
-    if(serial || equalName(name,"FS Ext Battery") || contains(name,"flock") || contains(name,"penguin") || contains(name,"pigvision"))return {Family::Flock,Confidence::Low,"Flock/battery name clue; arbitrary names are unverified"};
-    if(contains(name,"axon"))return {Family::Axon,Confidence::Low,"Axon name clue; arbitrary names are unverified"};
-    if(contains(name,"flipper"))return {Family::Flipper,Confidence::Low,"Flipper name clue; arbitrary names are unverified"};
+    if(serial || equalName(name,"FS Ext Battery") || contains(name,"flock") || contains(name,"penguin") || contains(name,"pigvision"))return {Family::Flock,Confidence::Low,"Flock/battery name match; arbitrary names are unverified"};
+    if(contains(name,"axon"))return {Family::Axon,Confidence::Low,"Axon name match; arbitrary names are unverified"};
+    if(contains(name,"flipper"))return {Family::Flipper,Confidence::Low,"Flipper name match; arbitrary names are unverified"};
   }
   if(namedPrefix(name,"biscuit"))return {Family::Biscuit,Confidence::Low,"Biscuit name; Pro/Ultra model unverified"};
   if(namedPrefix(name,"flipper"))return {Family::Flipper,Confidence::Low,"Flipper name only; spoofable"};

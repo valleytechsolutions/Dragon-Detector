@@ -29,7 +29,7 @@ The last command compares the five upstream table identifier sets against the co
 
 ## Meaning of parity
 
-All **well-formed, receivable reference table signatures** have a visible candidate path. Shared identifiers stay weak: an Espressif radio is not proven to be Flock, a Motorola OUI is not proven to be an ALPR, Meta company IDs are not proven camera glasses, FEAA may be an Eddystone beacon, and an Apple pairing advertisement may be AirPods. A hollow radar marker represents that uncertainty. Inspect the actual evidence before drawing conclusions.
+All **well-formed, receivable reference table signatures** have a visible candidate path. Shared identifiers stay weak: an Espressif radio is not proven to be Flock, a Motorola OUI is not proven to be an ALPR, Meta company IDs are not proven camera glasses, FEAA may be an Eddystone beacon, and an Apple pairing advertisement may be AirPods. Evidence details retain that specificity; the radar shows the matched family without CLUE/hint labels. Inspect the actual evidence before drawing conclusions.
 
 Three locally administered patterns (`82:6B:F2`, `02:C0:CA`, `02:13:37`) are explicitly labeled address-pattern clues, not vendor assignments. Random BLE addresses never receive vendor attribution. Samsung `48:27:EA` and Sonos `00:0E:58` are excluded by both this reference revision and Dragon.
 

@@ -34,11 +34,11 @@ Service IDs also accept equivalent 16/32/Bluetooth-Base-128 advertising encoding
 |---|---|
 | Signal hunt / foxhunting | Dedicated BLE or Wi-Fi listening, dBm gauge, 24-second signal trace, peak, trend, stability, saved comparison point, stale/reacquisition state |
 | Training fox | Explicitly enabled non-connectable Dragon BLE beacon; off at boot. Another Dragon Detector can detect and hunt it. Original protocol; not SquachMesh-compatible |
-| Type and confidence filters | Per-family visibility/alert switches; separate weak / medium+ / strong audible-alert threshold. All enabled clues remain on radar; all families enabled on fresh installs |
+| Type and confidence filters | Per-family visibility/alert switches; separate weak / medium+ / strong audible-alert threshold. Priority families bypass the confidence gate; trackers only alert when watched. All enabled matches remain on radar; all families enabled on fresh installs |
 | Ignore, snooze, watch | 64 address/radio rules; ignore/watch persist, snooze lasts until restart; watched addresses receive priority cards |
 | Repeated alert suppression | Off / after 5 / after 10; after the allowance, another alert needs a 7 dB stronger signal; allowance resets after 30 minutes |
 | Advertisement floods | Distinct-address and pairing-payload grouping over five seconds; aggregated alerts and an Activity view; tag cards quieted during a burst while history and watch rules remain active |
-| Alert cards | Ten-second dismissible cards; watch cards stay until dismissed; hunt/snooze shortcuts; quiet mode |
+| Alert cards | Six-second family-colored notification bubbles; Axon preempts lower priorities, with eight pending cards and 30-second expiry. Watch cards stay until dismissed; Hunt shortcut; quiet mode |
 | Persistent history | 512 unique address/radio/family records in RAM, bounded two-file flash journal, record CRC, first-match recording, encounters, peak/last signal, UTC when synchronized |
 | Export | Local CSV through the GitHub web tool; optional additional SD event CSV/PCAP on Spotpear |
 | Privacy | Screen names/address masking and hidden location/evidence text; stored/exported records retain full evidence |

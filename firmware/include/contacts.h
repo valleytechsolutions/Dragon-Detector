@@ -53,6 +53,10 @@ inline bool recentCandidateVisible(const Contact& c,uint32_t now,const dragon::D
 inline dragon::Family visibleFamily(const Contact& c,uint32_t now,uint32_t families=0xffffffffu){return trafficFresh(c,now)&&(families&(1u<<unsigned(c.trafficFamily)))?c.trafficFamily:c.match.family;}
 inline bool huntSweep(const Contact& c,uint32_t now){return !c.ble && (!c.packets || uint32_t(now-c.seen)>=12000);}
 inline bool preferContact(const Contact& a,const Contact& b,uint32_t now){
+  bool staleA=uint32_t(now-a.seen)>=30000,staleB=uint32_t(now-b.seen)>=30000;
+  if(staleA!=staleB)return !staleA;
+  unsigned pa=dragon::familyPriority(a.match.family),pb=dragon::familyPriority(b.match.family);
+  if(pa!=pb)return pa>pb;
   if(trafficFresh(a,now)!=trafficFresh(b,now))return trafficFresh(a,now);
   if(a.match.confidence!=b.match.confidence)return a.match.confidence>b.match.confidence;
   if(a.rssi!=b.rssi)return a.rssi>b.rssi;

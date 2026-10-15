@@ -8,7 +8,51 @@ import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools} from '..
 import {readRadarSettings,saveRadarSettings} from '../web/radar-transfer.js';
 import {readFileSync} from 'node:fs';
 import {boardProfiles,connectedProfile,validateManifest,supportsBadge} from '../web/board-profiles.js';
-import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan} from '../web/badge-editor.js';
+import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan,badgeTextLayout,drawBadgeText} from '../web/badge-editor.js';
+import {deviceQuery} from '../web/device-query.js';
+
+test('stalled settings query retries safely and recovers the studio connection',async()=>{
+  const writes=[];let attempts=0;
+  const link={async write(c){writes.push(c);},async wait(match){if(++attempts===1)throw new Error('Board response timed out.');const response='CLOCK_STATUS rtc=0 valid=0 epoch=0 offset=0';assert.ok(match(response));return response;}};
+  assert.match(await deviceQuery(link,'clock status',s=>s.startsWith('CLOCK_STATUS ')),/^CLOCK_STATUS/);
+  assert.deepEqual(writes,['clock status','clock status']);
+  await assert.rejects(deviceQuery(link,'badge upload 10 abc',()=>true),/read-only/);
+  assert.equal(writes.length,2,'must never retry a binary transfer command');
+});
+test('settings queries bound retries and stop immediately on USB disconnect',async()=>{
+  for(const disconnected of [false,true]){
+    let writes=0;const link={failure:disconnected?new Error('USB disconnected'):null,async write(){writes++;},async wait(){throw new Error('Board response timed out.');}};
+    await assert.rejects(deviceQuery(link,'badge info',()=>true),/timed out/);
+    assert.equal(writes,disconnected?1:3);
+  }
+});
+
+test('studio reads both legacy paged and 0.9.6+ single-screen radar settings',async()=>{
+  for(const tail of ['page=0 pages=2 plotted=6','pages=1 plotted=37 primary=-1','pages=1 plotted=384 primary=12']){
+    const link={async write(command){assert.equal(command,'radar status');},async wait(match){const response=`RADAR_SETTINGS theme=2 labels=1 recent=1 ${tail}`;assert.ok(match(response));return response;}};
+    assert.deepEqual(await readRadarSettings(link),{theme:'gold',labels:true,recent:true});
+  }
+  const invalid={async write(){},async wait(){return 'RADAR_SETTINGS theme=9 labels=1 recent=1 pages=1 plotted=0 primary=-1';}};
+  await assert.rejects(readRadarSettings(invalid),/Invalid radar settings/);
+});
+
+test('badge text stays inside the circular screen at extreme positions and font sizes',()=>{
+  assert.deepEqual(badgeTextLayout('',466),[]);
+  for(const size of [240,360,466])for(const fontPercent of [4,7,14])for(const yPercent of [0,12,50,88,100]){
+    const lines=badgeTextLayout('BWM\nDragon Detector\nA long message that must fit\nignored',size,{fontPercent,yPercent});
+    assert.equal(lines.length,3);
+    for(const line of lines){
+      assert.ok(line.maxWidth>0);assert.equal(line.x,size/2);
+      assert.ok(Math.hypot(line.maxWidth/2,Math.abs(line.y-size/2)+line.fontSize*.6)<=size*.46+.001);
+    }
+  }
+});
+test('badge text is drawn into the exported canvas with a readable outline',()=>{
+  const calls=[];const ctx={save(){},restore(){},strokeText(...args){calls.push(['stroke',...args]);},fillText(...args){calls.push(['fill',...args]);}};
+  drawBadgeText(ctx,'BWM\nYOUR PAL KAL',466,{color:'#ff0000'});
+  assert.equal(ctx.fillStyle,'#ff0000');assert.equal(ctx.strokeStyle,'#000000');
+  assert.deepEqual(calls.map(x=>x.slice(0,2)),[['stroke','BWM'],['fill','BWM'],['stroke','YOUR PAL KAL'],['fill','YOUR PAL KAL']]);
+});
 
 test('firmware release updates preserve the independently pinned installer dependency',()=>{
   const html=readFileSync(new URL('../web/index.html',import.meta.url),'utf8');
@@ -110,6 +154,22 @@ test('badge transfer stops on device errors before sending more image data',asyn
   let writes=0;const link={lines:[],write:async()=>{writes++;},wait:async()=>writes===1?'BADGE_READY':'BADGE_ERROR transfer or checksum'};
   await assert.rejects(uploadBadge(link,new Uint8Array(500)),/BADGE_ERROR/);
   assert.equal(writes,2);
+});
+
+test('badge transfer tolerates split and repeated cumulative ACKs without resending pixels',async()=>{
+  const port=mockPort(),serial=new BadgeSerial(port);await serial.open();
+  let sent=0;const bytes=new Uint8Array(434320),write=serial.write.bind(serial);
+  serial.write=async data=>{
+    await write(data);
+    if(typeof data==='string'){port.emit('BADGE_READY\n\n');return;}
+    const previous=sent;sent+=data.length;
+    port.emit(`BADGE_ACK ${previous}\n\nBADGE_ACK ${previous+Math.floor(data.length/2)}\n`);
+    port.emit(`BADGE_ACK ${sent}\n\n`);
+    if(sent===bytes.length)port.emit('\nBADGE_OK\n\n');
+  };
+  await uploadBadge(serial,bytes);assert.equal(sent,bytes.length);
+  assert.equal(port.writes.length,1+Math.ceil(bytes.length/BADGE_CHUNK_SIZE));
+  await serial.close();
 });
 
 test('history export preserves all 512 rows even in one USB read',async()=>{

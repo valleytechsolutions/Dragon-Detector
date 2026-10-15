@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include "app.h"
+#include "ble_lab.h"
 #include "board_pins.h"
 #include <lvgl.h>
 #include <esp_timer.h>
@@ -73,7 +74,7 @@ static void command(const String& c){
   const bool allowed=c=="badge info"||c=="status"||c=="contacts"||c=="selftest"||c=="screenshot"||c=="ui status"||c=="radar status"||c=="display status"||c=="axon status"||c=="traffic status"||c=="detector status";
   if(!allowed){Serial.println("LITE_RADAR_ONLY no menus, badge, audio or radio controls");return;}
 #endif
-  if(badgeCommand(c) || wearableCommand(c) || detectorCommand(c) || audioCommand(c) || uiCommand(c))return;
+  if(bleLabCommand(c) || badgeCommand(c) || wearableCommand(c) || detectorCommand(c) || audioCommand(c) || uiCommand(c))return;
   if(c=="status"){health();Serial.printf("SESSION %s\n",sessionPath.c_str());}
   else if(c=="selftest")runSelfTests();
 #ifdef BOARD_XIAO_ROUND
@@ -134,11 +135,11 @@ void setup(){
 #ifndef BOARD_RADAR_LITE
   uint32_t at=millis();while(millis()-at<1600){uiLoop();delay(5);}
 #endif
-  storageBegin();badgeInit();audioBegin();detectorBegin();radioBegin();Serial.println("DRAGON READY");health();
+  storageBegin();badgeInit();audioBegin();detectorBegin();radioBegin();bleLabBegin();Serial.println("DRAGON READY");health();
 }
 void loop(){
   uint32_t stamp=micros();auto measured=[&](int i){uint32_t end=micros();loopLastUs[i]=end-stamp;loopMaxUs[i]=std::max(loopMaxUs[i],loopLastUs[i]);stamp=end;};
-  boardLoop();measured(0);radioLoop();measured(1);storageLoop();detectorLoop();measured(2);audioLoop();measured(3);uiLoop();measured(4);badgeLoop();measured(5);
+  boardLoop();bleLabLoop();measured(0);radioLoop();measured(1);storageLoop();detectorLoop();measured(2);audioLoop();measured(3);uiLoop();measured(4);badgeLoop();measured(5);
   while(Serial.available()){char c=Serial.read();if(c=='\n'){serialLine.trim();if(serialOverflow)Serial.println("COMMAND_ERROR too long");else command(serialLine);serialLine="";serialOverflow=false;}else if(serialLine.length()<600)serialLine+=c;else serialOverflow=true;}
   if(millis()-lastHealth>10000){lastHealth=millis();health();}
   delay(2);

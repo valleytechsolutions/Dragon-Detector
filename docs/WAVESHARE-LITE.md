@@ -10,7 +10,7 @@ Actual 240×240 framebuffer capture from the connected board, not a panel photog
 
 - Boots straight to the green radar, with BWM logo, live sweep and Wi-Fi/BLE reception status. Fine range rings, segmented arcs and edge ticks replace the dense grid; every device keeps its unique family color.
 - Always 100% backlight; no dimming or timeout. The displayed **100% is brightness, not battery charge**.
-- Up to four labeled targets per page. Version 0.9.5 increases device names from 8 to 12 pixels, uses slim two-line callouts with 10-pixel signal text and enlarges radio status. Extra pages cycle automatically every seven seconds. Every plotted target has its family color and leader line; stale/weak clues have distinct markers. No tap or button is required.
+- All contacts appear together as family-colored dots. Up to four priority devices receive readable tags and leaders; Axon is first. Trackers remain small dots. There are no automatic pages. Lite has no touch hardware, so tap-to-reveal is available only on the full touch boards.
 - Signal radius uses the same median-filtered, smoothed RSSI as the full firmware. Stronger signals move inward. Neither the angle nor radius is a measured direction or distance.
 - All 26 detector families remain enabled, including the 0.9.3 Axon priority/receive fixes, ALPR, Find My accessories, Ring, Flipper and Wi-Fi/BLE activity detection. [Signature coverage and limitations](DETECTION.md) apply equally to Lite.
 - Passive BLE scanning and passive Wi-Fi reception alternate on the one shared radio, with Wi-Fi channels 1–11. Reception continues while drawing, but alternating modes/channel hopping still create listening gaps. No active probing, wireless attacks or fox transmitter.

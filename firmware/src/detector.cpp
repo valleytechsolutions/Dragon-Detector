@@ -148,16 +148,22 @@ bool emitDetection(Contact& c,Family family,Confidence confidence,const char* ev
   if(c.historyFamily!=family || uint32_t(millis()-c.historyAt)>=1000){historyObserve(c,family,confidence,evidence);c.historyAt=millis();c.historyFamily=family;}
   uint8_t flags=deviceRules(contactKey(c));bool watch=flags&RuleWatch;
   if(flags&(RuleIgnore|RuleSnooze))return false;
+  // Trackers remain visible and logged, but only an explicit watch rule alerts.
+  if(dragon::trackerFamily(family)&&!watch)return false;
   if(!watch && !dragon::alertConfidenceAllowed({family,confidence,evidence},detector.minimum,axonPriority))return false;
   if(!force && !c.gate.allow(millis(),c.rssi,detector.autoQuiet,watch))return false;
-  auto key=contactKey(c);char detail[128];snprintf(detail,sizeof(detail),"%d dBm / %s; %s",c.rssi,dragon::confidenceName(confidence),evidence);
+  auto key=contactKey(c);char detail[128];snprintf(detail,sizeof(detail),"%s%s%d dBm / %s",c.name,*c.name?" / ":"",c.rssi,evidence);
   addAlert(watch?"WATCH LIST HIT":dragon::familyName(family),detail,c.mac);
   audioAlert(family);
   if(family==Family::Axon)++axonAlertCount;
+  // Keep the bubble readable; complete signature evidence stays in history,
+  // the event log and contact details.
+  snprintf(detail,sizeof(detail),"%s%s%d dBm / %s",c.name,*c.name?" / ":"",c.rssi,c.ble?"Bluetooth":"Wi-Fi");
   if(!detector.quiet||watch)uiNotify(watch?"LOCKED ON":dragon::familyName(family),detail,&key,watch);
   return true;
 }
 bool detectorCommand(const String& cmd){
+  if(cmd=="detector quiet on"||cmd=="detector quiet off"){detector.quiet=cmd.endsWith("on");detectorSave();audioStop();Serial.printf("DETECTOR_QUIET %u\n",detector.quiet);return true;}
   if(cmd=="axon status"){axonStatus();return true;}
   if(cmd=="axon priority on"||cmd=="axon priority off"){axonPriority=cmd.endsWith("on");detectorSave();Serial.printf("AXON_PRIORITY %u\n",axonPriority);return true;}
   if(cmd=="traffic status"){auto& t=trafficStatus;Serial.printf("TRAFFIC deauth_frames=%lu deauth_alerts=%lu recent=%u channel=%u reason=%u protected=%u ble_alerts=%lu group=%u addresses=%u variants=%u\n",t.disconnectFrames,t.disconnectAlerts,recentDisconnects(),t.channel,t.reason,t.protectedFrame,t.bleAlerts,t.bleGroup,t.bleAddresses,t.bleVariants);return true;}

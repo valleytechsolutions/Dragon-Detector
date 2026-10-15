@@ -1,12 +1,14 @@
-import {localClockEpoch,setClock,readWearable,setOrientation} from './wearable-transfer.js';
-import {BadgeSerial} from './serial.js';
+import {decodeProfile,exportProfile,exportLog,importProfile,labLines,safeProfileName} from './ble-lab.js?v=0.9.8-2';
+import {localClockEpoch,setClock,readWearable,setOrientation} from './wearable-transfer.js?v=0.9.8';
+import {deviceQuery} from './device-query.js';
+import {BadgeSerial} from './serial.js?v=0.9.8';
 import {encodeBadge} from './badge-codec.js';
-import {uploadBadge} from './badge-transfer.js';
+import {uploadBadge} from './badge-transfer.js?v=0.9.8';
 import {readHistory} from './detector-transfer.js';
-import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasWearableTools} from './firmware-compat.js?v=0.9.5';
-import {readRadarSettings,saveRadarSettings} from './radar-transfer.js';
-import {boardProfiles,connectedProfile,validateManifest,supportsBadge} from './board-profiles.js?v=0.9.5';
-import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan} from './badge-editor.js';
+import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasWearableTools} from './firmware-compat.js?v=0.9.8';
+import {readRadarSettings,saveRadarSettings} from './radar-transfer.js?v=0.9.8';
+import {boardProfiles,connectedProfile,validateManifest,supportsBadge} from './board-profiles.js?v=0.9.8';
+import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan,drawBadgeText} from './badge-editor.js?v=0.9.8';
 const $ = id => document.getElementById(id);
 const models = Object.fromEntries(Object.entries(boardProfiles).map(([id,p])=>[id,p.name]));
 let board = '', releaseReady = false, request = 0;
@@ -35,7 +37,7 @@ async function chooseBoard(next) {
     const data = validateManifest(await response.json(),board,mode);
     if(revision !== request)return;
     $('installer').setAttribute('manifest', manifest); releaseReady = true;
-    $('board-status').textContent = `${data.version} · ${mode==='factory'?'Fresh installation replaces saved history and badge files.':board==='waveshare_lite'?'Update requires this exact Lite profile’s 0.9.4+ layout. For an older third-party port, choose Fresh installation unless its partitions have been verified.':board==='xiao_round'?'Update preserves files; requires this XIAO + Round Display profile’s 0.9.2 or newer 8 MB layout.':'Update preserves history, badges and settings; requires this board’s existing 0.3.x / 0.4.x / 0.5.x / 0.6.x / 0.7.x / 0.8.x / 0.9.x layout.'}`;
+    $('board-status').textContent = `${data.version} · ${mode==='factory'?'Fresh installation replaces saved history, badges and BLE profiles.':board==='waveshare'?'32 MB update preserves badge, history, settings and BLE profiles. When upgrading older firmware, initialize new BLE storage once in the lab.':board==='waveshare_lite'?'Update requires this exact Lite profile’s 0.9.4+ layout. For an older third-party port, choose Fresh installation unless its partitions have been verified.':board==='xiao_round'?'Update preserves files; requires this XIAO + Round Display profile’s 0.9.2 or newer 8 MB layout.':'Update preserves history, badges and settings; requires this board’s existing 0.3.x / 0.4.x / 0.5.x / 0.6.x / 0.7.x / 0.8.x / 0.9.x layout.'}`;
     $('download').href = `firmware/${board}/SHA256SUMS.txt`; $('download').textContent='Firmware file checksums'; $('download').hidden=false;
     $('install-message').textContent='Confirm your board, then connect its USB port.';
   } catch(error) {
@@ -60,6 +62,8 @@ function setBadgeProfile(id){
   $('badge-board').value=id;draw();
 }
 function controls(){
+  const labReady=!!serial&&deviceProfile==='waveshare'&&/^0\.9\.(?:[8-9]|\d{2,})$/.test(firmwareVersion);
+  document.querySelectorAll('#ble-lab button').forEach(b=>b.disabled=busy||!labReady);
   const lite=!!boardProfiles[deviceProfile]?.lite;
   for(const id of ['show-stopwatch','show-clock','clock-save','clock-sync','orientation-save'])$(id).disabled=busy||!serial||lite||!hasWearableTools(firmwareVersion);
   $('show-activity').disabled=busy||!serial||lite||!hasActivityTools(firmwareVersion);
@@ -71,7 +75,7 @@ function controls(){
   $('disconnect').hidden=$('detector-disconnect').hidden=!serial;
   if(!serial)$('device-label').textContent='USB NOT CONNECTED';
   $('badge-board').disabled=busy||!!serial;
-  for(const id of ['image','background','guides'])$(id).disabled=busy;
+  for(const id of ['image','stock-bwm','background','guides','badge-text','text-size','text-y','text-color'])$(id).disabled=busy;
   for(const id of ['zoom','pan-x','pan-y','center','fill','fit','rotate-left','rotate-right','mirror','reset-art','download-badge'])$(id).disabled=busy||!photo;
   document.querySelectorAll('[data-nudge]').forEach(b=>b.disabled=busy||!photo);
 }
@@ -79,6 +83,8 @@ function draw(){
   ctx.fillStyle=$('background').value;ctx.fillRect(0,0,size,size);
   if(photo){const g=badgeTransform(photo.width,photo.height,size,{zoom,x:offsetX,y:offsetY,turns,mirror});ctx.save();ctx.translate(g.cx,g.cy);ctx.rotate(g.angle);ctx.scale(g.scale*g.mirror,g.scale);ctx.drawImage(photo,-photo.width/2,-photo.height/2);ctx.restore();}
   else {ctx.fillStyle='#163b25';ctx.beginPath();ctx.arc(size/2,size/2,size*.39,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#78a05b';ctx.lineWidth=1;for(let n=1;n<4;n++){ctx.beginPath();ctx.arc(size/2,size/2,size*.1*n,0,Math.PI*2);ctx.stroke();}ctx.fillStyle='#c3f66d';ctx.textAlign='center';ctx.font=`bold ${size*.062}px sans-serif`;ctx.fillText('YOUR BADGE',size/2,size*.49);ctx.font=`${size*.027}px sans-serif`;ctx.fillText('CHOOSE AN IMAGE TO BEGIN',size/2,size*.55);}
+  drawBadgeText(ctx,$('badge-text').value,size,{fontPercent:$('text-size').value,yPercent:$('text-y').value,color:$('text-color').value});
+  $('text-size-value').textContent=$('text-size').value+'%';$('text-y-value').textContent=$('text-y').value+'%';
   guideCtx.clearRect(0,0,size,size);
   if($('guides').checked){guideCtx.strokeStyle='#ffffff99';guideCtx.lineWidth=Math.max(1,size/360);guideCtx.setLineDash([size/60,size/90]);guideCtx.beginPath();guideCtx.arc(size/2,size/2,size*.47,0,Math.PI*2);guideCtx.stroke();guideCtx.setLineDash([]);guideCtx.beginPath();guideCtx.moveTo(size*.44,size/2);guideCtx.lineTo(size*.56,size/2);guideCtx.moveTo(size/2,size*.44);guideCtx.lineTo(size/2,size*.56);guideCtx.stroke();}
   $('zoom').min=photo?Math.min(.05,fitBadgeZoom(photo.width,photo.height,size,turns)):.05;
@@ -93,16 +99,27 @@ function draw(){
   controls();
 }
 function fit(){if(!photo)return;zoom=fitBadgeZoom(photo.width,photo.height,size,turns);offsetX=offsetY=0;draw();}
-async function loadImage(file){
+async function loadImage(file,stock=false){
   if(!file||busy)return;const revision=++imageRequest;
   try{if(file.size>20*1024*1024)throw new Error('Choose an image smaller than 20 MB.');
     const next=await createImageBitmap(file,{imageOrientation:'from-image'});
     if(next.width*next.height>40000000){next.close();throw new Error('Choose an image below 40 megapixels.');}
     if(revision!==imageRequest){next.close();return;}
-    photo?.close();photo=next;photoName=file.name;turns=0;mirror=false;fit();$('studio-status').textContent='Whole image fitted inside the circle. Drag to position, or choose Fill circle for a full-screen crop.';
+    photo?.close();photo=next;photoName=file.name;turns=0;mirror=false;
+    if(stock){zoom=1;offsetX=offsetY=0;draw();$('studio-status').textContent='BWM stock badge centered and sized for the round screen. Add text below, or upload as it is.';}
+    else {fit();$('studio-status').textContent='Whole image fitted inside the circle. Drag to position, or choose Fill circle for a full-screen crop.';}
   }catch(error){$('studio-status').textContent=error.message;}
 }
-$('image').onchange=e=>loadImage(e.target.files[0]);
+$('image').onchange=e=>{const file=e.target.files[0];e.target.value='';loadImage(file);};
+async function loadStock(){
+  if(busy)return;const revision=++imageRequest;
+  try {const response=await fetch(`assets/bwm-badge-${size}.png`);if(!response.ok)throw new Error('The stock badge could not load. Choose your own image or try again.');
+    const blob=await response.blob();if(revision!==imageRequest)return;
+    await loadImage(new File([blob],'BWM stock badge.png',{type:'image/png'}),true);
+  }catch(error){if(revision===imageRequest)$('studio-status').textContent=error.message;}
+}
+$('stock-bwm').onclick=loadStock;
+for(const id of ['badge-text','text-size','text-y','text-color'])$(id).oninput=draw;
 $('badge-board').onchange=e=>setBadgeProfile(e.target.value);
 $('zoom').oninput=e=>{zoom=Number(e.target.value);draw();};
 $('center').onclick=()=>{offsetX=offsetY=0;draw();};
@@ -132,27 +149,27 @@ $('connect').onclick=async()=>{
   if(busy||serial)return;busy=true;controls();$('studio-status').textContent=$('detector-status').textContent='Choose your detector’s USB port in the browser prompt. Cancel the prompt to keep editing.';
   let link;
   try {
-    link=new BadgeSerial(await navigator.serial.requestPort());await link.open();await link.write('badge info');
-    const line=await link.wait(s=>s.startsWith('BADGE_INFO '));
+    link=new BadgeSerial(await navigator.serial.requestPort());await link.open();
+    const line=await deviceQuery(link,'badge info',s=>s.startsWith('BADGE_INFO '));
     const match=parseBadgeInfo(line);
     if(!match)throw new Error('Install the current firmware using the matching board profile first.');
     const profile=connectedProfile(match);if(!profile)throw new Error('This board identity or resolution is not supported. Use its exact matching firmware.');
     serial=link;firmwareVersion=match.version;deviceProfile=profile;setBadgeProfile(profile);
     $('device-label').textContent=`${match.size} × ${match.size} · ${boardProfiles[profile].lite?'LITE RADAR':'CONNECTED'}`;$('disconnect').hidden=false;
     if(boardProfiles[profile].lite){
-      $('studio-status').textContent=$('detector-status').textContent='Waveshare Lite connected. Always-on passive radar at full brightness, automatic target pages, no touch menus, badge mode, audio or settings. Use the installer above for firmware updates.';
+      $('studio-status').textContent=$('detector-status').textContent='Waveshare Lite connected. Always-on passive radar at full brightness, all contacts on one radar screen, no touch menus, badge mode, audio or settings. Use the installer above for firmware updates.';
       return;
     }
     $('studio-status').textContent=`${match.board} is ready. Choose and position your image.`;draw();
     if(hasDetectorTools(firmwareVersion)){
-      await link.write(`time ${Math.floor(Date.now()/1000)}`);if(await link.wait(s=>s==='TIME_OK'||s==='TIME_ERROR')!=='TIME_OK')throw new Error('Clock sync failed. Check the RTC.');
-      await link.write('display status');const config=await link.wait(s=>s.startsWith('DISPLAY_SETTINGS '));
+      await link.write(`time ${Math.floor(Date.now()/1000)}`);const clockSynced=await link.wait(s=>s==='TIME_OK'||s==='TIME_ERROR')==='TIME_OK';
+      const config=await deviceQuery(link,'display status',s=>s.startsWith('DISPLAY_SETTINGS '));
       const values=/brightness=(\d+) output=-?\d+ dim=(\d+) off=(\d+) dim_level=(\d+)/.exec(config);
       if(values)for(const [i,id] of ['display-brightness','display-dim','display-off','display-level'].entries()){const value=values[i+1];if(!Array.from($(id).options).some(o=>o.value===value))$(id).add(new Option(value,value));$(id).value=value;}
       await loadAudio(link);
       if(hasWearableTools(firmwareVersion))await loadWearable(link);
       if(hasRadarTools(firmwareVersion)){const radar=await readRadarSettings(link);$('radar-theme').value=radar.theme;$('radar-labels').checked=radar.labels;$('radar-recent').checked=radar.recent;}
-      $('detector-status').textContent=`${match.board} connected. UTC clock synchronized. History stays on your device until you download it.`;
+      $('detector-status').textContent=`${match.board} connected. ${clockSynced?'UTC clock synchronized.':'Clock sync unavailable; badge upload is ready.'} History stays on your device until you download it.`;
     }else $('detector-status').textContent='Connected to 0.3.x. Update to the current firmware for history and detector controls.';
   }catch(error){if(link)await link.close();serial=null;firmwareVersion='';deviceProfile='';$('studio-status').textContent=error.message;$('detector-status').textContent=error.message;}
   finally{busy=false;draw();}
@@ -162,6 +179,7 @@ $('disconnect').onclick=$('detector-disconnect').onclick=disconnect;
 $('upload').onclick=async()=>{
   if(!serial||!photo||busy||deviceProfile!==badgeProfile||!supportsBadge(deviceProfile))return;busy=true;const link=serial;
   $('disconnect').disabled=true;draw();
+  $('progress').value=0;$('studio-status').textContent='Preparing your badge and waiting for the board…';
   try{
     const bytes=encodeBadge(ctx.getImageData(0,0,size,size).data,size);
     await uploadBadge(link,bytes,percent=>{
@@ -189,7 +207,7 @@ $('show-radar').onclick=()=>detectorAction(async link=>{await link.write('screen
 $('show-activity').onclick=()=>detectorAction(async link=>{await link.write('screen activity');$('detector-status').textContent='Radio Activity selected on the board: deauthentication and BLE spam evidence.';});
 $('radar-save').onclick=()=>detectorAction(async link=>{await saveRadarSettings(link,{theme:$('radar-theme').value,labels:$('radar-labels').checked,recent:$('radar-recent').checked});$('detector-status').textContent='Radar theme, labels and recent-signal preferences saved on your detector.';});
 $('display-save').onclick=()=>detectorAction(async link=>{const values=['display-brightness','display-dim','display-off','display-level'].map(id=>Number($(id).value));await link.write('display set '+values.join(' '));const reply=await link.wait(s=>s==='DISPLAY_OK'||s==='DISPLAY_ERROR');if(reply!=='DISPLAY_OK')throw new Error('Display settings were rejected.');$('detector-status').textContent='Display preferences saved on your detector.';});
-draw();
+draw();loadStock();
 
 const toneFamilies=['Wi-Fi','BLE','Flock / ALPR + Raven focus','Axon / TASER','Meta / camera glasses','Pineapple','Pwnagotchi','Nyanbox','HaleHound','Find My / DULT','Serial module','Flipper','Biscuit','SmartTag','Raven','Google Find Hub','Tile','Ring','Camera vendor','ALPR vendor','Drone Remote ID','iBeacon','Disconnect burst','SSID conflict','BLE advert burst','Dragon fox'];
 for(const [i,label] of toneFamilies.entries()){$('tone-family').add(new Option(label,String(i)));$('sound-focus').add(new Option(label,String(i)));}
@@ -197,8 +215,8 @@ $('tone-family').value='3';
 $('tone-text').dataset.family='';
 $('tone-family').onchange=()=>{$('tone-text').value='';$('tone-text').dataset.family='';$('sound-status').textContent='Load this family’s saved tone before editing.';};
 $('sound-volume').oninput=()=>{$('sound-volume-label').textContent=$('sound-volume').value+'%';};
-async function loadTone(link){const id=$('tone-family').value;await link.write('tone get '+id);const value=await link.wait(s=>s.startsWith(`TONE_VALUE ${id} `)||s===`TONE_VALUE ${id}`||s.startsWith('TONE_ERROR'));if(value.startsWith('TONE_ERROR'))throw new Error(value);$('tone-text').value=value.slice(('TONE_VALUE '+id).length).trim();$('tone-text').dataset.family=id;}
-async function loadAudio(link){await link.write('tone settings');const value=await link.wait(s=>s.startsWith('TONE_SETTINGS '));const m=/ready=(\d+) enabled=(\d+) volume=(\d+) hunt=(\d+) focus=(-?\d+) quiet=(\d+)/.exec(value);if(!m)throw new Error('Invalid audio settings response.');$('sound-enabled').checked=m[2]==='1';$('sound-volume').value=m[3];$('sound-volume').oninput();$('sound-hunt').checked=m[4]==='1';$('sound-focus').value=m[5];$('sound-status').textContent=m[1]==='1'?(m[6]==='1'?'Speaker ready. Quiet mode is ON; automatic audio is muted.':'Speaker ready. Audio preferences loaded.'):deviceProfile==='xiao_round'?'This board has no speaker. Visual alerts and on-screen signal hunting remain available.':'The board could not initialize its speaker output.';await loadTone(link);}
+async function loadTone(link){const id=$('tone-family').value;const value=await deviceQuery(link,'tone get '+id,s=>s.startsWith(`TONE_VALUE ${id} `)||s===`TONE_VALUE ${id}`||s.startsWith('TONE_ERROR'));if(value.startsWith('TONE_ERROR'))throw new Error(value);$('tone-text').value=value.slice(('TONE_VALUE '+id).length).trim();$('tone-text').dataset.family=id;}
+async function loadAudio(link){const value=await deviceQuery(link,'tone settings',s=>s.startsWith('TONE_SETTINGS '));const m=/ready=(\d+) enabled=(\d+) volume=(\d+) hunt=(\d+) focus=(-?\d+) quiet=(\d+)/.exec(value);if(!m)throw new Error('Invalid audio settings response.');$('sound-enabled').checked=m[2]==='1';$('sound-volume').value=m[3];$('sound-volume').oninput();$('sound-hunt').checked=m[4]==='1';$('sound-focus').value=m[5];$('sound-status').textContent=m[1]==='1'?(m[6]==='1'?'Speaker ready. Quiet mode is ON; automatic audio is muted.':'Speaker ready. Audio preferences loaded.'):deviceProfile==='xiao_round'?'This board has no speaker. Visual alerts and on-screen signal hunting remain available.':'The board could not initialize its speaker output.';await loadTone(link);}
 async function toneReply(link,command){await link.write(command);const reply=await link.wait(s=>s==='TONE_OK'||s.startsWith('TONE_ERROR'));if(reply!=='TONE_OK')throw new Error(reply.replace('TONE_ERROR ','Tone rejected: '));}
 async function audioAction(action){await detectorAction(async link=>{try{await action(link);}catch(error){$('sound-status').textContent=error.message;throw error;}});}
 $('sound-save').onclick=()=>audioAction(async link=>{await toneReply(link,`tone config ${Number($('sound-enabled').checked)} ${$('sound-volume').value} ${Number($('sound-hunt').checked)} ${$('sound-focus').value}`);$('sound-status').textContent='Audio preferences saved on the detector.';});
@@ -219,3 +237,43 @@ $('clock-sync').onclick=()=>detectorAction(async link=>{await setClock(link,Math
 $('clock-save').onclick=()=>detectorAction(async link=>{const offset=Number($('clock-offset').value);await setClock(link,localClockEpoch($('clock-local').value,offset),offset);await loadWearable(link);$('detector-status').textContent='Local clock saved. Stopwatch elapsed time is unchanged.';});
 $('orientation-save').onclick=()=>detectorAction(async link=>{await setOrientation(link,$('orientation-mode').value);await loadWearable(link);$('detector-status').textContent='Orientation preference saved.';});
 for(const page of ['stopwatch','clock'])$('show-'+page).onclick=()=>detectorAction(async link=>{await link.write('screen '+page);$('detector-status').textContent=page==='clock'?'Clock displayed.':'Stopwatch displayed. Tap Start, then Lap; Home leaves it running.';});
+
+async function labAction(fn){if(!serial||busy)return;busy=true;controls();try{await fn(serial);}catch(e){$('lab-output').textContent=e.message;}finally{busy=false;controls();}}
+async function labCommand(link,command){link.lines=[];await link.write(command);const reply=await link.wait(s=>/^LAB_(OK|ERROR|LOG|DIFF)/.test(s),10000);$('lab-output').textContent=reply;if(reply.startsWith('LAB_ERROR'))throw new Error(reply);return reply;}
+function showProfile(bytes){
+ const p=decodeProfile(bytes),lines=[`${p.name || 'Unnamed peripheral'} · ${p.partial?'Partial capture':'Complete capture'}`,`${p.attributes.length} attributes · ${p.address}`, ''];
+ const names={'1800':'Generic Access','1801':'Generic Attribute','180a':'Device Information','180f':'Battery','2a19':'Battery level','2901':'Description','2902':'Notification configuration'};
+ const name=a=>names[a.uuid.toLowerCase()]||a.uuid;
+ const access=a=>[[2,'Read'],[4,'Write without response'],[8,'Write'],[16,'Notify'],[32,'Indicate']].filter(([bit])=>a.properties&bit).map(([,label])=>label).join(' / ');
+ $('lab-attribute').replaceChildren(new Option('Choose a characteristic',''));
+ for(const a of p.attributes){
+  const status=a.flags&1?'Read unavailable':a.flags&2?'Value truncated':a.flags&4?'Not read':`${a.length} bytes captured`;
+  if(a.kind===0)lines.push(`SERVICE ${name(a)}`);
+  else{lines.push(`${a.kind===1?'  #':'    Descriptor #'}${a.index} ${name(a)}`,`    ${a.kind===1?access(a)+' · ':''}${status}`);if(a.length)lines.push('    '+a.value.slice(0,32).map(v=>v.toString(16).padStart(2,'0')).join(' ')+(a.length>32?' …':''));}
+  if(a.kind===1)$('lab-attribute').add(new Option(`#${a.index} ${name(a)} · ${access(a)} · ${status}`,String(a.index)));
+ }
+ $('lab-output').textContent=lines.join('\n');return p;
+}
+function labAttr(){const value=$('lab-attribute').value;if(!/^\d+$/.test(value))throw new Error('Read the workspace and choose a characteristic first.');return value;}
+function labSaved(){return safeProfileName($('lab-saved').value);}
+$('lab-open').onclick=()=>labAction(async l=>{await l.write('screen lab');$('lab-output').textContent='BLE Lab opened on the display.';});
+$('lab-status').onclick=()=>labAction(async l=>{$('lab-output').textContent=(await labLines(l,'lab status')).join('\n');});
+$('lab-stop').onclick=()=>labAction(l=>labCommand(l,'lab stop'));
+$('lab-refresh').onclick=()=>labAction(async l=>{const rows=await labLines(l,'lab nearby');$('lab-device').replaceChildren(new Option('Choose your peripheral',''));for(const row of rows){const m=/^LAB_DEVICE ([0-9a-f:]{17}) (\d) (-?\d+) (.*)$/i.exec(row);if(m)$('lab-device').add(new Option(`${m[4]||m[1]} · ${m[3]} dBm · ${m[1]}`,`${m[1]} ${m[2]}`));}$('lab-output').textContent='Select your peripheral, then connect. Radar remains active until you connect.';});
+$('lab-inspect').onclick=()=>labAction(async l=>{const d=$('lab-device').value;if(!/^[0-9a-f:]{17} [0-3]$/i.test(d))throw new Error('Choose your device first.');await labCommand(l,'lab inspect '+d);$('lab-output').textContent+='\nDiscovery runs on the device. Use Status, then Read workspace when connected.';});
+$('lab-workspace').onclick=()=>labAction(async l=>showProfile(await exportProfile(l)));
+$('lab-read').onclick=()=>labAction(l=>labCommand(l,'lab read '+labAttr()));
+$('lab-subscribe').onclick=()=>labAction(l=>labCommand(l,'lab subscribe '+labAttr()));
+$('lab-notify').onclick=()=>labAction(l=>labCommand(l,'lab notify '+labAttr()));
+$('lab-events').onclick=()=>labAction(async l=>{$('lab-output').textContent=(await labLines(l,'lab events')).join('\n');});
+$('lab-log').onclick=()=>labAction(l=>labCommand(l,'lab log on'));$('lab-log-stop').onclick=()=>labAction(l=>labCommand(l,'lab log off'));
+$('lab-demo').onclick=()=>labAction(l=>labCommand(l,'lab demo'));
+$('lab-save').onclick=()=>labAction(l=>labCommand(l,'lab save '+safeProfileName($('lab-name').value)));
+$('lab-export').onclick=()=>labAction(async l=>{const bytes=await exportProfile(l);showProfile(bytes);const url=URL.createObjectURL(new Blob([bytes],{type:'application/octet-stream'})),a=document.createElement('a');a.href=url;a.download='dragon-gatt-profile.ddg';a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);});
+$('lab-import').onclick=()=>labAction(async l=>{const f=$('lab-file').files[0];if(!f||f.size>72136)throw new Error('Choose a valid .ddg profile under 72 KB.');const bytes=new Uint8Array(await f.arrayBuffer());decodeProfile(bytes);await importProfile(l,bytes,p=>{$('lab-output').textContent=`Importing ${p}%`;});showProfile(bytes);});
+$('lab-library').onclick=()=>labAction(async l=>{const rows=await labLines(l,'lab list');$('lab-saved').replaceChildren(new Option('Choose a saved profile',''));for(const row of rows){const m=/^LAB_PROFILE ([a-z0-9_-]{1,32})\.ddg (\d+)$/i.exec(row);if(m)$('lab-saved').add(new Option(`${m[1]} · ${m[2]} bytes`,m[1]));}$('lab-output').textContent='Profile library refreshed.';});
+$('lab-load').onclick=()=>labAction(l=>labCommand(l,'lab load '+labSaved()));$('lab-compare').onclick=()=>labAction(l=>labCommand(l,'lab compare '+labSaved()));
+$('lab-clone').onclick=()=>{if(confirm('Start a local GATT peripheral from the workspace? Radar reception pauses until Stop. The original device is not modified.'))labAction(l=>labCommand(l,'lab clone'));};
+$('lab-initialize').onclick=()=>{if(confirm('Initialize the new upper 16 MB BLE Lab partition? Badge, history and settings stay in the lower half. Old data in the upper half will be replaced.'))labAction(l=>labCommand(l,'lab storage initialize'));};
+
+$('lab-log-download').onclick=()=>labAction(async l=>{const csv=await exportLog(l,$('lab-log-file').value==='previous'),url=URL.createObjectURL(new Blob([csv],{type:'text/csv'})),a=document.createElement('a');a.href=url;a.download='dragon-ble-events.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);$('lab-output').textContent='Saved event log downloaded.';});

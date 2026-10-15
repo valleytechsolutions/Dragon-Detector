@@ -1,5 +1,30 @@
 # Changes
 
+## 0.9.8 — Waveshare BLE Lab and 32 MB storage
+
+- Original MIT BLE Lab: passive advertisement inspector, explicit GATT discovery/read, notification/indication monitoring, local event logs, saved DDG1 profiles, USB import/export and structural/value comparison.
+- Local GATT peripheral emulation with readable/writable characteristics, notifications and descriptors; captured legacy advertisements when they fit. Stack-owned GAP/GATT/CCCD attributes are managed by NimBLE. Bond keys, protected access and proprietary behavior are not cloned.
+- Waveshare AMOLED 1.75C now addresses 32 MB. The lower 16 MB partitions are unchanged; a separate 16 MB recon filesystem holds profiles and event logs. Update manifests exclude both filesystems and NVS. Fresh-install manifests initialize both.
+- Touch Tools → Recon → BLE Lab and matching USB browser controls. Home/Stop releases the connection/emulator and restores the previous radar state. Other boards remain on their existing 8/16 MB layouts.
+- Includes the 0.9.6 detection/radar and 0.9.7 badge improvements below.
+
+
+## 0.9.7 — Badge upload repair and BWM stock badge
+
+- Serialize Bluetooth scanner changes on its host task. Reproduced and fixed a NimBLE scan-result double-free when USB badge upload paused reception on the Waveshare AMOLED.
+- Repeat cumulative USB acknowledgments during an idle transfer to recover Windows native USB stalls without resending image bytes. Keep checksum validation, the inactivity timeout, and atomic replacement of the previous badge.
+- Include the centered BWM stock badge in full-board firmware and the studio. Size the visible silhouette for the round screen; preserve existing custom badges and the original source PNG.
+- Add optional three-line text with size, vertical position, color and an outline, rendered into both the device upload and PNG download. A failed automatic clock sync no longer disconnects the badge editor.
+- Accept the 0.9.6 single-screen radar-status response during studio connection, while retaining compatibility with older paged firmware. Retry stalled read-only USB settings queries.
+
+## 0.9.6 — Axon priority and one-screen radar
+
+- Route all AXEOFF company/service/address matches, including custom UUID and random-address matches, through the reserved Axon receive queue and first-hit alerts. Include SquachWatch Axon name/address signatures in that path. Preserve the evidence specificity in details.
+- Use a full 100/100 ms passive BLE window and remove the active-scan result cap. Protect live priority contacts from lower-priority insertions under tracker crowds.
+- Remove radar pagination on every board. Plot every retained visible contact, label Axon first and then cameras/ALPR/glasses/drones/Flipper. Keep trackers as small, silent dots; touch reveals their label/leader without displacing Axon.
+- Use compact family-colored notification bubbles, a bounded priority queue, and Axon sound preemption. Trackers only alert when explicitly watched. Keep ignore, snooze, quiet, family switches and cooldowns.
+- Add regression coverage for AXEOFF matching, first-hit alerts, 384-contact tracker crowds, tap selection, notification ordering and sound ordering.
+
 ## 0.9.5 — Refined Lite radar
 
 - Increase Lite device names from 8 to 12 pixels, with slim two-line callouts and four targets per automatically cycling page. Enlarge radio status, simplify the footer and strengthen label-position stability.
