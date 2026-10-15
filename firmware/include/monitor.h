@@ -17,6 +17,11 @@ struct DetectorSettings {
   uint16_t smoothingMs=1800;
   bool enabled(Family f)const{return unsigned(f)<unsigned(Family::Count) && (families&(1u<<unsigned(f)));}
 };
+inline bool priorityAxon(Match match,bool enabled){return enabled&&match.family==Family::Axon&&match.confidence>=Confidence::Medium;}
+inline bool signatureAlertReady(Match match,uint16_t hits,uint32_t since,uint32_t at,bool axonPriority){
+  return hits&&(priorityAxon(match,axonPriority)||(hits>=2&&uint32_t(at-since)>=400));
+}
+inline bool alertConfidenceAllowed(Match match,Confidence minimum,bool axonPriority){return match.confidence>=minimum||priorityAxon(match,axonPriority);}
 struct AlertGate {
   uint32_t window=0,last=0;int peak=-127;uint8_t count=0;bool active=false;
   bool allow(uint32_t now,int rssi,uint8_t budget,bool watched=false) {

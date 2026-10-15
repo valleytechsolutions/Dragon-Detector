@@ -1,8 +1,17 @@
-# Validation status · 0.9.2
+# Validation status · 0.9.3
 
 This is an experimental development release. Automated signature checks and basic board checks do not establish field detection accuracy or all-day battery life.
 
 All four board profiles compile locally: Spotpear JC3636W518, Waveshare 1.75C, M5Stack StopWatch C152 and Seeed XIAO ESP32-S3 + Round Display. Audio-equipped boards retain full-range PCM/codec output and a 100% volume default. The Seeed assembly has no onboard speaker. Release packaging checks are separate from physical hardware tests.
+
+## Waveshare Axon correction · 0.9.3 · 2026-10-14
+
+- The connected board identified itself as Waveshare ESP32-S3-Touch-AMOLED-1.75C running 0.9.1. Its saved general alert threshold was strong-only, Axon was enabled, quiet was off, volume was 100%, and no target was locked. Exported road-session history contained no Axon entries. Historical queue statistics included 3,609 drops and a 3.6-second maximum lag; those cumulative figures cannot be attributed specifically to the drive.
+- A synthetic over-the-air manufacturer `034D` advertisement from the local computer was classified by 0.9.1, but its alert count remained zero under the saved threshold. On 0.9.3 the same test produced an Axon alert on its first processed observation despite strong-only remaining selected. A CRC-verified 466×466 framebuffer capture showed the Axon popup and signal label. The initial observed processing lag was 16 ms; this is a single bench result, not a field latency guarantee.
+- Additional independent over-the-air service-data advertisements for `FC81`, `FE6B` and `FE6C` each incremented the correct service counter on normal radar. Across these short tests, 196 Axon observations were processed with zero Axon queue drops. A USB framebuffer transfer temporarily paused scanning and delayed queued processing, so the session's later 3.9-second maximum includes that diagnostic operation. Windows rejected the initial service-list publisher setup; service-data publishing succeeded. The host fixture suite separately tests service-list encodings.
+- A complete private 16 MB recovery backup was saved. The existing partition table matched the build; only the application at `0x10000` was written and its hash verified. The board reports 0.9.3, ready badge storage/audio, retained 100% volume, and 23/23 on-device tests passed. Priority off/on commands passed; an actual restart restored priority on, the same theme/labels and normal radar without a Hunt lock. A second CRC-checked capture verified the new setting row.
+- Native regressions cover all assigned Axon IDs across 16/32/base-128 encodings, unnamed random-address adverts, public identity addresses, empty advertisements, valid fields preceding malformed tails, ADV/scan-response boundaries, header-only Wi-Fi evidence, weak compatibility cases, immediate-versus-repeat alert policy, and planned channel coverage across timer rollover. Another 50,000 random inputs exercise the actual transport wrappers. Existing 134-entry SquachWatch coverage, parser/tracking, display and tone tests still pass; 26 web tests passed.
+- **Limits:** all transmitted Axon test signals were synthetic. No real Axon body camera, Wi-Fi Axon transmitter, controlled drive comparison, RF congestion trial or battery endurance test was available. The exact cause of the reported road miss is unresolved without the corresponding AXEOFF packets/log. A registered identifier can describe other Axon/TASER equipment. Test history may contain the computer's synthetic beacon; private addresses/captures/backups are not published. See [Axon configuration and evidence](AXON.md).
 
 ## Seeed XIAO Round Display · 0.9.2 · 2026-10-14
 

@@ -1,7 +1,15 @@
 #include "app.h"
+#include "axon.h"
 void runSelfTests(){
   int passed=0,failed=0;auto check=[&](bool ok,const char* name){if(ok)++passed;else{++failed;Serial.printf("TEST FAILED: %s\n",name);}};
   using namespace dragon;
+  const uint8_t mac[]={0xc2,1,2,3,4,5};bool payloadValid=false;
+  uint8_t axon[]={3,0xff,0x4d,3};auto axonFrame=parseBleObservation(axon,sizeof(axon),0,mac,1,payloadValid);
+  check(payloadValid&&axonFrame.match.family==Family::Axon,"Axon CID on random BLE address");
+  check(signatureAlertReady(axonFrame.match,1,100,100,true)&&alertConfidenceAllowed(axonFrame.match,Confidence::Strong,true),"Axon first-hit priority alert");
+  uint8_t axonTail[]={3,0xff,0x4d,3,9,9,'X'};
+  check(parseBleObservation(axonTail,sizeof(axonTail),0,mac,1,payloadValid).match.family==Family::Axon&&!payloadValid,"Axon complete field survives bad tail");
+  for(uint16_t id:{0xfc81,0xfe6b,0xfe6c}){uint8_t data[]={3,3,uint8_t(id),uint8_t(id>>8)};check(parseBleObservation(data,sizeof(data),0,mac,1,payloadValid).match.family==Family::Axon,"Axon assigned service");}
   check(!parseWifi(nullptr,0).valid,"empty Wi-Fi rejected");
   uint8_t deauth[26]{};deauth[0]=0xc0;deauth[24]=7;
   check(parseWifi(deauth,26).deauth && parseWifi(deauth,26).reason==7,"deauth parsed");

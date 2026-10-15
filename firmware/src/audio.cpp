@@ -53,7 +53,7 @@ static bool focusEligible(const Contact& c,uint32_t now){
  if(audioFocus>=int(Family::Deauth)&&audioFocus<=int(Family::BleSpam))return int(c.trafficFamily)==audioFocus&&detector.enabled(c.trafficFamily)&&c.wifiAlerts&&now-c.lastWifiAlert<=12000;
  if(!focusMatches(c.match.family)||!detector.enabled(c.match.family))return false;
  if(audioFocus<=int(Family::Ble))return c.packets>=2&&now-c.firstSeen>=400;
- return now-c.matchedAt<=12000&&((c.matchHits>=2&&c.matchedAt-c.matchSince>=400&&c.match.confidence>=detector.minimum)||(deviceRules(contactKey(c))&RuleWatch));
+ return now-c.matchedAt<=12000&&((dragon::signatureAlertReady(c.match,c.matchHits,c.matchSince,c.matchedAt,axonPriority)&&dragon::alertConfidenceAllowed(c.match,detector.minimum,axonPriority))||(deviceRules(contactKey(c))&RuleWatch));
 }
 static int target(uint32_t now){
  if(trackedContact>=0)return trackedContact;

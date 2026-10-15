@@ -19,7 +19,9 @@ static Match ble(const std::vector<uint8_t>& p){auto f=parseBle(p.data(),p.size(
 #include "service_encoding_test.h"
 #include "radar_layout_test.h"
 #include "wearable_test.h"
+#include "axon_test.h"
 int main(){
+  axonTests();
   wearableTests();
   radarLayoutTests();
   serviceEncodingTests();

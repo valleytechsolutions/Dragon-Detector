@@ -1,5 +1,13 @@
 # Changes
 
+## 0.9.3 — Axon reception and first-hit alerts
+
+- Add saved Axon priority under Tools → Detectors: registered vendor evidence alerts on its first observation, including when other alerts require strong confidence. Respect quiet/ignore/snooze/family controls and cooldowns.
+- Reserve receive capacity for registered Axon signals and drain those packets first. Prevent older ordinary packets from rolling a contact's state backward.
+- Start with BLE; alternate 2.2-second phases and plan an eleven-channel Wi-Fi sweep at 200 ms dwell. Dedicated Hunt retains its radio lock.
+- Keep public address evidence from empty advertisements, complete Axon fields before damaged tails, and Wi-Fi source evidence despite malformed information elements. Surface broad AXEOFF partial-UUID/random-address patterns as weak clues without assigning them a vendor identity.
+- Add per-signature reception, alert, queue-drop and latency diagnostics through `axon status`, host transport/fuzz tests and six additional on-device checks. Shared by all four board profiles.
+
 ## 0.9.2 — Seeed XIAO Round Display
 
 - Add an 8 MB XIAO ESP32-S3 + Seeed Round Display profile with GC9A01 LCD, buffered CHSC6X touch/BOOT input, BM8563 RTC and shared-SPI microSD. Preserve existing card files; keep logging/capture opt-in.

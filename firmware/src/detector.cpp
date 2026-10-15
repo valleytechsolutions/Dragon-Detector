@@ -5,6 +5,8 @@
 #include <time.h>
 
 dragon::DetectorSettings detector;
+bool axonPriority=true;
+uint32_t axonAlertCount=0;
 HistoryRecord* historyRecords=nullptr;
 size_t historyCount=0;
 bool historyReady=false;
@@ -39,6 +41,7 @@ void detectorSave(){
   prefs.putUInt("schema",1);prefs.putBytes("settings",&detector,sizeof(detector));
   prefs.putBool("sound",alertSound);prefs.putBool("vibrate",alertVibration);
   prefs.putBool("active-ble",activeBle);
+  prefs.putBool("axon-priority",axonPriority);
 }
 void displayMac(const uint8_t* mac,char* out){macText(mac,out);if(detector.privacy)strcpy(out+9,"XX:XX:XX");}
 String displayName(const char* name){if(!detector.privacy)return String(name);return strlen(name)>3?String(name).substring(0,3)+"...":String(name);}
@@ -58,6 +61,7 @@ void detectorBegin(){
     prefs.putBytes("settings",&detector,sizeof(detector));prefs.putUInt("schema",1);prefs.putBool("coverage-v05",true);
   }
   activeBle=prefs.getBool("active-ble",false);
+  axonPriority=prefs.getBool("axon-priority",true);
   if(unsigned(detector.minimum)<1||unsigned(detector.minimum)>3)detector.minimum=Confidence::Medium;
   if(detector.autoQuiet!=0&&detector.autoQuiet!=5&&detector.autoQuiet!=10)detector.autoQuiet=5;
   if(detector.smoothingMs<600||detector.smoothingMs>4000)detector.smoothingMs=1800;
@@ -135,15 +139,18 @@ bool emitDetection(Contact& c,Family family,Confidence confidence,const char* ev
   if(c.historyFamily!=family || uint32_t(millis()-c.historyAt)>=1000){historyObserve(c,family,confidence,evidence);c.historyAt=millis();c.historyFamily=family;}
   uint8_t flags=deviceRules(contactKey(c));bool watch=flags&RuleWatch;
   if(flags&(RuleIgnore|RuleSnooze))return false;
-  if(!watch && confidence<detector.minimum)return false;
+  if(!watch && !dragon::alertConfidenceAllowed({family,confidence,evidence},detector.minimum,axonPriority))return false;
   if(!force && !c.gate.allow(millis(),c.rssi,detector.autoQuiet,watch))return false;
   auto key=contactKey(c);char detail[128];snprintf(detail,sizeof(detail),"%d dBm / %s; %s",c.rssi,dragon::confidenceName(confidence),evidence);
   addAlert(watch?"WATCH LIST HIT":dragon::familyName(family),detail,c.mac);
   audioAlert(family);
+  if(family==Family::Axon)++axonAlertCount;
   if(!detector.quiet||watch)uiNotify(watch?"LOCKED ON":dragon::familyName(family),detail,&key,watch);
   return true;
 }
 bool detectorCommand(const String& cmd){
+  if(cmd=="axon status"){axonStatus();return true;}
+  if(cmd=="axon priority on"||cmd=="axon priority off"){axonPriority=cmd.endsWith("on");detectorSave();Serial.printf("AXON_PRIORITY %u\n",axonPriority);return true;}
   if(cmd=="traffic status"){auto& t=trafficStatus;Serial.printf("TRAFFIC deauth_frames=%lu deauth_alerts=%lu recent=%u channel=%u reason=%u protected=%u ble_alerts=%lu group=%u addresses=%u variants=%u\n",t.disconnectFrames,t.disconnectAlerts,recentDisconnects(),t.channel,t.reason,t.protectedFrame,t.bleAlerts,t.bleGroup,t.bleAddresses,t.bleVariants);return true;}
   if(cmd=="radio active"||cmd=="radio passive"){setActiveBle(cmd=="radio active");Serial.printf("RADIO_MODE active_ble=%u\n",activeBle);return true;}
   if(cmd=="history export"){bool scanning=radioEnabled;setRadio(false);if(!historyExport())Serial.println("HISTORY_ERROR");setRadio(scanning);return true;}

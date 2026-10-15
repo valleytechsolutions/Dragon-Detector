@@ -1,10 +1,12 @@
-# Daily detection and hunting · 0.9.1
+# Daily detection and hunting · 0.9.3
 
 The radar starts at **100% brightness with no automatic dimming or screen-off timeout**. It listens passively on 2.4 GHz Wi-Fi and Bluetooth LE. The optional training fox transmitter is off at every boot.
 
 ## Radar and evidence
 
 Every enabled signature appears from its first valid sighting. **Hollow dots are weak clues**; filled dots indicate stronger evidence. Select **Tools → Detectors** to change individual families or the **audible alert threshold** (medium+ by default). Raising that threshold does not hide weaker radar clues. All families, including iBeacon, start enabled. Existing customized family masks are retained; the previous untouched default gains iBeacon.
+
+**Axon priority** is on by default in Tools → Detectors. It alerts immediately on a registered Axon vendor/service clue, even with the general threshold set to strong-only. It honors quiet, ignore/snooze, family filters and cooldowns. Turn it off to use the general threshold and repeat rule for Axon too. [Evidence, AXEOFF comparison and diagnostics](AXON.md).
 
 Use **TARGETS** for a ten-row paged list ordered by evidence and signal; refresh to update it. Tap the radar speaker icon for quick quiet mode. Tap a marker or contact for its signal, evidence, confidence and last observation. Remote ID contacts show decoded aircraft/operator coordinates when broadcast; these fields have their own age and are self-reported. Hidden/silent devices and scan gaps can produce an empty radar. A signature does not establish intent or recording.
 

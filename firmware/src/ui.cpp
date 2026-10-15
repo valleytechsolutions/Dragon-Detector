@@ -322,7 +322,8 @@ static void build(){
   }else if(page==Detectors){
     title("DETECTION FILTERS","All enabled clues appear on the radar");body=scrollBody();
     row(body,detector.minimum==Confidence::Low?"Alerts: all hints":detector.minimum==Confidence::Medium?"Alerts: medium +":"Alerts: strong only","Sound/popups threshold; dots stay visible",0,62);
-    for(unsigned i=2;i<unsigned(Family::Count);++i){auto f=Family(i);String text=String(detector.enabled(f)?"ON  ":"OFF  ")+dragon::familyName(f);row(body,text.c_str(),"Tap to enable or disable this family",i-1,4000+i);}
+    row(body,axonPriority?"Axon priority: ON":"Axon priority: OFF","First hit; medium+ alerts",1,151);
+    for(unsigned i=2;i<unsigned(Family::Count);++i){auto f=Family(i);String text=String(detector.enabled(f)?"ON  ":"OFF  ")+dragon::familyName(f);row(body,text.c_str(),"Tap to enable or disable this family",i,4000+i);}
   }else if(page==Controls){
     title("TARGET CONTROLS");body=scrollBody();char mac[18];displayMac(controlKey.mac,mac);uint8_t flags=deviceRules(controlKey);
     row(body,mac,"Rules match this radio/address only",0,0);
@@ -446,7 +447,7 @@ static void build(){
     title("RADIO HEALTH","Live reception and resource counters");body=scrollBody();diagnosticsLabel=label(body,"Reading...",6,0,244,F12);
   }else if(page==About){
     title("SIGNATURES & LIMITS");body=scrollBody();
-    label(body,"DRAGON DETECTOR " DRAGON_VERSION "\nDetection / hunt edition\n\nGreen radar / signal proximity.\nAngles are decorative.\nNo distance or direction.\n\nAll recognized clues appear.\nHollow dots: weak evidence.\nAlerts wait for repeat evidence.\nTap a dot, then Hunt signal\nfor dedicated BLE or Wi-Fi.\n\nAirTag / Find My is a family\nmatch, not model or owner ID.\nBiscuit Pro / Ultra cannot be\ndistinguished from adverts.\nNo proof of malicious intent.\n\nHold badge: tools.\nAlways on at 100% by default.\nDisplay timeouts in Settings.\nUSB Badge Studio on GitHub.\n\nBy Your Pal Kal / Valleytech\nOriginal code: MIT.\nFlock Noir / Colonel Panic\nOUI Spy / Unified Blue\nMarauder: Just Call Me Koko\nSquachWatch feature reference\nOpenDroneID: Apache-2.0\nFull notices in CREDITS.md",5,0,244,F14);
+    label(body,"DRAGON DETECTOR " DRAGON_VERSION "\nDetection / hunt edition\n\nGreen radar / signal proximity.\nAngles are decorative.\nNo distance or direction.\n\nAll recognized clues appear.\nHollow dots: weak evidence.\nAxon priority: first vendor hit.\nOther alerts need repeat evidence.\nTap a dot, then Hunt signal\nfor dedicated BLE or Wi-Fi.\n\nAirTag / Find My is a family\nmatch, not model or owner ID.\nBiscuit Pro / Ultra cannot be\ndistinguished from adverts.\nNo proof of malicious intent.\n\nHold badge: tools.\nAlways on at 100% by default.\nDisplay timeouts in Settings.\nUSB Badge Studio on GitHub.\n\nBy Your Pal Kal / Valleytech\nOriginal code: MIT.\nFlock Noir / Colonel Panic\nOUI Spy / Unified Blue\nMarauder: Just Call Me Koko\nSquachWatch feature reference\nOpenDroneID: Apache-2.0\nFull notices in CREDITS.md",5,0,244,F14);
   }
   micBadge=label(root,"MIC REC",137,17,86,F12,0xff8585);lv_obj_set_style_text_align(micBadge,LV_TEXT_ALIGN_CENTER,0);legible(micBadge);lv_obj_add_flag(micBadge,LV_OBJ_FLAG_HIDDEN);
 }
@@ -505,6 +506,7 @@ static void action(lv_event_t* e){
     case 59:if(trackedContact>=0){selectContact(trackedContact);go(Details);}break;
     case 60:historyPage=0;go(History);break;
     case 61:go(Detectors);break;
+    case 151:axonPriority=!axonPriority;detectorSave();go(Detectors);page=Boot;break;
     case 62:detector.minimum=detector.minimum==Confidence::Strong?Confidence::Low:Confidence(unsigned(detector.minimum)+1);detectorSave();go(Detectors);page=Boot;break;
     case 64:go(Rules);break;
     case 65:case 66:case 67:if(!toggleRule(controlKey,id==65?RuleWatch:id==66?RuleIgnore:RuleSnooze)){uiNotify("Rule not saved","Rule list is full or storage failed. Remove an existing rule and retry.",nullptr,false);}go(Controls);page=Boot;break;

@@ -4,6 +4,8 @@
 #include <esp_wifi.h>
 #include <esp_timer.h>
 #include <atomic>
+#include "axon.h"
+#include "radio_schedule.h"
 
 bool radioEnabled=true,blePhase=false,candidatesOnly=true;
 bool radarRecent=true;
@@ -18,17 +20,40 @@ uint16_t radioQueueHigh=0;
 static ContactCache contactCache;
 uint8_t wifiChannel=1,channelLock=0;
 struct Observation { uint32_t at; uint64_t us; uint16_t len,original,advLength; int8_t rssi; uint8_t channel,kind,addressType,mac[6]; uint8_t data[1024]; };
-static std::atomic<uint32_t> drops{0};
+static std::atomic<uint32_t> drops{0},axonDrops{0},axonQueued{0};
 static constexpr unsigned QUEUE_SIZE=96;
-static QueueHandle_t queue,freeSlots;
+static constexpr unsigned AXON_RESERVE=24;
+static QueueHandle_t queue,priorityQueue,freeSlots;
 static Observation* observations;
 // Free/ready queues carry one-byte pool indexes. Only received bytes are copied
 // in callbacks; the old implementation copied/cleared a 1 KB object each time.
-static bool reserveObservation(uint8_t& index){if(xQueueReceive(freeSlots,&index,0)==pdTRUE)return true;++drops;return false;}
+static bool reserveObservation(uint8_t& index,bool priority){
+  if((priority||uxQueueMessagesWaiting(freeSlots)>AXON_RESERVE)&&xQueueReceive(freeSlots,&index,0)==pdTRUE)return true;
+  ++drops;if(priority)++axonDrops;return false;
+}
+static void enqueueObservation(uint8_t index,bool priority){
+  if(xQueueSend(priority?priorityQueue:queue,&index,0)==pdTRUE){if(priority)++axonQueued;return;}
+  ++drops;if(priority)++axonDrops;xQueueSend(freeSlots,&index,0);
+}
+static uint32_t axonBleHits=0,axonWifiHits=0,axonCompanyHits=0,axonServiceHits=0,axonOuiHits=0,axonWeakHits=0,axonRecovered=0,axonMaxLagMs=0;
+void axonStatus(){
+  Serial.printf("AXON_STATUS priority=%u enabled=%u minimum=%u quiet=%u sound=%u tracked=%d alerts=%lu ble=%lu wifi=%lu company=%lu service=%lu oui=%lu weak=%lu recovered=%lu queued=%lu drops=%lu lag_ms=%lu ble_ms=%lu wifi_ms=%lu\n",axonPriority,detector.enabled(Family::Axon),unsigned(detector.minimum),detector.quiet,alertSound,trackedContact,axonAlertCount,axonBleHits,axonWifiHits,axonCompanyHits,axonServiceHits,axonOuiHits,axonWeakHits,axonRecovered,axonQueued.load(),axonDrops.load(),axonMaxLagMs,dragon::RadioSchedule::BleMs,dragon::RadioSchedule::WifiMs);
+}
+static void countAxon(dragon::AxonClue clue,bool ble,bool payloadValid,uint32_t receivedAt){
+  if(!clue.signals)return;
+  if(ble)++axonBleHits;else ++axonWifiHits;
+  if(clue.signals&dragon::AxonCompany)++axonCompanyHits;
+  if(clue.signals&dragon::AxonService)++axonServiceHits;
+  if(clue.signals&dragon::AxonOui)++axonOuiHits;
+  if(clue.signals&dragon::AxonCompatibility)++axonWeakHits;
+  if(!payloadValid)++axonRecovered;
+  axonMaxLagMs=std::max(axonMaxLagMs,uint32_t(millis()-receivedAt));
+}
 
 
 static NimBLEScan* scanner;
-static uint32_t phaseStart=0,lastHop=0,lastAccounting=0;
+static uint32_t lastHop=0,lastAccounting=0;
+static dragon::RadioSchedule schedule;
 static dragon::BleBurstMonitor bleBursts;
 static dragon::WifiRetryFilter retries;
 dragon::TrafficStatus trafficStatus;
@@ -54,14 +79,15 @@ static void wifiRx(void* buffer,wifi_promiscuous_pkt_type_t type){
   if(type!=WIFI_PKT_MGMT && type!=WIFI_PKT_DATA)return;
   auto* p=static_cast<wifi_promiscuous_pkt_t*>(buffer);
   if(p->rx_ctrl.rx_state || p->rx_ctrl.sig_len<28)return;
-  uint8_t index;if(!reserveObservation(index))return;auto& o=observations[index];o.at=millis();o.us=esp_timer_get_time();o.kind=0;o.addressType=0;
+  bool priority=dragon::inspectAxonWifi(p->payload,p->rx_ctrl.sig_len-4).registered();
+  uint8_t index;if(!reserveObservation(index,priority))return;auto& o=observations[index];o.at=millis();o.us=esp_timer_get_time();o.kind=0;o.addressType=0;
   o.original=p->rx_ctrl.sig_len-4;
   // Without PCAP, a data frame only needs its maximum MAC header + LLC for
   // EAPOL and source-address clues. Management bodies remain complete.
   o.len=std::min<size_t>(o.original,type==WIFI_PKT_DATA&&!captureEnabled?48:sizeof(o.data));
   o.rssi=p->rx_ctrl.rssi;o.channel=p->rx_ctrl.channel;
   memcpy(o.data,p->payload,o.len);
-  if(xQueueSend(queue,&index,0)!=pdTRUE){++drops;xQueueSend(freeSlots,&index,0);}
+  enqueueObservation(index,priority);
 }
 class BleCallbacks:public NimBLEScanCallbacks {
   void onDiscovered(const NimBLEAdvertisedDevice* d) override {
@@ -69,11 +95,13 @@ class BleCallbacks:public NimBLEScanCallbacks {
     if(activeBle && d->isScannable())onResult(d);
   }
   void onResult(const NimBLEAdvertisedDevice* d) override {
-    uint8_t index;if(!reserveObservation(index))return;auto& o=observations[index];o.at=millis();o.kind=1;o.channel=0;o.us=0;o.rssi=d->getRSSI();
-    auto addr=d->getAddress();memcpy(o.mac,addr.getBase()->val,6); // NimBLE native address is little endian
-    for(int i=0;i<3;++i)std::swap(o.mac[i],o.mac[5-i]);o.addressType=addr.getType();
-    const auto& payload=d->getPayload();o.original=payload.size();o.advLength=d->getAdvLength();o.len=std::min<size_t>(payload.size(),sizeof(o.data));memcpy(o.data,payload.data(),o.len);
-    if(xQueueSend(queue,&index,0)!=pdTRUE){++drops;xQueueSend(freeSlots,&index,0);}
+    auto addr=d->getAddress();uint8_t mac[6];for(int i=0;i<6;++i)mac[i]=addr.getBase()->val[5-i];
+    const auto& payload=d->getPayload();
+    bool priority=dragon::inspectAxonBle(payload.data(),payload.size(),d->getAdvLength(),mac,addr.getType()).registered();
+    uint8_t index;if(!reserveObservation(index,priority))return;auto& o=observations[index];o.at=millis();o.kind=1;o.channel=0;o.us=0;o.rssi=d->getRSSI();
+    memcpy(o.mac,mac,6);o.addressType=addr.getType();
+    o.original=payload.size();o.advLength=d->getAdvLength();o.len=std::min<size_t>(payload.size(),sizeof(o.data));memcpy(o.data,payload.data(),o.len);
+    enqueueObservation(index,priority);
   }
 };
 static BleCallbacks bleCallbacks;
@@ -120,7 +148,7 @@ static void update(Contact& c,const Observation& o,const char* name,dragon::Matc
   // when they have not earned a repeat-confirmed audible alert.
   if(c.match.confidence!=Confidence::None && (c.matchHits==1 || changed))historyObserve(c,c.match.family,c.match.confidence,c.match.evidence);
   bool watched=deviceRules(contactKey(c))&RuleWatch;
-  bool fresh=c.match.confidence!=Confidence::None && c.matchHits>=2 && uint32_t(o.at-c.matchSince)>=400;
+  bool fresh=c.match.confidence!=Confidence::None && dragon::signatureAlertReady(c.match,c.matchHits,c.matchSince,o.at,axonPriority);
   if((fresh || (watched&&c.packets>=2)) && uint32_t(o.at-c.seen)<30000){
     bool tracker=c.match.family==Family::Tracker||c.match.family==Family::SmartTag||c.match.family==Family::GoogleTag||c.match.family==Family::Tile||c.match.family==Family::IBeacon;
     // Group heavy tag traffic rather than announcing every spoofable address.
@@ -144,13 +172,18 @@ static void process(const Observation& o){
   if(o.kind==0){
     ++wifiFrames;if(o.channel<14)++channelFrames[o.channel];
     writePcap(o.data,o.len,o.original,o.us);
-    // Truncation may cut information elements; never classify a partial beacon.
-    if(o.len<o.original && ((o.data[0]>>2)&3)==0)return;
-    auto f=dragon::parseWifi(o.data,o.len);if(!f.valid){++malformedFrames;return;}
+    // Header evidence survives an incomplete body, but partial SSID/security
+    // elements never become network or attack claims.
+    bool payloadValid=false;
+    auto f=dragon::parseWifiObservation(o.data,o.len,o.len<o.original&&((o.data[0]>>2)&3)==0,payloadValid);
+    if(!payloadValid)++malformedFrames;if(!f.valid)return;
+    countAxon(dragon::inspectAxonWifi(o.data,o.len),false,payloadValid,o.at);
     if(f.eapol)++eapolFrames;
     // Data traffic must not evict the disconnect retry cache during a burst.
     if((f.deauth||f.disassoc) && retries.duplicate(f,o.at))return;
     Contact& c=getContact(f.source,false,0,o.at);
+    // Priority observations may overtake older general traffic for this key.
+    if(c.packets&&int32_t(o.at-c.seen)<0)return;
     update(c,o,f.name,f.match);
     if(&c-contacts.data==trackedContact && o.channel>=1 && o.channel<=11)channelLock=o.channel;
     dragon::mergeDrone(c.drone,f.drone,o.at);
@@ -169,18 +202,22 @@ static void process(const Observation& o){
       }
     }
   }else{
-    ++bleFrames;if(o.len!=o.original){++malformedFrames;return;}auto f=dragon::parseBle(o.data,o.len,o.advLength);if(!f.valid){++malformedFrames;return;}
-    f.match=dragon::addressHint(o.mac,o.addressType==0,f.match);
-    Contact& c=getContact(o.mac,true,o.addressType,o.at);update(c,o,f.name,f.match);dragon::mergeDrone(c.drone,f.drone,o.at);
+    ++bleFrames;if(o.len!=o.original){++malformedFrames;return;}
+    bool payloadValid=false;auto f=dragon::parseBleObservation(o.data,o.len,o.advLength,o.mac,o.addressType,payloadValid);
+    if(!payloadValid)++malformedFrames;if(!f.valid)return;
+    countAxon(dragon::inspectAxonBle(o.data,o.len,o.advLength,o.mac,o.addressType),true,payloadValid,o.at);
+    Contact& c=getContact(o.mac,true,o.addressType,o.at);if(c.packets&&int32_t(o.at-c.seen)<0)return;
+    update(c,o,f.name,f.match);dragon::mergeDrone(c.drone,f.drone,o.at);
     if(f.match.family==Family::Tracker||f.match.family==Family::SmartTag||f.match.family==Family::GoogleTag||f.match.family==Family::Tile||f.match.family==Family::IBeacon)checkBleBurst(c,o,3);
     if(f.applePopup)checkBleBurst(c,o,0);if(f.fastPair)checkBleBurst(c,o,1);if(f.swiftPair)checkBleBurst(c,o,2);
   }
 }
 void radioBegin(){
   observations=(Observation*)ps_malloc(QUEUE_SIZE*sizeof(Observation));
-  static StaticQueue_t readyControl,freeControl;static uint8_t readyMemory[QUEUE_SIZE],freeMemory[QUEUE_SIZE];
+  static StaticQueue_t readyControl,priorityControl,freeControl;static uint8_t readyMemory[QUEUE_SIZE],priorityMemory[QUEUE_SIZE],freeMemory[QUEUE_SIZE];
   if(!observations){radioEnabled=false;addAlert("Radio memory error","Could not allocate packet pool");return;}
   queue=xQueueCreateStatic(QUEUE_SIZE,1,readyMemory,&readyControl);
+  priorityQueue=xQueueCreateStatic(QUEUE_SIZE,1,priorityMemory,&priorityControl);
   freeSlots=xQueueCreateStatic(QUEUE_SIZE,1,freeMemory,&freeControl);
   for(uint8_t i=0;i<QUEUE_SIZE;++i)xQueueSend(freeSlots,&i,0);
   wifi_init_config_t cfg=WIFI_INIT_CONFIG_DEFAULT();
@@ -194,19 +231,27 @@ void radioBegin(){
   esp_wifi_set_promiscuous_filter(&filter);esp_wifi_set_promiscuous_rx_cb(wifiRx);esp_wifi_set_channel(1,WIFI_SECOND_CHAN_NONE);
   NimBLEDevice::init("");scanner=NimBLEDevice::getScan();scanner->setScanCallbacks(&bleCallbacks,true);
   scanner->setActiveScan(activeBle);scanner->setInterval(100);scanner->setWindow(85);scanner->setMaxResults(activeBle?96:0);
-  esp_wifi_set_promiscuous(true);phaseStart=lastHop=lastAccounting=millis();
-  Serial.println("RADIO ready: passive Wi-Fi 3300ms / BLE 3300ms; channels 1-11");
+  setRadio(true);
+  Serial.println("RADIO ready: BLE-first 2200ms / Wi-Fi 2200ms; channels 1-11; Axon reserved queue");
 }
 void setRadio(bool enabled){
   if(!queue || !scanner)return;
   if(!enabled && fox)setFoxTransmit(false);
-  radioEnabled=enabled;scanner->stop();esp_wifi_set_promiscuous(enabled);blePhase=false;phaseStart=lastAccounting=millis();
+  radioEnabled=enabled;scanner->stop();esp_wifi_set_promiscuous(false);
+  uint32_t now=millis();lastHop=lastAccounting=now;
+  bool wifiHunt=trackedContact>=0&&!contacts[trackedContact].ble;
+  blePhase=enabled&&!wifiHunt;schedule.begin(now,blePhase,wifiChannel);
+  if(blePhase&&!scanner->start(activeBle?1000:dragon::RadioSchedule::BleMs,false,true)){
+    blePhase=false;schedule.begin(now,false,wifiChannel);addAlert("BLE scan failed","Wi-Fi listening resumed");
+  }
+  if(enabled&&!blePhase)esp_wifi_set_promiscuous(true);
 }
 void radioLoop(){
   if(!queue)return;
-  radioQueueHigh=std::max<uint16_t>(radioQueueHigh,uxQueueMessagesWaiting(queue));
+  radioQueueHigh=std::max<uint16_t>(radioQueueHigh,uxQueueMessagesWaiting(queue)+uxQueueMessagesWaiting(priorityQueue));
   uint64_t batchAt=esp_timer_get_time();uint8_t index;
-  for(int i=0;i<64 && xQueueReceive(queue,&index,0)==pdTRUE;++i){
+  for(int i=0;i<64;++i){
+    if(xQueueReceive(priorityQueue,&index,0)!=pdTRUE&&xQueueReceive(queue,&index,0)!=pdTRUE)break;
     radioMaxLagMs=std::max(radioMaxLagMs,uint32_t(millis()-observations[index].at));
     process(observations[index]);xQueueSend(freeSlots,&index,0);
     if(esp_timer_get_time()-batchAt>=4000)break; // give touch/audio/render a turn
@@ -220,16 +265,18 @@ void radioLoop(){
     if(!scanner->isScanning())scanner->start(activeBle?1000:10000,false,true);
     bleListenMs+=elapsed;return;
   }
-  if(blePhase && now-phaseStart<3300 && !scanner->isScanning())scanner->start(activeBle?1000:3300,false,true);
+  if(blePhase && !schedule.due(now) && !scanner->isScanning())scanner->start(activeBle?1000:dragon::RadioSchedule::BleMs,false,true);
   if(blePhase)bleListenMs+=elapsed;else{wifiListenMs+=elapsed;channelDwellMs[wifiChannel]+=elapsed;}
-  if(!blePhase && trackedContact<0 && now-phaseStart>=3300){
-    esp_wifi_set_promiscuous(false);blePhase=true;phaseStart=now;
-    if(!scanner->start(activeBle?1000:3300,false,true)){blePhase=false;esp_wifi_set_promiscuous(true);addAlert("BLE scan failed","Wi-Fi listening resumed");}
-  }else if(blePhase && now-phaseStart>=3300){
-    scanner->stop();blePhase=false;phaseStart=now;esp_wifi_set_promiscuous(true);
+  if(!blePhase && trackedContact<0 && schedule.due(now)){
+    esp_wifi_set_promiscuous(false);blePhase=true;schedule.begin(now,true,schedule.firstChannel);
+    if(!scanner->start(activeBle?1000:dragon::RadioSchedule::BleMs,false,true)){blePhase=false;schedule.begin(now,false,wifiChannel);esp_wifi_set_promiscuous(true);addAlert("BLE scan failed","Wi-Fi listening resumed");}
+  }else if(blePhase && schedule.due(now)){
+    scanner->stop();blePhase=false;schedule.begin(now,false,(schedule.firstChannel%11)+1);
+    wifiChannel=channelLock?channelLock:schedule.firstChannel;
+    esp_wifi_set_channel(wifiChannel,WIFI_SECOND_CHAN_NONE);esp_wifi_set_promiscuous(true);lastHop=now;
   }
   bool relocating=trackedContact>=0 && huntSweep(contacts[trackedContact],now);
-  if(!blePhase && now-lastHop>=(relocating?180u:350u)){lastHop=now;uint8_t c=channelLock&&!relocating?channelLock:(wifiChannel%11)+1;
+  if(!blePhase && now-lastHop>=(relocating?180u:dragon::RadioSchedule::HopMs)){lastHop=now;uint8_t c=channelLock&&!relocating?channelLock:trackedContact>=0?(wifiChannel%11)+1:schedule.channel(now);
     if(esp_wifi_set_channel(c,WIFI_SECOND_CHAN_NONE)==ESP_OK)wifiChannel=c;
   }
 }
