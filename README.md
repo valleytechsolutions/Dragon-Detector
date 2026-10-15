@@ -6,7 +6,7 @@
 
 **[Open the web flasher & detector tools](https://valleytechsolutions.github.io/Dragon-Detector/)** · [Install guide](docs/FLASHING.md) · [Controls](docs/USER-GUIDE.md) · [Detection evidence](docs/DETECTION.md) · [Credits](CREDITS.md)
 
-Version **0.9.4** adds the [Waveshare 1.28 Lite radar](docs/WAVESHARE-LITE.md), with automatic target pages and a fixed always-on display. It retains the 0.9.3 improvements to [Axon detection and priority alerts](docs/AXON.md): first-hit vendor alerts, reserved receive capacity, shorter listening gaps and AXEOFF compatibility clues. It is an experimental development release; see [what has actually been tested](docs/VALIDATION.md). The flasher requires desktop Chrome/Edge, HTTPS, a USB data cable, and the exact board selection; it stays disabled if matching release files are unavailable.
+Version **0.9.5** refines the [Waveshare 1.28 Lite radar](docs/WAVESHARE-LITE.md), with larger text, a refined instrument-style radar, four targets per automatic page and a fixed always-on display. It retains the 0.9.3 improvements to [Axon detection and priority alerts](docs/AXON.md): first-hit vendor alerts, reserved receive capacity, shorter listening gaps and AXEOFF compatibility clues. It is an experimental development release; see [what has actually been tested](docs/VALIDATION.md). The flasher requires desktop Chrome/Edge, HTTPS, a USB data cable, and the exact board selection; it stays disabled if matching release files are unavailable.
 
 ## Choose the exact board
 

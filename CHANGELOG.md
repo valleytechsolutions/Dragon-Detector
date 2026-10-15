@@ -1,5 +1,11 @@
 # Changes
 
+## 0.9.5 — Refined Lite radar
+
+- Increase Lite device names from 8 to 12 pixels, with slim two-line callouts and four targets per automatically cycling page. Enlarge radio status, simplify the footer and strengthen label-position stability.
+- Replace the dense grid and thick bezel with fine range rings, segmented arcs, edge ticks and a center reticle. Cache the static artwork in 115 KB of PSRAM; raise the animation cap from eight to twelve updates per second.
+- Keep the full boards' six-target layout, shared detection and device colors unchanged. Extend native checks to cover every contact across four-target pages and collision-free larger labels inside the round panel.
+
 ## 0.9.4 — Waveshare 1.28 Lite
 
 - Add the non-touch Waveshare ESP32-S3-LCD-1.28 with 16 MB flash, 2 MB quad-SPI PSRAM, a GC9A01 panel and CH343 serial diagnostics. Select SPI3/HSPI explicitly for display initialization.

@@ -1,8 +1,16 @@
-# Validation status · 0.9.4
+# Validation status · 0.9.5
 
 This is an experimental development release. Automated signature checks and basic board checks do not establish field detection accuracy or all-day battery life.
 
 The release workflow covers five profiles: Spotpear JC3636W518, Waveshare 1.75C, M5Stack StopWatch C152, Seeed XIAO ESP32-S3 + Round Display and Waveshare ESP32-S3-LCD-1.28 Lite. Audio-equipped boards retain full-range PCM/codec output and a 100% volume default. The Seeed assembly has no onboard speaker. Release packaging checks are separate from physical hardware tests.
+
+## Lite readability and rendering refinement · 0.9.5 · 2026-10-14
+
+- The owner confirmed that 12-pixel device names are readable and that the final slim-callout, fine-ring design looks better. The 240×240 framebuffer passed CRC32 and the current hardware guide includes the captured preview.
+- The final app was flashed at `0x10000` with esptool hash verification and restarted into radar-only mode. All **23 on-device tests** passed; brightness stayed at 100%, disabled-mode commands were rejected and passive BLE/Wi-Fi counters continued increasing with zero receive-queue drops in the short check.
+- UI diagnostics measured a typical draw at **65.8 ms**, versus 101.3 ms in the earlier large-text build. Frames advanced at approximately twelve per second. The 115 KB background cache left roughly **175 KB internal heap and 1.65 MB PSRAM free**, stable across the check. This is a bench comparison with one visible candidate, not a guarantee for all target counts or RF conditions.
+- All five firmware profiles compiled. Native tests verify all 384 contacts across both four- and six-target pagination, larger callout containment within the circular panel, non-overlap and existing signature/fuzz cases. Twenty-seven web tests passed. Full-board defaults remain six labels per page; Lite cycles four every seven seconds. Multi-page radio operation with more than four distinct controlled devices has not been physically exercised.
+- Detection logic did not change in this visual revision; the 0.9.4 synthetic Axon receive checks below remain the relevant radio evidence. Screenshot transfer briefly pauses reception, so it was performed after timing/queue measurements, then the board was restarted to leave normal scanning active.
 
 ## Waveshare ESP32-S3-LCD-1.28 Lite · 0.9.4 · 2026-10-14
 
@@ -13,7 +21,7 @@ The release workflow covers five profiles: Spotpear JC3636W518, Waveshare 1.75C,
 - Controlled synthetic advertisements from the local computer tested manufacturer `034D` and services `FC81`, `FE6B`, `FE6C`. Each produced an Axon classification/visual alert, with zero priority-queue drops. This verifies those receive paths, **not real body-camera model/recording state or field accuracy**. Synthetic test contacts were cleared by restarting after the tests.
 - Multiple 240×240 framebuffer captures passed CRC32, including a synthetic Axon visual alert with the radar still visible. The UART screenshot command deliberately pauses reception for its approximately ten-second transfer; its inflated maximum queue-age statistics are excluded from normal-scan latency assessment. A fresh restart restores ordinary scanning.
 - Native checks cover automatic seven-second pagination, empty lists, changing page counts and millisecond rollover, alongside all 134 pinned reference facts and existing parser/tracking/fuzz cases. Twenty-seven web tests include exact Lite identity, minimum release version, manifest/partition checks and exclusion from badge controls. Browser checks confirmed Lite factory/update selection and resetting hardware confirmation when the installation type changes.
-- Physical panel orientation and colors still require the owner's confirmation; framebuffer captures cannot verify them. Multi-page cycling is covered by native logic tests, not a controlled live test with more than six distinct target devices.
+- The owner confirmed correct physical panel orientation and colors, but reported that the 0.9.4 text was too small. Multi-page cycling is covered by native logic tests, not a controlled live test with more than six distinct target devices.
 
 ## Waveshare Axon correction · 0.9.3 · 2026-10-14
 
