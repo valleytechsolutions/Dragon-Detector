@@ -15,7 +15,7 @@ struct Contact {
   uint32_t historyAt=0;dragon::Family historyFamily=dragon::Family::Count;
 };
 constexpr size_t MAX_CONTACTS=384;
-// Storage lives in PSRAM on all three boards, leaving internal RAM for radio,
+// Storage lives in PSRAM on all supported boards, leaving internal RAM for radio,
 // USB, LVGL and DMA. Constructed during setup after PSRAM is initialized.
 struct ContactStore {
   Contact* data=nullptr;

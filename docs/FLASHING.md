@@ -16,7 +16,7 @@ The factory filesystem is at `0xC10000` on Spotpear/Waveshare, `0x810000` on Sto
 
 ## Manual installation
 
-Build/package with `python tools/build_release.py --board waveshare` (or `spotpear` / `stopwatch` / `xiao_round`). Verify the files against `web/firmware/<board>/SHA256SUMS.txt`.
+Build/package with `python tools/build_release.py --board waveshare` (or `spotpear` / `stopwatch` / `xiao_round` / `waveshare_lite`). Verify the files against `web/firmware/<board>/SHA256SUMS.txt`.
 
 ```
 python -m esptool --chip esp32s3 --port YOUR_PORT write-flash 0x0 web/firmware/waveshare/factory-0x0.bin
@@ -32,6 +32,6 @@ Replace the port and board folder with the exact device. This is a factory write
 
 ## Hosting
 
-GitHub Settings → Pages → Source must be **GitHub Actions**. The firmware workflow tests and builds all four profiles. The Pages workflow publishes only a successful `main` push, taking source and all four build artifacts from that same completed run. Failed builds are never substituted with older binaries. The public website contains release binaries; device dumps and local scan data are excluded.
+GitHub Settings → Pages → Source must be **GitHub Actions**. The firmware workflow tests and builds all five profiles. The Pages workflow publishes only a successful `main` push, taking source and all five build artifacts from that same completed run. Failed builds are never substituted with older binaries. The public website contains release binaries; device dumps and local scan data are excluded.
 
 The web page validates the exact board name, ESP32-S3 family, image filenames, partition offsets and factory/update erase policy before enabling installation. This does not automatically identify connected display wiring; select the printed model carefully.

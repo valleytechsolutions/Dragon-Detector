@@ -47,6 +47,12 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
           name: dragon-detector-xiao_round
           path: web/firmware/xiao_round
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+          name: dragon-detector-waveshare_lite
+          path: web/firmware/waveshare_lite
       - name: Verify published manifests and images
         run: python tools/validate_release.py
       - uses: actions/configure-pages@v5

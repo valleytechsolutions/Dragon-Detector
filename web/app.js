@@ -3,9 +3,9 @@ import {BadgeSerial} from './serial.js';
 import {encodeBadge} from './badge-codec.js';
 import {uploadBadge} from './badge-transfer.js';
 import {readHistory} from './detector-transfer.js';
-import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasWearableTools} from './firmware-compat.js?v=0.9.2';
+import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasWearableTools} from './firmware-compat.js?v=0.9.4';
 import {readRadarSettings,saveRadarSettings} from './radar-transfer.js';
-import {boardProfiles,connectedProfile,validateManifest} from './board-profiles.js';
+import {boardProfiles,connectedProfile,validateManifest,supportsBadge} from './board-profiles.js?v=0.9.4';
 import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan} from './badge-editor.js';
 const $ = id => document.getElementById(id);
 const models = Object.fromEntries(Object.entries(boardProfiles).map(([id,p])=>[id,p.name]));
@@ -35,7 +35,7 @@ async function chooseBoard(next) {
     const data = validateManifest(await response.json(),board,mode);
     if(revision !== request)return;
     $('installer').setAttribute('manifest', manifest); releaseReady = true;
-    $('board-status').textContent = `${data.version} · ${mode==='factory'?'Fresh installation replaces saved history and badge files.':board==='xiao_round'?'Update preserves files; requires this XIAO + Round Display profile’s 0.9.2 or newer 8 MB layout.':'Update preserves history, badges and settings; requires this board’s existing 0.3.x / 0.4.x / 0.5.x / 0.6.x / 0.7.x / 0.8.x / 0.9.x layout.'}`;
+    $('board-status').textContent = `${data.version} · ${mode==='factory'?'Fresh installation replaces saved history and badge files.':board==='waveshare_lite'?'Update requires this exact Lite profile’s 0.9.4+ layout. For an older third-party port, choose Fresh installation unless its partitions have been verified.':board==='xiao_round'?'Update preserves files; requires this XIAO + Round Display profile’s 0.9.2 or newer 8 MB layout.':'Update preserves history, badges and settings; requires this board’s existing 0.3.x / 0.4.x / 0.5.x / 0.6.x / 0.7.x / 0.8.x / 0.9.x layout.'}`;
     $('download').href = `firmware/${board}/SHA256SUMS.txt`; $('download').textContent='Firmware file checksums'; $('download').hidden=false;
     $('install-message').textContent='Confirm your board, then connect its USB port.';
   } catch(error) {
@@ -53,18 +53,19 @@ const canvas=$('preview'), ctx=canvas.getContext('2d',{willReadFrequently:true})
 const guideCanvas=$('preview-guides'),guideCtx=guideCanvas.getContext('2d');
 let photo=null,size=466,zoom=1,offsetX=0,offsetY=0,turns=0,mirror=false,serial=null,busy=false,firmwareVersion='',deviceProfile='',badgeProfile='stopwatch',photoName='',imageRequest=0;
 function setBadgeProfile(id){
-  if(!boardProfiles[id])return;
+  if(!supportsBadge(id))return;
   const previous=size;badgeProfile=id;size=boardProfiles[id].size;
   ({x:offsetX,y:offsetY}=rescalePan(offsetX,offsetY,previous,size));
   canvas.width=canvas.height=guideCanvas.width=guideCanvas.height=size;
   $('badge-board').value=id;draw();
 }
 function controls(){
-  for(const id of ['show-stopwatch','show-clock','clock-save','clock-sync','orientation-save'])$(id).disabled=busy||!serial||!hasWearableTools(firmwareVersion);
-  $('show-activity').disabled=busy||!serial||!hasActivityTools(firmwareVersion);
-  $('radar-save').disabled=busy||!serial||!hasRadarTools(firmwareVersion);
-  for(const id of ['history-export','show-radar','sync-time','display-save','sound-save','tone-load','tone-save','tone-preview','tone-reset','tone-stop'])$(id).disabled=busy||!serial||!hasDetectorTools(firmwareVersion);
-  if(deviceProfile==='xiao_round')for(const id of ['sound-save','tone-load','tone-save','tone-preview','tone-reset','tone-stop'])$(id).disabled=true;
+  const lite=!!boardProfiles[deviceProfile]?.lite;
+  for(const id of ['show-stopwatch','show-clock','clock-save','clock-sync','orientation-save'])$(id).disabled=busy||!serial||lite||!hasWearableTools(firmwareVersion);
+  $('show-activity').disabled=busy||!serial||lite||!hasActivityTools(firmwareVersion);
+  $('radar-save').disabled=busy||!serial||lite||!hasRadarTools(firmwareVersion);
+  for(const id of ['history-export','show-radar','sync-time','display-save','sound-save','tone-load','tone-save','tone-preview','tone-reset','tone-stop'])$(id).disabled=busy||!serial||lite||!hasDetectorTools(firmwareVersion);
+  if(deviceProfile==='xiao_round'||lite)for(const id of ['sound-save','tone-load','tone-save','tone-preview','tone-reset','tone-stop'])$(id).disabled=true;
   $('connect').disabled=$('detector-connect').disabled=busy||!!serial;
   $('disconnect').disabled=$('detector-disconnect').disabled=busy;
   $('disconnect').hidden=$('detector-disconnect').hidden=!serial;
@@ -87,8 +88,8 @@ function draw(){
   const profile=boardProfiles[badgeProfile];
   $('preview-size').textContent=`${profile.name} · ${size} × ${size} · ${profile.display}`;
   $('image-info').textContent=photo?`${photoName} · ${photo.width} × ${photo.height} source pixels`:'Choose a photo or logo. Nothing leaves your browser until you upload to USB.';
-  $('upload').disabled=busy||!serial||!photo||deviceProfile!==badgeProfile;
-  $('upload').textContent=serial?`Upload to ${size} × ${size} display ↗`:'Connect your board to upload';
+  $('upload').disabled=busy||!serial||!photo||deviceProfile!==badgeProfile||!supportsBadge(deviceProfile);
+  $('upload').textContent=boardProfiles[deviceProfile]?.lite?'Lite is radar only — no badge upload':serial?`Upload to ${size} × ${size} display ↗`:'Connect your board to upload';
   controls();
 }
 function fit(){if(!photo)return;zoom=fitBadgeZoom(photo.width,photo.height,size,turns);offsetX=offsetY=0;draw();}
@@ -137,7 +138,11 @@ $('connect').onclick=async()=>{
     if(!match)throw new Error('Install the current firmware using the matching board profile first.');
     const profile=connectedProfile(match);if(!profile)throw new Error('This board identity or resolution is not supported. Use its exact matching firmware.');
     serial=link;firmwareVersion=match.version;deviceProfile=profile;setBadgeProfile(profile);
-    $('device-label').textContent=`${size} × ${size} · CONNECTED`;$('disconnect').hidden=false;
+    $('device-label').textContent=`${match.size} × ${match.size} · ${boardProfiles[profile].lite?'LITE RADAR':'CONNECTED'}`;$('disconnect').hidden=false;
+    if(boardProfiles[profile].lite){
+      $('studio-status').textContent=$('detector-status').textContent='Waveshare Lite connected. Always-on passive radar at full brightness, automatic target pages, no touch menus, badge mode, audio or settings. Use the installer above for firmware updates.';
+      return;
+    }
     $('studio-status').textContent=`${match.board} is ready. Choose and position your image.`;draw();
     if(hasDetectorTools(firmwareVersion)){
       await link.write(`time ${Math.floor(Date.now()/1000)}`);if(await link.wait(s=>s==='TIME_OK'||s==='TIME_ERROR')!=='TIME_OK')throw new Error('Clock sync failed. Check the RTC.');
@@ -155,7 +160,7 @@ $('connect').onclick=async()=>{
 $('detector-connect').onclick=()=>$('connect').onclick();
 $('disconnect').onclick=$('detector-disconnect').onclick=disconnect;
 $('upload').onclick=async()=>{
-  if(!serial||!photo||busy||deviceProfile!==badgeProfile)return;busy=true;const link=serial;
+  if(!serial||!photo||busy||deviceProfile!==badgeProfile||!supportsBadge(deviceProfile))return;busy=true;const link=serial;
   $('disconnect').disabled=true;draw();
   try{
     const bytes=encodeBadge(ctx.getImageData(0,0,size,size).data,size);

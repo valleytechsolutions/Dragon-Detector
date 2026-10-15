@@ -8,7 +8,7 @@ for md in [ROOT/'README.md',ROOT/'CREDITS.md',*ROOT.glob('docs/*.md')]:
     for target in re.findall(r'!?\[[^\]]*\]\(([^\s)]+)',md.read_text(encoding='utf-8')):
         if '://' in target or target.startswith('#'):continue
         file=unquote(target.split('#')[0]);assert (md.parent/file).exists(),f'{md.name}: missing {file}'
-for board in ('spotpear','waveshare','stopwatch','xiao_round'):
+for board in ('spotpear','waveshare','stopwatch','xiao_round','waveshare_lite'):
     folder=ROOT/'web/firmware'/board
     records={name:sha for sha,name in (line.split() for line in (folder/'SHA256SUMS.txt').read_text().splitlines())}
     for mode in ('factory','update'):

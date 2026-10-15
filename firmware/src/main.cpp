@@ -67,6 +67,12 @@ static void health(){
 static uint32_t loopLastUs[6]{},loopMaxUs[6]{};
 static void command(const String& c){
   if(c=="loop diagnostics"){const char* names[]={"board","radio","history","audio","ui","badge"};for(int i=0;i<6;++i)Serial.printf("LOOP_TIMING %s last_us=%lu max_us=%lu\n",names[i],loopLastUs[i],loopMaxUs[i]);Serial.println("LOOP_END");return;}
+#ifdef BOARD_RADAR_LITE
+  // A legacy browser/serial command cannot leave Lite paused, in Hunt, dimmed,
+  // or on a screen with controls that this board cannot operate.
+  const bool allowed=c=="badge info"||c=="status"||c=="contacts"||c=="selftest"||c=="screenshot"||c=="ui status"||c=="radar status"||c=="display status"||c=="axon status"||c=="traffic status"||c=="detector status";
+  if(!allowed){Serial.println("LITE_RADAR_ONLY no menus, badge, audio or radio controls");return;}
+#endif
   if(badgeCommand(c) || wearableCommand(c) || detectorCommand(c) || audioCommand(c) || uiCommand(c))return;
   if(c=="status"){health();Serial.printf("SESSION %s\n",sessionPath.c_str());}
   else if(c=="selftest")runSelfTests();
@@ -115,12 +121,19 @@ void setup(){
   previousCaptureStage=captureTrace[0]==CAPTURE_TRACE_MAGIC?captureTrace[1]:0;
   Serial.printf("PREVIOUS_CAPTURE stage=%lu reset=%d\n",previousCaptureStage,esp_reset_reason());captureStage(0);
   Serial.printf("Flash=%u PSRAM=%u reset=%d\n",ESP.getFlashChipSize(),ESP.getPsramSize(),esp_reset_reason());
-  if(ESP.getPsramSize()<4*1024*1024){Serial.println("FATAL: expected octal PSRAM");while(true)delay(100);}
+#ifdef BOARD_RADAR_LITE
+  constexpr unsigned minimumPsram=2*1024*1024;
+#else
+  constexpr unsigned minimumPsram=4*1024*1024;
+#endif
+  if(ESP.getPsramSize()<minimumPsram){Serial.println("FATAL: insufficient PSRAM for board profile");while(true)delay(100);}
   contacts.data=(Contact*)ps_malloc(MAX_CONTACTS*sizeof(Contact));
   if(!contacts.data){Serial.println("FATAL: contact storage allocation failed");while(true)delay(100);}
   for(size_t i=0;i<MAX_CONTACTS;++i)new(&contacts[i]) Contact{};
   runSelfTests();boardBegin();uiBegin();wearableBegin();
+#ifndef BOARD_RADAR_LITE
   uint32_t at=millis();while(millis()-at<1600){uiLoop();delay(5);}
+#endif
   storageBegin();badgeInit();audioBegin();detectorBegin();radioBegin();Serial.println("DRAGON READY");health();
 }
 void loop(){

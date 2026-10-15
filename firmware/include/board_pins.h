@@ -3,7 +3,13 @@
 
 #define BTN_PIN 0
 
-#if defined(BOARD_XIAO_ROUND)
+#if defined(BOARD_RADAR_LITE)
+#define BOARD_NAME "Waveshare ESP32-S3-LCD-1.28 Lite"
+#define SCREEN_RES 240
+#define BOARD_HAS_AUDIO 0
+#define BOARD_HAS_SD 0
+#define LITE_BACKLIGHT 40
+#elif defined(BOARD_XIAO_ROUND)
 #define BOARD_NAME "Seeed XIAO ESP32-S3 + Round Display"
 #define SCREEN_RES 240
 #define BOARD_HAS_AUDIO 0

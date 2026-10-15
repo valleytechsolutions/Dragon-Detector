@@ -1,8 +1,19 @@
-# Validation status · 0.9.3
+# Validation status · 0.9.4
 
 This is an experimental development release. Automated signature checks and basic board checks do not establish field detection accuracy or all-day battery life.
 
-All four board profiles compile locally: Spotpear JC3636W518, Waveshare 1.75C, M5Stack StopWatch C152 and Seeed XIAO ESP32-S3 + Round Display. Audio-equipped boards retain full-range PCM/codec output and a 100% volume default. The Seeed assembly has no onboard speaker. Release packaging checks are separate from physical hardware tests.
+The release workflow covers five profiles: Spotpear JC3636W518, Waveshare 1.75C, M5Stack StopWatch C152, Seeed XIAO ESP32-S3 + Round Display and Waveshare ESP32-S3-LCD-1.28 Lite. Audio-equipped boards retain full-range PCM/codec output and a 100% volume default. The Seeed assembly has no onboard speaker. Release packaging checks are separate from physical hardware tests.
+
+## Waveshare ESP32-S3-LCD-1.28 Lite · 0.9.4 · 2026-10-14
+
+- The connected non-touch board reported an ESP32-S3R2, 16 MB flash and 2 MB quad-SPI PSRAM, with a CH343 UART bridge. Its older third-party 0.9.1 port was saved as a complete private recovery image. The partition table matched; only the application at `0x10000` was written, with esptool hash verification. Private flash dumps and local observations are excluded from GitHub and the flasher.
+- The first display attempt stalled in TFT_eSPI initialization. Selecting SPI3/HSPI explicitly resolved the issue on this S3/Arduino combination. Startup now reaches the fixed green radar and reports **23/23 on-device self-tests**. No touch, speaker, motion polling or menu tasks are initialized.
+- The final profile uses an 11,520-byte internal display tile, holds animation/RSSI positions steady across one frame, caps drawing at eight frames per second and retains all 384 contact slots. Bench checks observed roughly 175 KB free internal heap and 1.77 MB free PSRAM, increasing BLE/Wi-Fi counters and zero receive-queue drops. These short checks do not establish all-day battery life or crowded-environment performance.
+- Old badge/display/filter preferences are ignored. USB checks confirmed 100% brightness, no dim/off timers, all 26 families enabled, passive BLE, Axon priority on and no Hunt lock. Attempts to pause, enter menus/badge/Hunt, disable Axon priority, enable active scanning or change display timers were rejected. The dedicated build does not allocate or write persistent history.
+- Controlled synthetic advertisements from the local computer tested manufacturer `034D` and services `FC81`, `FE6B`, `FE6C`. Each produced an Axon classification/visual alert, with zero priority-queue drops. This verifies those receive paths, **not real body-camera model/recording state or field accuracy**. Synthetic test contacts were cleared by restarting after the tests.
+- Multiple 240×240 framebuffer captures passed CRC32, including a synthetic Axon visual alert with the radar still visible. The UART screenshot command deliberately pauses reception for its approximately ten-second transfer; its inflated maximum queue-age statistics are excluded from normal-scan latency assessment. A fresh restart restores ordinary scanning.
+- Native checks cover automatic seven-second pagination, empty lists, changing page counts and millisecond rollover, alongside all 134 pinned reference facts and existing parser/tracking/fuzz cases. Twenty-seven web tests include exact Lite identity, minimum release version, manifest/partition checks and exclusion from badge controls. Browser checks confirmed Lite factory/update selection and resetting hardware confirmation when the installation type changes.
+- Physical panel orientation and colors still require the owner's confirmation; framebuffer captures cannot verify them. Multi-page cycling is covered by native logic tests, not a controlled live test with more than six distinct target devices.
 
 ## Waveshare Axon correction · 0.9.3 · 2026-10-14
 

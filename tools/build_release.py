@@ -2,7 +2,7 @@
 from pathlib import Path
 import argparse, csv, hashlib, json, os, re, shutil, subprocess, sys
 ROOT=Path(__file__).resolve().parents[1]
-BOARDS={'spotpear':('Spotpear JC3636W518','spotpear'),'waveshare':('Waveshare ESP32-S3-Touch-AMOLED-1.75C','spotpear'),'stopwatch':('M5Stack StopWatch C152','m5stack-stopwatch'),'xiao_round':('Seeed XIAO ESP32-S3 + Round Display','xiao-round')}
+BOARDS={'spotpear':('Spotpear JC3636W518','spotpear'),'waveshare':('Waveshare ESP32-S3-Touch-AMOLED-1.75C','spotpear'),'stopwatch':('M5Stack StopWatch C152','m5stack-stopwatch'),'xiao_round':('Seeed XIAO ESP32-S3 + Round Display','xiao-round'),'waveshare_lite':('Waveshare ESP32-S3-LCD-1.28 Lite','waveshare-lite')}
 VERSION=re.search(r'#define DRAGON_VERSION "([0-9.]+)"',(ROOT/'firmware/include/version.h').read_text()).group(1)
 
 def run(*args):subprocess.run([sys.executable,*args],cwd=ROOT,check=True)

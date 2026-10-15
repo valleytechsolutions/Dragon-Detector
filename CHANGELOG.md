@@ -1,5 +1,12 @@
 # Changes
 
+## 0.9.4 — Waveshare 1.28 Lite
+
+- Add the non-touch Waveshare ESP32-S3-LCD-1.28 with 16 MB flash, 2 MB quad-SPI PSRAM, a GC9A01 panel and CH343 serial diagnostics. Select SPI3/HSPI explicitly for display initialization.
+- Boot directly into a fixed, full-brightness radar. Share the current signature engine, Axon priority, RSSI tracking, family colors, labels and renderer with the full boards; cycle extra target pages every seven seconds.
+- Exclude menu, touch, audio, badge and wearable implementations. Ignore old full-UI preferences, disable persistent history, and reject commands that pause scanning or enter unavailable modes.
+- Use an 11.5 KB internal display tile and an eight-frame-per-second animation limit, with stable geometry across tiles. Add Lite recovery instructions, native paging tests, exact USB capability checks and the fifth flasher/CI profile.
+
 ## 0.9.3 — Axon reception and first-hit alerts
 
 - Add saved Axon priority under Tools → Detectors: registered vendor evidence alerts on its first observation, including when other alerts require strong confidence. Respect quiet/ignore/snooze/family controls and cooldowns.

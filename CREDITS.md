@@ -64,3 +64,7 @@ Stopwatch/lap arithmetic, calendar validation, manual rotation buffering, device
 ## 0.9.2 Seeed XIAO Round Display
 
 Thanks to **Seeed Studio** for the XIAO ESP32-S3 and Round Display hardware, schematics, pin definitions and CHSC6X protocol example in [Seeed_Arduino_RoundDisplay](https://github.com/Seeed-Studio/Seeed_Arduino_RoundDisplay), reviewed at `e811877f5b150981a481c39abd9c7ee0a029cd1c`. [Its MIT notice is retained](docs/licenses/Seeed-RoundDisplay-MIT.txt). The adapter implements checked touch/RTC reads, buffered input and SPI-card integration using these references; the complete demo/UI is not bundled. **Bodmer / TFT_eSPI**, with its retained **Adafruit** notices, provides the pinned GC9A01 display driver. The RTC register layout follows Seeed’s linked PCF8563 datasheet. The small-screen layout, web board identity and 240-pixel badge support are original Dragon Detector code.
+
+### Waveshare ESP32-S3-LCD-1.28 Lite
+
+The independent board adapter follows Waveshare's [official board documentation](https://docs.waveshare.com/ESP32-S3-LCD-1.28) and [schematic](https://files.waveshare.com/wiki/ESP32-S3-LCD-1.28/Esp32-s3-lcd-.128-sch.pdf). It uses the same pinned MIT-licensed TFT_eSPI dependency as XIAO Round. The shared Dragon Detector code remains MIT; no third-party port source was incorporated.

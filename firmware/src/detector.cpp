@@ -52,6 +52,14 @@ static int historySlot(const dragon::DeviceKey& key,uint8_t family){
   historyRecords[oldest]={};dirty[oldest]=false;persistedAt[oldest]=0;return int(oldest);
 }
 void detectorBegin(){
+#ifdef BOARD_RADAR_LITE
+  // Fixed passive radar. Never import old full-UI filters, ignore rules or
+  // display timers. No persistent history allocation or flash writes on Lite.
+  detector=dragon::DetectorSettings{};detector.history=false;
+  activeBle=false;axonPriority=true;alertSound=alertVibration=false;
+  Serial.println("LITE detectors=all axon_priority=1 passive=1 history=off");
+  return;
+#else
   bootId=esp_random();prefs.begin("dd-detect",false);
   if(prefs.getUInt("schema",0)==1 && prefs.getBytesLength("settings")==sizeof(detector))prefs.getBytes("settings",&detector,sizeof(detector));
   // Upgrade the previous untouched default mask, preserving customized masks.
@@ -90,6 +98,7 @@ void detectorBegin(){
   }
   File current=LittleFS.open(journals[journal],FILE_READ);journalBytes=current?current.size():0;current.close();
   Serial.printf("HISTORY ready records=%u capacity=%u\n",unsigned(historyCount),unsigned(HISTORY_LIMIT));
+#endif
 }
 void historyObserve(const Contact& c,Family family,Confidence confidence,const char* evidence){
   if(!historyReady||!detector.history||!detector.enabled(family))return;

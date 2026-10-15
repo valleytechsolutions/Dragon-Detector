@@ -6,6 +6,15 @@
 namespace dragon {
 constexpr unsigned RadarPageSize=6;
 struct RadarPoint {int x,y;};
+struct RadarAutoPager {
+  unsigned page=0;uint32_t changed=0;bool started=false;
+  unsigned update(unsigned pages,uint32_t now){
+    if(!pages)pages=1;
+    if(!started||page>=pages||pages==1){page=0;changed=now;started=true;}
+    else if(uint32_t(now-changed)>=7000){page=(page+1)%pages;changed=now;}
+    return page;
+  }
+};
 // Keep markers clear of the logo/status and bottom controls. Only the
 // decorative angle changes; radius still represents exactly the same RSSI.
 inline RadarPoint radarPlotPoint(float radius,float unitX,float unitY){

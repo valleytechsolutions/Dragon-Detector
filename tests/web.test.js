@@ -7,7 +7,7 @@ import {readHistory} from '../web/detector-transfer.js';
 import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools} from '../web/firmware-compat.js';
 import {readRadarSettings,saveRadarSettings} from '../web/radar-transfer.js';
 import {readFileSync} from 'node:fs';
-import {boardProfiles,connectedProfile,validateManifest} from '../web/board-profiles.js';
+import {boardProfiles,connectedProfile,validateManifest,supportsBadge} from '../web/board-profiles.js';
 import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan} from '../web/badge-editor.js';
 
 test('firmware release updates preserve the independently pinned installer dependency',()=>{
@@ -15,12 +15,12 @@ test('firmware release updates preserve the independently pinned installer depen
   assert.match(html,/https:\/\/unpkg\.com\/esp-web-tools@10\.4\.0\/dist\/web\/install-button\.js\?module/);
 });
 
-test('every release board is available in installation and badge preview controls',()=>{
+test('every board is installable; only full boards have badge preview controls',()=>{
   const html=readFileSync(new URL('../web/index.html',import.meta.url),'utf8');
   const options=html.match(/<select id="badge-board">([\s\S]*?)<\/select>/)[1];
   for(const id of Object.keys(boardProfiles)){
     assert.ok(html.includes(`data-board="${id}"`),`installer ${id}`);
-    assert.ok(options.includes(`value="${id}"`),`badge preview ${id}`);
+    assert.equal(options.includes(`value="${id}"`),supportsBadge(id),`badge preview ${id}`);
   }
 });
 
@@ -140,8 +140,9 @@ test('flasher rejects wrong boards, partitions, remote paths and destructive upd
  for(const [board,p] of Object.entries(boardProfiles))for(const mode of ['factory','update']){
   const parts=[{path:'bootloader.bin',offset:0},{path:'partitions.bin',offset:0x8000},{path:'boot_app0.bin',offset:0xe000},{path:'firmware.bin',offset:0x10000}];
   if(mode==='factory')parts.push({path:'littlefs.bin',offset:p.filesystemOffset});
-  const good={name:`Dragon Detector — ${p.firmwareName} (${mode})`,version:'0.9.2',new_install_prompt_erase:mode==='factory',builds:[{chipFamily:'ESP32-S3',parts}]};
+  const good={name:`Dragon Detector — ${p.firmwareName} (${mode})`,version:'0.9.4',new_install_prompt_erase:mode==='factory',builds:[{chipFamily:'ESP32-S3',parts}]};
   assert.equal(validateManifest(good,board,mode),good);
+  if(board==='waveshare_lite'){const old=structuredClone(good);old.version='0.9.3';assert.throws(()=>validateManifest(old,board,mode),/0.9.4/);}
   if(board==='xiao_round'){const old=structuredClone(good);old.version='0.9.1';assert.throws(()=>validateManifest(old,board,mode),/0.9.2/);}
   for(const mutate of [d=>d.name+=' wrong',d=>d.builds[0].chipFamily='ESP32',d=>d.builds[0].parts[3].offset=0,d=>d.builds[0].parts[3].path='https://example.com/firmware.bin',d=>d.builds[0].parts.push(d.builds[0].parts[0]),d=>d.builds[0].parts.pop(),d=>d.new_install_prompt_erase=!d.new_install_prompt_erase,d=>d.version='0.10.0']){
    const bad=structuredClone(good);mutate(bad);assert.throws(()=>validateManifest(bad,board,mode),/manifest/);
@@ -167,4 +168,17 @@ test('badge positioning scales with preview size, survives board changes and sta
  assert.deepEqual(panFromPointer(start,{x:9999,y:-9999},233,466),{x:466,y:-466});
  const pan=rescalePan(46.6,-93.2,466,360);assert.ok(Math.abs(pan.x-36)<1e-8);assert.ok(Math.abs(pan.y+72)<1e-8);
  const back=rescalePan(pan.x,pan.y,360,466);assert.ok(Math.abs(back.x-46.6)<1e-8);
+});
+
+test('Lite identifies itself without advertising badge or full-UI capabilities',()=>{
+ const name='Waveshare ESP32-S3-LCD-1.28 Lite';
+ const info=parseBadgeInfo(`BADGE_INFO 0.9.4 240 RADAR_ONLY ${name}`);
+ assert.deepEqual(info,{version:'0.9.4',size:240,board:name});
+ assert.equal(connectedProfile(info),'waveshare_lite');
+ assert.equal(supportsBadge('waveshare_lite'),false);
+ assert.equal(supportsBadge('unknown'),false);
+ for(const version of ['0.9.1','0.9.2','0.9.3'])assert.equal(parseBadgeInfo(`BADGE_INFO ${version} 240 RADAR_ONLY ${name}`),null);
+ assert.equal(parseBadgeInfo(`BADGE_INFO 0.9.4 240 READY ${name}`),null);
+ assert.equal(parseBadgeInfo(`BADGE_INFO 0.9.4 466 RADAR_ONLY ${name}`),null);
+ assert.equal(parseBadgeInfo('BADGE_INFO 0.9.4 240 RADAR_ONLY Seeed XIAO ESP32-S3 + Round Display'),null);
 });

@@ -1,4 +1,6 @@
-# Daily detection and hunting · 0.9.3
+# Daily detection and hunting · 0.9.4
+
+This guide covers the four full-feature boards. The non-touch Waveshare ESP32-S3-LCD-1.28 has a dedicated [Lite radar guide](WAVESHARE-LITE.md); it has no menus, settings or badge mode.
 
 The radar starts at **100% brightness with no automatic dimming or screen-off timeout**. It listens passively on 2.4 GHz Wi-Fi and Bluetooth LE. The optional training fox transmitter is off at every boot.
 
