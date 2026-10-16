@@ -521,7 +521,7 @@ void uiShow(const String& name){
 #ifdef BOARD_AMOLED_175C
   if(name=="modes"||name=="tools"){openRadioTools=name=="tools";go(Recon);return;}
   if(name=="lab"){go(BleLab);return;}
-  if(name=="csi"||name=="portal"||name=="analysis"||name=="probes"||name=="filters"||name=="captures"){reconPage(name);go(Recon);return;}
+  if(name=="network"||name=="csi"||name=="portal"||name=="analysis"||name=="probes"||name=="filters"||name=="captures"){reconPage(name);go(Recon);return;}
 #endif
   if(name=="device-colors"){go(FamilyColors);return;}
   if(name=="stopwatch"){go(Stopwatch);return;}if(name=="clock"){go(Clock);return;}if(name=="orientation"){go(Orientation);return;}if(name=="laps"){go(Laps);return;}

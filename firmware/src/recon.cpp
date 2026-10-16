@@ -3,6 +3,7 @@
 #include "recon_internal.h"
 #include "portal.h"
 #include "csi_monitor.h"
+#include "network_tools.h"
 #ifdef BOARD_AMOLED_175C
 #include "app.h"
 #include "ble_lab.h"
@@ -35,7 +36,7 @@ static uint8_t* capture=nullptr;static bool captureDirty=false;
 static File saveFile;static String savePath;static size_t saveOffset=0;static uint32_t saveCrc=0xffffffffu;
 static char ssids[32][33]{};static unsigned ssidCount=0;
 void say(const char* s){strlcpy(status.message,s,sizeof(status.message));}
-static bool busy(){return status.active||status.saving||portalActive()||csiActive()||bleLabOwnsRadio();}
+static bool busy(){return status.active||status.saving||portalActive()||csiActive()||networkActive()||bleLabOwnsRadio();}
 static bool saveList(){auto* fs=bleLabStorage();if(!fs||!bleLabStorageSpace(8192))return false;fs->mkdir("/lists");File f=fs->open("/lists/ssids.part",FILE_WRITE);if(!f)return false;bool ok=true;
  for(unsigned i=0;i<ssidCount&&ok;++i)ok=f.print(ssids[i])==strlen(ssids[i])&&f.write('\n')==1;
  f.flush();f.close();ok=ok&&fs->rename("/lists/ssids.part","/lists/ssids.txt");if(!ok)fs->remove("/lists/ssids.part");return ok;
@@ -151,14 +152,14 @@ ReconMode reconMode(){return mode;}
 uint8_t reconRadio(){return reconModes[unsigned(mode)].radio;}
 bool reconAll(){return reconModes[unsigned(mode)].all;}
 bool reconAccepts(Family family,bool ble){return modeAccepts(mode,family,ble);}
-bool reconOwnsRadio(){return status.active||status.saving||portalActive()||csiActive();}
+bool reconOwnsRadio(){return status.active||status.saving||portalActive()||csiActive()||networkActive();}
 bool reconRecording(){return wifiRecording.load();}
 bool reconSetMode(ReconMode next){if(!validMode(unsigned(next))||busy())return false;if(status.recording&&next!=mode)captureStop();mode=next;prefs.putUChar("mode",unsigned(mode));trackedContact=-1;channelLock=0;radioApplyMode();return true;}
-void reconStop(){csiStop();portalStop();stop();captureStop();}
+void reconStop(){networkStop();csiStop();portalStop();stop();captureStop();}
 uint16_t reconHopDwell(){return hopDwell;}
 uint8_t reconNextChannel(uint8_t current){return analysis::nextChannel(current,hopMask);}
-void reconBegin(){prefs.begin("dd-recon",false);loadList();unsigned m=prefs.getUChar("mode",0);mode=validMode(m)?ReconMode(m):ReconMode::Radar;probes=(analysis::Probe*)ps_calloc(96,sizeof(analysis::Probe));aps=(Ap*)ps_calloc(ApCapacity,sizeof(Ap));clients=(dragon::toolkit::Client*)ps_calloc(ClientCapacity,sizeof(dragon::toolkit::Client));packet=(uint8_t*)ps_malloc(1200);beacon=(uint8_t*)ps_malloc(1024);radioApplyMode();}
-void reconLoop(){csiLoop();portalLoop();tick(millis());saveTick();if(status.recording&&millis()-captureAt>=15*60*1000){captureStop();say("15-minute capture limit; Save to retain");}}
+void reconBegin(){networkBegin();prefs.begin("dd-recon",false);loadList();unsigned m=prefs.getUChar("mode",0);mode=validMode(m)?ReconMode(m):ReconMode::Radar;probes=(analysis::Probe*)ps_calloc(96,sizeof(analysis::Probe));aps=(Ap*)ps_calloc(ApCapacity,sizeof(Ap));clients=(dragon::toolkit::Client*)ps_calloc(ClientCapacity,sizeof(dragon::toolkit::Client));packet=(uint8_t*)ps_malloc(1200);beacon=(uint8_t*)ps_malloc(1024);radioApplyMode();}
+void reconLoop(){networkLoop();csiLoop();portalLoop();tick(millis());saveTick();if(status.recording&&millis()-captureAt>=15*60*1000){captureStop();say("15-minute capture limit; Save to retain");}}
 void reconWifi(const uint8_t* p,size_t n,size_t original,uint64_t us,int rssi,uint8_t channel){
  if(status.saving)return;
  auto frame=dragon::parseWifi(p,n);bool eapol=frame.valid&&frame.eapol;
@@ -176,7 +177,7 @@ void reconWifi(const uint8_t* p,size_t n,size_t original,uint64_t us,int rssi,ui
 void reconBle(const uint8_t* mac,uint8_t type,int rssi,const uint8_t* p,size_t n,size_t boundary,uint32_t at){if(!status.recording||!status.bleCapture||n>1024||boundary>n)return;char line[2200],address[18];macText(mac,address);int used=snprintf(line,sizeof(line),"%lu,%s,%u,%d,%u,%u,",at,address,type,rssi,unsigned(boundary),unsigned(n));for(size_t i=0;i<n;++i){snprintf(line+used,3,"%02x",p[i]);used+=2;}line[used++]='\n';appendCapture((const uint8_t*)line,used);}
 static bool number(const String& s,unsigned& n){if(!s.length())return false;n=0;for(unsigned i=0;i<s.length();++i){if(!isDigit(s[i])||n>100000)return false;n=n*10+s[i]-'0';}return true;}
 bool reconCommand(const String& c){
- if(portalCommand(c)||csiCommand(c))return true;
+ if(networkCommand(c)||portalCommand(c)||csiCommand(c))return true;
  if(!c.startsWith("mode ")&&!c.startsWith("tool ")&&!c.startsWith("recon "))return false;unsigned n=0;
  if(c=="mode list"){for(unsigned i=0;i<unsigned(ReconMode::Count);++i)Serial.printf("MODE %u %s / %s\n",i,reconModes[i].name,reconModes[i].detail);Serial.println("RECON_OK");}
  else if(c=="mode status"||c=="tool status")Serial.printf("MODE_STATUS mode=%u radio=%u active=%u tool=%u accepted=%lu errors=%lu error=%d responses=%lu eapol=%lu recording=%u records=%lu bytes=%u saving=%u ssids=%u message=%s\n",unsigned(mode),reconRadio(),status.active,unsigned(status.attack),status.accepted,status.errors,status.error,status.responses,status.eapol,status.recording,status.records,unsigned(status.bytes),status.saving,ssidCount,status.message);

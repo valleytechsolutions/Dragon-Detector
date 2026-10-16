@@ -1,5 +1,13 @@
 # Changes
 
+## 0.11.1 — Connected-network diagnostics
+
+- Add eight explicitly selected Wi-Fi profiles, DHCP/IP/gateway/DNS display, gateway ping, bounded local-subnet scans and CSV capture-library export on the Waveshare AMOLED.
+- Restore radar on Home, Disconnect, failed join, connection loss and session expiry; keep network credentials out of responses and disable automatic connection.
+- Add native controls and version-gated web controls. Retain the 0.11 detection/BLE lab, original badge, display settings and both filesystem layouts.
+- Validate ICMP response identity/checksums/nonce, subnet bounds and 25,000 malformed packets, alongside the existing detector and web suites.
+
+
 ## 0.11.0 — Detection audit and Waveshare recon expansion
 
 - Audit all 158 current SquachWatch table facts; add BWCDEVICE/BodyWorn, WatchGuard/Digital Ally, ShotSpotter, Chipolo, newer Tile, Vuzix and vendor clues. Remove generic ESP32-as-camera, Flipper-company-only and Meta-Quest-as-glasses false positives.

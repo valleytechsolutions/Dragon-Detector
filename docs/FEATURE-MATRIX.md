@@ -1,4 +1,4 @@
-# Reference feature comparison · 0.11.0
+# Reference feature comparison · 0.11.1
 
 This is a feature audit, not a claim that Dragon Detector is an official port or has identical behavior. The original application remains MIT. Reference firmware is not silently linked into it. [Credits and exact source revisions](../CREDITS.md) · [Measured hardware checks](VALIDATION.md).
 
@@ -20,7 +20,7 @@ This is a feature audit, not a claim that Dragon Detector is an official port or
 | CSI motion monitor | Experimental independent amplitude-shape monitor; calibrated signal-change score, low-data state and 120-point CSV. No phase-fusion equivalence or occupancy guarantee |
 | Save/load SSIDs, custom HTML, capture browser | Recon flash playlist/template/capture library; checked browser download and individual deletion |
 | Recon missions / desktop tool | Dragon history, PCAP/BLE CSV, probe CSV, GATT profiles/events. Marauder `.rlog` mission directories and its desktop format are not implemented |
-| Join / saved network profiles / IP ping scan | Not implemented in this firmware; passive radio tools do not join a network |
+| Join / saved network profiles / IP ping scan | Connected network: eight explicit profiles, DHCP/IP/gateway/DNS, gateway ping, at most 254 local-subnet addresses, CSV; no automatic reconnection |
 | Save/load AP lists, arbitrary source-MAC configuration, command scripts | Not implemented; live AP selections expire and cannot be loaded as fresh observations |
 | USB BadUSB / DuckyScript | Not implemented in this USB-CDC stopwatch build |
 | GPS wardriving / WiGLE / NMEA | No supported local GPS in this board profile; broadcast Remote ID coordinates are different data |

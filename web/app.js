@@ -1,16 +1,17 @@
-import {normalizeHex,probeRows,probeCsv} from './recon-analysis.js?v=0.11.0';
-import {hasReconTools,reconLines,exportCapture,captureName,importPortalHtml} from './recon-transfer.js?v=0.11.0';
-import {decodeProfile,exportProfile,exportLog,importProfile,labLines,safeProfileName} from './ble-lab.js?v=0.11.0';
-import {localClockEpoch,setClock,readWearable,setOrientation} from './wearable-transfer.js?v=0.11.0';
+import {hasNetworkTools,networkProfileCommand,networkResultsCsv} from './network-tools.js?v=0.11.1';
+import {normalizeHex,probeRows,probeCsv} from './recon-analysis.js?v=0.11.1';
+import {hasReconTools,reconLines,exportCapture,captureName,importPortalHtml} from './recon-transfer.js?v=0.11.1';
+import {decodeProfile,exportProfile,exportLog,importProfile,labLines,safeProfileName} from './ble-lab.js?v=0.11.1';
+import {localClockEpoch,setClock,readWearable,setOrientation} from './wearable-transfer.js?v=0.11.1';
 import {deviceQuery} from './device-query.js';
-import {BadgeSerial} from './serial.js?v=0.11.0';
+import {BadgeSerial} from './serial.js?v=0.11.1';
 import {encodeBadge} from './badge-codec.js';
-import {uploadBadge} from './badge-transfer.js?v=0.11.0';
+import {uploadBadge} from './badge-transfer.js?v=0.11.1';
 import {readHistory} from './detector-transfer.js';
-import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasWearableTools} from './firmware-compat.js?v=0.11.0';
-import {readRadarSettings,saveRadarSettings} from './radar-transfer.js?v=0.11.0';
-import {boardProfiles,connectedProfile,validateManifest,supportsBadge} from './board-profiles.js?v=0.11.0';
-import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan,drawBadgeText} from './badge-editor.js?v=0.11.0';
+import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasWearableTools} from './firmware-compat.js?v=0.11.1';
+import {readRadarSettings,saveRadarSettings} from './radar-transfer.js?v=0.11.1';
+import {boardProfiles,connectedProfile,validateManifest,supportsBadge} from './board-profiles.js?v=0.11.1';
+import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan,drawBadgeText} from './badge-editor.js?v=0.11.1';
 const $ = id => document.getElementById(id);
 const models = Object.fromEntries(Object.entries(boardProfiles).map(([id,p])=>[id,p.name]));
 let board = '', releaseReady = false, request = 0;
@@ -68,6 +69,7 @@ function controls(){
   document.querySelectorAll('#ble-lab button').forEach(b=>b.disabled=busy||!labReady);
   document.querySelectorAll('#radio-tools button').forEach(b=>b.disabled=busy||!serial||deviceProfile!=='waveshare'||!hasReconTools(firmwareVersion));
   document.querySelectorAll('[data-requires="0.11"]').forEach(b=>b.disabled=busy||!serial||deviceProfile!=='waveshare'||!/^0\.11\.\d+$/.test(firmwareVersion));
+  document.querySelectorAll('[data-requires="0.11.1"]').forEach(b=>b.disabled=busy||!serial||deviceProfile!=='waveshare'||!hasNetworkTools(firmwareVersion));
   const lite=!!boardProfiles[deviceProfile]?.lite;
   for(const id of ['show-stopwatch','show-clock','clock-save','clock-sync','orientation-save'])$(id).disabled=busy||!serial||lite||!hasWearableTools(firmwareVersion);
   $('show-activity').disabled=busy||!serial||lite||!hasActivityTools(firmwareVersion);
@@ -337,3 +339,11 @@ $('portal-html-reset').onclick=()=>{if(confirm('Restore the original Dragon Dete
 
 for(const action of ['start','status','calibrate','stop'])$('csi-'+action).onclick=()=>reconAction(l=>reconDo(l,'csi '+action));
 $('csi-download').onclick=()=>reconAction(async l=>{const rows=await reconDo(l,'csi history');const header=rows.find(x=>x.startsWith('RECON_CSI_CSV '));if(!header)throw new Error('No CSI history response');const csv=[header.slice(14),...rows.filter(x=>x.startsWith('RECON_CSI_POINT ')).map(x=>x.slice(16))].join('\n')+'\n';downloadText(csv,'dragon-csi.csv','text/csv');});
+
+for(const [id,command] of Object.entries({'network-status':'net status','network-profiles':'net profiles','network-disconnect':'net disconnect','network-ping':'net ping gateway','network-stop':'net scan stop','network-results':'net results','network-save':'net save'}))$(id).onclick=()=>reconAction(l=>reconDo(l,command));
+$('network-store').onclick=()=>reconAction(async l=>{const command=networkProfileCommand(Number($('network-slot').value),$('network-ssid').value,$('network-password').value);try{await reconDo(l,command);}finally{$('network-password').value='';}});
+$('network-connect').onclick=()=>reconAction(async l=>{await reconDo(l,'net connect '+Number($('network-slot').value));await l.write('screen network');});
+$('network-remove').onclick=()=>{if(confirm('Delete this saved network and password from the detector?'))reconAction(l=>reconDo(l,'net profile remove '+Number($('network-slot').value)));};
+$('network-scan').onclick=()=>{if(confirm('Ping up to 254 addresses in the joined local subnet?'))reconAction(l=>reconDo(l,'net scan local'));};
+$('network-clear').onclick=()=>{if(confirm('Clear current ping results? Saved CSV files stay intact.'))reconAction(l=>reconDo(l,'net clear'));};
+$('network-download').onclick=()=>reconAction(async l=>{downloadText(networkResultsCsv(await reconLines(l,'net results')),'dragon-local-network.csv','text/csv');$('recon-output').textContent='Local network results downloaded.';});

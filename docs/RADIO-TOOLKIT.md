@@ -1,4 +1,4 @@
-# Waveshare modes and radio toolkit · 0.11.0
+# Waveshare modes and radio toolkit · 0.11.1
 
 Available on **ESP32-S3-Touch-AMOLED-1.75C**. Open **Tools → Recon → Modes** or **Radio tools**. Desktop controls live in [Radio tools on the web flasher](https://valleytechsolutions.github.io/Dragon-Detector/#radio-tools). Other boards retain their existing detection, badge and daily-tool capabilities.
 
@@ -94,3 +94,15 @@ Select a fresh AP, place both endpoints still, and Start from Radio tools. CSI a
 Calibration lasts 30 seconds and requires at least 20 usable one-second windows. Windows need at least five samples/second, recent data, low queue loss and stable RSSI. Insufficient data reports LOW DATA, never STABLE. The displayed change score is relative to that local baseline; it is not calibrated probability, an occupancy guarantee, a person detector or a location estimate. Recalibrate after moving the detector/AP. Walking/still ground-truth validation remains installation dependent.
 
 The monitor retains the last 120 one-second summary points for CSV download. No raw CSI or nearby credentials are stored. Stop/Home and the 15-minute ceiling release the radio. USB: `csi start`, `csi status`, `csi calibrate`, `csi history`, `csi stop`.
+
+## Connected network · 0.11.1
+
+Open **Tools → Recon → Radio toolkit → Connected network**, or expand **Connected network** in the web Radio tools. Add an SSID and password to one of eight slots over USB, then explicitly join that slot. Open networks and WPA2/WPA3 personal networks are supported by the underlying station driver; enterprise authentication and WEP are outside this profile. WPA3 peer interoperability has not been exercised in this release.
+
+Profiles are stored in a separate NVS namespace with integrity checks. Passwords are not returned by list/status commands or stored by the webpage. NVS is not encrypted: use a lab credential if physical extraction is a concern. An existing slot is replaced only by Save profile; Delete removes only that slot. There is no automatic connection on boot.
+
+The shared radio pauses its radar schedule while joined. The page shows DHCP address, subnet mask, gateway, primary DNS, channel, signal and scan progress. Home, Disconnect, loss of connection, a 25-second failed-join deadline, or a 15-minute session deadline release the station interface and restore the previous radar state. Other lab operations cannot take over during this session.
+
+Gateway ping sends one ICMP echo. Scan local /24 checks the joined /24 (or narrower subnet), skips the detector, and sends no more than four requests per second, with an 800 ms response window. An explicit USB range may contain up to 254 addresses within the joined subnet. A missing reply does not establish that a host is offline. Replies must match the sender, identifier, sequence, random nonce, payload length and checksums. Scan stop retains results; save or clear them before another scan. CSV includes responding addresses and round-trip times, plus sent/no-reply/error totals when saved on the detector. Saved CSV uses the existing capture library and checked USB download.
+
+USB commands: `net profiles`, `net status`, `net connect <slot 0..7>`, `net disconnect`, `net ping gateway`, `net scan local`, `net scan <first IPv4> <last IPv4>`, `net scan stop`, `net results`, `net save`, `net clear`, `net profile remove <slot>`. The browser encodes new profiles as `net profile put <slot> <SSID hex> <password hex or ->`; credentials never appear in the response.

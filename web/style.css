@@ -22,3 +22,5 @@ textarea{width:100%;box-sizing:border-box;resize:vertical;background:#081b15;col
 
 #ble-lab label.check,#radio-tools label.check{display:flex;align-items:center;justify-content:flex-start;gap:10px;min-height:36px}
 #ble-lab .check input[type=checkbox],#radio-tools .check input[type=checkbox]{display:inline-block;flex:0 0 16px;width:16px;height:16px;max-width:16px;padding:0;margin:0;accent-color:var(--lime)}
+
+#network-tools{margin-top:22px}#network-tools>summary{cursor:pointer;font-weight:700;font-size:16px;color:var(--lime)}

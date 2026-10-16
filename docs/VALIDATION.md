@@ -1,4 +1,11 @@
-# Validation status · 0.11.0
+# Validation status · 0.11.1
+
+## Connected-network diagnostics · 0.11.1 · 2026-10-15
+
+On the Waveshare AMOLED, a temporary Windows 11 24H2 **2.4 GHz WPA2** access point verified association, DHCP, gateway/address/mask/DNS reporting and a genuine nonce/checksum-matched gateway ICMP reply. Tests verified the out-of-subnet rejection, unsaved-results guard, CSV storage, scan cancellation, Home restoration, a second connection without leaked netif handlers, automatic cleanup after AP loss and the 25-second absent-network deadline. The test removed its profile and stopped the temporary hotspot; original badge CRC and listening mode remained unchanged. WPA3 peer interoperability and the full 15-minute expiry were not exercised live.
+
+Native tests add 25,000 malformed ICMP cases, wrong ID/sequence/nonce, checksum corruption, truncation and subnet bounds. Web tests total 47 with profile encoding, protocol gating and CSV validation. The public opt-in fixture is `tools/test_network_live.py`; it requires an unused profile slot and will not replace an already running Windows hotspot. Windows Wi-Fi Direct legacy publishing did not provide a usable connection here; the separate per-session tethering API supplied the successful controlled fixture without changing persistent hotspot settings.
+
 
 This is an experimental development release. Automated signature checks and basic board checks do not establish field detection accuracy or all-day battery life.
 
