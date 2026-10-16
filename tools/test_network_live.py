@@ -31,7 +31,8 @@ async def run(port,output):
   original_badge=await cmd('badge checksum',1.5)
   profiles=await cmd('net profiles');used={int(x) for x in re.findall(r'RECON_NETWORK_PROFILE (\d+) ',profiles)}
   slot=next(i for i in range(7,-1,-1) if i not in used)
-  ssid='Dragon-Network-Fixture';password=secrets.token_hex(16)
+  # Fresh identity avoids Windows reusing a prior per-session hotspot credential.
+  ssid='Dragon-Network-'+secrets.token_hex(3);password=secrets.token_hex(16)
   manager=NetworkOperatorTetheringManager.create_from_connection_profile(NetworkInformation.get_internet_connection_profile())
   assert manager.tethering_operational_state==TetheringOperationalState.OFF,'Existing hotspot is active; leave it alone'
   configuration=NetworkOperatorTetheringSessionAccessPointConfiguration();configuration.ssid=ssid;configuration.passphrase=password;configuration.band=TetheringWiFiBand.TWO_POINT_FOUR_GIGAHERTZ;configuration.authentication_kind=TetheringWiFiAuthenticationKind.WPA2
