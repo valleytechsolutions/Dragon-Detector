@@ -521,6 +521,7 @@ void uiShow(const String& name){
 #ifdef BOARD_AMOLED_175C
   if(name=="modes"||name=="tools"){openRadioTools=name=="tools";go(Recon);return;}
   if(name=="lab"){go(BleLab);return;}
+  if(name=="csi"||name=="portal"||name=="analysis"||name=="probes"||name=="filters"||name=="captures"){reconPage(name);go(Recon);return;}
 #endif
   if(name=="device-colors"){go(FamilyColors);return;}
   if(name=="stopwatch"){go(Stopwatch);return;}if(name=="clock"){go(Clock);return;}if(name=="orientation"){go(Orientation);return;}if(name=="laps"){go(Laps);return;}
@@ -604,6 +605,8 @@ bool uiStopwatchKey(bool start,uint64_t at){
   updateTimer();return true;
 }
 bool uiCommand(const String& cmd){
+  if(cmd=="ui layout"){lv_obj_update_layout(root);Serial.printf("UI_LAYOUT count=%lu page=%u\n",lv_obj_get_child_cnt(root),unsigned(page));for(unsigned i=0;i<lv_obj_get_child_cnt(root);++i){auto* o=lv_obj_get_child(root,i);lv_area_t a;lv_obj_get_coords(o,&a);Serial.printf("UI_WIDGET %u x=%d y=%d w=%d h=%d hidden=%u opa=%u children=%lu type=%s\n",i,a.x1,a.y1,a.x2-a.x1+1,a.y2-a.y1+1,lv_obj_has_flag(o,LV_OBJ_FLAG_HIDDEN),lv_obj_get_style_opa(o,0),lv_obj_get_child_cnt(o),lv_obj_check_type(o,&lv_label_class)?"label":lv_obj_check_type(o,&lv_btn_class)?"button":"object");}Serial.println("UI_LAYOUT_END");return true;}
+
   if(cmd=="ui status"){Serial.printf("UI_STATUS page=%u actions=%lu last_action=%d\n",unsigned(page),inputActions,lastInputAction);return true;}
   if(cmd=="radar status"){Serial.printf("RADAR_SETTINGS theme=%u labels=%u recent=%u pages=1 plotted=%u primary=%d\n",radarTheme,radarLabels,radarRecent,dotCount,radarPrimary);return true;}
   if(cmd=="radar scope all"||cmd=="radar scope candidates"){candidatesOnly=cmd.endsWith("candidates");settings.putBool("candidates",candidatesOnly);radarPrepared=0;Serial.printf("RADAR_SCOPE %s\n",candidatesOnly?"candidates":"all");return true;}

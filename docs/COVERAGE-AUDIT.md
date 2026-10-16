@@ -1,17 +1,17 @@
-# SquachWatch coverage audit · 0.5.0
+# SquachWatch coverage audit · 0.11.0
 
-Reference: [SquachWatch-CYD](https://github.com/skizzophrenic/SquachWatch-CYD/tree/a6167dbb0693963b5ad7022e7923cfb458d7676c), inspected 2026-10-13. This is a pinned comparison, not a promise to match future upstream changes automatically.
+Reference: [SquachWatch-CYD](https://github.com/skizzophrenic/SquachWatch-CYD/tree/1485b0122aa527f8309c3f4e6ba8dc1614be5bb1), inspected 2026-10-15. This is a pinned comparison, not a promise to match future upstream changes automatically.
 
 ## What is checked
 
 | Reference table | Entries | Dragon regression check |
 |---|---:|---|
-| Wi-Fi address patterns | 97 | Construct a complete beacon for each source prefix, recognize its family, check its radar eligibility |
-| BLE service IDs | 15 | Construct a valid service-list advertisement for each ID, recognize its family, check radar eligibility |
-| BLE manufacturer IDs | 7 | Check every company; Apple additionally requires a valid Find My payload |
+| Wi-Fi address patterns | 110 | Construct a complete beacon for each source prefix, recognize its family, check its radar eligibility |
+| BLE service IDs | 25 | Construct a valid service-list advertisement for each ID, recognize its family, check radar eligibility |
+| BLE manufacturer IDs | 8 | Check every company; Apple additionally requires a valid Find My payload |
 | Exact device names | 7 | Check each name inside a valid BLE name AD field |
 | SSID prefixes | 8 | Check each prefix with a suffix in an actual Wi-Fi beacon |
-| **Total table entries** | **134** | **Every entry must pass; strong-only alert settings must not hide it** |
+| **Total table entries** | **158** | **Every entry must pass; strong-only alert settings must not hide it** |
 
 The [machine-readable ledger](data/squachwatch-coverage.json) lists every individual identifier and expected Dragon family. It contains public matching facts, not copied GPL functions or assets. The [native coverage tests](../tests/coverage_test.h) exercise the independent firmware parsers and the same visibility predicate used on the device. A failed or missing entry fails CI.
 
@@ -37,7 +37,7 @@ Dragon deliberately rejects malformed/truncated AD fields and Apple byte sequenc
 
 ## Hardware and reception boundaries
 
-All three selected boards share the same detector implementation. Their ESP32-S3 radios receive 2.4 GHz Wi-Fi and legacy Bluetooth LE. They cannot receive Bluetooth Classic-only serial/skimmer modules, 5/6 GHz Wi-Fi, LoRa, or extended-only BLE broadcasts. They have no supported local GPS receiver. Silent radios, address changes, antenna orientation, scan scheduling and radio congestion can still cause misses. No test suite substitutes for a controlled field trial against every physical product.
+All five selected boards share the same detector implementation. Their ESP32-S3 radios receive 2.4 GHz Wi-Fi and legacy Bluetooth LE. They cannot receive Bluetooth Classic-only serial/skimmer modules, 5/6 GHz Wi-Fi, LoRa, or extended-only BLE broadcasts. They have no supported local GPS receiver. Silent radios, address changes, antenna orientation, scan scheduling and radio congestion can still cause misses. No test suite substitutes for a controlled field trial against every physical product.
 
 Passive BLE remains the default. **Settings → BLE scan → Active** requests scan responses from scannable devices, which can reveal names omitted from the initial advertisement. It transmits scan requests without connecting or pairing. Results are bounded to 96 advertisers per one-second active scan; subsequent cycles clear them. Dedicated hunts use the selected mode. Disable Active to return to listen-only BLE.
 
@@ -45,7 +45,7 @@ Passive BLE remains the default. **Settings → BLE scan → Active** requests s
 
 - Contact capacity: 160 → 384, allocated in PSRAM rather than occupying internal radio/DMA memory.
 - A 1,024-entry lookup cache verifies complete radio/address/type identity on every hit; collisions fall back to a full search, and reused slots cannot alias a different device.
-- The 96-entry packet pool passes one-byte indexes through queues instead of repeatedly clearing/copying 1 KB records. Without PCAP, Wi-Fi data frames retain only the header/LLC bytes needed for address and EAPOL detection; management frames retain their bodies.
+- The 96-entry packet pool passes one-byte indexes through queues instead of repeatedly clearing/copying 1 KB records. Without PCAP, Wi-Fi data frames retain only the header/LLC bytes needed for address and EAPOL detection; the AMOLED retains complete bounded EAPOL bodies for key-message analysis, and management frames retain their bodies.
 - Radio batches yield after a 4 ms processing budget or 64 packets, whichever occurs first. One slow packet can exceed that budget; live diagnostics report the measured maximum and queue lag.
 - Vendor lookup uses binary search. Radar ordering uses cached `O(n log n)` sorting instead of an `O(n²)` sort on every frame. All retained visible contacts can have dots; the former 60-dot cap is removed.
 - Contact lists create ten rows per page, sorted by evidence and signal. Stored row identities are checked again on tap, so a busy scan cannot redirect a selection to a reused slot.

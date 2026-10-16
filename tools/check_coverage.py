@@ -9,11 +9,12 @@ ROOT=pathlib.Path(__file__).resolve().parents[1]
 def generate(reference=None):
     ledger=json.loads((ROOT/'docs/data/squachwatch-coverage.json').read_text())
     entries=ledger['entries']
-    expected={'address':97,'uuid':15,'company':7,'name':7,'ssid':8}
+    expected=ledger['counts']
     assert {k:sum(e['kind']==k for e in entries) for k in expected}==expected
     assert len({(e['kind'],e['value']) for e in entries})==len(entries)
     if reference:
         source=(pathlib.Path(reference)/'src/signatures.cpp').read_text(encoding='utf8')
+        source=re.sub(r'//[^\n]*','',source)
         found={'address':set(''.join(f'{int(x,16):02X}' for x in row) for row in re.findall(r'\{\{0x([\dA-Fa-f]+),\s*0x([\dA-Fa-f]+),\s*0x([\dA-Fa-f]+)\}',source))}
         for table,kind in [('kUuidTable','uuid'),('kMfgIdTable','company'),('kBtClassicNames','name'),('kSsidPrefixes','ssid')]:
             section=source.split(table+'[] = {')[1].split('};')[0]

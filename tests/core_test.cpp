@@ -22,7 +22,9 @@ static Match ble(const std::vector<uint8_t>& p){auto f=parseBle(p.data(),p.size(
 #include "axon_test.h"
 #include "ble_profile_test.h"
 #include "recon_test.h"
+#include "recon_analysis_test.h"
 int main(){
+  reconAnalysisTests();
   reconTests();
   bleProfileTests();
   axonTests();

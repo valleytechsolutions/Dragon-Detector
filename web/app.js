@@ -1,15 +1,16 @@
-import {hasReconTools,reconLines,exportCapture,captureName} from './recon-transfer.js?v=0.10.0';
-import {decodeProfile,exportProfile,exportLog,importProfile,labLines,safeProfileName} from './ble-lab.js?v=0.10.0';
-import {localClockEpoch,setClock,readWearable,setOrientation} from './wearable-transfer.js?v=0.10.0';
+import {normalizeHex,probeRows,probeCsv} from './recon-analysis.js?v=0.11.0';
+import {hasReconTools,reconLines,exportCapture,captureName,importPortalHtml} from './recon-transfer.js?v=0.11.0';
+import {decodeProfile,exportProfile,exportLog,importProfile,labLines,safeProfileName} from './ble-lab.js?v=0.11.0';
+import {localClockEpoch,setClock,readWearable,setOrientation} from './wearable-transfer.js?v=0.11.0';
 import {deviceQuery} from './device-query.js';
-import {BadgeSerial} from './serial.js?v=0.10.0';
+import {BadgeSerial} from './serial.js?v=0.11.0';
 import {encodeBadge} from './badge-codec.js';
-import {uploadBadge} from './badge-transfer.js?v=0.10.0';
+import {uploadBadge} from './badge-transfer.js?v=0.11.0';
 import {readHistory} from './detector-transfer.js';
-import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasWearableTools} from './firmware-compat.js?v=0.10.0';
-import {readRadarSettings,saveRadarSettings} from './radar-transfer.js?v=0.10.0';
-import {boardProfiles,connectedProfile,validateManifest,supportsBadge} from './board-profiles.js?v=0.10.0';
-import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan,drawBadgeText} from './badge-editor.js?v=0.10.0';
+import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasWearableTools} from './firmware-compat.js?v=0.11.0';
+import {readRadarSettings,saveRadarSettings} from './radar-transfer.js?v=0.11.0';
+import {boardProfiles,connectedProfile,validateManifest,supportsBadge} from './board-profiles.js?v=0.11.0';
+import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan,drawBadgeText} from './badge-editor.js?v=0.11.0';
 const $ = id => document.getElementById(id);
 const models = Object.fromEntries(Object.entries(boardProfiles).map(([id,p])=>[id,p.name]));
 let board = '', releaseReady = false, request = 0;
@@ -63,9 +64,10 @@ function setBadgeProfile(id){
   $('badge-board').value=id;draw();
 }
 function controls(){
-  const labReady=!!serial&&deviceProfile==='waveshare'&&/^0\.(?:9\.(?:[8-9]|\d{2,})|10\.\d+)$/.test(firmwareVersion);
+  const labReady=!!serial&&deviceProfile==='waveshare'&&/^0\.(?:9\.(?:[8-9]|\d{2,})|(?:10|11)\.\d+)$/.test(firmwareVersion);
   document.querySelectorAll('#ble-lab button').forEach(b=>b.disabled=busy||!labReady);
   document.querySelectorAll('#radio-tools button').forEach(b=>b.disabled=busy||!serial||deviceProfile!=='waveshare'||!hasReconTools(firmwareVersion));
+  document.querySelectorAll('[data-requires="0.11"]').forEach(b=>b.disabled=busy||!serial||deviceProfile!=='waveshare'||!/^0\.11\.\d+$/.test(firmwareVersion));
   const lite=!!boardProfiles[deviceProfile]?.lite;
   for(const id of ['show-stopwatch','show-clock','clock-save','clock-sync','orientation-save'])$(id).disabled=busy||!serial||lite||!hasWearableTools(firmwareVersion);
   $('show-activity').disabled=busy||!serial||lite||!hasActivityTools(firmwareVersion);
@@ -211,7 +213,7 @@ $('radar-save').onclick=()=>detectorAction(async link=>{await saveRadarSettings(
 $('display-save').onclick=()=>detectorAction(async link=>{const values=['display-brightness','display-dim','display-off','display-level'].map(id=>Number($(id).value));await link.write('display set '+values.join(' '));const reply=await link.wait(s=>s==='DISPLAY_OK'||s==='DISPLAY_ERROR');if(reply!=='DISPLAY_OK')throw new Error('Display settings were rejected.');$('detector-status').textContent='Display preferences saved on your detector.';});
 draw();loadStock();
 
-const toneFamilies=['Wi-Fi','BLE','Flock / ALPR + Raven focus','Axon / TASER','Meta / camera glasses','Pineapple','Pwnagotchi','Nyanbox','HaleHound','Find My / DULT','Serial module','Flipper','Biscuit','SmartTag','Raven','Google Find Hub','Tile','Ring','Camera vendor','ALPR vendor','Drone Remote ID','iBeacon','Disconnect burst','SSID conflict','BLE advert burst','Dragon fox'];
+const toneFamilies=['Wi-Fi','BLE','Flock / ALPR + Raven focus','Axon / body cameras','Meta / camera glasses','Pineapple','Pwnagotchi','Nyanbox','HaleHound','Find My / DULT','Serial module','Flipper','Biscuit','SmartTag','Raven / acoustic sensors','Google Find Hub','Tile','Ring','Camera vendor','ALPR vendor','Drone / Remote ID','iBeacon','Disconnect burst','SSID conflict','BLE advert burst','Dragon fox'];
 for(const [i,label] of toneFamilies.entries()){$('tone-family').add(new Option(label,String(i)));$('sound-focus').add(new Option(label,String(i)));}
 $('tone-family').value='3';
 $('tone-text').dataset.family='';
@@ -302,3 +304,36 @@ $('recon-local-save').onclick=()=>reconAction(async l=>{const name=$('recon-loca
 $('recon-destination-save').onclick=()=>reconAction(l=>{const ch=Number($('recon-destination').value);if(!Number.isInteger(ch)||ch<1||ch>11)throw new Error('Use channel 1–11.');return reconDo(l,'tool destination '+ch);});
 $('recon-ssid-list').onclick=()=>reconAction(l=>reconDo(l,'tool ssid list'));
 $('recon-ssid-clear').onclick=()=>{if(confirm('Clear the saved SSID playlist?'))reconAction(l=>reconDo(l,'tool ssid clear'));};
+
+function downloadText(text,name,type='text/plain'){const url=URL.createObjectURL(new Blob([text],{type})),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);}
+for(const [id,command] of Object.entries({'lab-subscriptions':'lab subscriptions','lab-hid':'lab hid','lab-fingerprints':'lab fingerprints','lab-security':'lab security','lab-bonds':'lab bonds'}))$(id).onclick=()=>labAction(async l=>{$('lab-output').textContent=(await labLines(l,command)).join('\n');});
+$('lab-unsubscribe').onclick=()=>labAction(l=>labCommand(l,'lab unsubscribe '+labAttr()));
+$('lab-write').onclick=()=>labAction(async l=>{const index=labAttr(),value=normalizeHex($('lab-write-value').value),nr=$('lab-write-nr').checked;if(!confirm(`Write ${value.length/2} bytes to the connected peripheral's characteristic #${index}${nr?' without response':''}?\n${value}`))return;await labCommand(l,`lab ${nr?'writenr':'write'} ${index} ${value}`);});
+$('lab-mtu-save').onclick=()=>labAction(l=>{const n=Number($('lab-mtu').value);if(!Number.isInteger(n)||n<23||n>517)throw new Error('MTU must be 23–517.');return labCommand(l,'lab mtu '+n);});
+$('lab-delete').onclick=()=>labAction(async l=>{const n=labSaved();if(confirm(`Delete saved profile ${n}?`))await labCommand(l,'lab delete '+n);});
+$('lab-pairing-save').onclick=()=>labAction(l=>labCommand(l,`lab pairing ${$('lab-pairing').checked?1:0} ${$('lab-mitm').checked?1:0} ${$('lab-bond').checked?1:0}`));
+$('lab-confirm-yes').onclick=()=>labAction(l=>labCommand(l,'lab confirm yes'));
+$('lab-confirm-no').onclick=()=>labAction(l=>labCommand(l,'lab confirm no'));
+$('lab-passkey-save').onclick=()=>labAction(l=>{const code=$('lab-passkey').value;if(!/^\d{6}$/.test(code))throw new Error('Enter the six digits displayed by your peripheral.');$('lab-passkey').value='';return labCommand(l,'lab passkey '+code);});
+$('lab-forget').onclick=()=>labAction(async l=>{const address=$('lab-bond-address').value.trim();if(!/^[0-9a-f]{2}(?::[0-9a-f]{2}){5} [0-3]$/i.test(address))throw new Error('Use address and type from List bonds.');if(confirm('Remove this one stored BLE bond?'))await labCommand(l,'lab forget '+address);});
+$('recon-stats').onclick=()=>reconAction(l=>reconDo(l,'recon stats'));
+$('recon-probes').onclick=()=>reconAction(async l=>{const rows=await reconLines(l,'recon probes');$('recon-output').textContent=probeRows(rows).map(p=>`${p.ssid||'[wildcard]'} · ${p.address} · CH ${p.channel} · ${p.rssi} dBm · ${p.age}s ago · ${p.count} observations`).join('\n')||'No probe requests observed yet.';});
+$('recon-probes-download').onclick=()=>reconAction(async l=>{downloadText(probeCsv(await reconLines(l,'recon probes')),'dragon-probes.csv','text/csv');$('recon-output').textContent='Probe inventory downloaded locally.';});
+$('recon-filter-save').onclick=()=>reconAction(l=>reconDo(l,`recon filter ${Number($('recon-filter').value)} ${$('recon-filter-ap').checked?1:0}`));
+$('recon-filter-status').onclick=()=>reconAction(l=>reconDo(l,'recon filter'));
+$('recon-hop-save').onclick=()=>reconAction(l=>reconDo(l,'recon hop '+$('recon-hop').value));
+
+$('lab-select').onclick=()=>labAction(l=>{const d=$('lab-device').value;if(!/^[0-9a-f:]{17} [0-3]$/i.test(d))throw new Error('Choose your observed device.');return labCommand(l,'lab select '+d);});
+$('lab-replay').onclick=()=>labAction(async l=>{if(confirm('Replay the selected owned peripheral’s legacy advertisement for up to 30 seconds? Radar pauses until Stop. Captured identity replay needs a random-static address.'))await labCommand(l,'lab replay'+($('lab-replay-identity').checked?' identity':''));});
+$('lab-sound').onclick=()=>labAction(async l=>{if(confirm('Send one sound request to the connected Find My / DULT tracker? The tracker decides whether to allow it.'))await labCommand(l,'lab sound');});
+for(const [id,command] of Object.entries({'portal-status':'portal status','portal-stop':'portal stop','portal-log':'portal log','portal-save':'portal save'}))$(id).onclick=()=>reconAction(l=>reconDo(l,command));
+$('portal-name-save').onclick=()=>reconAction(l=>{const n=$('portal-name').value;if(!/^[ -~]{1,32}$/.test(n))throw new Error('Use a printable 1–32 byte SSID.');return reconDo(l,'portal name '+n);});
+$('portal-start').onclick=()=>reconAction(async l=>{const rows=await reconLines(l,'portal status');if(!confirm('Start this local lab AP?\n'+rows.join('\n')+'\nRadar pauses until Stop or timeout.'))return;const n=Number($('recon-seconds').value);if(!Number.isInteger(n)||n<1||n>60)throw new Error('Duration must be 1–60 seconds.');await reconDo(l,'tool seconds '+n);await reconDo(l,'portal start');});
+$('portal-probes').onclick=()=>reconAction(async l=>{const rows=await reconDo(l,'portal probes');$('portal-probe').replaceChildren(new Option('Choose a probe',''));for(const row of rows){const m=/^RECON_PORTAL_PROBE ([0-9a-f:]{17}) ([0-9a-f]{2,64}) (.*)$/i.exec(row);if(m)$('portal-probe').add(new Option(m[3],m[1]+' '+m[2]));}});
+$('portal-probe-select').onclick=()=>reconAction(l=>{const value=$('portal-probe').value;if(!/^[0-9a-f:]{17} [0-9a-f]{2,64}$/i.test(value))throw new Error('Choose a recent probe first.');return reconDo(l,'portal probe '+value);});
+$('portal-clear').onclick=()=>{if(confirm('Clear the in-memory portal submissions?'))reconAction(l=>reconDo(l,'portal clear'));};
+$('portal-html-upload').onclick=()=>reconAction(async l=>{const file=$('portal-html').files[0];if(!file||file.size>16384)throw new Error('Choose an HTML template up to 16 KB.');await importPortalHtml(l,new Uint8Array(await file.arrayBuffer()),p=>{$('recon-output').textContent=`Uploading template ${p}%`;});$('recon-output').textContent='Template stored with a verified CRC.';});
+$('portal-html-reset').onclick=()=>{if(confirm('Restore the original Dragon Detector test page?'))reconAction(l=>reconDo(l,'portal html reset'));};
+
+for(const action of ['start','status','calibrate','stop'])$('csi-'+action).onclick=()=>reconAction(l=>reconDo(l,'csi '+action));
+$('csi-download').onclick=()=>reconAction(async l=>{const rows=await reconDo(l,'csi history');const header=rows.find(x=>x.startsWith('RECON_CSI_CSV '));if(!header)throw new Error('No CSI history response');const csv=[header.slice(14),...rows.filter(x=>x.startsWith('RECON_CSI_POINT ')).map(x=>x.slice(16))].join('\n')+'\n';downloadText(csv,'dragon-csi.csv','text/csv');});

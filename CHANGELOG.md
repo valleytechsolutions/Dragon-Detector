@@ -1,5 +1,14 @@
 # Changes
 
+## 0.11.0 — Detection audit and Waveshare recon expansion
+
+- Audit all 158 current SquachWatch table facts; add BWCDEVICE/BodyWorn, WatchGuard/Digital Ally, ShotSpotter, Chipolo, newer Tile, Vuzix and vendor clues. Remove generic ESP32-as-camera, Flipper-company-only and Meta-Quest-as-glasses false positives.
+- BLE Lab: central writes with/without response, unsubscribe and active subscriptions, MTU control, explicit pairing/passkey/numeric comparison, bond controls, friendly UUID/protocol details, HID report-layout parser, profile deletion, timed legacy advertisement/address replay and supported tracker sound requests.
+- Wi-Fi analysis: raw-SSID probe inventory, EAPOL message/PMKID/SAE counters, eight capture filters, selected-AP scope and configurable channel plans. Stopping a capture restores the previous listening mode.
+- Timed local portal with captive DNS, optional checked HTML template, explicit probe-SSID selection and bounded flash-saveable submission logs.
+- Experimental passive CSI signal monitor: fixed LLTF layout, 30-second calibration, sample-rate/quality checks, bounded queue/history and Stop/Home cleanup.
+- Desktop controls, round-screen menus, parser/transport tests, provenance ledger and explicit feature comparison. Flash layout and saved badge/settings are unchanged.
+
 ## 0.10.0 — Waveshare modes and radio toolkit
 
 - Eight persistent listening modes with live switching, focused radar/audio and dedicated passive surveys.

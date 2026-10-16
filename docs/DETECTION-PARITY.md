@@ -1,10 +1,10 @@
-# Detection feature comparison · 0.7.0
+# Detection feature comparison · 0.11.0
 
-The requested reference is [SquachWatch-CYD](https://github.com/skizzophrenic/SquachWatch-CYD), reviewed at `a6167dbb0693963b5ad7022e7923cfb458d7676c`. Its detection families and controls informed this independently implemented Dragon Radar interface. Its GPL-3.0 application code and artwork are not incorporated into the MIT application. [Credits and license boundaries](../CREDITS.md).
+The requested reference is [SquachWatch-CYD](https://github.com/skizzophrenic/SquachWatch-CYD), reviewed at `1485b0122aa527f8309c3f4e6ba8dc1614be5bb1`. Its detection families and controls informed this independently implemented Dragon Radar interface. Its GPL-3.0 application code and artwork are not incorporated into the MIT application. [Credits and license boundaries](../CREDITS.md).
 
 ## Device coverage
 
-Every detection category and all **134 table entries** in that pinned reference have corresponding recognition and radar-visibility fixtures here: 97 address patterns, 15 service IDs, seven company IDs, seven exact names and eight SSID prefixes. See the [complete fact ledger](data/squachwatch-coverage.json) and [audit procedure](COVERAGE-AUDIT.md). Matching a category does not guarantee reception of every product in it. The ESP32-S3 hardware, advertised payloads, radio scheduling and evidence thresholds set the practical limits.
+Every detection category and all **158 table entries** in that pinned reference have corresponding recognition and radar-visibility fixtures here: 110 address patterns, 25 service IDs, eight company IDs, seven exact names and eight SSID prefixes. See the [complete fact ledger](data/squachwatch-coverage.json) and [audit procedure](COVERAGE-AUDIT.md). Matching a category does not guarantee reception of every product in it. The ESP32-S3 hardware, advertised payloads, radio scheduling and evidence thresholds set the practical limits.
 
 | Reference category | Dragon Detector implementation |
 |---|---|
@@ -19,18 +19,18 @@ Every detection category and all **134 table entries** in that pinned reference 
 | Camera vendors | Wyze, Hikvision, Verkada, Avigilon, Axis, Arlo and Blink vendor blocks; explicitly weak shared-module hints |
 | Samsung tags | FD5A; Samsung manufacturer ID alone is insufficient |
 | Google tags | FEAA service data with Find Hub 40/41 frame and valid EID length; bare/general FEAA is an explicitly weak Eddystone clue |
-| Tile | FEED / FEEC services |
+| Tile | FEED / FEEC / FD84 services; Chipolo FE33/FE65/CID08C3 share the tracker family |
 | Ring | Ring LLC vendor blocks; shared Amazon blocks remain weak |
 | Deauthentication activity | Six deauth/disassociation frames per rolling three seconds across source addresses; retry suppression and 15-second burst cooldown |
 | Evil twin candidate | Repeated same **raw SSID**, different BSSIDs, conflicting open/protected status, contemporaneous observations |
 | iBeacon | Complete Apple iBeacon format; enabled by default, optional family toggle |
-| Pentest devices | Flipper company/OUI/service/appearance, Pwnagotchi name/counter fields even with changed MAC, Pineapple/deauther names; retained Nyanbox, HaleHound and Biscuit candidates |
+| Pentest devices | Flipper service/appearance/name, Pwnagotchi name/counter fields even with changed MAC, Pineapple/deauther names; retained Nyanbox, HaleHound and Biscuit candidates |
 
 Service IDs also accept equivalent 16/32/Bluetooth-Base-128 advertising encodings, with the original evidence thresholds preserved.
 
 ## Detection controls
 
-| Capability | Status in the three current board profiles |
+| Capability | Status in the five current board profiles |
 |---|---|
 | Signal hunt / foxhunting | Dedicated BLE or Wi-Fi listening, dBm gauge, 24-second signal trace, peak, trend, stability, saved comparison point, stale/reacquisition state |
 | Training fox | Explicitly enabled non-connectable Dragon BLE beacon; off at boot. Another Dragon Detector can detect and hunt it. Original protocol; not SquachMesh-compatible |

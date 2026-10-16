@@ -41,14 +41,16 @@ static void captureFlush(lv_disp_drv_t* driver,const lv_area_t* area,lv_color_t*
   panelFlush(driver,area,pixels);
 }
 static void screenshot(){
+  // Finish pending partial refreshes before mirroring a complete frame.
   auto* display=lv_disp_get_default();
+  lv_refr_now(display);
   captureWidth=lv_disp_get_hor_res(display);captureHeight=lv_disp_get_ver_res(display);
   const size_t bytes=size_t(captureWidth)*captureHeight*sizeof(lv_color_t);
   capturePixels=(lv_color_t*)ps_calloc(1,bytes);
   if(!capturePixels){Serial.println("SCREENSHOT_FAILED memory");return;}
   captureStage(1);const bool wasEnabled=radioEnabled;
   captureStage(2);panelFlush=display->driver->flush_cb;display->driver->flush_cb=captureFlush;
-  lv_obj_invalidate(lv_scr_act());lv_refr_now(display);
+  _lv_inv_area(display,nullptr);lv_obj_invalidate(lv_scr_act());lv_refr_now(display);
   display->driver->flush_cb=panelFlush;
   // Capture the live sweep before pausing reception for the bulk USB transfer.
   setRadio(false);
@@ -144,7 +146,7 @@ void setup(){
 void loop(){
   uint32_t stamp=micros();auto measured=[&](int i){uint32_t end=micros();loopLastUs[i]=end-stamp;loopMaxUs[i]=std::max(loopMaxUs[i],loopLastUs[i]);stamp=end;};
   boardLoop();bleLabLoop();reconLoop();measured(0);radioLoop();measured(1);storageLoop();detectorLoop();measured(2);audioLoop();measured(3);uiLoop();measured(4);badgeLoop();measured(5);
-  while(Serial.available()){char c=Serial.read();if(c=='\n'){serialLine.trim();if(serialOverflow)Serial.println("COMMAND_ERROR too long");else command(serialLine);serialLine="";serialOverflow=false;}else if(serialLine.length()<600)serialLine+=c;else serialOverflow=true;}
+  while(Serial.available()){char c=Serial.read();if(c=='\n'){serialLine.trim();if(serialOverflow)Serial.println("COMMAND_ERROR too long");else command(serialLine);serialLine="";serialOverflow=false;}else if(serialLine.length()<1200)serialLine+=c;else serialOverflow=true;}
   if(millis()-lastHealth>10000){lastHealth=millis();health();}
   delay(2);
 }

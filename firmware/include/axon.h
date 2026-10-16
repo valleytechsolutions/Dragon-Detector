@@ -4,7 +4,7 @@
 namespace dragon {
 // Independent interpretation of AXEOFF's public signatures. A vendor identifier
 // indicates Axon/TASER equipment, not a camera model or its recording state.
-enum AxonSignal : uint8_t { AxonCompany=1, AxonService=2, AxonOui=4, AxonCompatibility=8, AxonName=16, AxonResearch=32 };
+enum AxonSignal : uint8_t { AxonCompany=1, AxonService=2, AxonOui=4, AxonCompatibility=8, AxonName=16, AxonResearch=32, AxonBwc=64, BodyCameraVendor=128 };
 struct AxonEvidence {
   uint8_t signals=0;
   bool detected()const{return signals!=0;}
@@ -12,6 +12,8 @@ struct AxonEvidence {
   Match match()const{
     if((signals&(AxonCompany|AxonService))==(AxonCompany|AxonService))
       return {Family::Axon,Confidence::Strong,"Axon/TASER CID 034D + assigned service; model/recording unknown"};
+    if(signals&BodyCameraVendor)return {Family::Axon,Confidence::Medium,"WatchGuard / Digital Ally vendor; body-camera model/recording unknown"};
+    if(signals&AxonBwc)return {Family::Axon,Confidence::Medium,"BWCDEVICE body-camera payload marker; recording unknown"};
     if(signals&AxonCompany)return {Family::Axon,Confidence::Medium,"Axon/TASER manufacturer CID 034D; model/recording unknown"};
     if(signals&AxonService)return {Family::Axon,Confidence::Medium,"Axon/TASER service FC81/FE6B/FE6C; model/recording unknown"};
     if(signals&AxonOui)return {Family::Axon,Confidence::Medium,"Axon public/source OUI 00:25:DF; model/recording unknown"};
@@ -23,14 +25,16 @@ struct AxonEvidence {
 };
 inline bool axonServiceId(uint16_t id){return id==0xfc81||id==0xfe6b||id==0xfe6c;}
 inline bool axonPrefix(const uint8_t* mac){return mac&&mac[0]==0&&mac[1]==0x25&&mac[2]==0xdf;}
+inline bool bodyCameraPrefix(const uint8_t* mac){return mac&&mac[0]==0&&((mac[1]==0x1d&&mac[2]==0x96)||(mac[1]==0x23&&mac[2]==0xbd));}
 inline bool axonResearchPrefix(const uint8_t* mac){return mac&&((mac[0]==0x28&&mac[1]==0x24&&mac[2]==0xff)||(mac[0]==0xe4&&mac[1]==5&&mac[2]==0x40));}
-inline bool axonName(const uint8_t* data,size_t size){char name[64];safeText(name,sizeof(name),data,size);return contains(name,"axon")||namedPrefix(name,"AB2")||namedPrefix(name,"AB3")||namedPrefix(name,"AB4");}
+inline bool axonName(const uint8_t* data,size_t size){char name[64];safeText(name,sizeof(name),data,size);return contains(name,"axon")||contains(name,"bodyworn")||namedPrefix(name,"AB2")||namedPrefix(name,"AB3")||namedPrefix(name,"AB4");}
 inline AxonEvidence inspectAxonBle(const uint8_t* p,size_t n,size_t advLength,const uint8_t* mac,uint8_t addressType){
   AxonEvidence result;
   // Public identity addresses (type 2) are public too. Random address prefixes
   // and arbitrary UUID substrings are only compatibility clues, never vendors.
   if(axonPrefix(mac))result.signals|=(addressType==0||addressType==2)?AxonOui:AxonCompatibility;
   if((addressType==0||addressType==2)&&axonResearchPrefix(mac))result.signals|=AxonResearch;
+  if((addressType==0||addressType==2)&&bodyCameraPrefix(mac))result.signals|=BodyCameraVendor;
   if(!p||advLength>n)return result;
   for(size_t offset=0;offset<n;){
     size_t end=advLength&&offset<advLength?advLength:n;
@@ -39,6 +43,7 @@ inline AxonEvidence inspectAxonBle(const uint8_t* p,size_t n,size_t advLength,co
     if(length>end-offset){offset=end;continue;}
     uint8_t type=p[offset];const uint8_t* data=p+offset+1;size_t size=length-1;
     if(type==0xff&&size>=2&&data[0]==0x4d&&data[1]==3)result.signals|=AxonCompany;
+    if((type==0xff||type==0x21||type==6||type==7)&&(bytesContain(data,size,"BWCDEVICE")||bytesContain(data,size,"ECIVEDCWB")))result.signals|=AxonBwc;
     if((type==8||type==9)&&axonName(data,size))result.signals|=AxonName;
     size_t width=(type==2||type==3||type==0x16)?2:(type==4||type==5||type==0x20)?4:(type==6||type==7||type==0x21)?16:0;
     bool serviceData=type==0x16||type==0x20||type==0x21;
@@ -65,6 +70,7 @@ inline AxonEvidence inspectAxonWifi(const uint8_t* p,size_t n){
   const unsigned type=(p[0]>>2)&3;
   if(type!=0&&type!=2)return result;
   if(axonPrefix(p+10))result.signals=AxonOui;
+  else if(bodyCameraPrefix(p+10))result.signals=BodyCameraVendor;
   else if(axonResearchPrefix(p+10))result.signals=AxonResearch;
   // A directed probe's SSID names its destination, not its transmitter.
   if(p[0]==0x80||p[0]==0x50)for(size_t at=36;at+2<=n;){

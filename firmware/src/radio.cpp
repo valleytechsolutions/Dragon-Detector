@@ -116,7 +116,12 @@ static void wifiRx(void* buffer,wifi_promiscuous_pkt_type_t type){
   o.original=p->rx_ctrl.sig_len-4;
   // Without PCAP, a data frame only needs its maximum MAC header + LLC for
   // EAPOL and source-address clues. Management bodies remain complete.
-  o.len=std::min<size_t>(o.original,type==WIFI_PKT_DATA&&!captureEnabled&&!reconRecording()?48:sizeof(o.data));
+  bool full=captureEnabled||reconRecording()||type!=WIFI_PKT_DATA;
+#ifdef BOARD_AMOLED_175C
+  // Preserve EAPOL bodies for message/PMKID analysis even outside a capture.
+  full=full||dragon::parseWifi(p->payload,std::min<size_t>(o.original,48)).eapol;
+#endif
+  o.len=std::min<size_t>(o.original,full?sizeof(o.data):48);
   o.rssi=p->rx_ctrl.rssi;o.channel=p->rx_ctrl.channel;
   memcpy(o.data,p->payload,o.len);
   enqueueObservation(index,priority);
@@ -295,7 +300,10 @@ void setRadio(bool enabled){
   if(blePhase&&!scanCommand(ScanAction::Start,activeBle?1000:dragon::RadioSchedule::BleMs)){
     blePhase=false;schedule.begin(now,false,wifiChannel);addAlert("BLE scan failed","Wi-Fi listening resumed");
   }
-  if(enabled&&!blePhase)esp_wifi_set_promiscuous(true);
+  if(enabled&&!blePhase){
+    if(channelLock>=1&&channelLock<=11&&esp_wifi_set_channel(channelLock,WIFI_SECOND_CHAN_NONE)==ESP_OK)wifiChannel=channelLock;
+    esp_wifi_set_promiscuous(true);
+  }
 }
 void radioLoop(){
   if(!queue)return;
@@ -314,7 +322,7 @@ void radioLoop(){
   if(trackedContact<0&&reconRadio()){
     if(reconRadio()==2){if(!scanner->isScanning())scanCommand(ScanAction::Start,10000);bleListenMs+=elapsed;return;}
     wifiListenMs+=elapsed;channelDwellMs[wifiChannel]+=elapsed;
-    if(now-lastHop>=dragon::RadioSchedule::HopMs){lastHop=now;uint8_t c=channelLock?channelLock:(wifiChannel%11)+1;if(esp_wifi_set_channel(c,WIFI_SECOND_CHAN_NONE)==ESP_OK)wifiChannel=c;}
+    if(now-lastHop>=reconHopDwell()){lastHop=now;uint8_t c=channelLock?channelLock:reconNextChannel(wifiChannel);if(esp_wifi_set_channel(c,WIFI_SECOND_CHAN_NONE)==ESP_OK)wifiChannel=c;}
     return;
   }
   if(trackedContact>=0 && contacts[trackedContact].ble){

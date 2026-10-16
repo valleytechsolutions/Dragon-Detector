@@ -11,7 +11,7 @@ enum class Family : uint8_t { Wifi, Ble, Flock, Axon, Meta, Pineapple, Pwnagotch
 enum class Confidence : uint8_t { None, Low, Medium, Strong };
 struct Match { Family family; Confidence confidence; const char* evidence; };
 inline const char* familyName(Family f) {
-  static const char* n[] = {"Wi-Fi", "BLE", "Flock", "Axon / TASER", "Camera glasses", "Pineapple", "Pwnagotchi", "Nyanbox", "HaleHound", "Find My / DULT", "Serial module", "Flipper", "Biscuit", "SmartTag", "Raven", "Google Find Hub", "Tile", "Ring", "Camera vendor", "ALPR vendor", "Drone Remote ID", "iBeacon", "Disconnect burst", "SSID conflict", "BLE advert burst", "Dragon fox"};
+  static const char* n[] = {"Wi-Fi", "BLE", "Flock", "Body cameras", "Camera glasses", "Pineapple", "Pwnagotchi", "Nyanbox", "HaleHound", "Find My / DULT", "Serial module", "Flipper", "Biscuit", "SmartTag", "Acoustic sensors", "Google Find Hub", "Tile", "Ring", "Camera vendor", "ALPR vendor", "Drone / Remote ID", "iBeacon", "Disconnect burst", "SSID conflict", "BLE advert burst", "Dragon fox"};
   return unsigned(f)<unsigned(Family::Count)?n[unsigned(f)]:"Unknown";
 }
 // Shared ordering for radar, contact retention, notification and sound queues.
@@ -40,7 +40,7 @@ inline bool namedPrefix(const char* s,const char* prefix){size_t n=strlen(prefix
 // Reference facts: Flock Noir 0559417 / Colonel Panic Flock-You research.
 // Shared chip-vendor OUIs are deliberately not enough for a default-radar match.
 inline bool flockPrefix(const uint8_t* m){
- const uint32_t list[]={0x70c94e,0x3c9180,0xd8f3bc,0x803049,0xb83532,0x145afc,0x744ca1,0x083a88,0x9c2f9d,0xc03532,0x940853,0xe4aaea,0xf46add,0xe00af6,0x24b2b9,0x00f48d,0xd03957,0xe8d0fc,0xe04f43,0xb81ea4,0x700894,0x588e81,0xec1bbd,0x3c71bf,0x5800e3,0x9035ea,0x5c93a2,0x646e69,0xa4cf12,0x14b5cd,0xb41e52,0x00037f};
+ const uint32_t list[]={0x70c94e,0x3c9180,0xd8f3bc,0x803049,0xb83532,0x145afc,0x744ca1,0x083a88,0x9c2f9d,0xc03532,0x940853,0xe4aaea,0xf46add,0xe00af6,0x24b2b9,0x00f48d,0xd03957,0xe8d0fc,0xe04f43,0xb81ea4,0x700894,0x588e81,0xec1bbd,0x5800e3,0x9035ea,0x5c93a2,0x646e69,0x14b5cd,0xb41e52,0x00037f};
  if(m[0]&3)return false;uint32_t p=(uint32_t(m[0])<<16)|(uint32_t(m[1])<<8)|m[2];
  for(auto v:list)if(v==p)return true;return false;
 }
@@ -66,8 +66,9 @@ inline Match named(const char* name, Family base) {
   if(equalName(name,"flock noir") || namedPrefix(name,"dragon detector"))return {base,Confidence::None,"detector dashboard, not a camera"};
   if(base==Family::Ble){
     bool serial=strlen(name)==10;for(size_t i=0;serial && i<10;++i)serial=isdigit((unsigned char)name[i]);
-    if(serial || equalName(name,"FS Ext Battery") || contains(name,"flock") || contains(name,"penguin") || contains(name,"pigvision"))return {Family::Flock,Confidence::Low,"Flock/battery name match; arbitrary names are unverified"};
-    if(contains(name,"axon"))return {Family::Axon,Confidence::Low,"Axon name match; arbitrary names are unverified"};
+    bool fs=strlen(name)>=7&&strlen(name)<=15&&!strncmp(name,"FS-",3);for(size_t i=3;fs&&name[i];++i)fs=isxdigit((unsigned char)name[i]);
+    if(fs || serial || equalName(name,"FS Ext Battery") || contains(name,"flock") || contains(name,"penguin") || contains(name,"pigvision"))return {Family::Flock,Confidence::Low,"Flock/battery name match; arbitrary names are unverified"};
+    if(contains(name,"axon")||contains(name,"bodyworn"))return {Family::Axon,Confidence::Low,"Axon name match; arbitrary names are unverified"};
     if(contains(name,"flipper"))return {Family::Flipper,Confidence::Low,"Flipper name match; arbitrary names are unverified"};
   }
   if(namedPrefix(name,"biscuit"))return {Family::Biscuit,Confidence::Low,"Biscuit name; Pro/Ultra model unverified"};
@@ -191,12 +192,12 @@ inline bool assignedUuid16(const uint8_t* d,size_t width,uint16_t& value){
 }
 inline BleFrame parseBle(const uint8_t* p,size_t n,size_t advLength=0) {
   BleFrame f; if(!p || !n || advLength>n)return f; bool xuntong=false,lux=false,meta=false,findmy=false,flipper=false,metaService=false,dult=false,axonCompany=false,axonService=false,smarttag=false,biscuit=false,flockService=false;
-  bool snap=false,snapService=false,flipperCompany=false,raven=false,tile=false,google=false,ibeacon=false,serial=false,fox=false;
+  bool snap=false,snapService=false,vuzix=false,chipolo=false,axonBwc=false,raven=false,tile=false,google=false,ibeacon=false,serial=false,fox=false;
   bool googleService=false,droneService=false,applePairing=false,ibeaconExtra=false;uint8_t ravenServices=0;uint16_t appearance=0;
   auto service=[&](uint16_t uuid){
     f.fastPair|=uuid==0xfe2c;findmy|=uuid==0xfd44;flipper|=uuid>=0x3080&&uuid<=0x3083;
     axonService|=uuid==0xfc81||uuid==0xfe6b||uuid==0xfe6c;smarttag|=uuid==0xfd5a;metaService|=uuid==0xfd5f||uuid==0xfeb7||uuid==0xfeb8;
-    snapService|=uuid==0xfe45;tile|=uuid==0xfeed||uuid==0xfeec;serial|=uuid==0x1101;googleService|=uuid==0xfeaa;droneService|=uuid==0xfffa;
+    snapService|=uuid==0xfe45;tile|=uuid==0xfeed||uuid==0xfeec||uuid==0xfd84;dult|=uuid==0xfcb2;chipolo|=uuid==0xfe33||uuid==0xfe65;serial|=uuid==0x1101;googleService|=uuid==0xfeaa;droneService|=uuid==0xfffa;
     if(uuid>=0x3100 && uuid<=0x3500 && (uuid&0xff)==0){raven=true;ravenServices|=1u<<((uuid>>8)-0x31);}
   };
   for(size_t o=0;o<n;) {
@@ -214,8 +215,8 @@ inline BleFrame parseBle(const uint8_t* p,size_t n,size_t advLength=0) {
     if((t==8 || t==9) && z)safeText(f.name,sizeof(f.name),d,z);
     if(t==0xff && z>=2) {
       uint16_t id=d[0]|uint16_t(d[1])<<8; f.company=id;axonCompany|=id==0x034d;
-      xuntong|=id==0x09c8; lux|=id==0x0d53; meta|=id==0x01ab || id==0x058e;
-      snap|=id==0x03c2;flipperCompany|=id==0x0e29;
+      xuntong|=id==0x09c8; lux|=id==0x0d53; meta|=id==0x01ab;vuzix|=id==0x060c;chipolo|=id==0x08c3;
+      snap|=id==0x03c2;
       ibeacon|=id==0x004c && z>=25 && d[2]==2 && d[3]==0x15;
       ibeaconExtra|=id==0x004c && z>25 && d[2]==2 && d[3]==0x15;
       applePairing|=id==0x004c && z==29;
@@ -241,6 +242,8 @@ inline BleFrame parseBle(const uint8_t* p,size_t n,size_t advLength=0) {
       const uint8_t uuid[]={0x85,0x2a,0x9f,0x57,0xc5,0x2a,0xed,0x88,0x26,0xc2,0xf4,0x12,0x01,0x00,0x19,0x15};
       for(size_t j=0;j+16<=z;j+=16){dult|=!memcmp(d+j,uuid,16);if(t==0x21)break;}
     }
+    // Field marker inside validated AD records; a device name alone cannot forge this path.
+    if(t==0x21||t==0xff||t==6||t==7)axonBwc|=bytesContain(d,z,"BWCDEVICE")||bytesContain(d,z,"ECIVEDCWB");
     o+=l;
   }
   f.valid=true; f.match=named(f.name,Family::Ble);
@@ -250,23 +253,25 @@ inline BleFrame parseBle(const uint8_t* p,size_t n,size_t advLength=0) {
   bool numeric=strlen(f.name)==10; if(numeric)for(int i=0;i<10;++i)numeric &= isdigit((unsigned char)f.name[i])!=0;
   if(fox)f.match={Family::Fox,Confidence::Strong,"Dragon fox training beacon; unauthenticated, not a threat"};
   else if(f.drone.valid)f.match={Family::Drone,Confidence::Strong,"decoded Remote ID broadcast; position and identity self-reported"};
+  else if(axonBwc)f.match={Family::Axon,Confidence::Medium,"BWCDEVICE body-camera payload marker; spoofable, recording unknown"};
   else if(axonCompany || axonService)f.match={Family::Axon,axonCompany&&axonService?Confidence::Strong:Confidence::Medium,"Axon/TASER company or member service ID; model/recording unknown"};
   else if(flockService)f.match={Family::Flock,Confidence::Strong,"Flock accessory 128-bit service; camera presence unverified"};
   else if(xuntong && (penguin || numeric || equalName(f.name,"FS Ext Battery")))f.match={Family::Flock,Confidence::Medium,"Xuntong company + Flock battery name"};
-  else if(lux && metaService)f.match={Family::Meta,Confidence::Medium,"Luxottica + Meta service composite; recording unknown"};
+  else if((lux||meta) && metaService)f.match={Family::Meta,Confidence::Medium,"Meta/Luxottica + Meta service composite; recording unknown"};
   else if(snap && snapService)f.match={Family::Meta,Confidence::Medium,"Snap company + FE45 service; model/recording unknown"};
   else if(raven)f.match={Family::Raven,ravenServices==0x1f?Confidence::Strong:Confidence::Medium,"exact Raven research service; spoofable, field validation pending"};
   else if(biscuit && namedPrefix(f.name,"biscuit"))f.match={Family::Biscuit,Confidence::Medium,"Biscuit name + service; Pro/Ultra model unverified"};
   else if(smarttag)f.match={Family::SmartTag,Confidence::Medium,"Samsung FD5A service; owner and model unknown"};
   else if(google)f.match={Family::GoogleTag,Confidence::Strong,"Find Hub 40/41 frame and valid EID length; owner unknown"};
-  else if(tile)f.match={Family::Tile,Confidence::Medium,"Tile-assigned FEED/FEEC service; owner unknown"};
+  else if(chipolo)f.match={Family::GoogleTag,Confidence::Low,"Chipolo identifier; network/model/owner unverified"};
+  else if(tile)f.match={Family::Tile,Confidence::Medium,"Tile-assigned service; owner unknown"};
   else if(findmy)f.match={Family::Tracker,Confidence::Medium,"Find My protocol; may be AirTag or another accessory"};
   else if(dult)f.match={Family::Tracker,Confidence::Medium,"DULT tracker service; owner unknown"};
-  else if(flipper || flipperCompany)f.match={Family::Flipper,flipperCompany||appearance==0x8600?Confidence::Medium:Confidence::Low,"Flipper service/company; activity unverified"};
+  else if(flipper)f.match={Family::Flipper,appearance==0x8600?Confidence::Medium:Confidence::Low,"Flipper Zero service; activity unverified"};
   else if(ibeacon)f.match={Family::IBeacon,ibeaconExtra?Confidence::Low:Confidence::Strong,"iBeacon format; common benign proximity beacon"};
   else if(serial && f.match.confidence==Confidence::None)f.match={Family::Skimmer,Confidence::Low,"serial service; common benign module, not proof of a skimmer"};
   else if(lux && f.match.confidence==Confidence::None)f.match={Family::Meta,Confidence::Low,"Luxottica company only; product unverified"};
-  else if((snap||meta) && f.match.confidence==Confidence::None)f.match={Family::Meta,Confidence::Low,"Meta/Snap company only; glasses not established"};
+  else if((snap||snapService||meta||vuzix) && f.match.confidence==Confidence::None)f.match={Family::Meta,Confidence::Low,"Glasses-vendor identifier; model/recording unverified"};
   else if(f.match.confidence==Confidence::None){
     if(metaService)f.match={Family::Meta,Confidence::Low,"Meta service only; glasses/recording not established"};
     else if(xuntong)f.match={Family::Flock,Confidence::Low,"Xuntong module company; camera or battery unverified"};

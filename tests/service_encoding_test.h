@@ -20,7 +20,7 @@ static void serviceEncodingTests(){
     auto p=serviceField(0x3082,width,type);append(p,{3,0x19,0,0x86});assert(ble(p).family==Family::Flipper&&ble(p).confidence==Confidence::Medium);
     std::vector<uint8_t> body(21);body[0]=0x40;auto hub=serviceField(0xfeaa,width,type,body);assert(ble(hub).family==Family::GoogleTag&&ble(hub).confidence==Confidence::Strong);
     auto pair=serviceField(0xfe2c,width,type);assert(parseBle(pair.data(),pair.size()).fastPair);
-    auto snap=serviceField(0xfe45,width,type);assert(ble(snap).confidence==Confidence::None);append(snap,{3,0xff,0xc2,3});assert(ble(snap).family==Family::Meta&&ble(snap).confidence==Confidence::Medium);
+    auto snap=serviceField(0xfe45,width,type);assert(ble(snap).confidence==Confidence::Low);append(snap,{3,0xff,0xc2,3});assert(ble(snap).family==Family::Meta&&ble(snap).confidence==Confidence::Medium);
     ODID_BasicID_data id;odid_initBasicIDData(&id);id.IDType=ODID_IDTYPE_SERIAL_NUMBER;id.UAType=ODID_UATYPE_HELICOPTER_OR_MULTIROTOR;strcpy(id.UASID,"TEST-UUID-WIDTH");
     ODID_BasicID_encoded encoded;assert(encodeBasicIDMessage(&encoded,&id)==ODID_SUCCESS);
     std::vector<uint8_t> rid{0x0d,7};rid.insert(rid.end(),(uint8_t*)&encoded,(uint8_t*)&encoded+25);

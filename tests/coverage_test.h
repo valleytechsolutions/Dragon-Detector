@@ -61,5 +61,5 @@ static void coverageTests(){
   DisconnectMonitor sparse;for(unsigned i=0;i<10;++i)assert(!sparse.observe(i*1000));
   DisconnectMonitor rollover;for(unsigned i=0;i<5;++i)assert(!rollover.observe(0xfffffc00+i*400));assert(rollover.observe(976));
   Contact hunt;hunt.packets=1;hunt.seen=100;assert(!huntSweep(hunt,12099));assert(huntSweep(hunt,12100));hunt.ble=true;assert(!huntSweep(hunt,12100));
-  puts("PASS: all 134 pinned SquachWatch table facts recognized and radar-visible; runtime rules, weak evidence, cache and visibility boundaries");
+  puts("PASS: all 158 pinned SquachWatch table facts recognized and radar-visible; runtime rules, weak evidence, cache and visibility boundaries");
 }

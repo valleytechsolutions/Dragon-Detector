@@ -18,11 +18,14 @@ void reconWifi(const uint8_t*,size_t,size_t,uint64_t,int,uint8_t);
 void reconBle(const uint8_t*,uint8_t,int,const uint8_t*,size_t,size_t,uint32_t);
 void reconView(void*,bool tools=false);
 void reconViewLoop();
+void reconPage(const String&);
 void reconLeave();
 void radioApplyMode();
+uint16_t reconHopDwell();uint8_t reconNextChannel(uint8_t);
 fs::FS* bleLabStorage();
 bool bleLabStorageSpace(size_t);
 #else
+inline uint16_t reconHopDwell(){return 180;}inline uint8_t reconNextChannel(uint8_t c){return c%11+1;}
 inline void reconBegin(){}
 inline void reconLoop(){}
 inline bool reconCommand(const String&){return false;}

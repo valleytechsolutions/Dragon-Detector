@@ -6,13 +6,15 @@
 
 **[Open the web flasher & detector tools](https://valleytechsolutions.github.io/Dragon-Detector/)** · [Install guide](docs/FLASHING.md) · [Controls](docs/USER-GUIDE.md) · [Detection evidence](docs/DETECTION.md) · [Credits](CREDITS.md)
 
-Version **0.10.0** adds [selectable modes and a radio toolkit](docs/RADIO-TOOLKIT.md) to the **32 MB Waveshare AMOLED 1.75C**: Axon/ALPR/drone focus, continuous Wi-Fi/BLE surveys, 24 timed transmission tools, AP/client selection, and flash-backed Wi-Fi PCAP/BLE CSV capture. [BLE Lab](docs/BLE-LAB.md), radar, badge, stopwatch and manual orientation remain available. Update preserves badge, history, settings, GATT profiles and saved captures. Active tools temporarily own the shared radio; Stop restores scanning. This is not complete Marauder parity. [Validation and limits](docs/VALIDATION.md).
+Version **0.11.0** expands the **32 MB Waveshare AMOLED 1.75C** with GATT writes, explicit pairing, subscriptions, HID report layouts, advertisement replay, tracker sound requests, a local portal/probe-SSID lab, filtered packet captures, traffic analysis and an experimental CSI signal monitor. The existing 24 timed Wi-Fi/BLE tools and eight listening modes remain available. Shared detection now covers **158 pinned SquachWatch table facts**, with additional body-camera and tracker clues and stricter false-positive handling. [Radio tools](docs/RADIO-TOOLKIT.md) · [BLE Lab](docs/BLE-LAB.md) · [Feature comparison and remaining gaps](docs/FEATURE-MATRIX.md).
 
-| Waveshare listening modes | Waveshare radio toolkit |
+Update preserves badge, history, settings, GATT profiles and saved captures. Active lab sessions temporarily own the shared radio; Stop/Home returns it to the previous listening state. This is an independent implementation, not complete Marauder or ChimeraBLE parity. [Validation and limits](docs/VALIDATION.md).
+
+| Waveshare radio toolkit | Experimental CSI monitor |
 |---|---|
-| ![Modes on Waveshare](media/waveshare-modes-v010.png) | ![Radio toolkit on Waveshare](media/waveshare-toolkit-v010.png) |
+| ![Radio toolkit on Waveshare](media/waveshare-toolkit-v011.png) | ![CSI monitor on Waveshare](media/waveshare-csi-v011.png) |
 
-Logical display captures from 0.10.0. [Open Radio tools](https://valleytechsolutions.github.io/Dragon-Detector/#radio-tools).
+Logical display captures from 0.11.0; CSI is shown during calibration. [Open Radio tools](https://valleytechsolutions.github.io/Dragon-Detector/#radio-tools).
 
 ## Choose the exact board
 
@@ -47,7 +49,7 @@ Logical 240×240 captures from the connected XIAO, not panel photographs.
 *Green radar theme with animated sweep, labeled signals and owner-supplied BWM1 logo. Inward means stronger filtered RSSI, with no numerical distance scale. Actual 466×466 LVGL render from M5Stack StopWatch C152, not a panel photograph. Targets opens the paged list; the speaker button toggles quiet mode.*
 
 - **Three radar themes:** Green radar (default), Dragon Ball, and Black / gold / red. Each of the 26 device families has its own fixed color for dots, labels and leaders, with a [color legend](docs/RADAR-COLORS.md). Animated sweep, pulsing signals, automatic priority tags and tap-to-reveal tracker tags. All contacts share one radar; tap a selected dot again for evidence and Hunt; choose your theme in Settings or the USB web tools.
-- **Audited signature coverage:** all 134 table entries in the pinned SquachWatch reference have recognition and radar tests. Includes Flipper, Wi-Fi Pineapple, Pwnagotchi, nyanBOX, Biscuit, Flock, Axon/TASER, Raven, camera glasses, Find My/DULT, SmartTag, Google Find Hub, Tile, Ring/camera/ALPR vendors, decoded drone Remote ID, iBeacon, pentest devices, disconnect bursts and SSID security conflicts. [Coverage and comparison](docs/DETECTION-PARITY.md).
+- **Audited signature coverage:** all 158 table entries in the pinned SquachWatch reference have recognition and radar tests. Includes Flipper, Wi-Fi Pineapple, Pwnagotchi, nyanBOX, Biscuit, Flock, Axon/TASER, Raven, camera glasses, Find My/DULT, SmartTag, Google Find Hub, Tile, Ring/camera/ALPR vendors, decoded drone Remote ID, iBeacon, pentest devices, disconnect bursts and SSID security conflicts. [Coverage and comparison](docs/DETECTION-PARITY.md).
 - **All recognized candidates on radar:** first sightings appear immediately; device types use fixed colors and trackers use smaller dots. Intermittent signals remain for up to two minutes with a segmented marker and explicit last-seen age. A paged Targets list, quick quiet toggle and live radio-health screen make crowded areas easier to navigate.
 - **Traffic awareness:** Wi-Fi deauthentication/disassociation bursts and BLE pairing/tag spam candidates, with a radar activity banner, counts, protocol/channel evidence and a dedicated Activity screen. See [how traffic detection works](docs/RADAR-AND-ACTIVITY.md).
 - **Dragon Hunt:** dedicated target listening, filtered dBm, signal history, peak, trend, stability, a saved comparison mark, and automatic channel searching for stale Wi-Fi targets. Optional Dragon fox beacons support board-to-board training; transmission starts only when explicitly enabled.

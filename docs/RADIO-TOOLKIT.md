@@ -1,4 +1,4 @@
-# Waveshare modes and radio toolkit · 0.10.0
+# Waveshare modes and radio toolkit · 0.11.0
 
 Available on **ESP32-S3-Touch-AMOLED-1.75C**. Open **Tools → Recon → Modes** or **Radio tools**. Desktop controls live in [Radio tools on the web flasher](https://valleytechsolutions.github.io/Dragon-Detector/#radio-tools). Other boards retain their existing detection, badge and daily-tool capabilities.
 
@@ -43,7 +43,7 @@ BLE tools generate Swift Pair, Google Fast Pair, Samsung pairing, Flipper, Apple
 
 **Stop**, **Home** and timeout end transmission and restore the previous listening state. Tests never start automatically at boot. GATT work, capture saves and timed tests exclude one another. Driver errors stop the run. Test traffic queued during a run is discarded before normal radar processing resumes.
 
-Counters distinguish driver-accepted transmissions, driver errors, observed authentication replies and observed EAPOL frames. Acceptance does not establish reception, client disconnection, successful pairing, vulnerability or complete handshake capture. Protected Management Frames and peer firmware can prevent an effect. This is an independent toolkit, **not complete Marauder parity**: Evil Portal, Karma, AirTag identity spoofing, Find My sound and GPS/wardriving workflows are not included in this release. No GPS, 5/6 GHz Wi-Fi, Classic Bluetooth or connected BLE packet sniffing is provided by this hardware/build.
+Counters distinguish driver-accepted transmissions, driver errors, observed authentication replies and observed EAPOL frames. Acceptance does not establish reception, client disconnection, successful pairing, vulnerability or complete handshake capture. Protected Management Frames and peer firmware can prevent an effect. This is an independent toolkit, **not complete Marauder parity**. The portal/probe-SSID lab and BLE replay/sound requests added in 0.11 have the explicit limits below and in [BLE Lab](BLE-LAB.md). See the [feature matrix](FEATURE-MATRIX.md) for remaining gaps. No GPS, 5/6 GHz Wi-Fi, Classic Bluetooth or connected BLE packet sniffing is provided by this hardware/build.
 
 The Waveshare raw-frame adapter is pinned to ESP-IDF 5.1.4 and fails compilation when that SDK changes. Revalidate it with an independent receiver before claiming effects on a new driver or target. The other board builds do not link this adapter.
 
@@ -68,3 +68,29 @@ Files live in `/captures` on the existing upper 16 MB recon volume. GATT profile
 ## Credits and validation
 
 Mode/workflow inspiration: [Colonel Panic's Unified Blue](https://github.com/colonelpanichacks/oui-spy-unified-blue). Packet-builder origins: Valleytech HackerPhone, independently implemented from [JustCallMeKoko's MIT Marauder](https://github.com/justcallmekoko/ESP32Marauder) protocol references. This release keeps MIT source licensing and the upstream notices; it does not copy Unified Blue/ChimeraBLE GPL code. [Full credits](../CREDITS.md) · [Measured validation](VALIDATION.md).
+
+## 0.11 analysis and filtered capture
+
+Traffic statistics count observed management/data frames, beacons, probes, disconnects, protected frames, retries, Pwnagotchi peers and recognized device signatures. EAPOL key-message candidates M1–M4, unencrypted PMKID KDEs and SAE authentication commits have separate counters. Counts do not establish a complete handshake, crackability or successful attack. Export PCAP for protocol analysis.
+
+The 96-row probe inventory keys on the exact source address and raw SSID bytes; embedded NUL/non-text bytes do not merge into a different name. Web CSV preserves raw SSID hex and escapes spreadsheet formulas. A requested network name does not identify the sender.
+
+Capture filters: all frames, beacons/responses, probes, deauth/disassociation, EAPOL/PMKID, Pwnagotchi peers, detected families, or authentication/SAE. Selected-AP capture requires a fresh selection and locks its channel. Filter/scope changes are rejected during recording. Continuous survey/capture can use an 11-bit channel mask and 80–2000 ms dwell; default 1–11/180 ms and preset 1/6/11/350 ms. This does not alter the balanced radar schedule. Capture Start remembers the prior mode; Stop/full/timeout restores it without persisting the temporary capture mode.
+
+USB: `recon stats`, `recon stats clear`, `recon probes`, `recon filter`, `recon filter KIND SELECTED_AP`, `recon hop MASK DWELL_MS`.
+
+## Portal / probe-SSID lab
+
+A local, open AP serves captive DNS and an HTTP template for an explicit 1–60 second session. Default SSID is Dragon-Lab; the default page identifies itself as a security demonstration and asks for invented test values. Choose a name directly or select an exact, fresh observed probe's address/raw SSID pair. Selection does not start transmission; it is rechecked before copying the name. This is one selected SSID per run, not an automatic all-SSID responder or Internet proxy.
+
+Upload an optional UTF-8 HTML template (1–16,384 bytes, no NUL) via CRC-checked USB. The template is stored atomically in `/portal` on the upper recon filesystem. Invalid saved CRC prevents Start until reset/reimport. POST bodies are limited to 511 bytes; at most 32 submissions are retained in RAM, with dropped-record counters. Stop, then save a hex-encoded CSV to `/captures`. Unsaved submissions block a new run until saved or explicitly cleared. Requests and submissions are not automatically posted elsewhere. Download/delete saved logs through Capture studio.
+
+USB: `portal name NAME`, `portal probes`, `portal probe MAC SSID_HEX`, `portal start`, `portal status`, `portal stop`, `portal log`, `portal save`, `portal clear`, `portal html reset`; browser handles binary template import. Stop/Home/timeout closes the AP/server and restores prior reception. There is no automatic deauthentication step.
+
+## Experimental CSI signal monitor
+
+Select a fresh AP, place both endpoints still, and Start from Radio tools. CSI accepts only that source's compatible LLTF 128-byte IQ layout, fixing the PHY mode/bandwidth from the first eligible packet, discarding the first two complex pairs consistently. It normalizes amplitude to remove uniform gain changes and compares successive subcarrier shapes. Only a fixed callback queue is filled in the Wi-Fi task; analysis runs in the application loop.
+
+Calibration lasts 30 seconds and requires at least 20 usable one-second windows. Windows need at least five samples/second, recent data, low queue loss and stable RSSI. Insufficient data reports LOW DATA, never STABLE. The displayed change score is relative to that local baseline; it is not calibrated probability, an occupancy guarantee, a person detector or a location estimate. Recalibrate after moving the detector/AP. Walking/still ground-truth validation remains installation dependent.
+
+The monitor retains the last 120 one-second summary points for CSV download. No raw CSI or nearby credentials are stored. Stop/Home and the 15-minute ceiling release the radio. USB: `csi start`, `csi status`, `csi calibrate`, `csi history`, `csi stop`.

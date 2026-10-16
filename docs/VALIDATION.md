@@ -1,6 +1,21 @@
-# Validation status · 0.10.0
+# Validation status · 0.11.0
 
 This is an experimental development release. Automated signature checks and basic board checks do not establish field detection accuracy or all-day battery life.
+
+## Waveshare detection and recon expansion · 0.11.0 · 2026-10-15
+
+- Saved and hashed a fresh private 32 MB recovery image. The application-only update leaves NVS, the badge/history volume and the upper recon volume at their existing addresses. Production browser USB modules checked the original badge checksum/startup preference, saved display/radar/audio/orientation/clock preferences and a pre-existing 3,379-byte GATT profile after flashing. The Uno Q was not modified.
+- Audited the pinned SquachWatch source against the committed ledger: all 158 table facts match, and all have native recognition/radar-visibility fixtures. Additional cases cover body-camera reserved-queue handling, public versus randomized addresses, BWC payload bounds, vendor false positives, service encodings and protocol composites. These are parser/transport checks, not sightings of every physical product.
+- A Windows-created GATT fixture verified discovery/read, response and no-response writes received at the peer, notification delivery, unsubscribe with the peer's CCCD state cleared, MTU control/status, and save/delete of a uniquely named test profile. A separate receiver observed the captured service advertisement replayed at the detector's own address. A synthetic tracker characteristic received the expected sound-request opcode. This does not establish that a real AirTag will accept the request or that proprietary behavior is cloned. Successful authenticated pairing/passkey exchange and captured-address replay have not been verified on a physical peer.
+- A temporary laptop connection to the detector's test AP verified DHCP, the local HTTP page, captive DNS, an invented form submission, rejection of an oversized POST, and CRC-checked log download. The original laptop Wi-Fi connection was restored and its temporary test profile removed. Three subsequent portal timeouts closed the AP and restored radar. Custom HTML import/reset also passed through the production browser transport.
+- Selected-AP beacon capture produced 68 checked PCAP records, all with the selected BSSID and correct Radiotap channel. This exposed and fixed an initial channel-transition bug: the receiver now tunes the selected channel before enabling capture. Filter changes, channel-plan changes, Stop restoration and saved PCAP transfer passed. EAPOL/PMKID/SAE parsing has bounded fixtures; complete live handshake acquisition is not established by this release.
+- CSI callbacks ran on the selected test AP, but only one usable shape comparison arrived during the short trial. The monitor correctly reported **LOW DATA**. Baseline and normalized shape calculations have native fixtures; this installation did not provide enough samples to validate walking/still discrimination. CSI remains experimental, with no occupancy or detection-range claim.
+- Native parser/fuzz checks and 45 web tests pass. New malformed-input coverage includes 25,000 advertisement/HID/EAPOL/PMKID/DNS cases and CSI baseline/shape checks. On-device self-tests report **23 passed, zero failed**. Logical round-screen captures are checked against their USB CRC; the capture path now clears pending partial invalidations before requesting a complete frame. The active CSI view and toolkit were inspected. These are not photographs or a new physical touch confirmation.
+- Active tools release the shared radio on Stop/Home/timeout. A short post-test radar run showed increasing BLE/Wi-Fi counters and zero receive drops. These checks do not establish all-day battery life, crowded-field performance, or the peer effects of every transmission format. See the [feature matrix](FEATURE-MATRIX.md) for implemented workflows and remaining upstream differences.
+
+| Expanded radio toolkit | Experimental CSI status |
+|---|---|
+| ![0.11 toolkit, logical display capture](../media/waveshare-toolkit-v011.png) | ![0.11 CSI, logical display capture](../media/waveshare-csi-v011.png) |
 
 ## Waveshare modes and radio toolkit · 0.10.0 · 2026-10-15
 

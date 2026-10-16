@@ -21,7 +21,7 @@ static void parityTests(){
   assert(ble({3,3,0xed,0xfe}).family==Family::Tile);assert(ble({3,3,0xec,0xfe}).family==Family::Tile);
   assert(ble({3,0xff,0xc2,3}).confidence==Confidence::Low);
   assert(ble({3,0xff,0xc2,3,3,3,0x45,0xfe}).confidence==Confidence::Medium);
-  assert(ble({3,0xff,0x29,0x0e}).family==Family::Flipper);
+  assert(ble({3,0xff,0x29,0x0e}).confidence==Confidence::None);
   std::vector<uint8_t> ib(25);ib[0]=0x4c;ib[2]=2;ib[3]=0x15;
   assert(ble(ad(0xff,ib)).family==Family::IBeacon);ib.pop_back();assert(ble(ad(0xff,ib)).confidence==Confidence::None);
   assert(DetectorSettings{}.enabled(Family::IBeacon));
@@ -31,7 +31,7 @@ static void parityTests(){
   const uint8_t flockMac[]={0xb4,0x1e,0x52,1,2,3},ringMac[]={0xac,0x9f,0xc3,1,2,3},flipperMac[]={0x0c,0xfa,0x22,1,2,3};
   Match none{Family::Ble,Confidence::None,"none"};
   assert(addressHint(flockMac,true,none).confidence==Confidence::Medium);
-  assert(addressHint(ringMac,true,none).family==Family::Ring);assert(addressHint(flipperMac,true,none).family==Family::Flipper);
+  assert(addressHint(ringMac,true,none).family==Family::Ring);assert(addressHint(flipperMac,true,none).confidence==Confidence::None);
   assert(addressHint(ringMac,false,none).confidence==Confidence::None);
   const uint8_t samsung[]={0x48,0x27,0xea,1,2,3},sonos[]={0,0x0e,0x58,1,2,3},local[]={0x82,0x6b,0xf2,1,2,3};
   assert(addressHint(samsung,true,none).confidence==Confidence::None);assert(addressHint(sonos,true,none).confidence==Confidence::None);assert(addressHint(local,true,none).confidence==Confidence::Low);
