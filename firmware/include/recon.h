@@ -1,8 +1,9 @@
 #pragma once
 #include <Arduino.h>
 #include "recon_modes.h"
-#ifdef BOARD_AMOLED_175C
+#ifndef BOARD_RADAR_LITE
 #include <FS.h>
+size_t reconCaptureCapacity();
 void reconBegin();
 void reconLoop();
 bool reconCommand(const String&);

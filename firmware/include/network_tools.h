@@ -1,6 +1,6 @@
 #pragma once
 #include <Arduino.h>
-#ifdef BOARD_AMOLED_175C
+#ifndef BOARD_RADAR_LITE
 void networkBegin();
 bool networkActive();
 void networkLoop();

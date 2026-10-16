@@ -1,4 +1,4 @@
-"""Opt-in Windows integration test for the 0.11/0.12 Waveshare BLE Lab.
+"""Opt-in Windows integration test for the 0.11–0.13 full-board BLE Lab.
 
 Requires pyserial, Bleak and PyWinRT. Connects only to synthetic services created
 by this script. Exercises central writes, subscriptions, MTU, profile deletion,
@@ -10,25 +10,31 @@ from pathlib import Path
 from test_ble_lab_live import Board,attributes
 from winrt.windows.devices.bluetooth.genericattributeprofile import GattServiceProvider,GattLocalCharacteristicParameters,GattCharacteristicProperties as P,GattProtectionLevel,GattServiceProviderAdvertisingParameters,GattWriteOption
 from winrt.windows.storage.streams import DataWriter,DataReader
-from bleak import BleakScanner
+from bleak import BleakScanner,BleakClient
 
 def buffer(v):
  w=DataWriter();w.write_bytes(v);return w.detach_buffer()
 async def main():
- b=Board(args.port);log={};providers=[];writes=[];loop=asyncio.get_running_loop()
+ b=Board(args.port);log={'transcript':[]};providers=[];writes=[];loop=asyncio.get_running_loop()
  async def cmd(c,seconds=2):
   print('TEST',c.split()[0:2],flush=True)
-  b.port.reset_input_buffer();b.port.write((c+'\n').encode());r='';end=time.monotonic()+45
+  pending=b.port.read(b.port.in_waiting).decode(errors='replace');log['transcript'].append({'pending':pending});b.port.write((c+'\n').encode());r='';end=time.monotonic()+45
   marker='LAB_END' if c in ['lab status','lab events','lab adverts','lab security','lab subscriptions','lab list'] else 'BADGE_INFO' if c=='badge info' else 'BADGE_CHECKSUM' if c=='badge checksum' else 'LAB_OK'
   if c.startswith('screen '):await asyncio.sleep(1);return ''
   while time.monotonic()<end:
    if b.port.in_waiting:r+=b.port.read(b.port.in_waiting).decode(errors='replace')
    if marker in r or 'LAB_ERROR' in r:break
    await asyncio.sleep(.02)
-  await asyncio.sleep(.1);log[c]=r
+  await asyncio.sleep(.1);log[c]=r;log['transcript'].append({'command':c,'response':r})
   assert marker in r or 'LAB_ERROR' in r,(c,r)
   assert 'Guru Meditation' not in r and 'Rebooting' not in r,(c,r)
   return r
+ async def wait_idle():
+  for _ in range(30):
+   r=await cmd('lab status')
+   if 'state=IDLE owned=0' in r:return r
+   await asyncio.sleep(1)
+  raise AssertionError(r)
  async def wait_connected():
   for _ in range(40):
    r=await cmd('lab status',1)
@@ -71,11 +77,11 @@ async def main():
    await asyncio.sleep(2)
   raise AssertionError('Own synthetic UUID not seen')
  try:
-  assert re.search(r'BADGE_INFO 0\.(?:11|12)\.\d+ 466 READY Waveshare',await cmd('badge info'))
+  assert re.search(r'BADGE_INFO 0\.(?:11|12|13)\.\d+ 466 READY Waveshare',await cmd('badge info'))
   original_badge=re.search(r'BADGE_CHECKSUM [^\r\n]+',await cmd('badge checksum'))[0]
-  await cmd('screen radar');await cmd('lab stop');await b.idle();await cmd('lab pairing 0 1 0')
+  await cmd('screen radar');await cmd('lab stop');await wait_idle();await cmd('lab pairing 0 1 0')
   svc=uuid.uuid4();ch=uuid.uuid4();p,c,token,cb=await provider(svc,ch,P.READ|P.WRITE|P.WRITE_WITHOUT_RESPONSE|P.NOTIFY,b'DD011 fixture')
-  await asyncio.sleep(8);await select(svc);await wait_connected()
+  await asyncio.sleep(8);target=await select(svc);await wait_connected()
   attrs=attributes(await b.export());a=next(x for x in attrs if x['uuid']==str(ch));i=a['index'];assert a['value']==b'DD011 fixture';print('Fixture properties',a['props'],flush=True);assert a['props']&12==12
   print('PASS own fixture discovery/read',flush=True)
   for op,data in [('write',b'WITH-RESPONSE'),('writenr',b'NO-RESPONSE')]:
@@ -88,23 +94,50 @@ async def main():
   print('PASS notify delivery and CCCD unsubscribe',flush=True)
   assert 'LAB_OK pending' in await cmd('lab mtu 247');await wait_connected();security=await cmd('lab security');assert int(re.search(r'mtu=(\d+)',security)[1])>=23
   print('PASS MTU command/status',flush=True)
+  if args.bridge:
+   assert 'LAB_OK bridge starting' in await cmd('lab bridge')
+   for _ in range(30):
+    status=await cmd('lab status')
+    if 'state=BRIDGING' in status:break
+    await asyncio.sleep(1)
+   assert 'state=BRIDGING' in status,status
+   dev=await BleakScanner.find_device_by_filter(lambda d,a:str(svc) in a.service_uuids and d.address.lower()!=target.split()[0].lower(),timeout=20)
+   assert dev,'Own bridge service was not advertised'
+   async with BleakClient(dev,timeout=20) as receiver:
+    assert await receiver.read_gatt_char(str(ch))==b'NO-RESPONSE'
+    received=[];await receiver.start_notify(str(ch),lambda _,v:received.append(bytes(v)))
+    await receiver.write_gatt_char(str(ch),b'BRIDGE-WRITE',response=True)
+    for _ in range(20):
+     if b'BRIDGE-WRITE' in writes:break
+     await asyncio.sleep(.25)
+    assert b'BRIDGE-WRITE' in writes,writes
+    await c.notify_value_async(buffer(b'BRIDGE-NOTIFICATION'))
+    for _ in range(20):
+     if b'BRIDGE-NOTIFICATION' in received:break
+     await asyncio.sleep(.25)
+    assert b'BRIDGE-NOTIFICATION' in received,received
+    assert await receiver.read_gatt_char(str(ch))==b'BRIDGE-NOTIFICATION'
+    status=await b.command('lab bridge status',2);log['bridge']=status;assert 'writes=1 errors=0' in status,status
+   # Windows is both peripheral and client here. It can retain the shared
+   # physical link after its client closes; this fixture verifies explicit Stop.
+   await cmd('lab stop');await wait_idle();print('PASS bridge cached read, forwarded write, forwarded notification and explicit Stop restoring radar',flush=True)
   name='fixture-011-'+str(int(time.time()));assert 'LAB_OK saved' in await cmd('lab save '+name)
-  await cmd('lab stop');await b.idle();assert 'LAB_OK deleted' in await cmd('lab delete '+name);assert name not in await cmd('lab list')
+  await cmd('lab stop');await wait_idle();assert 'LAB_OK deleted' in await cmd('lab delete '+name);assert name not in await cmd('lab list')
   await asyncio.sleep(5);target=await select(svc,False);p.stop_advertising()
   assert 'LAB_OK starting' in await cmd('lab replay',3);assert 'state=EMULATING' in await cmd('lab status')
   d=await BleakScanner.find_device_by_filter(lambda d,a:str(svc) in a.service_uuids and d.address.lower()!=target.split()[0].lower(),timeout=12);assert d,'Replay not observed over air';print('PASS captured service advertisement replay at detector identity',flush=True)
-  await cmd('lab stop');await b.idle();print('PASS replay stop / radar restored',flush=True)
+  await cmd('lab stop');await wait_idle();print('PASS replay stop / radar restored',flush=True)
   # Known sound characteristic on our own provider; verifies protocol bytes only.
   sound_svc=uuid.UUID('7dfc9000-7d1c-4951-86aa-8d9728f8d66c');sound_ch=uuid.UUID('7dfc9001-7d1c-4951-86aa-8d9728f8d66c')
   p2,c2,t2,cb2=await provider(sound_svc,sound_ch,P.READ|P.WRITE,b'fixture');await asyncio.sleep(8);await select(sound_svc);await wait_connected();assert 'LAB_OK sound request' in await cmd('lab sound');await wait_connected();assert b'\xaf' in writes
   print('PASS tracker sound opcode delivered to controlled fixture',flush=True)
-  await cmd('lab stop');await b.idle();assert original_badge in await cmd('badge checksum');log['result']='PASS'
+  await cmd('lab stop');await wait_idle();assert original_badge in await cmd('badge checksum');log['result']='PASS'
  finally:
-  await cmd('lab stop');await cmd('lab pairing 0 1 0');await cmd('screen radar');b.port.close()
+  await cmd('lab stop');await wait_idle();await cmd('lab pairing 0 1 0');await cmd('screen radar');b.port.close()
   for p in providers:
    try:p.stop_advertising()
    except OSError:pass
   Path('.work').mkdir(exist_ok=True)
   Path('.work/ble-lab-extended-results.json').write_text(json.dumps(log,indent=2))
 if __name__=='__main__':
- parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--port',required=True);args=parser.parse_args();asyncio.run(main())
+ parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--port',required=True);parser.add_argument('--bridge',action='store_true');args=parser.parse_args();asyncio.run(main())

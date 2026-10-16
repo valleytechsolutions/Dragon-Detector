@@ -1,5 +1,5 @@
 #include "network_tools.h"
-#ifdef BOARD_AMOLED_175C
+#ifndef BOARD_RADAR_LITE
 #include "app.h"
 #include "recon_internal.h"
 #include "ble_lab.h"

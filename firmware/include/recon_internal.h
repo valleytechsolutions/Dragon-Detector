@@ -1,6 +1,6 @@
 #pragma once
 #include "recon.h"
-#ifdef BOARD_AMOLED_175C
+#ifndef BOARD_RADAR_LITE
 #include "attack_frames.h"
 #include "recon_analysis.h"
 namespace dragon::toolkit {

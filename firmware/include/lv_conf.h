@@ -4,7 +4,7 @@
 #define LV_COLOR_DEPTH 16
 #define LV_COLOR_16_SWAP 1
 #define LV_MEM_CUSTOM 1
-#ifdef BOARD_AMOLED_175C
+#ifndef BOARD_RADAR_LITE
 // Long recon lists must not consume the internal heap needed by both radios.
 // The board driver allocates its DMA display tile separately.
 #define LV_MEM_CUSTOM_INCLUDE "lv_memory.h"

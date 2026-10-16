@@ -1,5 +1,5 @@
 #include "csi_monitor.h"
-#ifdef BOARD_AMOLED_175C
+#ifndef BOARD_RADAR_LITE
 #include "app.h"
 #include "ble_lab.h"
 #include "recon_internal.h"

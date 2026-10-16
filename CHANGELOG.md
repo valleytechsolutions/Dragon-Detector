@@ -1,5 +1,14 @@
 # Changes
 
+## 0.13.0 — Four-board recon lab and clearer tools
+
+- Rename Daily to Utilities, remove the on-device Badge editor shortcut, and put Attacks in the first Recon row with separate Wi-Fi and BLE lists. Keep browser Badge Studio.
+- Bring eight modes, 29 timed radio tools, GATT, portal, connected-network and CSI workflows to Waveshare, M5Stack, Spotpear and XIAO. Scale controls and RAM captures to each board; Lite stays radar-only.
+- Add persistent recon sessions with checked RCN1/PRB1/REL1 ZIP export, historical AP archives, volatile source-MAC controls and bounded reviewed recipes. Home cancels recipes and restores their previous radio mode.
+- Add independent HID field/usage decoding and a cached-read GATT bridge for explicit owned-device sessions. Register the GATT server while disconnected before reconnecting the original peer.
+- Compress the complete 40,333-prefix registry with a bounded CRC-checked decoder into PSRAM, preserving flash reserve. Keep all existing partitions, badges and preferences.
+- Extend the web lab to all four full boards with version-aware controls, session/survey downloads, recipes, HID and bridge tools. Document actual limits and attribution.
+
 ## 0.12.0 — Continuous recon and shared notebook
 
 - Keep both radios scanning through Hunt; visit every Wi-Fi channel despite loop jitter, then give the target extra dwell. Replace ordinary Pause controls with radio health.

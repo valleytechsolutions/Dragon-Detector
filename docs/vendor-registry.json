@@ -7,5 +7,6 @@
   "shared_prefixes": 2,
   "index_bytes": 241998,
   "names_bytes": 467217,
-  "generated_sha256": "d6bd814846c63903f3200e763bfcf116a8b08d5b01089cb0b879774300e7cb07"
+  "generated_sha256": "f744c4dc9e12961683f0d377220983a8b62eb4e40e8f7c64519ba6becc584292",
+  "compressed_bytes": 462273
 }

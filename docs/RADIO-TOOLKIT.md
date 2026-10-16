@@ -1,8 +1,10 @@
+> **0.13.0:** All four full boards now expose this toolkit. **Tools → Recon → Attacks** opens the Wi-Fi and BLE lists; **Radio tools** opens surveys and captures. [New sessions, archives, recipes, HID and bridge workflows](RECON-013.md). Lite remains radar-only.
+
 > **0.12.0:** Normal Hunt keeps both radios scanning, with complete Wi-Fi sweeps and additional target dwell. The toolkit now has 29 tools; new iBeacon, Eddystone UID/telemetry, BTHome and custom-payload workflows are documented in [Recon Notebook](RECON-NOTEBOOK.md). The older release details below describe the original 24-tool set.
 
 # Waveshare modes and radio toolkit · 0.11.1
 
-Available on **ESP32-S3-Touch-AMOLED-1.75C**. Open **Tools → Recon → Modes** or **Radio tools**. Desktop controls live in [Radio tools on the web flasher](https://valleytechsolutions.github.io/Dragon-Detector/#radio-tools). Other boards retain their existing detection, badge and daily-tool capabilities.
+Available on **ESP32-S3-Touch-AMOLED-1.75C**. Open **Tools → Recon → Modes** or **Radio tools**. Desktop controls live in [Radio tools on the web flasher](https://valleytechsolutions.github.io/Dragon-Detector/#radio-tools). The historical Waveshare release notes below are retained for reference.
 
 ## Listening modes
 

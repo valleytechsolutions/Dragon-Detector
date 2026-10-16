@@ -1,7 +1,7 @@
 #pragma once
 #include <Arduino.h>
 #include "ble_profile.h"
-#ifdef BOARD_AMOLED_175C
+#ifndef BOARD_RADAR_LITE
 void bleLabBegin();
 void bleLabLoop();
 bool bleLabCommand(const String&);

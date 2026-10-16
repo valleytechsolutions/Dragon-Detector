@@ -1,18 +1,20 @@
-import {hasNetworkTools,networkProfileCommand,networkResultsCsv} from './network-tools.js?v=0.12.0';
-import {normalizeHex,probeRows,probeCsv} from './recon-analysis.js?v=0.12.0';
-import {hasReconTools,reconLines,exportCapture,captureName,importPortalHtml} from './recon-transfer.js?v=0.12.0';
-import {decodeProfile,exportProfile,exportLog,importProfile,labLines,safeProfileName} from './ble-lab.js?v=0.12.0';
-import {localClockEpoch,setClock,readWearable,setOrientation} from './wearable-transfer.js?v=0.12.0';
+import {hasFullLab,hasFullRecon,hasSessionTools} from './lab-capabilities.js?v=0.13.0';
+import {sessionName,downloadMission,recipePutCommand,sourceMacCommand} from './mission-tools.js?v=0.13.0';
+import {hasNetworkTools,networkProfileCommand,networkResultsCsv} from './network-tools.js?v=0.13.0';
+import {normalizeHex,probeRows,probeCsv} from './recon-analysis.js?v=0.13.0';
+import {hasReconTools,reconLines,exportCapture,exportReconFile,captureName,importPortalHtml} from './recon-transfer.js?v=0.13.0';
+import {decodeProfile,exportProfile,exportLog,importProfile,labLines,safeProfileName} from './ble-lab.js?v=0.13.0';
+import {localClockEpoch,setClock,readWearable,setOrientation} from './wearable-transfer.js?v=0.13.0';
 import {deviceQuery} from './device-query.js';
-import {BadgeSerial} from './serial.js?v=0.12.0';
+import {BadgeSerial} from './serial.js?v=0.13.0';
 import {encodeBadge} from './badge-codec.js';
-import {uploadBadge} from './badge-transfer.js?v=0.12.0';
+import {uploadBadge} from './badge-transfer.js?v=0.13.0';
 import {readHistory} from './detector-transfer.js';
-import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasWearableTools} from './firmware-compat.js?v=0.12.0';
-import {readRadarSettings,saveRadarSettings} from './radar-transfer.js?v=0.12.0';
-import {boardProfiles,connectedProfile,validateManifest,supportsBadge} from './board-profiles.js?v=0.12.0';
-import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan,drawBadgeText} from './badge-editor.js?v=0.12.0';
-import {hasNotebook,readNotebook,customAdvertCommand} from './notebook.js?v=0.12.0';
+import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasWearableTools} from './firmware-compat.js?v=0.13.0';
+import {readRadarSettings,saveRadarSettings} from './radar-transfer.js?v=0.13.0';
+import {boardProfiles,connectedProfile,validateManifest,supportsBadge} from './board-profiles.js?v=0.13.0';
+import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan,drawBadgeText} from './badge-editor.js?v=0.13.0';
+import {hasNotebook,readNotebook,customAdvertCommand} from './notebook.js?v=0.13.0';
 const $ = id => document.getElementById(id);
 const models = Object.fromEntries(Object.entries(boardProfiles).map(([id,p])=>[id,p.name]));
 let board = '', releaseReady = false, request = 0;
@@ -66,14 +68,16 @@ function setBadgeProfile(id){
   $('badge-board').value=id;draw();
 }
 function controls(){
-  const labReady=!!serial&&deviceProfile==='waveshare'&&/^0\.(?:9\.(?:[8-9]|\d{2,})|(?:10|11|12)\.\d+)$/.test(firmwareVersion);
+  const labReady=!!serial&&hasFullLab(deviceProfile,firmwareVersion),reconReady=!!serial&&hasFullRecon(deviceProfile,firmwareVersion);
   document.querySelectorAll('#ble-lab button').forEach(b=>b.disabled=busy||!labReady);
-  document.querySelectorAll('#radio-tools button').forEach(b=>b.disabled=busy||!serial||deviceProfile!=='waveshare'||!hasReconTools(firmwareVersion));
-  document.querySelectorAll('[data-requires="0.11"]').forEach(b=>b.disabled=busy||!serial||deviceProfile!=='waveshare'||!/^0\.(?:11|12)\.\d+$/.test(firmwareVersion));
-  document.querySelectorAll('[data-requires="0.11.1"]').forEach(b=>b.disabled=busy||!serial||deviceProfile!=='waveshare'||!hasNetworkTools(firmwareVersion));
+  document.querySelectorAll('#radio-tools button').forEach(b=>b.disabled=busy||!reconReady);
+  document.querySelectorAll('[data-requires="0.11"]').forEach(b=>b.disabled=busy||!reconReady||!/^0\.(?:11|12|13)\.\d+$/.test(firmwareVersion));
+  document.querySelectorAll('[data-requires="0.11.1"]').forEach(b=>b.disabled=busy||!reconReady||!hasNetworkTools(firmwareVersion));
+  document.querySelectorAll('[data-requires="0.13"]').forEach(b=>b.disabled=busy||!serial||!hasSessionTools(deviceProfile,firmwareVersion));
+  $('lab-initialize').disabled=busy||!labReady||deviceProfile!=='waveshare';
   const lite=!!boardProfiles[deviceProfile]?.lite;
   for(const id of ['notebook-open','notebook-probes','notebook-adverts','notebook-memory'])$(id).disabled=busy||!serial||lite||!hasNotebook(firmwareVersion);
-  $('custom-advert-save').disabled=busy||!serial||deviceProfile!=='waveshare'||!hasNotebook(firmwareVersion);
+  $('custom-advert-save').disabled=busy||!serial||!reconReady||!hasNotebook(firmwareVersion);
   for(const id of ['show-stopwatch','show-clock','clock-save','clock-sync','orientation-save'])$(id).disabled=busy||!serial||lite||!hasWearableTools(firmwareVersion);
   $('show-activity').disabled=busy||!serial||lite||!hasActivityTools(firmwareVersion);
   $('radar-save').disabled=busy||!serial||lite||!hasRadarTools(firmwareVersion);
@@ -247,7 +251,7 @@ $('clock-save').onclick=()=>detectorAction(async link=>{const offset=Number($('c
 $('orientation-save').onclick=()=>detectorAction(async link=>{await setOrientation(link,$('orientation-mode').value);await loadWearable(link);$('detector-status').textContent='Orientation preference saved.';});
 for(const page of ['stopwatch','clock'])$('show-'+page).onclick=()=>detectorAction(async link=>{await link.write('screen '+page);$('detector-status').textContent=page==='clock'?'Clock displayed.':'Stopwatch displayed. Tap Start, then Lap; Home leaves it running.';});
 
-async function labAction(fn){if(!serial||busy)return;busy=true;controls();try{await fn(serial);}catch(e){$('lab-output').textContent=e.message;}finally{busy=false;controls();}}
+async function labAction(fn){if(!serial||busy||!hasFullLab(deviceProfile,firmwareVersion))return;busy=true;controls();try{await fn(serial);}catch(e){$('lab-output').textContent=e.message;}finally{busy=false;controls();}}
 async function labCommand(link,command){link.lines=[];await link.write(command);const reply=await link.wait(s=>/^LAB_(OK|ERROR|LOG|DIFF)/.test(s),10000);$('lab-output').textContent=reply;if(reply.startsWith('LAB_ERROR'))throw new Error(reply);return reply;}
 function showProfile(bytes){
  const p=decodeProfile(bytes),lines=[`${p.name || 'Unnamed peripheral'} · ${p.partial?'Partial capture':'Complete capture'}`,`${p.attributes.length} attributes · ${p.address}`, ''];
@@ -287,7 +291,7 @@ $('lab-initialize').onclick=()=>{if(confirm('Initialize the new upper 16 MB BLE 
 
 $('lab-log-download').onclick=()=>labAction(async l=>{const csv=await exportLog(l,$('lab-log-file').value==='previous'),url=URL.createObjectURL(new Blob([csv],{type:'text/csv'})),a=document.createElement('a');a.href=url;a.download='dragon-ble-events.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);$('lab-output').textContent='Saved event log downloaded.';});
 
-async function reconAction(fn){if(!serial||busy||deviceProfile!=='waveshare'||!hasReconTools(firmwareVersion))return;busy=true;controls();try{await fn(serial);}catch(e){$('recon-output').textContent=e.message;}finally{busy=false;controls();}}
+async function reconAction(fn){if(!serial||busy||!hasFullRecon(deviceProfile,firmwareVersion))return;busy=true;controls();try{await fn(serial);}catch(e){$('recon-output').textContent=e.message;}finally{busy=false;controls();}}
 async function reconDo(link,command){const rows=await reconLines(link,command);$('recon-output').textContent=rows.join('\n');return rows;}
 for(const [id,command] of Object.entries({'recon-open':'screen modes','recon-status':'tool status','recon-stop':'tool stop','recon-record-wifi':'recon capture wifi','recon-record-ble':'recon capture ble','recon-record-stop':'recon capture stop','recon-save':'recon capture save'}))$(id).onclick=()=>reconAction(async l=>{if(command.startsWith('screen ')){await l.write(command);$('recon-output').textContent='Modes opened on the display.';}else await reconDo(l,command);});
 $('recon-mode-save').onclick=()=>reconAction(l=>reconDo(l,'mode set '+Number($('recon-mode').value)));
@@ -360,3 +364,25 @@ for(const kind of ['probes','adverts'])$('notebook-'+kind).onclick=()=>notebookA
 });
 $('notebook-memory').onclick=()=>notebookAction(async l=>{await l.write('memory status');$('detector-status').textContent=await l.wait(s=>s.startsWith('MEMORY '));});
 $('custom-advert-save').onclick=async()=>{await reconAction(l=>reconDo(l,customAdvertCommand($('custom-advert-hex').value)));$('custom-advert-status').textContent=$('recon-output').textContent;};
+
+$('lab-bridge').onclick=()=>labAction(async l=>{if(confirm('Bridge the connected peripheral to a local GATT server for up to 10 minutes? Reads use cached values. Writes acknowledge locally before forwarding; use Bridge status to check failures. Radar resumes on Stop, disconnect or timeout.'))await labCommand(l,'lab bridge');});
+for(const [id,command] of Object.entries({'lab-bridge-status':'lab bridge status','lab-hid-events':'lab hid events'}))$(id).onclick=()=>labAction(l=>labCommand(l,command));
+$('lab-hid-fields').onclick=()=>labAction(l=>labCommand(l,'lab hid fields '+labAttr()));
+$('lab-hid-decode').onclick=()=>labAction(l=>{const id=Number($('hid-report-id').value),kind=Number($('hid-report-kind').value);if(!Number.isInteger(id)||id<0||id>255||![1,2,3].includes(kind))throw new Error('Choose the Report Reference ID and direction.');return labCommand(l,`lab hid decode ${labAttr()} ${id} ${kind} ${normalizeHex($('hid-report-value').value)}`);});
+$('mission-start').onclick=()=>reconAction(l=>reconDo(l,`mission start ${$('mission-protocol').value==='ble'?'ble':'wifi'} ${sessionName($('mission-name').value)}`));
+for(const [id,command] of Object.entries({'mission-status':'mission status','mission-stop':'mission stop','recipe-status':'recipe status','recipe-stop':'recipe stop'}))$(id).onclick=()=>reconAction(l=>reconDo(l,command));
+$('mission-list').onclick=()=>reconAction(async l=>{const lines=await reconDo(l,'mission list');$('mission-saved').replaceChildren(new Option('Choose a saved session',''));for(const line of lines){const m=/^MISSION_SAVED ([a-z0-9_-]{1,32})$/i.exec(line);if(m)$('mission-saved').add(new Option(m[1],m[1]));}});
+$('mission-download').onclick=()=>reconAction(async l=>{const name=sessionName($('mission-saved').value),data=await downloadMission(l,name,file=>{$('recon-output').textContent='Downloading '+file;});downloadText(data,name+'.zip','application/zip');$('recon-output').textContent='Four files verified and packaged. Extract the complete directory for your recon viewer.';});
+$('mission-remove').onclick=()=>reconAction(async l=>{const name=sessionName($('mission-saved').value);if(confirm('Delete saved session '+name+'?'))await reconDo(l,'mission remove '+name);});
+$('survey-save').onclick=()=>reconAction(l=>reconDo(l,'survey save '+sessionName($('survey-name').value)));
+$('survey-list').onclick=()=>reconAction(async l=>{const lines=await reconDo(l,'survey list');$('survey-saved').replaceChildren(new Option('Choose a saved survey',''));for(const line of lines){const m=/^RECON_SURVEY ([a-z0-9_-]{1,32}) (\d+)$/i.exec(line);if(m)$('survey-saved').add(new Option(m[1]+' · '+m[2]+' bytes',m[1]));}});
+$('survey-load').onclick=()=>reconAction(l=>reconDo(l,'survey load '+sessionName($('survey-saved').value)));
+$('survey-download').onclick=()=>reconAction(async l=>{const name=sessionName($('survey-saved').value),data=await exportReconFile(l,'survey get '+name);downloadText(data,name+'.csv','text/csv');$('recon-output').textContent='Historical survey downloaded; SSIDs use hex to preserve bytes.';});
+$('survey-remove').onclick=()=>reconAction(async l=>{const name=sessionName($('survey-saved').value);if(confirm('Delete saved survey '+name+'?'))await reconDo(l,'survey remove '+name);});
+$('source-mac-save').onclick=()=>reconAction(l=>reconDo(l,sourceMacCommand($('source-mac').value.trim())));
+$('recipe-save').onclick=()=>reconAction(l=>reconDo(l,recipePutCommand($('recipe-name').value,$('recipe-text').value)));
+$('recipe-list').onclick=()=>reconAction(async l=>{const lines=await reconDo(l,'recipe list');$('recipe-saved').replaceChildren(new Option('Choose a saved recipe',''));for(const line of lines){const m=/^RECON_RECIPE_FILE ([a-z0-9_-]{1,32})$/i.exec(line);if(m)$('recipe-saved').add(new Option(m[1],m[1]));}});
+async function readRecipe(l){const name=sessionName($('recipe-saved').value),lines=await reconLines(l,'recipe read '+name),line=lines.find(s=>/^RECON_RECIPE_HEX (?:[a-f0-9]{2}){1,512}$/i.test(s));if(!line)throw new Error('Invalid saved recipe.');const text=new TextDecoder().decode(Uint8Array.from(line.slice(17).match(/../g),x=>parseInt(x,16)));$('recipe-text').value=text;return {name,text};}
+$('recipe-read').onclick=()=>reconAction(readRecipe);
+$('recipe-run').onclick=()=>reconAction(async l=>{const {name,text}=await readRecipe(l);if(confirm(`Run the saved recipe ${name}?\n\n${text}\nTimed TOOL steps transmit using your current selected target. Home or Stop cancels the recipe.`))await reconDo(l,'recipe run '+name);});
+$('recipe-remove').onclick=()=>reconAction(async l=>{const name=sessionName($('recipe-saved').value);if(confirm('Delete recipe '+name+'?'))await reconDo(l,'recipe remove '+name);});

@@ -1,9 +1,16 @@
 #include "notebook.h"
 #include "vendor_registry.h"
 #include "flash_budget.h"
+#include "lz_block.h"
 static void notebookTests(){
  using namespace dragon;using namespace notebook;
  assert(flashReserve(100)==21&&flashReserve(101)==22&&storageFits(100,78,1)&&!storageFits(100,79,1)&&!storageFits(100,101,0)&&!storageFits(100,1,size_t(-1)));
+ uint8_t packed[]={0x13,'a',1,0,0x50,'b','c','d','e','f'},unpacked[13]{};
+ assert(unpackBlock(packed,sizeof(packed),unpacked,sizeof(unpacked))&&!memcmp(unpacked,"aaaaaaaabcdef",13));
+ for(size_t i=0;i<sizeof(packed);++i)assert(!unpackBlock(packed,i,unpacked,sizeof(unpacked)));
+ assert(!unpackBlock(packed,sizeof(packed),unpacked,12));
+ uint32_t seed=77;uint8_t compressed[64],destination[100];for(unsigned i=0;i<25000;++i){for(auto& b:compressed){seed=seed*1664525+1013904223;b=seed>>24;}unpackBlock(compressed,seed%64,destination,100);}
+ assert(vendorRegistryBegin());
  Advert rows[2];uint8_t mac[6]={0x58,0xb9,0x65,1,2,3};uint8_t data[]={2,1,6,2,9,'X'};
  assert(observeAdvert(rows,2,mac,1,-60,data,6,3,10));assert(rows[0].count==1&&rows[0].changes==0);
  data[5]='Y';assert(observeAdvert(rows,2,mac,1,-61,data,6,3,11)&&rows[0].changes==0); // scan response only

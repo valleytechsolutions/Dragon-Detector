@@ -6,15 +6,15 @@
 
 **[Open the web flasher & detector tools](https://valleytechsolutions.github.io/Dragon-Detector/)** · [Install guide](docs/FLASHING.md) · [Controls](docs/USER-GUIDE.md) · [Detection evidence](docs/DETECTION.md) · [Credits](CREDITS.md)
 
-Version **0.12.0** keeps detection running through Hunt, badges, menus and routine USB transfers. All four full boards gain a **Recon Notebook** with BLE payload inspection, probe-request inventory, EAPOL/PMKID/SAE counters and CSV export, plus a flash-only **40,333-prefix IEEE vendor directory**. The Waveshare now has **29 timed Wi-Fi/BLE tools**: its existing attack/test catalog adds iBeacon, Eddystone UID/telemetry, BTHome and validated custom advertising. GATT discovery/emulation, explicit pairing, portal/CSI/network tools and the eight listening modes remain Waveshare features. All five boards retain the **158-fact SquachWatch detection audit** and AXEOFF priority handling. [Notebook and scan policy](docs/RECON-NOTEBOOK.md) · [Memory reserve](docs/FLASH-BUDGET.md) · [Radio tools](docs/RADIO-TOOLKIT.md) · [Feature comparison and remaining gaps](docs/FEATURE-MATRIX.md).
+Version **0.13.0** brings the **29 timed Wi-Fi/BLE tools, eight modes and BLE Lab to all four full boards**. New workflows include saved recon sessions, historical AP archives, bounded recipes, HID report decoding and a GATT bridge with cached reads. **Tools → Recon → Attacks** opens the attack lists directly; **Utilities** replaces Daily. Normal screens retain background detection. All five profiles share the 158-fact SquachWatch audit and AXEOFF priority handling. [New workflows and limits](docs/RECON-013.md) · [Memory reserve](docs/FLASH-BUDGET.md) · [Feature comparison](docs/FEATURE-MATRIX.md).
 
 Update preserves badge, history, settings, GATT profiles and saved captures. Active lab sessions temporarily own the shared radio; Stop/Home returns it to the previous listening state. This is an independent implementation, not complete Marauder or ChimeraBLE parity. [Validation and limits](docs/VALIDATION.md).
 
-| Waveshare radio toolkit | Experimental CSI monitor |
+| Utilities | Attacks |
 |---|---|
-| ![Radio toolkit on Waveshare](media/waveshare-toolkit-v011.png) | ![CSI monitor on Waveshare](media/waveshare-csi-v011.png) |
+| ![Utilities on Waveshare](media/waveshare-utilities-013.png) | ![Attacks menu on Waveshare](media/waveshare-attacks-013.png) |
 
-Logical display captures from 0.11.0; CSI is shown during calibration. [Open Radio tools](https://valleytechsolutions.github.io/Dragon-Detector/#radio-tools).
+CRC-verified logical display captures from the connected Waveshare running 0.13.0; these are firmware renders, not panel photographs. [Open Radio tools](https://valleytechsolutions.github.io/Dragon-Detector/#radio-tools).
 
 ## Choose the exact board
 
@@ -65,7 +65,7 @@ Logical 240×240 captures from the connected XIAO, not panel photographs.
 
 ## Stopwatch, clock and orientation
 
-**Tools → Daily** now includes a real start/pause/lap stopwatch and a clock. M5Stack yellow/blue and Waveshare BOOT/short PWR operate timing controls; the four full-feature boards also have touch buttons. The latest 50 laps remain available while detection keeps running. Settings provides RTC date/time and local UTC offset, saved 0°/90°/180°/270° orientation on the four full-feature boards (Lite has a fixed orientation). [Controls, behavior and hardware limits](docs/STOPWATCH-CLOCK-ORIENTATION.md).
+**Tools → Utilities** now includes a real start/pause/lap stopwatch and a clock. M5Stack yellow/blue and Waveshare BOOT/short PWR operate timing controls; the four full-feature boards also have touch buttons. The latest 50 laps remain available while detection keeps running. Settings provides RTC date/time and local UTC offset, saved 0°/90°/180°/270° orientation on the four full-feature boards (Lite has a fixed orientation). [Controls, behavior and hardware limits](docs/STOPWATCH-CLOCK-ORIENTATION.md).
 
 | Stopwatch · 0.9 | Clock · 0.9 |
 |---|---|

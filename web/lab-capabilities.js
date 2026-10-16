@@ -1,0 +1,4 @@
+const full=new Set(['waveshare','stopwatch','spotpear','xiao_round']);
+export const hasSessionTools=(board,version)=>full.has(board)&&/^0\.13\.\d+$/.test(version);
+export const hasFullLab=(board,version)=>hasSessionTools(board,version)||(board==='waveshare'&&/^0\.(?:9\.(?:[8-9]|\d{2,})|(?:10|11|12)\.\d+)$/.test(version));
+export const hasFullRecon=(board,version)=>hasSessionTools(board,version)||(board==='waveshare'&&/^0\.(?:10|11|12)\.\d+$/.test(version));

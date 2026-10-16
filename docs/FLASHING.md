@@ -1,3 +1,5 @@
+> **0.13:** Utilities replaces Daily. Badge editing stays in the web Badge Studio. The first Recon row now includes **Attacks**, with separate Wi-Fi and BLE lists on all four full boards. Existing partitions, badge and settings are preserved by a matching Update. [New features](RECON-013.md).
+
 # Flash Dragon Detector
 
 **[Open the web flasher](https://valleytechsolutions.github.io/Dragon-Detector/)** in desktop Chrome or Edge. HTTPS or localhost is required for Web Serial. Use a USB data cable and close serial monitors first.

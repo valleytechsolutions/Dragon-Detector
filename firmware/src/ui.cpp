@@ -3,6 +3,7 @@
 #include "vendor_registry.h"
 #include "ble_lab.h"
 #include "recon.h"
+#include "recipes.h"
 #include "radar_colors.h"
 #include "board_pins.h"
 #include "radar_layout.h"
@@ -104,8 +105,8 @@ static lv_obj_t* label(lv_obj_t* parent,const char* text,int x,int y,int w=0,con
   auto* o=lv_label_create(parent);lv_label_set_text(o,text);lv_obj_set_pos(o,S(x),S(y));if(w)lv_obj_set_width(o,S(w));lv_obj_set_style_text_font(o,font,0);lv_obj_set_style_text_color(o,color(c),0);return o;
 }
 static void go(Page p){
-if(p==Radar){reconStop();bleLabStop();}
-#ifdef BOARD_AMOLED_175C
+if(p==Radar){recipeStop();reconStop();bleLabStop();}
+#ifndef BOARD_RADAR_LITE
 if(page==Recon&&p!=Recon)reconLeave();
 #endif
 if(page==BleLab&&p!=BleLab)bleLabStop();pending=p;}
@@ -204,7 +205,7 @@ static void build(){
   timerValue=timerState=timerLap=timerStartButton=timerSecondary=clockValue=clockDate=editValue=editPreview=editField=nullptr;
   badgeUnload();page=pending;pageAt=millis();statusLabel=audioLabel=audioMeter=radar=trackingLabel=huntValue=huntMeta=huntGauge=huntGraph=diagnosticsLabel=activityLabel=radarActivity=nullptr;radarPrepared=0;
   lv_obj_clean(root);lv_obj_set_style_bg_color(root,color(0x071510),0);
-  #ifdef BOARD_AMOLED_175C
+  #ifndef BOARD_RADAR_LITE
   if(page==BleLab){bleLabView(root);return;}
   if(page==Recon){reconView(root,openRadioTools);return;}
 #endif
@@ -223,14 +224,14 @@ static void build(){
     auto* quiet=button(root,detector.quiet?LV_SYMBOL_MUTE:LV_SYMBOL_VOLUME_MAX,270,257,38,34,97);
     for(auto* b:{targets,tools,quiet}){lv_obj_set_style_bg_color(b,color(theme.panel),0);lv_obj_set_style_bg_opa(b,LV_OPA_80,0);lv_obj_set_style_border_color(b,color(theme.ring),0);lv_obj_set_style_border_opa(b,LV_OPA_60,0);}
   }else if(page==Menu){
-    title("DRAGON TOOLS");const char* tabs[]={"RECON","DAILY","SYSTEM"};
+    title("DRAGON TOOLS");const char* tabs[]={"RECON","UTILITIES","SYSTEM"};
     for(int i=0;i<3;++i){auto* b=button(root,tabs[i],47+i*89,76,86,32,10+i);if(menuTab==i)lv_obj_set_style_bg_color(b,color(0x36582b),0);}
-    #ifdef BOARD_AMOLED_175C
-    if(menuTab==0){button(root,"Modes",57,115,119,40,7100);button(root,"BLE Lab",184,115,119,40,7000);button(root,"Wi-Fi",57,162,119,40,20);button(root,"Bluetooth",184,162,119,40,21);button(root,"History",57,209,119,40,60);button(root,"Hunt",184,209,119,40,57);button(root,"Radio tools",57,257,119,39,7102);button(root,"Activity",184,257,119,39,116);}
+    #ifndef BOARD_RADAR_LITE
+    if(menuTab==0){button(root,"Modes",57,115,119,40,7100);button(root,"Attacks",184,115,119,40,7103);button(root,"Wi-Fi",57,162,119,40,20);button(root,"Bluetooth",184,162,119,40,21);button(root,"History",57,209,119,40,60);button(root,"Hunt",184,209,119,40,57);button(root,"Radio tools",57,257,119,39,7102);button(root,"BLE Lab",184,257,119,39,7000);}
 #else
     if(menuTab==0){button(root,"Wi-Fi",57,119,119,49,20);button(root,"Bluetooth",184,119,119,49,21);button(root,"History",57,176,119,49,60);button(root,"Hunt",184,176,119,49,57);button(root,"Detectors",57,233,119,45,61);button(root,"Activity",184,233,119,45,116);}
     #endif
-    if(menuTab==1){button(root,"Stopwatch",57,119,119,49,130);button(root,"Clock",184,119,119,49,133);button(root,"My badge",57,176,119,49,50);button(root,"Badge editor",184,176,119,49,51);button(root,LV_SYMBOL_DIRECTORY "  SD files",79,242,202,43,32);}
+    if(menuTab==1){button(root,"Stopwatch",57,119,119,49,130);button(root,"Clock",184,119,119,49,133);button(root,"My badge",57,176,119,49,50);button(root,"SD files",184,176,119,49,32);button(root,"Activity",79,242,202,43,116);}
 
     if(menuTab==2){button(root,"Settings",60,126,240,48,40);button(root,"Recon notebook",60,184,240,48,153);button(root,"Radio health",79,243,202,44,99);}
   }else if(page==Devices){
@@ -255,7 +256,7 @@ static void build(){
       s+="\n\nIdentity and activity unverified. Signal strength is not distance.";
       if(const char* vendor=dragon::registeredVendor(c.mac,c.ble,c.addressType))s+="\n\nIEEE address registrant:\n"+String(vendor)+"\nRegistry ownership is not product identification.";
       auto* evidence=label(body,s.c_str(),8,0,240);
-#ifdef BOARD_AMOLED_175C
+#ifndef BOARD_RADAR_LITE
       if(c.ble){lv_obj_update_layout(evidence);button(body,"OPEN BLE LAB",8,lv_obj_get_height(evidence)*360/SCREEN_RES+12,240,40,7001);}
 #endif
       button(root,"Controls",52,263,124,37,56);
@@ -450,8 +451,9 @@ static void action(lv_event_t* e){
   if(id>=5000&&id<5000+int(RULE_LIMIT)){controlKey=ruleKeys[id-5000];controlChannel=0;go(Controls);return;}
   if(id>=8000&&id<8010){unsigned row=id-8000;if(row<notebookRows&&notebookAdverts){auto& k=notebookKeys[row];for(unsigned i=0;i<dragon::notebook::Capacity;++i){auto& a=notebookAdverts[i];if(a.used&&a.type==k.addressType&&!memcmp(a.mac,k.mac,6)){notebookSelection=a;go(NotebookDetail);return;}}}go(NotebookBle);return;}
   if(id>=201 && id<=211){trackedContact=-1;channelLock=id-200;setRadio(true);go(Channels);page=Boot;return;}
-#ifdef BOARD_AMOLED_175C
+#ifndef BOARD_RADAR_LITE
   if(id==7100||id==7102){openRadioTools=id==7102;go(Recon);return;}
+  if(id==7103){reconPage("attacks");go(Recon);return;}
   if(id==7000){go(BleLab);return;}
   if(id==7001&&selectionValid()&&contacts[selected].ble){auto& c=contacts[selected];bleLabSelect(c.mac,c.addressType,c.name);go(BleLab);return;}
 #endif
@@ -485,7 +487,6 @@ static void action(lv_event_t* e){
     case 45:if(selectionValid() && !contacts[selected].ble && contacts[selected].channel){trackedContact=-1;channelLock=contacts[selected].channel;setRadio(true);go(Channels);}break;
     case 46:setCapture(!captureEnabled);pending=Details;page=Boot;break;
     case 50:go(Badge);break;
-    case 51:{auto* box=lv_msgbox_create(root,"BADGE STUDIO","Open the GitHub web flasher on a computer, choose Badge Studio, connect USB, then crop and upload. Hold your badge to return to tools.",nullptr,true);lv_obj_set_size(box,S(260),S(225));lv_obj_center(box);break;}
     case 52:if(selectionValid())trackContact(selected);go(Hunt);break;
     case 53:candidatesOnly=!candidatesOnly;settings.putBool("candidates",candidatesOnly);pending=page;page=Boot;break;
     case 54:trackContact(-1);go(Radar);break;
@@ -558,12 +559,13 @@ bool uiTouch(bool pressed,int,int){
   // Navigation uses visible Tools/Home buttons. Leave drags to LVGL lists.
   return true;
 }
-void uiShow(const String& name){
-#ifdef BOARD_AMOLED_175C
+void uiShow(const String& name){if(name=="radar")recipeStop();
+#ifndef BOARD_RADAR_LITE
   if(name=="modes"||name=="tools"){openRadioTools=name=="tools";go(Recon);return;}
   if(name=="lab"){go(BleLab);return;}
-  if(name=="network"||name=="csi"||name=="portal"||name=="analysis"||name=="probes"||name=="filters"||name=="captures"){reconPage(name);go(Recon);return;}
+  if(name=="attacks"||name=="missions"||name=="recipes"||name=="network"||name=="csi"||name=="portal"||name=="analysis"||name=="probes"||name=="filters"||name=="captures"){reconPage(name);go(Recon);return;}
 #endif
+  if(name=="utilities"){menuTab=1;go(Menu);return;}
   if(name=="notebook"){go(Notebook);return;}if(name=="notebook-ble"){notebookPage=0;go(NotebookBle);return;}if(name=="notebook-probes"){notebookPage=0;go(NotebookProbes);return;}
   if(name=="device-colors"){go(FamilyColors);return;}
   if(name=="stopwatch"){go(Stopwatch);return;}if(name=="clock"){go(Clock);return;}if(name=="orientation"){go(Orientation);return;}if(name=="laps"){go(Laps);return;}
@@ -579,7 +581,7 @@ void uiBegin(){
   if(!settings.getBool("radar-v07",false)){settings.putBool("radar-labels",true);settings.putUChar("radar-theme",1);settings.putBool("radar-v07",true);}
   radarLabels=settings.getBool("radar-labels",true);radarRecent=settings.getBool("radar-recent",true);radarTheme=settings.getUChar("radar-theme",1);if(radarTheme>2)radarTheme=1;
   scr_lvgl_init();set_brightness(brightness);lastInteraction=millis();root=lv_scr_act();lv_obj_clear_flag(root,LV_OBJ_FLAG_SCROLLABLE);lv_obj_set_style_bg_color(root,color(0x071510),0);
-#ifdef BOARD_AMOLED_175C
+#ifndef BOARD_RADAR_LITE
   pinMode(BTN_PIN,INPUT_PULLUP);
 #endif
   auto* img=lv_img_create(root);lv_img_set_src(img,&vts_logo);lv_obj_align(img,LV_ALIGN_CENTER,0,S(-25));
@@ -596,7 +598,7 @@ void uiLoop(){
   if(!notice&&page!=BleLab&&page!=Recon&&page!=Stopwatch&&page!=ClockEdit){dragon::DetectionNotice next;if(noticeQueue.take(millis(),next)&&detector.enabled(next.family)&&(!detector.quiet||next.watched)&&(!next.hasKey||!(deviceRules(next.key)&(RuleIgnore|RuleSnooze))))uiNotify(next.title,next.detail,next.hasKey?&next.key:nullptr,next.watched);}
   if(page==Boot && pending==Boot && millis()-pageAt>2200)pending=Radar;
   if(page!=pending)build();
-#ifdef BOARD_AMOLED_175C
+#ifndef BOARD_RADAR_LITE
   if(page==BleLab)bleLabViewLoop();
   if(page==Recon)reconViewLoop();
 #endif

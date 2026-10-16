@@ -1,6 +1,6 @@
 #pragma once
 #include <Arduino.h>
-#ifdef BOARD_AMOLED_175C
+#ifndef BOARD_RADAR_LITE
 bool csiActive();bool csiStart();void csiStop();void csiLoop();
 void csiStatus(char*,size_t);bool csiCommand(const String&);
 #else

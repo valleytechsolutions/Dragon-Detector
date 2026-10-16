@@ -119,7 +119,7 @@ static void wifiRx(void* buffer,wifi_promiscuous_pkt_type_t type){
   // Without PCAP, a data frame only needs its maximum MAC header + LLC for
   // EAPOL and source-address clues. Management bodies remain complete.
   bool full=captureEnabled||reconRecording()||type!=WIFI_PKT_DATA;
-#ifdef BOARD_AMOLED_175C
+#ifndef BOARD_RADAR_LITE
   // Preserve EAPOL bodies for message/PMKID analysis even outside a capture.
   full=full||dragon::parseWifi(p->payload,std::min<size_t>(o.original,48)).eapol;
 #endif
@@ -270,7 +270,7 @@ void radioBegin(){
   for(uint8_t i=0;i<QUEUE_SIZE;++i)xQueueSend(freeSlots,&i,0);
   // STA transmit sessions publish driver events even without joining a network.
   // The passive NULL interface did not require the default event loop.
-#ifdef BOARD_AMOLED_175C
+#ifndef BOARD_RADAR_LITE
   esp_err_t eventResult=esp_event_loop_create_default();
   if(eventResult!=ESP_OK&&eventResult!=ESP_ERR_INVALID_STATE){radioEnabled=false;addAlert("Wi-Fi event loop failed",esp_err_to_name(eventResult));return;}
 #endif
@@ -369,7 +369,7 @@ void setActiveBle(bool enabled){
   scanCommand(ScanAction::Configure,0,enabled&&reconMode()==dragon::ReconMode::Radar);setRadio(listening);
 }
 
-#ifdef BOARD_AMOLED_175C
+#ifndef BOARD_RADAR_LITE
 void radioApplyMode(){if(bleLabOwnsRadio()||reconOwnsRadio()||!scanner)return;setRadio(false);scanCommand(ScanAction::Configure,0,reconMode()==dragon::ReconMode::Radar?activeBle:false);setRadio(true);}
 void radioRebindBle(){
   NimBLEDevice::init("");scanner=NimBLEDevice::getScan();scanner->setScanCallbacks(&bleCallbacks,true);

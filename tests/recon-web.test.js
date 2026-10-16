@@ -4,9 +4,9 @@ import {hasReconTools,captureName,exportCapture,importPortalHtml} from '../web/r
 import {parseBadgeInfo,hasWearableTools} from '../web/firmware-compat.js';
 import {validateManifest,boardProfiles} from '../web/board-profiles.js';
 import {hasNetworkTools,networkProfileCommand,networkResultsCsv} from '../web/network-tools.js';
-test('Network profiles encode spaces and punctuation without command injection; old firmware stays gated',()=>{assert.ok(hasNetworkTools('0.11.1'));for(const v of ['0.11.0','0.13.0','0.11.01'])assert.ok(!hasNetworkTools(v));assert.equal(networkProfileCommand(0,'A B',''), 'net profile put 0 412042 -');assert.equal(networkProfileCommand(7,'lab','12345678'),'net profile put 7 6c6162 3132333435363738');for(const args of [[8,'x',''],[0,'x\nnet disconnect',''],[0,'x','short'],[0,'x','a'.repeat(64)],[0,'é','']])assert.throws(()=>networkProfileCommand(...args));assert.equal(captureName('net-0123abcd.csv'),'net-0123abcd.csv');});
+test('Network profiles encode spaces and punctuation without command injection; old firmware stays gated',()=>{assert.ok(hasNetworkTools('0.11.1'));for(const v of ['0.11.0','0.14.0','0.11.01'])assert.ok(!hasNetworkTools(v));assert.equal(networkProfileCommand(0,'A B',''), 'net profile put 0 412042 -');assert.equal(networkProfileCommand(7,'lab','12345678'),'net profile put 7 6c6162 3132333435363738');for(const args of [[8,'x',''],[0,'x\nnet disconnect',''],[0,'x','short'],[0,'x','a'.repeat(64)],[0,'é','']])assert.throws(()=>networkProfileCommand(...args));assert.equal(captureName('net-0123abcd.csv'),'net-0123abcd.csv');});
 test('Network result export excludes malformed or formula cells',()=>{assert.equal(networkResultsCsv(['RECON_HOST 192.168.1.1 34','RECON_HOST 999.1.1.1 2','RECON_HOST =CMD 4','RECON_HOST 1.2.3.4 99999']), 'ipv4,rtt_ms\n192.168.1.1,34\n');});
-test('0.10 contracts enable supported hardware and keep unknown protocols closed',()=>{assert.ok(hasReconTools('0.10.0'));assert.ok(hasWearableTools('0.10.0'));for(const v of ['0.9.8','0.13.0','1.10.0','0.100.0'])assert.ok(!hasReconTools(v));for(const id of Object.keys(boardProfiles)){const p=boardProfiles[id],state=p.lite?'RADAR_ONLY':'READY';assert.ok(parseBadgeInfo(`BADGE_INFO 0.10.0 ${p.size} ${state} ${p.firmwareName}`));}
+test('0.10 contracts enable supported hardware and keep unknown protocols closed',()=>{assert.ok(hasReconTools('0.10.0'));assert.ok(hasWearableTools('0.10.0'));for(const v of ['0.9.8','0.14.0','1.10.0','0.100.0'])assert.ok(!hasReconTools(v));for(const id of Object.keys(boardProfiles)){const p=boardProfiles[id],state=p.lite?'RADAR_ONLY':'READY';assert.ok(parseBadgeInfo(`BADGE_INFO 0.10.0 ${p.size} ${state} ${p.firmwareName}`));}
  const p=boardProfiles.waveshare,parts=[{path:'bootloader.bin',offset:0},{path:'partitions.bin',offset:0x8000},{path:'boot_app0.bin',offset:0xe000},{path:'firmware.bin',offset:0x10000}];const m={name:`Dragon Detector — ${p.firmwareName} (update)`,version:'0.10.0',new_install_prompt_erase:false,builds:[{chipFamily:'ESP32-S3',parts}]};validateManifest(m,'waveshare','update');parts.push({path:'littlefs.bin',offset:0xc10000},{path:'reconfs.bin',offset:0x1000000});assert.throws(()=>validateManifest(m,'waveshare','update'));m.name=m.name.replace('(update)','(factory)');m.new_install_prompt_erase=true;validateManifest(m,'waveshare','factory');
 });
 function fake(lines){let cb,removed=false;return {get removed(){return removed;},onLine(fn){cb=fn;return()=>removed=true;},async write(c){assert.equal(c,'recon get wifi-0123abcd.pcap');for(const line of lines)cb(line);}};}
@@ -20,6 +20,29 @@ test('recon analysis validates hex and preserves raw probe SSIDs without spreads
 test('HTML import waits for bounded CRC-checked chunk acknowledgements',async()=>{const data=new TextEncoder().encode('<html>Test</html>'),writes=[],responses=['RECON_READY','RECON_ACK '+data.length,'RECON_OK template saved'];const link={lines:[],async write(s){writes.push(s);},async wait(f){const r=responses.shift();assert.ok(f(r));return r;}};await importPortalHtml(link,data);assert.equal(writes.length,2);assert.deepEqual(writes[1],data);await assert.rejects(importPortalHtml(link,new Uint8Array([0])));assert.equal(captureName('portal-0123abcd.csv'),'portal-0123abcd.csv');});
 
 import {hasNotebook,readNotebook,customAdvertCommand} from '../web/notebook.js';
+import {hasFullLab,hasFullRecon,hasSessionTools} from '../web/lab-capabilities.js';
+import {sessionName,missionCommand,recipePutCommand,sourceMacCommand,validateMissionFile,zipStored} from '../web/mission-tools.js';
+import {exportReconFile} from '../web/recon-transfer.js';
+test('0.13 labs target exactly four full boards; old boards and unknown protocols stay gated',()=>{
+ for(const id of ['waveshare','stopwatch','spotpear','xiao_round']){assert.ok(hasFullLab(id,'0.13.0'));assert.ok(hasFullRecon(id,'0.13.0'));assert.ok(hasSessionTools(id,'0.13.0'));}
+ for(const id of ['waveshare_lite','unknown','',null])assert.ok(!hasFullLab(id,'0.13.0'));
+ for(const id of ['stopwatch','spotpear','xiao_round'])assert.ok(!hasFullLab(id,'0.12.0'));
+ assert.ok(hasFullLab('waveshare','0.9.8'));assert.ok(!hasFullRecon('waveshare','0.9.8'));assert.ok(!hasSessionTools('waveshare','0.12.0'));assert.ok(!hasFullLab('waveshare','0.14.0'));
+});
+test('mission and recipe commands reject traversal, command injection and unsupported records',()=>{
+ assert.equal(sessionName('field_01'),'field_01');assert.equal(missionCommand('field_01','obs.rlog'),'mission get field_01 obs.rlog');assert.equal(recipePutCommand('survey','WAIT 2'),'recipe put survey 574149542032');
+ for(const bad of ['../x','x y','x\nTOOL','x'.repeat(33),''])assert.throws(()=>sessionName(bad));assert.throws(()=>missionCommand('x','../../badge.bin'));assert.throws(()=>recipePutCommand('x','a'.repeat(513)));assert.throws(()=>recipePutCommand('x','WAIT 2\0'));
+ assert.equal(sourceMacCommand('02:11:22:33:44:55'),'tool source 02:11:22:33:44:55');for(const bad of ['01:11:22:33:44:55','00:00:00:00:00:00','02:11:22:33:44:55\ntool start 1'])assert.throws(()=>sourceMacCommand(bad));
+});
+test('recon mission ZIP records preserve headers, CRC, central directory offsets and byte boundaries',()=>{
+ const manifest={schema:1,mode:'wifi',state:'complete',observations:'obs.rlog',probes:'probes.rlog',relationships:'relations.rlog'};
+ const entries=[{name:'test/session.json',data:new TextEncoder().encode(JSON.stringify(manifest))},...Object.entries({'obs.rlog':['RCN1',21],'probes.rlog':['PRB1',45],'relations.rlog':['REL1',12]}).map(([name,[header,length]])=>{const data=new Uint8Array(4+length);data.set(new TextEncoder().encode(header));return {name:'test/'+name,data};})];
+ for(const e of entries)validateMissionFile(e.name.slice(5),e.data);assert.throws(()=>validateMissionFile('obs.rlog',new Uint8Array(5)));const zip=zipStored(entries),v=new DataView(zip.buffer);let at=0;for(const e of entries){assert.equal(v.getUint32(at,true),0x04034b50);assert.equal(v.getUint32(at+14,true),crc32(e.data));const n=v.getUint16(at+26,true);assert.equal(new TextDecoder().decode(zip.slice(at+30,at+30+n)),e.name);assert.deepEqual(zip.slice(at+30+n,at+30+n+e.data.length),e.data);at+=30+n+e.data.length;}assert.equal(v.getUint32(at,true),0x02014b50);assert.equal(v.getUint32(zip.length-6,true),at);assert.equal(v.getUint16(zip.length-12,true),4);
+});
+test('mission export uses the checked recon transport and rejects arbitrary command execution',async()=>{
+ let cb;const data=new TextEncoder().encode('RCN1'),link={onLine(f){cb=f;return()=>{};},async write(c){assert.equal(c,'mission get test obs.rlog');for(const s of ['RECON_FILE 4','RECON_DATA 0 52434e31',`RECON_END 4 ${crc32(data).toString(16).padStart(8,'0')}`])cb(s);}};
+ assert.deepEqual(await exportReconFile(link,'mission get test obs.rlog'),data);await assert.rejects(exportReconFile(link,'tool start 1'));await assert.rejects(exportReconFile(link,'mission get test ../x'));
+});
 test('0.12 contracts accept every real board manifest and preserve both Waveshare filesystems',()=>{
  assert.ok(hasNotebook('0.12.0'));assert.ok(hasReconTools('0.12.0'));assert.ok(hasNetworkTools('0.12.0'));assert.ok(!hasNotebook('0.11.1'));
  for(const version of ['0.11.1','0.12.0'])for(const [id,p] of Object.entries(boardProfiles))for(const mode of ['update','factory']){

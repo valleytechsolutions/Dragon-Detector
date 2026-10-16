@@ -1,8 +1,8 @@
-# Reference feature comparison · 0.12.0
+# Reference feature comparison · 0.13.0
 
 This is a feature audit, not a claim that Dragon Detector is an official port or has identical behavior. The original application remains MIT. Reference firmware is not silently linked into it. [Credits and exact source revisions](../CREDITS.md) · [Measured hardware checks](VALIDATION.md).
 
-## Marauder: Waveshare AMOLED implementation
+## Marauder: all four full boards
 
 | Reference workflow | Dragon Detector entry / extent |
 |---|---|
@@ -19,9 +19,9 @@ This is a feature audit, not a claim that Dragon Detector is an official port or
 | Find My sound | Explicit connected AirTag/Find My/DULT characteristic write; peer may reject it |
 | CSI motion monitor | Experimental independent amplitude-shape monitor; calibrated signal-change score, low-data state and 120-point CSV. No phase-fusion equivalence or occupancy guarantee |
 | Save/load SSIDs, custom HTML, capture browser | Recon flash playlist/template/capture library; checked browser download and individual deletion |
-| Recon missions / desktop tool | Dragon history, PCAP/BLE CSV, probe CSV, GATT profiles/events. Marauder `.rlog` mission directories and its desktop format are not implemented |
+| Recon missions / desktop tool | Named sessions with independently encoded RCN1/PRB1/REL1 files and checked ZIP download; no GPS fix. External desktop integration is not yet tested |
 | Join / saved network profiles / IP ping scan | Connected network: eight explicit profiles, DHCP/IP/gateway/DNS, gateway ping, at most 254 local-subnet addresses, CSV; no automatic reconnection |
-| Save/load AP lists, arbitrary source-MAC configuration, command scripts | Not implemented; live AP selections expire and cannot be loaded as fresh observations |
+| Save/load AP lists, arbitrary source-MAC configuration, command scripts | Historical AP CSV save/load/export, volatile source-MAC configuration and reviewed bounded recipes. Archives cannot be loaded as fresh target observations |
 | USB BadUSB / DuckyScript | Not implemented in this USB-CDC stopwatch build |
 | GPS wardriving / WiGLE / NMEA | No supported local GPS in this board profile; broadcast Remote ID coordinates are different data |
 | 5/6 GHz, Bluetooth Classic, external NRF24 | Not provided by the ESP32-S3 radio / current board profile |
@@ -34,11 +34,11 @@ This is a feature audit, not a claim that Dragon Detector is an official port or
 | GATT discovery, service/characteristic/descriptor values | Available; 16 services / 64 characteristics / 128 attributes / 512-byte values; partial/error markers |
 | Read/write/write-no-response, subscribe/unsubscribe, MTU | Available; requests obey advertised properties and peer access controls |
 | Pairing, passkey, numeric comparison, bonds | Explicit opt-in policy and user input; no implicit PIN, automatic unseen approval or key cloning |
-| HID Report Map | Report IDs and input/output/feature lengths; malformed/unsupported items flagged. Full usage-tree and semantic live keyboard decoding are not implemented |
+| HID Report Map | Bounded field/usage parser and semantic keyboard, mouse and consumer decoding. Unsupported maps/values retain raw evidence; no HID injection |
 | Save/load/list/delete/compare clones | DDG1 profiles with CRC and atomic file saves |
 | Peripheral emulation | Application GATT services and initial values, readable descriptors and legacy adverts; local writes/notifications. Proprietary behavior is not recreated |
 | Live events and export | Bounded local event ring, rotating CSV logs and checked USB export. Chimera's JSON command/event schema is not implemented |
-| Transparent relay / MITM | Not implemented; central and emulator roles are mutually exclusive |
+| Transparent relay / MITM | Cached-read GATT bridge forwards writes and notifications; not a transparent ATT proxy, identity clone or pairing bypass |
 
 ## SquachWatch and Unified Blue detection
 
@@ -46,10 +46,12 @@ All **158 table facts** from the pinned SquachWatch revision have parser and rad
 
 AXEOFF's company/service/address/UUID compatibility paths, priority receive capacity, first-hit alert treatment and distinctive hunt audio remain covered by dedicated regression tests. Eight listening modes provide the focused radar/survey workflows inspired by Unified Blue. New body-camera vendor and BWC payload clues also receive the reserved queue path. No signature or OUI proves malicious activity, camera recording, operator identity or a precise model.
 
-SquachWatch pets/games/chat and social systems remain outside the user's detector scope. The five boards share recognition logic; the new BLE/portal/CSI lab runs only on the 32 MB Waveshare AMOLED profile. Firmware builds and signature fixtures do not substitute for a field trial against every physical product.
+SquachWatch pets/games/chat and social systems remain outside the user's detector scope. The five boards share recognition logic; the BLE/portal/CSI lab now runs on all four full boards. Firmware builds and signature fixtures do not substitute for a field trial against every physical product.
 
-## Shared 0.12 additions
+## Shared features
 
-Waveshare AMOLED, M5Stack StopWatch, Spotpear and XIAO Round share the passive Recon Notebook: full bounded advertisements, common protocol metadata, probe-request inventory, protocol counters and CSV. Hunt now preserves both radios and a complete Wi-Fi sweep, including under delayed rendering. Normal USB badge/history/SD transfers cooperate with detection. Five new Waveshare advertising tools supplement the existing 24 formats. [Details](RECON-NOTEBOOK.md).
+Waveshare AMOLED, M5Stack StopWatch, Spotpear and XIAO Round share the passive Recon Notebook: full bounded advertisements, common protocol metadata, probe-request inventory, protocol counters and CSV. Hunt now preserves both radios and a complete Wi-Fi sweep, including under delayed rendering. Normal USB badge/history/SD transfers cooperate with detection. All four full boards expose the 29-format toolkit in 0.13. [Details](RECON-NOTEBOOK.md).
 
 These additions do not mean the boards have exhausted useful features or reached 79% occupied physical flash. The [budget report](FLASH-BUDGET.md) separates app slots, OTA allocation and user storage. The unsupported/unimplemented rows above remain explicit work or hardware limits.
+
+The [0.13 guide](RECON-013.md) documents session, recipe, archive, HID and bridge limits. USB BadUSB/DuckyScript and Chimera JSON protocol compatibility remain unimplemented; unsupported radio bands and external GPS require different hardware.

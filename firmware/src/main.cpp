@@ -11,7 +11,7 @@
 #include <esp_ota_ops.h>
 #include <LittleFS.h>
 static String serialLine;
-#ifdef BOARD_AMOLED_175C
+#ifndef BOARD_RADAR_LITE
 SET_LOOP_TASK_STACK_SIZE(12288);
 #endif
 static bool serialOverflow=false;
@@ -152,7 +152,11 @@ void setup(){
 #ifndef BOARD_RADAR_LITE
   uint32_t at=millis();while(millis()-at<1600){uiLoop();delay(5);}
 #endif
-  storageBegin();badgeInit();audioBegin();detectorBegin();notebookBegin();radioBegin();bleLabBegin();reconBegin();Serial.println("DRAGON READY");health();
+  storageBegin();badgeInit();audioBegin();detectorBegin();notebookBegin();
+#ifndef BOARD_RADAR_LITE
+  if(!dragon::vendorRegistryBegin())Serial.println("REGISTRY unavailable: PSRAM allocation or integrity check");
+#endif
+  radioBegin();bleLabBegin();reconBegin();Serial.println("DRAGON READY");health();
 }
 void loop(){
   uint32_t stamp=micros();auto measured=[&](int i){uint32_t end=micros();loopLastUs[i]=end-stamp;loopMaxUs[i]=std::max(loopMaxUs[i],loopLastUs[i]);stamp=end;};

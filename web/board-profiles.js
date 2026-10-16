@@ -14,10 +14,10 @@ export function validateManifest(data,board,mode){
   if(!profile||!['factory','update'].includes(mode))throw new Error('Choose a supported board and installation type.');
   const expected=[['bootloader.bin',0],['partitions.bin',0x8000],['boot_app0.bin',0xe000],['firmware.bin',0x10000]];
   if(mode==='factory')expected.push(['littlefs.bin',profile.filesystemOffset]);
-  if(mode==='factory'&&board==='waveshare'&&/^0\.(?:9\.(?:[8-9]|\d{2,})|(?:10|11|12)\.\d+)$/.test(data?.version))expected.push(['reconfs.bin',profile.reconOffset]);
+  if(mode==='factory'&&board==='waveshare'&&/^0\.(?:9\.(?:[8-9]|\d{2,})|(?:10|11|12|13)\.\d+)$/.test(data?.version))expected.push(['reconfs.bin',profile.reconOffset]);
   const build=data?.builds?.[0];
-  if(board==='waveshare_lite'&&!/^0\.(?:9\.([4-9]|\d{2,})|(?:10|11|12)\.\d+)$/.test(data?.version))throw new Error('Waveshare Lite requires a 0.9.4 or newer matching manifest.');
-  if(board==='xiao_round'&&!/^0\.(?:9\.([2-9]|\d{2,})|(?:10|11|12)\.\d+)$/.test(data?.version))throw new Error('XIAO Round Display requires a 0.9.2 or newer matching manifest.');
-  if(data?.name!==`Dragon Detector — ${profile.firmwareName} (${mode})`||!/^0\.(?:[3-9]|10|11|12)\.\d+$/.test(data.version)||data.new_install_prompt_erase!==(mode==='factory')||data.builds?.length!==1||build?.chipFamily!=='ESP32-S3'||build.parts?.length!==expected.length||expected.some(([path,offset],i)=>build.parts[i]?.path!==path||build.parts[i]?.offset!==offset))throw new Error('Firmware manifest does not match this exact board and installation type.');
+  if(board==='waveshare_lite'&&!/^0\.(?:9\.([4-9]|\d{2,})|(?:10|11|12|13)\.\d+)$/.test(data?.version))throw new Error('Waveshare Lite requires a 0.9.4 or newer matching manifest.');
+  if(board==='xiao_round'&&!/^0\.(?:9\.([2-9]|\d{2,})|(?:10|11|12|13)\.\d+)$/.test(data?.version))throw new Error('XIAO Round Display requires a 0.9.2 or newer matching manifest.');
+  if(data?.name!==`Dragon Detector — ${profile.firmwareName} (${mode})`||!/^0\.(?:[3-9]|10|11|12|13)\.\d+$/.test(data.version)||data.new_install_prompt_erase!==(mode==='factory')||data.builds?.length!==1||build?.chipFamily!=='ESP32-S3'||build.parts?.length!==expected.length||expected.some(([path,offset],i)=>build.parts[i]?.path!==path||build.parts[i]?.offset!==offset))throw new Error('Firmware manifest does not match this exact board and installation type.');
   return data;
 }

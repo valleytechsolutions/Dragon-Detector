@@ -1,4 +1,4 @@
-#ifdef BOARD_AMOLED_175C
+#ifndef BOARD_RADAR_LITE
 #include <stdint.h>
 #include <esp_idf_version.h>
 // Marauder-compatible raw frame adapter, MIT reference notice in

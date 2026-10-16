@@ -1,3 +1,5 @@
+> **0.13:** Utilities replaces Daily. Badge editing stays in the web Badge Studio. The first Recon row now includes **Attacks**, with separate Wi-Fi and BLE lists on all four full boards. Existing partitions, badge and settings are preserved by a matching Update. [New features](RECON-013.md).
+
 > **0.12 update:** Hunt, badge and ordinary screens continue BLE/Wi-Fi detection. Channel selection is now a priority after a full sweep, and manual Pause is removed. Explicit Waveshare radio modes remain exclusive when selected. Open **Tools → System → Recon notebook** for passive payload/probe evidence, or use **Settings → Recon notebook**. [Scan timing and export](RECON-NOTEBOOK.md).
 
 # Daily detection and hunting · 0.10.0
@@ -137,7 +139,7 @@ Additional USB commands: `radio active`, `radio passive`, `screen targets`, `scr
 
 ## Daily timing and orientation
 
-Tools → Daily → Stopwatch provides touch Start/Pause, Lap/Reset, and a lap list; hardware keys work while that page is open. Tools → Daily → Clock and Settings → Clock & date configure the local clock. Settings → Orientation saves a fixed 0°/90°/180°/270° angle. [Full stopwatch, RTC and orientation guide](STOPWATCH-CLOCK-ORIENTATION.md).
+Tools → Utilities → Stopwatch provides touch Start/Pause, Lap/Reset, and a lap list; hardware keys work while that page is open. Tools → Utilities → Clock and Settings → Clock & date configure the local clock. Settings → Orientation saves a fixed 0°/90°/180°/270° angle. [Full stopwatch, RTC and orientation guide](STOPWATCH-CLOCK-ORIENTATION.md).
 
 ## Seeed XIAO Round Display
 
