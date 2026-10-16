@@ -4,7 +4,7 @@ import {crc32,encodeBadge,cropGeometry,fitCircleZoom} from '../web/badge-codec.j
 import {BadgeSerial} from '../web/serial.js';
 import {uploadBadge,BADGE_CHUNK_SIZE} from '../web/badge-transfer.js';
 import {readHistory} from '../web/detector-transfer.js';
-import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools} from '../web/firmware-compat.js';
+import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasBrandedThemes} from '../web/firmware-compat.js';
 import {readRadarSettings,saveRadarSettings} from '../web/radar-transfer.js';
 import {readFileSync} from 'node:fs';
 import {boardProfiles,connectedProfile,validateManifest,supportsBadge} from '../web/board-profiles.js';
@@ -84,8 +84,10 @@ test('USB handshake accepts current/legacy boards and gates detector/activity to
   assert.equal(hasDetectorTools('0.50.0'),false);
 });
 
+test('branded themes require 0.13.1 firmware',()=>{for(const v of ['0.12.9','0.13.0','invalid'])assert.equal(hasBrandedThemes(v),false);for(const v of ['0.13.1','0.13.12'])assert.equal(hasBrandedThemes(v),true);});
+
 test('radar settings preserve all themes and gate each acknowledged write',async()=>{
-  for(const [index,theme] of ['dragon','green','gold'].entries()){
+  for(const [index,theme] of ['dragon','green','gold','valleytech','biscuit','marauder'].entries()){
     const writes=[];const replies=[`RADAR_SETTINGS theme=${index} labels=1 recent=0 page=1 pages=2 plotted=6`,`RADAR_THEME ${index}`,'RADAR_LABELS 1','RADAR_RECENT 0'];
     const link={write:async s=>writes.push(s),wait:async match=>{const s=replies.shift();assert.ok(match(s));return s;}};
     const config=await readRadarSettings(link);assert.deepEqual(config,{theme,labels:true,recent:false});await saveRadarSettings(link,config);

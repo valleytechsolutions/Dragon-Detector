@@ -1,5 +1,13 @@
-# Validation status · 0.13.0
+# Validation status · 0.13.1
 
+
+
+## Branded radar themes · 0.13.1 · 2026-10-16
+
+- All five local board builds and package checks passed; the smallest remaining application reserve is 26.8% on XIAO. All 55 web tests and the native parser/tracking/fuzz checks pass, including the 158 SquachWatch table facts. Release CI additionally requires five builds and ASan/UBSan.
+- The connected Waveshare received an application-only update. All six theme selections returned the correct USB index and produced CRC-verified logical 466×466 display captures. The three branded renders were visually checked for logo contrast, status-strip clearance and readable, unchanged family-colored labels. Production web read/save functions also round-tripped all six themes over real USB, restoring the original selection afterward. Invalid theme names were rejected without changing the selection. Physical panel/touch confirmation was not repeated for this appearance-only change.
+- Both radio counters and channel 1–11 dwell advanced during theme switching. Final checks reported 23/23 self-tests, zero receive drops in the short validation interval, the original badge CRC/startup preference, and unchanged radar, audio, brightness/timeouts, fixed orientation and clock offset. The saved Black / gold / red theme was restored. This does not establish long-duration reception or battery performance.
+- The other full boards have native 360/240-pixel logo assets and successful builds; their physical displays were not attached for this release. Lite remains fixed green and excludes the new logo arrays. Existing partitions and reserve rules are unchanged.
 
 ## Four-board recon lab · 0.13.0 · 2026-10-16
 

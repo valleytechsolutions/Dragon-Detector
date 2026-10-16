@@ -94,3 +94,9 @@ The independent Recon Notebook, cooperative USB receive processing, jitter-toler
 ## 0.13 independent implementations
 
 Recon-session records use factual RCN1/PRB1/REL1 layouts from the already credited Marauder revision `d3ceb28afeda1196ca27c13adeaa69ada52383f3`; its MIT notice remains included. The bounded recipe engine, AP archive, UI scaling, GATT bridge and HID semantic decoder are original code. HID parsing follows the [USB HID 1.11 specification](https://www.usb.org/sites/default/files/hid1_11.pdf). Registry compression follows the public [LZ4 block format](https://github.com/lz4/lz4/blob/dev/doc/lz4_Block_format.md) using an independently written encoder and bounded decoder; no LZ4 library implementation is bundled. ChimeraBLE remains a workflow reference, not a linked dependency.
+
+## Radar theme artwork · 0.13.1
+
+The project owner supplied the unchanged source PNGs for [Valleytech Custom Solutions](media/theme-logos/valleytech.png), [Biscuit Shop](media/theme-logos/biscuit-shop.png), and [JustCallMeKoko / Marauder](media/theme-logos/jcmk.png). Artwork and brand rights remain with their respective owners; the software MIT license does not grant rights to these marks or imply endorsement. These are optional Dragon Detector appearance themes, not official firmware ports or affiliations.
+
+`tools/encode_radar_logo.py` encodes native 240/360/466-pixel panel assets from the supplied originals, preserving aspect ratio and alpha. The black Valleytech mark sits on a light LVGL plate for contrast; Biscuit's white artwork retains its transparency; JCMK retains its supplied black background. The original three themes retain the BWM1 logo. Palettes, layout and drawing code are original Dragon Detector work. Lite keeps its existing fixed green radar and does not include the new logo arrays.

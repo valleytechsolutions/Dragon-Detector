@@ -1,5 +1,12 @@
 # Changes
 
+## 0.13.1 — Branded radar themes
+
+- Added Valleytech (silver/cyan), Biscuit Shop (warm amber) and Marauder (black/red), each with the owner-supplied radar logo, on all four full boards.
+- Theme selection is available in Settings → Radar theme & labels and the USB web tools. New choices are gated on older firmware. Existing theme indices, badge, preferences and partitions are preserved.
+- Native-resolution logo assets avoid runtime scaling and retain the original source PNGs. Device-family colors, labels, sweep animation and background scanning are unchanged. Lite stays fixed green.
+- Web gallery and theme guide show CRC-verified Waveshare renders; attribution records identify the supplied artwork separately from MIT application code.
+
 ## 0.13.0 — Four-board recon lab and clearer tools
 
 - Rename Daily to Utilities, remove the on-device Badge editor shortcut, and put Attacks in the first Recon row with separate Wi-Fi and BLE lists. Keep browser Badge Studio.

@@ -14,3 +14,6 @@ export function hasActivityTools(version){return /^0\.(?:[6789]|10|11|12|13)\.\d
 export function hasRadarTools(version){return /^0\.(?:[789]|10|11|12|13)\.\d+$/.test(version);}
 
 export function hasWearableTools(version){return /^0\.(?:9|10|11|12|13)\.\d+$/.test(version);}
+
+// Branded radar assets and indices 3..5 first shipped in 0.13.1.
+export function hasBrandedThemes(version){return /^0\.13\.[1-9]\d*$/.test(version);}

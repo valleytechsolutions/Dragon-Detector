@@ -14,7 +14,7 @@ Radius follows filtered RSSI: stronger signals move inward. Values stronger than
 
 After ten seconds without reception, a selected label shows its last-seen age. **Recent signals** retains previously recognized contacts for up to two minutes as segmented, muted markers with age. This display-only retention never refreshes evidence, triggers an alert, or makes Hunt audio treat a lost signal as live. Turn it off to return to the 30-second radar expiry. Disabled families and ignored addresses remain suppressed. Slot pressure can evict older contacts before that limit.
 
-USB commands: `radar status`, `radar theme green|dragon|gold`, `radar labels on|off`, `radar recent on|off`, `radar scope candidates|all`. Preferences also load/save from the 0.7 web detector tools.
+USB commands: `radar status`, `radar theme green|dragon|gold|valleytech|biscuit|marauder`, `radar labels on|off`, `radar recent on|off`, `radar scope candidates|all`. Preferences also load/save from the 0.7 web detector tools.
 
 Signal filtering takes at most one sample per 100 ms, applies a five-sample median and then an elapsed-time exponential filter. Repeating the same radio packet faster does not make a target move inward. Fast/Balanced/Steady smoothing settings remain available. No transmit-power assumptions are used to invent metres. RSSI remains the available passive proximity cue. ESP32-S3 FTM ranging requires a compatible cooperating peer and is not a universal passive measurement: [Espressif FTM reference](https://docs.espressif.com/projects/esp-idf/en/v5.0.5/esp32s3/api-guides/wifi.html#fine-timing-measurement-ftm).
 
@@ -42,3 +42,5 @@ Crowded environments and address rotation can trigger these heuristics. Identica
 Open **Tools → Activity**, or tap a recent-activity banner on the radar. Events stores the alert detail; contact evidence explains the matched participant. Family toggles, confidence controls and quiet mode continue to apply to alerts. The web tool's **Show radio activity** shortcut requires 0.6.x or 0.7.x. USB `traffic status` returns aggregate counters; `screen activity` opens the panel.
 
 Balanced reception alternates Wi-Fi and BLE; hunting prioritizes one radio, so other activity can be missed. Only the currently received Wi-Fi channel is observed. These are decoded-frame detectors, not RF jamming measurements. All 134 pinned SquachWatch signature checks remain enforced. See [coverage](COVERAGE-AUDIT.md), [validation](VALIDATION.md) and [credits](../CREDITS.md).
+
+The three branded themes require firmware 0.13.1 or newer. [Previews and logos](THEMES.md).

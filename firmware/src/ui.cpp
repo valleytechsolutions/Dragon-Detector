@@ -17,7 +17,7 @@
 extern void scr_lvgl_init();
 extern void set_brightness(uint8_t);
 extern const lv_img_dsc_t vts_logo;
-extern const lv_img_dsc_t radar_logo;
+extern const lv_img_dsc_t radar_logo,radar_logo_valleytech,radar_logo_biscuit,radar_logo_marauder;
 // The layout is authored for the 360 px round panel. S() maps it onto the
 // board's panel; label/button/row helpers apply it, so callers pass 360 px units.
 #if SCREEN_RES<=240
@@ -64,9 +64,18 @@ struct RadarPalette {uint32_t top,bottom,grid,ring,dot,sweep,text,panel;};
 static const RadarPalette radarPalettes[]={
   {0x20b970,0x0c9553,0x095134,0xe0e5cd,0xffec50,0xb9ff72,0xfffae2,0x064a2e},
   {0x09291c,0x020c08,0x153d28,0x286c42,0xc0ff65,0x52dc84,0xdbf9c3,0x0b2419},
-  {0x19130b,0x070707,0x3e301b,0xa88742,0xffd166,0xe54138,0xffe4a3,0x21190f}
+  {0x19130b,0x070707,0x3e301b,0xa88742,0xffd166,0xe54138,0xffe4a3,0x21190f},
+  {0x091820,0x03090e,0x183440,0x71919d,0xdcebf0,0x63d5ef,0xe5f3f9,0x10242e},
+  {0x22180e,0x0c0805,0x49331e,0xaf7c40,0xffdf9e,0xffc56b,0xffecd0,0x2e2014},
+  {0x000000,0x100405,0x36161b,0xa34550,0xf0eeee,0xff354e,0xffe9ec,0x240c11}
 };
-static const char* radarThemeNames[]={"Dragon Ball","Green radar","Black / gold / red"};
+// Persistent indices 0..2 remain unchanged for existing settings.
+static const char* radarThemeNames[]={"Dragon Ball","Green radar","Black / gold / red","Valleytech","Biscuit Shop","Marauder"};
+static const char* radarThemeCommands[]={"dragon","green","gold","valleytech","biscuit","marauder"};
+static const char* radarThemeDescriptions[]={"Emerald grid / colored device families","Green phosphor / rings and live sweep","Dark field / gold rings / red sweep","Silver rings / cyan sweep / VTS logo","Warm amber / cream / Biscuit Shop logo","Black field / red sweep / JCMK logo"};
+static const lv_img_dsc_t* radarLogos[]={&radar_logo,&radar_logo,&radar_logo,&radar_logo_valleytech,&radar_logo_biscuit,&radar_logo_marauder};
+static constexpr unsigned RadarThemeCount=sizeof(radarThemeNames)/sizeof(radarThemeNames[0]);
+static_assert(sizeof(radarPalettes)/sizeof(radarPalettes[0])==RadarThemeCount && sizeof(radarLogos)/sizeof(radarLogos[0])==RadarThemeCount && sizeof(radarThemeCommands)/sizeof(radarThemeCommands[0])==RadarThemeCount && sizeof(radarThemeDescriptions)/sizeof(radarThemeDescriptions[0])==RadarThemeCount,"Every radar theme needs a palette, logo and menu/USB name");
 static HistoryRecord historySelection;
 static int devicePage=0,deviceRows=0,deviceTotal=0;
 static dragon::DeviceKey deviceKeys[10];
@@ -213,7 +222,9 @@ static void build(){
   }else if(page==Radar){
     radar=lv_obj_create(root);lv_obj_remove_style_all(radar);lv_obj_set_pos(radar,0,0);lv_obj_set_size(radar,SCREEN_RES,SCREEN_RES);lv_obj_clear_flag(radar,LV_OBJ_FLAG_SCROLLABLE);lv_obj_add_flag(radar,LV_OBJ_FLAG_CLICKABLE);
     lv_obj_add_event_cb(radar,radarDraw,LV_EVENT_DRAW_MAIN,nullptr);lv_obj_add_event_cb(radar,radarTap,LV_EVENT_CLICKED,nullptr);
-    auto* logo=lv_img_create(root);lv_img_set_src(logo,&radar_logo);lv_obj_align(logo,LV_ALIGN_TOP_MID,0,S(17));lv_obj_clear_flag(logo,LV_OBJ_FLAG_CLICKABLE);
+    // A light LVGL plate makes the unmodified black VTS artwork legible.
+    if(radarTheme==3){auto* plate=lv_obj_create(root);lv_obj_remove_style_all(plate);lv_obj_set_size(plate,radarLogos[radarTheme]->header.w+S(5),radarLogos[radarTheme]->header.h+S(4));lv_obj_align(plate,LV_ALIGN_TOP_MID,0,S(15));lv_obj_set_style_bg_color(plate,color(0xffffff),0);lv_obj_set_style_bg_opa(plate,LV_OPA_COVER,0);lv_obj_set_style_radius(plate,S(4),0);lv_obj_clear_flag(plate,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);}
+    auto* logo=lv_img_create(root);lv_img_set_src(logo,radarLogos[radarTheme]);lv_obj_align(logo,LV_ALIGN_TOP_MID,0,S(17));lv_obj_clear_flag(logo,LV_OBJ_FLAG_CLICKABLE);
     const auto& theme=radarPalettes[radarTheme];
     statusLabel=label(root,"LISTENING",56,66,248,F12,theme.text);lv_obj_set_style_text_align(statusLabel,LV_TEXT_ALIGN_CENTER,0);legible(statusLabel);lv_obj_set_style_bg_color(statusLabel,color(theme.panel),0);lv_obj_set_style_bg_opa(statusLabel,LV_OPA_60,0);
     radarActivity=label(root,"",75,84,210,F12,0xffbc76);lv_obj_set_style_text_align(radarActivity,LV_TEXT_ALIGN_CENTER,0);legible(radarActivity);lv_obj_add_flag(radarActivity,LV_OBJ_FLAG_CLICKABLE);lv_obj_add_event_cb(radarActivity,action,LV_EVENT_CLICKED,(void*)116);
@@ -417,7 +428,7 @@ static void build(){
     for(unsigned i=0;i<unsigned(Family::Count);++i)row(body,dragon::familyName(Family(i)),"Dot, leader and label",i,0,dragon::familyColor(Family(i)));
   }else if(page==RadarStyle){
     title("RADAR STYLE");body=scrollBody();int n=0;
-    for(int i=0;i<3;++i){String name=String(radarTheme==i?LV_SYMBOL_OK "  ":"")+radarThemeNames[i];row(body,name.c_str(),i==0?"Emerald grid / colored device families":i==1?"Green phosphor / rings and live sweep":"Dark field / gold rings / red sweep",n++,118+i);}
+    for(unsigned i=0;i<RadarThemeCount;++i){String name=String(radarTheme==i?LV_SYMBOL_OK "  ":"")+radarThemeNames[i];row(body,name.c_str(),radarThemeDescriptions[i],n++,9000+i);}
     row(body,"Device color legend","Unique family colors in every theme",n++,150);
     row(body,radarLabels?"Device labels: ON":"Device labels: OFF",radarLabels?"Priority tags + tapped dot / all dots visible":"All dots together / tap for evidence",n++,121);
     row(body,radarRecent?"Recent signals: 2 minutes":"Recent signals: OFF","Stale dots show last-seen age, not live RSSI",n++,124);
@@ -440,6 +451,7 @@ static void action(lv_event_t* e){
   ++inputActions;lastInputAction=int(intptr_t(lv_event_get_user_data(e)));
   lastInteraction=millis();
   int id=(intptr_t)lv_event_get_user_data(e);
+  if(id>=9000 && id<9000+int(RadarThemeCount)){radarTheme=id-9000;settings.putUChar("radar-theme",radarTheme);go(RadarStyle);page=Boot;return;}
   if(id>=2000 && id<2096){int i=id-2000;if(i>=fileCount)return;if(files[i].dir){directory=files[i].path;go(Files);page=Boot;}else{String ext=files[i].path;ext.toLowerCase();if(ext.endsWith(".mp3")||ext.endsWith(".wav")){audioPlay(files[i].path);go(Audio);}else{
       xSemaphoreTake(sdMutex,portMAX_DELAY);File f=CardFS.open(files[i].path);String text;while(f && f.available() && text.length()<2048){char ch=f.read();text+=(ch=='\n'||ch=='\t'||(ch>=32&&ch<127))?ch:'.';}f.close();xSemaphoreGive(sdMutex);
       lv_obj_t* box=lv_msgbox_create(root,"FILE PREVIEW",text.c_str(),nullptr,true);lv_obj_set_size(box,S(260),S(225));lv_obj_center(box);
@@ -542,7 +554,6 @@ static void action(lv_event_t* e){
     case 116:go(Activity);break;
     case 117:go(RadarStyle);break;
     case 152:if(radarPrimary>=0&&contacts[radarPrimary].used){selectContact(radarPrimary);go(Details);}else if(trackedContact>=0)go(Hunt);break;
-    case 118:case 119:case 120:radarTheme=id-118;settings.putUChar("radar-theme",radarTheme);go(RadarStyle);page=Boot;break;
     case 121:radarLabels=!radarLabels;settings.putBool("radar-labels",radarLabels);go(RadarStyle);page=Boot;break;
     case 124:radarRecent=!radarRecent;settings.putBool("radar-recent",radarRecent);go(RadarStyle);page=Boot;break;
     case 110:if(historyPage>0)--historyPage;go(History);page=Boot;break;
@@ -579,7 +590,7 @@ void uiBegin(){
   if(!settings.getBool("panel-v04",false)){settings.putUChar("brightness",100);settings.putBool("panel-v04",true);}
   brightness=settings.getUChar("brightness",100);if(brightness<25||brightness>100)brightness=100;candidatesOnly=settings.getBool("candidates",true);
   if(!settings.getBool("radar-v07",false)){settings.putBool("radar-labels",true);settings.putUChar("radar-theme",1);settings.putBool("radar-v07",true);}
-  radarLabels=settings.getBool("radar-labels",true);radarRecent=settings.getBool("radar-recent",true);radarTheme=settings.getUChar("radar-theme",1);if(radarTheme>2)radarTheme=1;
+  radarLabels=settings.getBool("radar-labels",true);radarRecent=settings.getBool("radar-recent",true);radarTheme=settings.getUChar("radar-theme",1);if(radarTheme>=RadarThemeCount)radarTheme=1;
   scr_lvgl_init();set_brightness(brightness);lastInteraction=millis();root=lv_scr_act();lv_obj_clear_flag(root,LV_OBJ_FLAG_SCROLLABLE);lv_obj_set_style_bg_color(root,color(0x071510),0);
 #ifndef BOARD_RADAR_LITE
   pinMode(BTN_PIN,INPUT_PULLUP);
@@ -657,7 +668,7 @@ bool uiCommand(const String& cmd){
   if(cmd=="radar labels on"||cmd=="radar labels off"){radarLabels=cmd.endsWith("on");settings.putBool("radar-labels",radarLabels);Serial.printf("RADAR_LABELS %u\n",radarLabels);return true;}
   if(cmd=="radar recent on"||cmd=="radar recent off"){radarRecent=cmd.endsWith("on");settings.putBool("radar-recent",radarRecent);Serial.printf("RADAR_RECENT %u\n",radarRecent);return true;}
   if(cmd=="radar next"||cmd=="radar previous"){Serial.println("RADAR_ALL_CONTACTS no pages");return true;}
-  if(cmd=="radar theme dragon"||cmd=="radar theme green"||cmd=="radar theme gold"){radarTheme=cmd.endsWith("dragon")?0:cmd.endsWith("green")?1:2;settings.putUChar("radar-theme",radarTheme);go(Radar);page=Boot;Serial.printf("RADAR_THEME %u\n",radarTheme);return true;}
+  if(cmd.startsWith("radar theme ")){for(unsigned i=0;i<RadarThemeCount;++i)if(cmd.substring(12)==radarThemeCommands[i]){radarTheme=i;settings.putUChar("radar-theme",radarTheme);go(Radar);page=Boot;Serial.printf("RADAR_THEME %u\n",radarTheme);return true;}Serial.println("RADAR_THEME_ERROR unknown theme");return true;}
   if(cmd=="display status"){Serial.printf("DISPLAY_SETTINGS brightness=%d output=%d dim=%u off=%u dim_level=%u wake=%u\n",brightness,outputBrightness,detector.dimSeconds,detector.offSeconds,detector.idleBrightness,detector.wakeAlert);return true;}
   if(cmd.startsWith("display set ")){
     unsigned b=0,dim=0,off=0,level=0;char extra;
