@@ -71,7 +71,7 @@ async def main():
    await asyncio.sleep(2)
   raise AssertionError('Own synthetic UUID not seen')
  try:
-  assert 'BADGE_INFO 0.11.0 466 READY Waveshare' in await cmd('badge info')
+  assert re.search(r'BADGE_INFO 0\.11\.\d+ 466 READY Waveshare',await cmd('badge info'))
   original_badge=re.search(r'BADGE_CHECKSUM [^\r\n]+',await cmd('badge checksum'))[0]
   await cmd('screen radar');await cmd('lab stop');await b.idle();await cmd('lab pairing 0 1 0')
   svc=uuid.uuid4();ch=uuid.uuid4();p,c,token,cb=await provider(svc,ch,P.READ|P.WRITE|P.WRITE_WITHOUT_RESPONSE|P.NOTIFY,b'DD011 fixture')

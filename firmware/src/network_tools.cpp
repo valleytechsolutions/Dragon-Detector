@@ -20,8 +20,9 @@ Profile profiles[8];Preferences prefs;
 bool active=false,connected=false,resume=false,scanning=false,waiting=false;
 uint8_t oldLock=0;unsigned selected=0;uint32_t started=0,lastCheck=0,sentAt=0,nextAt=0;
 esp_netif_t* iface=nullptr;esp_netif_ip_info_t address{};int fd=-1;
-esp_event_handler_instance_t wifiEvents=nullptr;std::atomic<unsigned> disconnectReason{0};
-void wifiEvent(void*,esp_event_base_t,int32_t event,void* data){if(event==WIFI_EVENT_STA_DISCONNECTED&&data)disconnectReason=static_cast<wifi_event_sta_disconnected_t*>(data)->reason;}
+esp_event_handler_instance_t wifiEvents=nullptr;std::atomic<unsigned> disconnectReason{0},disconnectCount{0};
+unsigned attempts=0,handledDisconnect=0;uint32_t lastAttempt=0;
+void wifiEvent(void*,esp_event_base_t,int32_t event,void* data){if(event==WIFI_EVENT_STA_DISCONNECTED&&data){disconnectReason=static_cast<wifi_event_sta_disconnected_t*>(data)->reason;++disconnectCount;}}
 uint32_t nextHost=0,lastHost=0,currentHost=0,nonce=0;uint16_t identifier=0,sequence=0;
 unsigned sent=0,received=0,missed=0,errors=0;bool dirty=false;
 struct Result {uint32_t host;uint16_t elapsed;};Result results[254];unsigned count=0;
@@ -66,7 +67,7 @@ bool networkConnect(unsigned index){using namespace dragon::toolkit;
  if(index>=8||!valid(profiles[index])||reconOwnsRadio()||bleLabOwnsRadio()||status.recording||ESP.getFreeHeap()<35000){note("Choose a saved profile; stop other radio sessions");return false;}
  esp_err_t err=esp_netif_init();if(err!=ESP_OK&&err!=ESP_ERR_INVALID_STATE)return false;
  iface=esp_netif_create_default_wifi_sta();if(!iface){note("Network interface unavailable");return false;}
- resume=radioEnabled;oldLock=channelLock;setRadio(false);active=true;connected=false;address={};selected=index;started=millis();lastCheck=0;disconnectReason=0;
+ resume=radioEnabled;oldLock=channelLock;setRadio(false);active=true;connected=false;address={};selected=index;started=millis();lastCheck=0;disconnectReason=0;disconnectCount=0;handledDisconnect=0;attempts=1;lastAttempt=started;
  if(esp_event_handler_instance_register(WIFI_EVENT,ESP_EVENT_ANY_ID,wifiEvent,nullptr,&wifiEvents)!=ESP_OK){networkStop();return false;}
  wifi_config_t cfg{};memcpy(cfg.sta.ssid,profiles[index].name,strlen(profiles[index].name));memcpy(cfg.sta.password,profiles[index].password,strlen(profiles[index].password));cfg.sta.threshold.authmode=*profiles[index].password?WIFI_AUTH_WPA2_PSK:WIFI_AUTH_OPEN;cfg.sta.pmf_cfg.capable=true;cfg.sta.pmf_cfg.required=false;
  err=esp_wifi_set_mode(WIFI_MODE_STA);if(err==ESP_OK)err=esp_wifi_set_config(WIFI_IF_STA,&cfg);memset(cfg.sta.password,0,sizeof(cfg.sta.password));if(err==ESP_OK)err=esp_wifi_connect();
@@ -76,7 +77,8 @@ void networkLoop(){if(!active)return;uint32_t now=millis();if(now-started>=15*60
  if(now-lastCheck>=300){lastCheck=now;wifi_ap_record_t ap{};esp_netif_ip_info_t got{};bool online=esp_wifi_sta_get_ap_info(&ap)==ESP_OK&&esp_netif_get_ip_info(iface,&got)==ESP_OK&&got.ip.addr;
  if(online){address=got;if(!connected){connected=true;note("Connected / ping gateway or scan local subnet");}}
  else if(connected){networkStop();note("Network lost / radar restored");return;}
- else if(now-started>25000){networkStop();note("Join timed out / check Wi-Fi settings");return;}}
+ else if(now-started>25000){networkStop();note("Join timed out / check Wi-Fi settings");return;}
+ else if(attempts<3&&disconnectCount.load()!=handledDisconnect&&now-lastAttempt>=1500){handledDisconnect=disconnectCount.load();++attempts;lastAttempt=now;esp_err_t retry=esp_wifi_connect();if(retry!=ESP_OK){networkStop();note("Connection retry failed / radar restored");return;}snprintf(message,sizeof(message),"Joining / attempt %u of 3 / reason %u",attempts,disconnectReason.load());}}
  scanLoop(now);
 }
 bool networkPingGateway(){uint32_t gw=ntohl(address.gw.addr);return scanStart(gw,gw);}
@@ -84,7 +86,7 @@ bool networkScanLocal(){uint32_t own=ntohl(address.ip.addr),mask=ntohl(address.n
 void networkStatus(char* out,size_t cap,bool readable){esp_netif_dns_info_t dns{};if(iface&&connected)esp_netif_get_dns_info(iface,ESP_NETIF_DNS_MAIN,&dns);wifi_ap_record_t ap{};bool associated=active&&esp_wifi_sta_get_ap_info(&ap)==ESP_OK;
  if(readable&&!connected){snprintf(out,cap,"%s\n%s\n\nNo automatic connection at boot.\n\nLast scan: %u sent / %u replied\n%u no reply / %u send errors\n\n%s",active?"JOINING / WAITING FOR IP":"DISCONNECTED",active?profiles[selected].name:"Choose Saved networks above",sent,received,missed,errors,message);return;}
  if(readable)snprintf(out,cap,"%s\n%s\nIP %s\nGateway %s\nMask %s / CH%u\nDNS %s / %d dBm\n\nPing: %u sent / %u replied\n%u no reply / %u send errors\n%s\n\n%s",connected?"NETWORK CONNECTED":active?"JOINING":"DISCONNECTED",active?profiles[selected].name:"No automatic connection",ip(ntohl(address.ip.addr)).c_str(),ip(ntohl(address.gw.addr)).c_str(),ip(ntohl(address.netmask.addr)).c_str(),ap.primary,ip(ntohl(dns.ip.u_addr.ip4.addr)).c_str(),ap.rssi,sent,received,missed,errors,scanning?"SCAN RUNNING":"SCAN IDLE",message);
- else snprintf(out,cap,"active=%u connected=%u scanning=%u ip=%s gateway=%s mask=%s dns=%s channel=%u rssi=%d associated=%u disconnect_reason=%u sent=%u received=%u timeouts=%u errors=%u retained=%u dirty=%u message=%s",active,connected,scanning,ip(ntohl(address.ip.addr)).c_str(),ip(ntohl(address.gw.addr)).c_str(),ip(ntohl(address.netmask.addr)).c_str(),ip(ntohl(dns.ip.u_addr.ip4.addr)).c_str(),ap.primary,ap.rssi,associated,disconnectReason.load(),sent,received,missed,errors,count,dirty,message);
+ else snprintf(out,cap,"active=%u connected=%u scanning=%u ip=%s gateway=%s mask=%s dns=%s channel=%u rssi=%d associated=%u disconnect_reason=%u attempts=%u sent=%u received=%u timeouts=%u errors=%u retained=%u dirty=%u message=%s",active,connected,scanning,ip(ntohl(address.ip.addr)).c_str(),ip(ntohl(address.gw.addr)).c_str(),ip(ntohl(address.netmask.addr)).c_str(),ip(ntohl(dns.ip.u_addr.ip4.addr)).c_str(),ap.primary,ap.rssi,associated,disconnectReason.load(),attempts,sent,received,missed,errors,count,dirty,message);
 }
 bool networkSaveResults(){if(scanning||!dirty)return false;auto* fs=bleLabStorage();if(!fs||!bleLabStorageSpace(32768))return false;char names[32][48];size_t sizes[32];if(dragon::toolkit::fileList(names,sizes,32)>=32)return false;fs->mkdir("/captures");char path[64];snprintf(path,sizeof(path),"/captures/net-%08lx.csv",esp_random());String temp=String(path)+".part";if(fs->exists(path)||fs->exists(temp))return false;File f=fs->open(temp,FILE_WRITE);if(!f)return false;bool ok=f.printf("# sent=%u,replied=%u,no_reply=%u,send_errors=%u\nipv4,rtt_ms\n",sent,received,missed,errors)>0;for(unsigned i=0;i<count&&ok;++i)ok=f.printf("%s,%u\n",ip(results[i].host).c_str(),results[i].elapsed)>0;f.flush();f.close();ok=ok&&fs->rename(temp,path);if(ok){dirty=false;snprintf(message,sizeof(message),"Saved %s",path+10);}else fs->remove(temp);return ok;}
 bool networkCommand(const String& c){if(!c.startsWith("net "))return false;unsigned n;char tail;

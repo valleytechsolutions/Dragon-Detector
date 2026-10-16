@@ -26,7 +26,11 @@ async def run(port,output):
    await asyncio.sleep(.3)
   raise AssertionError(s)
  try:
-  initial=await cmd('tool status');assert 'active=0' in initial and 'recording=0' in initial,initial
+  initial=''
+  for _ in range(15):
+   initial=await cmd('tool status',1)
+   if 'MODE_STATUS ' in initial:break
+  assert 'active=0' in initial and 'recording=0' in initial,initial
   assert 'active=0' in await cmd('net status')
   original_badge=await cmd('badge checksum',1.5)
   profiles=await cmd('net profiles');used={int(x) for x in re.findall(r'RECON_NETWORK_PROFILE (\d+) ',profiles)}
