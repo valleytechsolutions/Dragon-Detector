@@ -1,5 +1,12 @@
 # Changes
 
+## 0.13.2 — Hardware-aware storage and clearer installation
+
+- Remove SD menus, settings, command handlers, card prompts and logging/browser allocation from Waveshare AMOLED and M5Stack builds. Skip CSV formatting when SD logging is unavailable or disabled.
+- Utilities → Saved files opens internal-flash captures on those boards. All four full boards gain Settings shortcuts for Capture studio and Saved captures. Spotpear and XIAO keep their real SD features; Lite remains radar-only.
+- Add build guards against unsupported SD UI strings, and extend live scan-continuity checks to Utilities, saved files and Capture Studio.
+- Publish current Waveshare GUI pictures, a GUI tour, hardware feature/storage tables, current update compatibility instructions and board-specific information in the web flasher. Existing partitions, badge and preferences are unchanged.
+
 ## 0.13.1 — Branded radar themes
 
 - Added Valleytech (silver/cyan), Biscuit Shop (warm amber) and Marauder (black/red), each with the owner-supplied radar logo, on all four full boards.

@@ -1,4 +1,12 @@
-# Validation status · 0.13.1
+# Validation status · 0.13.2
+
+## Hardware-aware storage · 0.13.2 · 2026-10-16
+
+- All five local builds and package checks passed, including firmware-binary guards against SD menus/card prompts on Waveshare AMOLED, M5Stack and Lite. The other two builds retain their SD code. All 55 web tests and documentation/manifest/image checks pass. Release CI additionally requires the native/fuzz and ASan/UBSan suites before its five builds can publish.
+- The connected Waveshare received an application-only update. Utilities, Settings and Capture Studio produced CRC-verified logical display captures, inspected for readable controls and internal-storage wording. SD driver includes, browser rows, command handlers and logging allocations are excluded from its build; no-card contact handling no longer formats unused CSV strings. The compiled Waveshare image is about 9 KiB smaller than 0.13.1 with unchanged partition sizes.
+- Ten live checks cover radar, badge, settings, utilities, saved files, Capture Studio, both notebook pages and synthetic BLE/Wi-Fi Hunt targets. Both radio dwell counters and all 11 Wi-Fi channels advance in each case. These tests start no radio transmission. The board reports 23/23 self-tests, retains the original badge CRC/startup preference, and preserves theme, audio, timers, orientation, clock offset and detector preferences. Short checks do not establish long-duration or battery performance.
+- Browser checks exercised all five hardware selections, the matching-update option, confirmation gating and board-specific storage text. Badge Studio still resizes between boards and applies fit/rotation. The new three-image GUI gallery renders, and that browser flow reports no JavaScript errors. This release does not change the badge upload protocol or partition layout.
+- Only Waveshare is physically attached for this release. Other boards are build-tested; inserted-card operation on Spotpear/XIAO and new physical touch/panel feedback are not claimed. GUI pictures are firmware renders, not panel photographs. Published packages are tied to one clean CI source commit; final release verification checks the public firmware hashes and the app flashed on Waveshare.
 
 
 

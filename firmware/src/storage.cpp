@@ -9,8 +9,10 @@ uint32_t storageDrops=0;
 uint32_t channelFrames[14]{},channelDwellMs[14]{},wifiListenMs=0,bleListenMs=0;
 bool sdReady=false,loggingEnabled=false,captureEnabled=false;
 SemaphoreHandle_t sdMutex; String sessionPath;
-static File eventFile,pcapFile; static uint32_t lastFlush=0,segment=0;
+
 void macText(const uint8_t* m,char* out){snprintf(out,18,"%02X:%02X:%02X:%02X:%02X:%02X",m[0],m[1],m[2],m[3],m[4],m[5]);}
+#if BOARD_HAS_SD
+static File eventFile,pcapFile; static uint32_t lastFlush=0,segment=0;
 static String quoted(const char* s){String o="\"";const char* start=s;while(*start==' '||*start=='\t')++start;if(*start && strchr("=+-@",*start))o+='\'';for(;*s;++s){if(*s=='"')o+='"';if(*s!='\r'&&*s!='\n')o+=*s;}return o+'"';}
 static bool openLog(){
   String p=sessionPath+"/events-"+String(segment++)+".csv";
@@ -18,7 +20,6 @@ static bool openLog(){
   if(eventFile) eventFile.println("uptime_ms,event,radio,mac,name,rssi,channel,family,confidence,evidence");
   return bool(eventFile);
 }
-#if BOARD_HAS_SD
 static void mount(){
 #if defined(BOARD_SD_SPI)
   extern bool boardMountCard();bool mounted=boardMountCard();
@@ -35,10 +36,6 @@ static void mount(){
   Serial.printf("SD: %llu MB; session created\n",CardFS.cardSize()/1048576);
   sdReady=true;
 }
-#else
-// No card slot on this board: its would-be SD pins drive the display and touch resets.
-static void mount(){Serial.println("SD: this board has no card slot");}
-#endif
 void storageBegin(){
   sdMutex=xSemaphoreCreateMutex();
   mount();
@@ -52,15 +49,24 @@ static void append(const String& line){
   xSemaphoreGive(sdMutex);
 }
 void logContact(const Contact& c,const char* event){
+  if(!sdReady || !loggingEnabled)return;
   char mac[18];macText(c.mac,mac);
   String line=String(millis())+","+event+","+(c.ble?"BLE":"WiFi")+","+mac+","+quoted(c.name)+","+String(c.rssi)+","+String(c.channel)+","+quoted(dragon::familyName(c.match.family))+","+dragon::confidenceName(c.match.confidence)+","+quoted(c.match.evidence);
   append(line);
 }
+#else
+// Flash history, badges and recon storage have their own independent drivers.
+void storageBegin(){}
+void logContact(const Contact&,const char*){}
+#endif
 void addAlert(const char* title,const char* detail,const uint8_t* mac){
   Alert& a=alerts[alertTotal%MAX_ALERTS];a={};a.at=millis();strlcpy(a.title,title,sizeof(a.title));strlcpy(a.detail,detail,sizeof(a.detail));if(mac)macText(mac,a.mac);++alertTotal;
-  append(String(a.at)+",alert,,"+a.mac+","+quoted(title)+",,,,,"+quoted(detail));
+#if BOARD_HAS_SD
+  if(sdReady && loggingEnabled)append(String(a.at)+",alert,,"+a.mac+","+quoted(title)+",,,,,"+quoted(detail));
+#endif
   if(!radioTransferDepth)Serial.printf("ALERT %s: %s\n",title,detail);
 }
+#if BOARD_HAS_SD
 bool setCapture(bool enabled){
   if(!sdReady)return false;
   xSemaphoreTake(sdMutex,portMAX_DELAY);
@@ -85,3 +91,9 @@ void writePcap(const uint8_t* p,size_t n,size_t original,uint64_t us){
   else if(full)addAlert("Capture complete","16 MB capture limit reached; start a new capture to continue");
 }
 void storageLoop(){if(sdReady && millis()-lastFlush>2000 && xSemaphoreTake(sdMutex,0)==pdTRUE){lastFlush=millis();if(eventFile)eventFile.flush();if(pcapFile)pcapFile.flush();xSemaphoreGive(sdMutex);}}
+
+#else
+bool setCapture(bool){return false;}
+void writePcap(const uint8_t*,size_t,size_t,uint64_t){}
+void storageLoop(){}
+#endif

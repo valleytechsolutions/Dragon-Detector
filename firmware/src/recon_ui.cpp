@@ -94,7 +94,7 @@ void action(lv_event_t* e){int id=(intptr_t)lv_event_get_user_data(e);if(id==1){
 }
 }
 void reconView(void* p,bool tools){root=(lv_obj_t*)p;view=pageRequested?requested:tools?Tools:Modes;pageRequested=false;redraw=true;draw();}
-void reconPage(const String& name){requested=name=="attacks"?Attacks:name=="recipes"?Recipes:name=="missions"?Missions:name=="network"?Network:name=="csi"?Csi:name=="portal"?Portal:name=="analysis"?Statistics:name=="probes"?Probes:name=="filters"?Filters:Capture;pageRequested=true;}
+void reconPage(const String& name){requested=name=="files"?Library:name=="attacks"?Attacks:name=="recipes"?Recipes:name=="missions"?Missions:name=="network"?Network:name=="csi"?Csi:name=="portal"?Portal:name=="analysis"?Statistics:name=="probes"?Probes:name=="filters"?Filters:Capture;pageRequested=true;}
 void reconViewLoop(){if(!root)return;if(pageRequested){view=requested;redraw=true;pageRequested=false;}if(redraw)draw();else if(millis()-updated>=300){updated=millis();if(view==Running||view==Capture||view==Statistics||view==Portal||view==Csi||view==Network||view==Missions||view==Recipes)updateStatus();}}
 void reconLeave(){reconStop();root=body=info=nullptr;}
 #endif

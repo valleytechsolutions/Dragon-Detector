@@ -1,16 +1,18 @@
+> **0.13.2:** Waveshare AMOLED and M5Stack use internal flash with no SD controls. Utilities → Saved files opens captures; Settings → Capture studio opens recording controls. Spotpear/XIAO retain optional SD tools. [GUI tour](GUI.md) · [Hardware comparison](HARDWARE.md).
+
 > **0.13:** Utilities replaces Daily. Badge editing stays in the web Badge Studio. The first Recon row now includes **Attacks**, with separate Wi-Fi and BLE lists on all four full boards. Existing partitions, badge and settings are preserved by a matching Update. [New features](RECON-013.md).
 
 > **0.12 update:** Hunt, badge and ordinary screens continue BLE/Wi-Fi detection. Channel selection is now a priority after a full sweep, and manual Pause is removed. Explicit Waveshare radio modes remain exclusive when selected. Open **Tools → System → Recon notebook** for passive payload/probe evidence, or use **Settings → Recon notebook**. [Scan timing and export](RECON-NOTEBOOK.md).
 
-# Daily detection and hunting · 0.10.0
+# Detection, hunting and utilities · 0.13.2
 
 This guide covers the four full-feature boards. The non-touch Waveshare ESP32-S3-LCD-1.28 has a dedicated [Lite radar guide](WAVESHARE-LITE.md); it has no menus, settings or badge mode.
 
 The radar starts at **100% brightness with no automatic dimming or screen-off timeout**. It listens passively on 2.4 GHz Wi-Fi and Bluetooth LE. The optional training fox transmitter is off at every boot.
 
-## Waveshare BLE Lab
+## BLE Lab on all four full boards
 
-On the 32 MB Waveshare AMOLED 1.75C, open **Tools → Recon → BLE Lab** to inspect advertisements, discover GATT services, read values, monitor notifications, save profiles and emulate a local test peripheral. The [BLE Lab guide](BLE-LAB.md) explains the workflow and storage upgrade. Radar reception pauses during a connection or emulation, and resumes on Stop/Home. Merely opening the lab leaves radar listening active.
+On any full board running 0.13 or newer, open **Tools → Recon → BLE Lab** to inspect advertisements, discover GATT services, read values, monitor notifications, save profiles and emulate a local test peripheral. The [BLE Lab guide](BLE-LAB.md) explains the workflow and storage upgrade. Radar reception pauses during a connection or emulation, and resumes on Stop/Home. Merely opening the lab leaves radar listening active.
 
 ## Radar and evidence
 
@@ -22,7 +24,7 @@ Use **TARGETS** for a ten-row paged list ordered by family priority, freshness a
 
 **Settings → Radar** switches between candidates and all contacts. Disabled families and ignored addresses remain suppressed; explicitly watched addresses stay visible unless ignored. Angle is a stable visual arrangement, not a bearing; radius represents signal strength, not distance.
 
-The BWM1 emblem replaces the radar heading. RX mode, total radar contacts and battery percentage (where a fuel gauge exists) remain below it. **Settings → Radar theme & labels** offers Green radar (default), Dragon Ball, and Black / gold / red. The sweep animates and live dots pulse; rings have no numbered distance scale.
+The BWM1 emblem replaces the radar heading. RX mode, total radar contacts and battery percentage (where a fuel gauge exists) remain below it. **Settings → Radar theme & labels** offers Green radar (default), Dragon Ball, Black / gold / red, Valleytech, Biscuit Shop and Marauder. The three branded themes replace the BWM1 emblem with their own logo. The sweep animates and live dots pulse; rings have no numbered distance scale.
 
 Every visible contact stays on one radar as a family-colored dot; there are no radar pages. Axon receives the primary tag and leader line. Flipper, Flock/ALPR, camera glasses, Ring, other cameras and drones receive automatic tags next. Up to six tags fit on full boards (four on Lite); additional contacts remain visible as dots. AirTag/Find My, SmartTag, Google tags, Tile and iBeacon have smaller dots and no automatic tags or sounds. Tap any dot to reveal its tag and leader for ten seconds; tap the selected dot/tag again for details and Hunt. Tapping a tracker does not displace Axon's primary tag. Details retain the actual received evidence and its specificity; the radar has no CLUE or hint labels.
 
@@ -33,12 +35,12 @@ Inward means stronger filtered RSSI. The triangle and sweep do not indicate head
 ## Hunt a signal
 
 1. Select a radar dot, nearby contact or saved history record, then **Hunt signal**.
-2. BLE hunts dedicate reception to BLE. Wi-Fi hunts lock to the last observed channel, or sweep Wi-Fi if the channel is unknown. Other-radio coverage is paused while hunting.
+2. Hunts prioritize the selected signal while both BLE and Wi-Fi continue scanning. Wi-Fi channel priority follows a complete channel sweep; stale targets trigger a broader search. Explicit radio modes or active labs can intentionally specialize reception.
 3. Walk and compare dBm, signal trend and the trace. A less negative value is stronger. **Mark** saves the current filtered value for comparison. The peak and stability label help distinguish a sustained change from a spike.
 4. After ten seconds without reception, the gauge reports signal lost. The filter resets after a long gap; the 24-second trace shows missing reception as gaps, and the selected slot cannot be silently replaced by another device.
 A Wi-Fi target absent for twelve seconds triggers a channel sweep; reception locks to its new channel when it returns. This follows its saved address, not a guessed identity after address rotation.
 
-5. **Stop** restores balanced Wi-Fi/BLE scanning. Returning home keeps the hunt active; tap its radar status or Tools → Hunt to return.
+5. **Stop** clears the target priority while Wi-Fi/BLE scanning continues. Returning home keeps the hunt active; tap its radar status or Tools → Hunt to return.
 
 Settings offers Fast (0.6 s), Balanced (1.8 s) and Steady (4 s) smoothing after the median filter. RSSI depends on power, antenna orientation, walls and body shielding. The arrow means rising/falling signal, not a compass direction. A target that rotates its BLE address may be lost; unrelated addresses are not merged.
 
@@ -63,7 +65,7 @@ Open [Detector tools](https://valleytechsolutions.github.io/Dragon-Detector/#det
 
 Display privacy masks names/addresses and hides evidence/coordinates on screen. It does not alter stored or exported data. CSV includes the full records. Export briefly pauses reception. No account or cloud upload is involved.
 
-Spotpear additionally supports optional SD event CSV and bounded 16 MB PCAP captures. SD logging/capture are off by default. Waveshare 1.75C and StopWatch do not claim SD support.
+Spotpear and XIAO additionally support optional SD event CSV and bounded 16 MB PCAP captures. SD logging/capture are off by default. Waveshare 1.75C and StopWatch do not claim SD support.
 
 ## Display and navigation
 
@@ -77,7 +79,7 @@ In the 0.9.7 studio, **Use BWM stock badge** loads the supplied logo centered an
 
 Expand **Add text to your image** for up to three lines, text size, vertical position and color. Text has a black outline for contrast and stays within the round screen. It is included in the USB upload and PNG download. Clear the text box for an image-only badge. Use matching 0.9.7 firmware for the Bluetooth reset and USB acknowledgment fixes; an automatic clock-sync failure no longer blocks the studio connection.
 
-[Badge Studio](https://valleytechsolutions.github.io/Dragon-Detector/#studio) accepts PNG/JPEG/WebP (up to 20 MB and 40 megapixels). Choose the exact board to preview its 360×360 or 466×466 circle before connecting. Images initially fit completely inside a small safe margin. Choose **Fill circle** to crop edge-to-edge, then drag or zoom. Rotate 90° in either direction, mirror, center, or reset the crop. Fine positioning offers horizontal/vertical sliders and one-pixel arrow buttons; hold Shift for ten pixels. The focused preview accepts arrow keys too. Board changes preserve relative positioning. Alignment guides are preview-only and never become part of the image.
+[Badge Studio](https://valleytechsolutions.github.io/Dragon-Detector/#studio) accepts PNG/JPEG/WebP (up to 20 MB and 40 megapixels). Choose the exact board to preview its 240×240, 360×360 or 466×466 circle before connecting. Images initially fit completely inside a small safe margin. Choose **Fill circle** to crop edge-to-edge, then drag or zoom. Rotate 90° in either direction, mirror, center, or reset the crop. Fine positioning offers horizontal/vertical sliders and one-pixel arrow buttons; hold Shift for ten pixels. The focused preview accepts arrow keys too. Board changes preserve relative positioning. Alignment guides are preview-only and never become part of the image.
 
 **Download badge preview** saves a circular PNG. **Connect your badge** identifies the exact firmware model and locks the matching size, then **Upload** sends CRC-checked RGB565 directly over USB. A failed or interrupted transfer preserves the previous image. A successful upload enables badge startup. Hold the displayed image for Tools; Settings → Boot to radar restores radar startup. Images remain local to the browser/device.
 
@@ -112,7 +114,7 @@ resume
 
 Open **Settings → Audio & hunt tones** for the speaker switch, volume, hunt feedback and automatic family focus. Fresh installs enable audio at 100% volume; updates preserve the previous sound switch. Each of the 26 detector families has a distinct original RTTTL melody. Priority families alert on the first recognized match. Other alert filtering, ignore/snooze rules and auto-quiet still apply. Ordinary tracker detections stay silent unless explicitly watched. Axon preempts lower-priority audio and notification cards. Per-family duplicate requests coalesce, with a four-second cooldown and ten-second queue expiry, so packets do not restart a melody. Quiet mode and volume zero mute automatic audio, including watched devices.
 
-**Hunt feedback** follows the manually selected device. With no manually selected target, **Audio focus** can automatically follow the strongest fresh matching candidate; a six-dB margin reduces switching between similar signals. The on-board focus choices are Axon, Flock/ALPR/Raven and camera glasses; the web editor exposes all families. Focus changes the heartbeat target; other enabled families still retain their alert melodies. Audio focus uses the normal balanced Wi-Fi/BLE scan. Select a specific contact and tap Hunt to dedicate reception to that radio/channel.
+**Hunt feedback** follows the manually selected device. With no manually selected target, **Audio focus** can automatically follow the strongest fresh matching candidate; a six-dB margin reduces switching between similar signals. The on-board focus choices are Axon, Flock/ALPR/Raven and camera glasses; the web editor exposes all families. Focus changes the heartbeat target; other enabled families still retain their alert melodies. Audio focus uses the normal balanced Wi-Fi/BLE scan. Select a specific contact and tap Hunt to prioritize it while retaining background coverage.
 
 Higher, faster pulses mean a stronger filtered RSSI: approximately two seconds at -95 dBm down to 250 ms at -35 dBm. A rising/falling second chirp follows the signal trend. Axon uses a distinctive double heartbeat plus its own acquisition melody. After twelve seconds without observations, heartbeat feedback stops and a falling two-note cue plays once. Signal changes can also result from shielding, orientation and reflections; this is not measured distance or bearing.
 
@@ -133,7 +135,7 @@ USB commands: `tone settings`, `tone config <enabled 0|1> <volume 0..100> <hunt 
 
 **Settings → BLE scan** switches Passive/Active. Passive listens only. Active sends scan requests to obtain response-only names; it does not connect or pair. Some devices ignore requests. Active mode bounds and renews its result cache each second. Wi-Fi remains passive in both modes.
 
-**Settings → Radio health** shows received Wi-Fi/BLE counts, queue drops/occupancy, worst processing time, queue lag, contact evictions and available memory. Counters reset at boot. Increasing drops/lag indicates reception pressure; a paused radio or a dedicated hunt also reduces coverage. There are 384 live contact slots shared across the radios; history remains 512 address/radio/family records.
+**Settings → Radio health** shows received Wi-Fi/BLE counts, queue drops/occupancy, worst processing time, queue lag, contact evictions and available memory. Counters reset at boot. Increasing drops/lag indicates reception pressure; an explicit radio mode or active lab session can intentionally reduce background coverage. There are 384 live contact slots shared across the radios; history remains 512 address/radio/family records.
 
 Additional USB commands: `radio active`, `radio passive`, `screen targets`, `screen health`. `status` includes `RADIO_STATS`. They use the same settings and screens as the device controls.
 

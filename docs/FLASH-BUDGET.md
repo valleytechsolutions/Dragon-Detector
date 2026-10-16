@@ -1,14 +1,14 @@
-# Flash budget · 0.13.1
+# Flash budget · 0.13.2
 
 Application growth is capped at **79% of each OTA application slot**, leaving at least 21% of that slot free. New badge/history/recon writes also preserve 21% of their respective writable flash filesystem; existing files are never deleted to reach that reserve. Factory formatting and explicit user deletion remain separate actions.
 
 | Board | Physical flash | Current app, MiB | App slot, MiB | App slot free | User filesystem allocation, MiB |
 |---|---:|---:|---:|---:|---:|
-| Waveshare AMOLED | 32 MiB | 2.36 | 6 | 60.6% | 19.94 |
-| M5Stack StopWatch | 16 MiB | 2.52 | 4 | 36.9% | 7.94 |
+| Waveshare AMOLED | 32 MiB | 2.35 | 6 | 60.8% | 19.94 |
+| M5Stack StopWatch | 16 MiB | 2.52 | 4 | 37.1% | 7.94 |
 | Spotpear | 16 MiB | 2.31 | 6 | 61.5% | 3.94 |
-| Seeed XIAO Round | 8 MiB | 2.19 | 3 | 26.9% | 1.94 |
-| Waveshare Lite | 16 MiB | 1.61 | 6 | 73.1% | 3.94 |
+| Seeed XIAO Round | 8 MiB | 2.19 | 3 | 26.8% | 1.94 |
+| Waveshare Lite | 16 MiB | 1.60 | 6 | 73.3% | 3.94 (unused by radar UI) |
 
 These are packaged-image measurements rounded for readability. Exact byte counts accompany every board as `memory-budget.json` and inside `build-info.json`. The build fails if the app would cross the 79% limit. `memory status` on the device reports actual running app size, legacy filesystem use, free heap and PSRAM; `lab status` adds Waveshare recon filesystem use. The web Notebook section reads the runtime budget.
 

@@ -68,8 +68,20 @@ static void screenshot(){
 }
 static void health(){
   unsigned count=0;for(auto& c:contacts)if(c.used&&millis()-c.seen<30000)++count;
-  Serial.printf("HEALTH uptime=%lu heap=%u psram=%u contacts=%u wifi=%lu ble=%lu alerts=%lu drops=%lu storage_drops=%lu malformed=%lu channel=%u phase=%s sd=%s audio=%u\n",
-    millis(),ESP.getFreeHeap(),ESP.getFreePsram(),count,wifiFrames,bleFrames,alertTotal,queueDrops,storageDrops,malformedFrames,wifiChannel,blePhase?"BLE":"WIFI",sdReady?"OK":"MISSING",unsigned(audioStatus().mode));
+  Serial.printf("HEALTH uptime=%lu heap=%u psram=%u contacts=%u wifi=%lu ble=%lu alerts=%lu drops=%lu storage_drops=%lu malformed=%lu channel=%u phase=%s"
+#if BOARD_HAS_SD
+    " sd=%s"
+#elif defined(BOARD_RADAR_LITE)
+    " storage=RADAR_ONLY"
+#else
+    " storage=FLASH"
+#endif
+    " audio=%u\n",
+    millis(),ESP.getFreeHeap(),ESP.getFreePsram(),count,wifiFrames,bleFrames,alertTotal,queueDrops,storageDrops,malformedFrames,wifiChannel,blePhase?"BLE":"WIFI",
+#if BOARD_HAS_SD
+    sdReady?"OK":"MISSING",
+#endif
+    unsigned(audioStatus().mode));
   Serial.printf("DISPLAY %dx%d\n",lv_disp_get_hor_res(nullptr),lv_disp_get_ver_res(nullptr));
   Serial.printf("RUNTIME reset=%d stack_free=%u capture_previous=%lu\n",esp_reset_reason(),unsigned(uxTaskGetStackHighWaterMark(nullptr)),previousCaptureStage);
   Serial.printf("RADIO_STATS capacity=%u queue_high=%u batch_us=%lu lag_ms=%lu evictions=%lu cache_hits=%lu cache_misses=%lu active_ble=%u\n",unsigned(MAX_CONTACTS),radioQueueHigh,radioMaxBatchUs,radioMaxLagMs,contactEvictions,contactCacheHits,contactCacheMisses,activeBle);
@@ -107,6 +119,7 @@ static void command(const String& c){
   else if(c.startsWith("screen "))uiShow(c.substring(7));
   else if(c=="audio status"){auto a=audioStatus();Serial.printf("AUDIO mode=%u seconds=%lu peak=%u volume=%u file=%s\n",unsigned(a.mode),a.seconds,a.peak,a.volume,a.message);}
   else if(c.startsWith("volume "))audioVolume(c.substring(7).toInt());
+#if BOARD_HAS_SD
   else if(c.startsWith("ls ") && sdReady){xSemaphoreTake(sdMutex,portMAX_DELAY);File dir=CardFS.open(c.substring(3));File f=dir.openNextFile();for(int i=0;f&&i<128;++i){Serial.printf("%s %u %s\n",f.isDirectory()?"DIR":"FILE",unsigned(f.size()),f.path());f.close();f=dir.openNextFile();}f.close();dir.close();xSemaphoreGive(sdMutex);}
   else if(c.startsWith("put ") && sdReady){
     int split=c.lastIndexOf(' ');String path=c.substring(4,split);long total=c.substring(split+1).toInt();
@@ -123,12 +136,21 @@ static void command(const String& c){
     if(!file||file.isDirectory()){Serial.println("GET_ERROR");return;}RadioTransfer transfer;size_t remaining=file.size();Serial.printf("FILE_BYTES %u\n",unsigned(remaining));uint8_t data[1024];
     while(remaining){xSemaphoreTake(sdMutex,portMAX_DELAY);size_t n=file.read(data,std::min(sizeof(data),remaining));xSemaphoreGive(sdMutex);if(!n||!serialBytes(data,n))break;remaining-=n;}xSemaphoreTake(sdMutex,portMAX_DELAY);file.close();xSemaphoreGive(sdMutex);Serial.println("\nFILE_END");
   }
+#endif
   else if(c.startsWith("play "))audioPlay(c.substring(5));
+#if BOARD_HAS_SD
   else if(c=="capture on")setCapture(true);
   else if(c=="capture off")setCapture(false);
+#endif
   else if(c=="contacts"){for(auto& d:contacts)if(d.used){char mac[18];macText(d.mac,mac);Serial.printf("%s %s %d %s [%s] %s\n",d.ble?"BLE":"WIFI",mac,d.rssi,d.name,dragon::familyName(d.match.family),d.match.evidence);}}
   else if(c=="screenshot")screenshot();
-  else Serial.println("Commands: status, contacts, selftest, pause, resume, record, stop, play /path.mp3, capture on|off, screenshot");
+  else Serial.println("Commands: status, contacts, selftest, resume, screen radar, screenshot"
+#if BOARD_HAS_SD
+    ", ls /, get /path, capture on|off"
+#elif !defined(BOARD_RADAR_LITE)
+    ", screen files, screen captures, tool status, lab status"
+#endif
+  );
 }
 void setup(){
   // The native USB CDC default is only 256 bytes. Reserve room before begin()

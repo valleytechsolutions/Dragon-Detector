@@ -106,8 +106,10 @@ static dragon::Calendar editDate;
 static int editIndex=0,editOffset=0;
 static lv_obj_t* resetBox=nullptr;
 static const char* dateFields[]={"YEAR","MONTH","DAY","HOUR","MINUTE","SECOND","UTC OFFSET"};
+#if BOARD_HAS_SD
 static String directory="/";
 struct FileRow {String path;bool dir;uint32_t size;};static FileRow files[96];static int fileCount=0;static bool filesTruncated=false;
+#endif
 struct Dot {int x,y,index;dragon::DeviceKey key;int labelSlot=-1;};static Dot dots[MAX_CONTACTS];static int dotCount=0;
 static lv_color_t color(uint32_t c){return lv_color_hex(c);}
 static lv_obj_t* label(lv_obj_t* parent,const char* text,int x,int y,int w=0,const lv_font_t* font=F14,uint32_t c=0xd9efe0){
@@ -202,11 +204,13 @@ static void radarTap(lv_event_t*){lv_point_t p;lv_indev_get_point(lv_indev_get_a
     radarSelectedKey=key;radarHasSelection=true;radarSelectedAt=millis();
     if(open){selectContact(idx);go(Details);}else lv_obj_invalidate(radar);
   }else{radarHasSelection=false;lv_obj_invalidate(radar);}}
+#if BOARD_HAS_SD
 static void loadFiles(){
   fileCount=0;filesTruncated=false;if(!sdReady)return;
   xSemaphoreTake(sdMutex,portMAX_DELAY);File dir=CardFS.open(directory);
   if(dir&&dir.isDirectory()){File f=dir.openNextFile();while(f){if(fileCount>=96){filesTruncated=true;f.close();break;}String name=f.name();String path=directory=="/"?"/"+name:directory+"/"+name;files[fileCount++]={path,f.isDirectory(),uint32_t(f.size())};f.close();f=dir.openNextFile();}}dir.close();xSemaphoreGive(sdMutex);
 }
+#endif
 static void build(){
   // BLE Lab owns its complete screen and returns before the shared mic label
   // is rebuilt. Never retain a label from the page that is about to be freed.
@@ -242,7 +246,13 @@ static void build(){
 #else
     if(menuTab==0){button(root,"Wi-Fi",57,119,119,49,20);button(root,"Bluetooth",184,119,119,49,21);button(root,"History",57,176,119,49,60);button(root,"Hunt",184,176,119,49,57);button(root,"Detectors",57,233,119,45,61);button(root,"Activity",184,233,119,45,116);}
     #endif
-    if(menuTab==1){button(root,"Stopwatch",57,119,119,49,130);button(root,"Clock",184,119,119,49,133);button(root,"My badge",57,176,119,49,50);button(root,"SD files",184,176,119,49,32);button(root,"Activity",79,242,202,43,116);}
+    if(menuTab==1){button(root,"Stopwatch",57,119,119,49,130);button(root,"Clock",184,119,119,49,133);button(root,"My badge",57,176,119,49,50);
+#if BOARD_HAS_SD
+    button(root,"SD files",184,176,119,49,32);
+#else
+    button(root,"Saved files",184,176,119,49,7104);
+#endif
+    button(root,"Activity",79,242,202,43,116);}
 
     if(menuTab==2){button(root,"Settings",60,126,240,48,40);button(root,"Recon notebook",60,184,240,48,153);button(root,"Radio health",79,243,202,44,99);}
   }else if(page==Devices){
@@ -350,10 +360,14 @@ static void build(){
   }else if(page==Channels){
     title("CHANNEL ACTIVITY","Frames / second of observed dwell time");body=scrollBody();for(int ch=1;ch<=11;++ch){char s[96];float rate=channelDwellMs[ch]?channelFrames[ch]*1000.0/channelDwellMs[ch]:0;snprintf(s,sizeof(s),"CH %02d     %.1f f/s     %lus",ch,rate,(unsigned long)(channelDwellMs[ch]/1000));row(body,s,channelLock==ch?"Priority channel; full sweeps continue":"Tap to prioritize this channel",ch-1,200+ch);}
     button(root,"Auto",215,307,52,31,200);
+
+#if BOARD_HAS_SD
   }else if(page==Files){
     title("SD CARD",directory.c_str());loadFiles();body=scrollBody();
-    if(!sdReady)label(body,BOARD_HAS_SD?"SD card unavailable.\nInsert FAT32 card and restart.":"This board has no SD card slot.",5,20,244);
+    if(!sdReady)label(body,"SD card unavailable.\nInsert FAT32 card and restart.",5,20,244);
     else{row(body,".. / Parent",fileCount?"Tap a folder or text file":"This folder is empty",0,39);for(int i=0;i<fileCount;++i){String name=files[i].path.substring(files[i].path.lastIndexOf('/')+1);String sub=files[i].dir?"Folder":String(files[i].size/1024)+" KB";row(body,name.c_str(),sub.c_str(),i+1,2000+i);}if(filesTruncated)label(body,"First 96 entries shown",5,(fileCount+1)*59,235);}
+
+#endif
   }else if(page==Audio){
     title("AUDIO / HUNT",audioReady()?"Device melodies & signal feedback":"Speaker unavailable");body=scrollBody();int n=0;
     if(!audioReady()){label(body,"No speaker on this board.\nRadar, visual alerts and\nRSSI hunting remain available.",6,12,244);}
@@ -390,8 +404,12 @@ static void build(){
 #ifdef BOARD_STOPWATCH
     row(body,alertVibration?"Vibration: ON":"Vibration: OFF","Built-in StopWatch motor",n++,79);
 #endif
+    row(body,"Capture studio","Record Wi-Fi / BLE to internal flash",n++,7105);
+    row(body,"Saved captures","Internal flash files / USB download",n++,7104);
+#if BOARD_HAS_SD
     row(body,loggingEnabled&&sdReady?"SD event logging: ON":"SD event logging: OFF",sdReady?sessionPath.c_str():"Requires a mounted SD card",n++,43);
-    row(body,captureEnabled?"PCAP: recording":"PCAP: stopped",sdReady?"Raw 802.11 / 16 MB per capture":"Requires a mounted SD card",n++,24);
+    row(body,captureEnabled?"SD PCAP: recording":"SD PCAP: stopped",sdReady?"Raw 802.11 / 16 MB per capture":"Requires a mounted SD card",n++,24);
+#endif
     row(body,"Boot to radar","Clear the saved badge startup choice",n++,55);
   }else if(page==Stopwatch){
     dismissNotice();title("STOPWATCH","Elapsed time continues off this page");
@@ -452,10 +470,12 @@ static void action(lv_event_t* e){
   lastInteraction=millis();
   int id=(intptr_t)lv_event_get_user_data(e);
   if(id>=9000 && id<9000+int(RadarThemeCount)){radarTheme=id-9000;settings.putUChar("radar-theme",radarTheme);go(RadarStyle);page=Boot;return;}
+#if BOARD_HAS_SD
   if(id>=2000 && id<2096){int i=id-2000;if(i>=fileCount)return;if(files[i].dir){directory=files[i].path;go(Files);page=Boot;}else{String ext=files[i].path;ext.toLowerCase();if(ext.endsWith(".mp3")||ext.endsWith(".wav")){audioPlay(files[i].path);go(Audio);}else{
       xSemaphoreTake(sdMutex,portMAX_DELAY);File f=CardFS.open(files[i].path);String text;while(f && f.available() && text.length()<2048){char ch=f.read();text+=(ch=='\n'||ch=='\t'||(ch>=32&&ch<127))?ch:'.';}f.close();xSemaphoreGive(sdMutex);
       lv_obj_t* box=lv_msgbox_create(root,"FILE PREVIEW",text.c_str(),nullptr,true);lv_obj_set_size(box,S(260),S(225));lv_obj_center(box);
     }}return;}
+#endif
   if(id>=6000 && id<6000+deviceRows){int i=findContact(deviceKeys[id-6000]);if(i>=0){selectContact(i);go(Details);}else{uiNotify("Target expired","Refresh the list or reopen it from History.",nullptr,false);}return;}
   if(id>=1000 && id<1000+(int)MAX_CONTACTS){selectContact(id-1000);go(Details);return;}
   if(id>=3000&&id<3000+historyRows){for(size_t i=0;i<historyCount;++i)if(historyRecords[i].key==historyKeys[id-3000]&&historyRecords[i].family==historyFamilies[id-3000]){historySelection=historyRecords[i];go(HistoryDetail);return;}go(History);page=Boot;return;}
@@ -464,6 +484,7 @@ static void action(lv_event_t* e){
   if(id>=8000&&id<8010){unsigned row=id-8000;if(row<notebookRows&&notebookAdverts){auto& k=notebookKeys[row];for(unsigned i=0;i<dragon::notebook::Capacity;++i){auto& a=notebookAdverts[i];if(a.used&&a.type==k.addressType&&!memcmp(a.mac,k.mac,6)){notebookSelection=a;go(NotebookDetail);return;}}}go(NotebookBle);return;}
   if(id>=201 && id<=211){trackedContact=-1;channelLock=id-200;setRadio(true);go(Channels);page=Boot;return;}
 #ifndef BOARD_RADAR_LITE
+  if(id==7104||id==7105){reconPage(id==7104?"files":"captures");go(Recon);return;}
   if(id==7100||id==7102){openRadioTools=id==7102;go(Recon);return;}
   if(id==7103){reconPage("attacks");go(Recon);return;}
   if(id==7000){go(BleLab);return;}
@@ -489,15 +510,27 @@ static void action(lv_event_t* e){
     case 1:go(Radar);break;case 2:go(Menu);break;
     case 10:case 11:case 12:menuTab=id-10;go(Menu);page=Boot;break;
     case 20:filter=1;devicePage=0;go(Devices);break;case 21:filter=2;devicePage=0;go(Devices);break;case 22:go(Alerts);break;case 23:go(Channels);break;
-    case 24:setCapture(!captureEnabled);go(Settings);page=Boot;break;case 25:page=Boot;go(Devices);break;
-    case 30:directory="/music";go(Files);break;case 31:go(Audio);break;case 32:directory="/";go(Files);break;
+    case 25:page=Boot;go(Devices);break;
+#if BOARD_HAS_SD
+    case 24:setCapture(!captureEnabled);go(Settings);page=Boot;break;
+#endif
+    case 31:go(Audio);break;
+#if BOARD_HAS_SD
+    case 30:directory="/music";go(Files);break;case 32:directory="/";go(Files);break;
+#endif
     case 33:audioRecord();break;case 34:audioStop();break;case 35:audioVolume(audioStatus().volume-10);break;case 36:audioVolume(audioStatus().volume+10);break;
+#if BOARD_HAS_SD
     case 39:directory=directory.substring(0,directory.lastIndexOf('/'));if(directory.isEmpty())directory="/";go(Files);page=Boot;break;
+#endif
     case 40:go(Settings);break;case 41:go(About);break;case 42:setRadio(true);pending=page;page=Boot;break;
+#if BOARD_HAS_SD
     case 43:loggingEnabled=!loggingEnabled;pending=page;page=Boot;break;
+#endif
     case 44:brightness=brightness==100?25:brightness+25;settings.putUChar("brightness",brightness);outputBrightness=-1;pending=page;page=Boot;break;
     case 45:if(selectionValid() && !contacts[selected].ble && contacts[selected].channel){trackedContact=-1;channelLock=contacts[selected].channel;setRadio(true);go(Channels);}break;
+#if BOARD_HAS_SD
     case 46:setCapture(!captureEnabled);pending=Details;page=Boot;break;
+#endif
     case 50:go(Badge);break;
     case 52:if(selectionValid())trackContact(selected);go(Hunt);break;
     case 53:candidatesOnly=!candidatesOnly;settings.putBool("candidates",candidatesOnly);pending=page;page=Boot;break;
@@ -576,6 +609,14 @@ void uiShow(const String& name){if(name=="radar")recipeStop();
   if(name=="lab"){go(BleLab);return;}
   if(name=="attacks"||name=="missions"||name=="recipes"||name=="network"||name=="csi"||name=="portal"||name=="analysis"||name=="probes"||name=="filters"||name=="captures"){reconPage(name);go(Recon);return;}
 #endif
+  if(name=="files"){
+#if BOARD_HAS_SD
+    go(Files);
+#else
+    reconPage("files");go(Recon);
+#endif
+    return;
+  }
   if(name=="utilities"){menuTab=1;go(Menu);return;}
   if(name=="notebook"){go(Notebook);return;}if(name=="notebook-ble"){notebookPage=0;go(NotebookBle);return;}if(name=="notebook-probes"){notebookPage=0;go(NotebookProbes);return;}
   if(name=="device-colors"){go(FamilyColors);return;}
@@ -583,7 +624,7 @@ void uiShow(const String& name){if(name=="radar")recipeStop();
   if(name=="radar-style"){go(RadarStyle);return;}
   lastInteraction=millis();
   if(name=="activity"){go(Activity);return;}
-  if(name=="badge")go(Badge);else if(name=="radar")go(Radar);else if(name=="menu")go(Menu);else if(name=="wifi"){filter=1;go(Devices);}else if(name=="ble"){filter=2;go(Devices);}else if(name=="audio")go(Audio);else if(name=="files")go(Files);else if(name=="alerts")go(Alerts);else if(name=="channels")go(Channels);else if(name=="about")go(About);else if(name=="settings")go(Settings);else if(name=="hunt")go(Hunt);else if(name=="detectors")go(Detectors);else if(name=="history")go(History);else if(name=="display")go(Display);else if(name=="health")go(Diagnostics);else if(name=="targets"){filter=0;devicePage=0;go(Devices);}
+  if(name=="badge")go(Badge);else if(name=="radar")go(Radar);else if(name=="menu")go(Menu);else if(name=="wifi"){filter=1;go(Devices);}else if(name=="ble"){filter=2;go(Devices);}else if(name=="audio")go(Audio);else if(name=="alerts")go(Alerts);else if(name=="channels")go(Channels);else if(name=="about")go(About);else if(name=="settings")go(Settings);else if(name=="hunt")go(Hunt);else if(name=="detectors")go(Detectors);else if(name=="history")go(History);else if(name=="display")go(Display);else if(name=="health")go(Diagnostics);else if(name=="targets"){filter=0;devicePage=0;go(Devices);}
 }
 void uiBegin(){
   settings.begin("dd-ui",false);

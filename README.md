@@ -6,17 +6,27 @@
 
 **[Open the web flasher & detector tools](https://valleytechsolutions.github.io/Dragon-Detector/)** · [Install guide](docs/FLASHING.md) · [Controls](docs/USER-GUIDE.md) · [Detection evidence](docs/DETECTION.md) · [Credits](CREDITS.md)
 
-Version **0.13.1** adds **Valleytech, Biscuit Shop and Marauder radar themes**, each with its supplied logo. Select one in **Settings → Radar theme & labels** or the USB web tools. The original three themes and saved preferences remain available. [Theme previews](docs/THEMES.md).
+Version **0.13.2** makes storage controls match the hardware. **Waveshare AMOLED and M5Stack have no SD controls:** Utilities → Saved files opens captures in internal flash, and Settings provides Capture studio and Saved captures. Spotpear and XIAO retain their optional SD tools. [Hardware feature comparison](docs/HARDWARE.md) · [GUI tour](docs/GUI.md).
+
+**Six radar themes** include Valleytech, Biscuit Shop and Marauder with their supplied logos. Select one in **Settings → Radar theme & labels** or the USB web tools. [Theme previews](docs/THEMES.md).
 
 The 0.13 series brings the **29 timed Wi-Fi/BLE tools, eight modes and BLE Lab to all four full boards**. New workflows include saved recon sessions, historical AP archives, bounded recipes, HID report decoding and a GATT bridge with cached reads. **Tools → Recon → Attacks** opens the attack lists directly; **Utilities** replaces Daily. Normal screens retain background detection. All five profiles share the 158-fact SquachWatch audit and AXEOFF priority handling. [New workflows and limits](docs/RECON-013.md) · [Memory reserve](docs/FLASH-BUDGET.md) · [Feature comparison](docs/FEATURE-MATRIX.md).
 
 Update preserves badge, history, settings, GATT profiles and saved captures. Active lab sessions temporarily own the shared radio; Stop/Home returns it to the previous listening state. This is an independent implementation, not complete Marauder or ChimeraBLE parity. [Validation and limits](docs/VALIDATION.md).
 
-| Utilities | Attacks |
-|---|---|
-| ![Utilities on Waveshare](media/waveshare-utilities-013.png) | ![Attacks menu on Waveshare](media/waveshare-attacks-013.png) |
+| Utilities · internal files | Settings · no SD controls | Capture studio |
+|---|---|---|
+| ![Utilities on Waveshare](media/waveshare-utilities-0132.png) | ![Settings on Waveshare](media/waveshare-settings-0132.png) | ![Capture studio on Waveshare](media/waveshare-captures-0132.png) |
 
-CRC-verified logical display captures from the connected Waveshare running 0.13.0; these are firmware renders, not panel photographs. [Open Radio tools](https://valleytechsolutions.github.io/Dragon-Detector/#radio-tools).
+CRC-verified logical display captures from the connected Waveshare running 0.13.2; these are firmware renders, not panel photographs. [More GUI pictures](docs/GUI.md) · [Open Radio tools](https://valleytechsolutions.github.io/Dragon-Detector/#radio-tools).
+
+## Flash in three steps
+
+1. Open the **[web flasher](https://valleytechsolutions.github.io/Dragon-Detector/#install)** in desktop Chrome or Edge with a USB data cable.
+2. Choose the **exact board**, then **Update matching Dragon Detector** to keep files/settings on a compatible installation, or **Fresh install** for a new board (replaces saved files).
+3. Confirm the hardware checkbox, select **Connect & install**, choose the board's USB port, and wait for verification. Reset if it remains in the bootloader.
+
+[Full installation, update compatibility and recovery instructions](docs/FLASHING.md). Close the installer before connecting Badge Studio or detector tools.
 
 ## Choose the exact board
 
@@ -29,6 +39,17 @@ CRC-verified logical display captures from the connected Waveshare running 0.13.
 | **Waveshare ESP32-S3-LCD-1.28 — Lite** | 240×240 round LCD | **Radar only:** no touch/audio; full brightness, all contacts on one radar | `waveshare_lite` |
 
 The Waveshare **C variant** has different reset wiring from the non-C 1.75. Firmware is not interchangeable just because a board contains an ESP32-S3. [Board details and manufacturer links](docs/HARDWARE.md).
+
+| Hardware difference | Waveshare AMOLED | M5Stack StopWatch | Spotpear | XIAO Round | Waveshare Lite |
+|---|---|---|---|---|---|
+| Flash | 32 MB | 16 MB | 16 MB | 8 MB | 16 MB |
+| SD card controls | None | None | Optional CSV/PCAP + browser | Optional CSV/PCAP + browser | None |
+| Internal user storage | 3.94 MiB badge/history + 16 MiB recon | 7.94 MiB shared | 3.94 MiB shared | 1.94 MiB shared | No user file features |
+| Six themes, badge, stopwatch, radio tools, BLE Lab | Yes | Yes | Yes | Yes | Radar only |
+| Sound / haptics | Speaker connector | Speaker + haptics | Speaker connector | Visual alerts | Visual alerts |
+| Clock | RTC | RTC | Software | RTC | No clock UI |
+
+All five share the detection engine. The four full boards share the interactive toolset; storage capacity, controls and peripherals differ. These are partition capacities before filesystem overhead, not guaranteed free space. See the [complete hardware feature matrix](docs/HARDWARE.md) and [measured flash reserve](docs/FLASH-BUDGET.md).
 
 | Spotpear hardware | M5Stack hardware |
 |---|---|
@@ -54,7 +75,7 @@ Logical 240×240 captures from the connected XIAO, not panel photographs.
 - **Audited signature coverage:** all 158 table entries in the pinned SquachWatch reference have recognition and radar tests. Includes Flipper, Wi-Fi Pineapple, Pwnagotchi, nyanBOX, Biscuit, Flock, Axon/TASER, Raven, camera glasses, Find My/DULT, SmartTag, Google Find Hub, Tile, Ring/camera/ALPR vendors, decoded drone Remote ID, iBeacon, pentest devices, disconnect bursts and SSID security conflicts. [Coverage and comparison](docs/DETECTION-PARITY.md).
 - **All recognized candidates on radar:** first sightings appear immediately; device types use fixed colors and trackers use smaller dots. Intermittent signals remain for up to two minutes with a segmented marker and explicit last-seen age. A paged Targets list, quick quiet toggle and live radio-health screen make crowded areas easier to navigate.
 - **Traffic awareness:** Wi-Fi deauthentication/disassociation bursts and BLE pairing/tag spam candidates, with a radar activity banner, counts, protocol/channel evidence and a dedicated Activity screen. See [how traffic detection works](docs/RADAR-AND-ACTIVITY.md).
-- **Dragon Hunt:** dedicated target listening, filtered dBm, signal history, peak, trend, stability, a saved comparison mark, and automatic channel searching for stale Wi-Fi targets. Optional Dragon fox beacons support board-to-board training; transmission starts only when explicitly enabled.
+- **Dragon Hunt:** target priority with background scanning, filtered dBm, signal history, peak, trend, stability, a saved comparison mark, and automatic channel searching for stale Wi-Fi targets. Optional Dragon fox beacons support board-to-board training; transmission starts only when explicitly enabled.
 - **Useful alert controls:** per-family and confidence filters, persistent watch/ignore rules, temporary snooze, repeat-alert suppression, quiet mode and grouped advertisement bursts.
 - **Local detection history:** 512 address/radio/family records, bounded flash journal, encounters and peak signal. Connect USB to synchronize UTC and download CSV through the [detector tools](https://valleytechsolutions.github.io/Dragon-Detector/#detector).
 - **Your requested display defaults:** 100% brightness, always on, no automatic dimming. Settings offers independent dim and screen-off timers, dim level and wake-on-alert.

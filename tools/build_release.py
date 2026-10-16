@@ -51,6 +51,9 @@ def build(board,skip):
     checks=[]
     for file in sorted(out.glob('*.bin')):
         data=file.read_bytes();assert b'C:/Users/' not in data and b'C:\\Users\\' not in data, 'Private workstation path in image'
+        if file.name=='firmware.bin' and board in ('waveshare','stopwatch','waveshare_lite'):
+            for prompt in (b'SD CARD',b'SD files',b'SD event logging:',b'Requires a mounted SD card',b'Insert FAT32 card',b'SD: this board has no card slot'):
+                assert prompt not in data,(board,'Unsupported card UI in firmware',prompt)
         checks.append(f'{hashlib.sha256(data).hexdigest()}  {file.name}\n')
     (out/'SHA256SUMS.txt').write_text(''.join(checks),encoding='ascii')
     metadata={'version':VERSION,'board':board,'name':BOARDS[board][0],'source_commit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),'source_dirty':bool(subprocess.check_output(['git','status','--porcelain','--untracked-files=normal'],cwd=ROOT,text=True).strip()),'filesystem_offset':fs_offset,'filesystem_size':fs_size,'factory_resets_badges':True,'update_preserves_nvs_and_filesystem':True}

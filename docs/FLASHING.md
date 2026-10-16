@@ -1,4 +1,4 @@
-> **0.13:** Utilities replaces Daily. Badge editing stays in the web Badge Studio. The first Recon row now includes **Attacks**, with separate Wi-Fi and BLE lists on all four full boards. Existing partitions, badge and settings are preserved by a matching Update. [New features](RECON-013.md).
+> **0.13.2:** Waveshare AMOLED and M5Stack use internal flash with no SD controls. Matching updates preserve badge, settings and files. [GUI tour](GUI.md) · [Hardware feature comparison](HARDWARE.md).
 
 # Flash Dragon Detector
 
@@ -6,11 +6,21 @@
 
 1. Check the exact printed model: Spotpear JC3636W518, Waveshare **ESP32-S3-Touch-AMOLED-1.75C**, M5Stack StopWatch C152, **Seeed XIAO ESP32-S3 + Round Display**, or the non-touch **Waveshare ESP32-S3-LCD-1.28 Lite**.
 2. Select that board. The ESP32-S3 chip check does not distinguish these boards.
-3. Choose **Fresh install** for the first 0.3.x/0.4.x/0.5.x/0.6.x/0.7.x/0.8.x/0.9.x installation. It writes a blank badge filesystem. Back up existing firmware, files and settings first. Selecting the installer's erase option erases flash.
+3. Choose **Update matching Dragon Detector** if the exact board already has a compatible Dragon Detector layout (table below). Leave erase unchecked. Choose **Fresh install** for a new board or migration from unrelated firmware; this replaces saved files. Back up existing firmware, files and settings first.
 4. Confirm the board/type checkbox, Connect & install, choose its serial port, and wait for verification. Reset if it stays in the bootloader.
 5. Close the installer before connecting from Badge Studio.
 
-Use **Update** only on an existing 0.3.x/0.4.x/0.5.x/0.6.x/0.7.x/0.8.x/0.9.x installation for the same exact board. The update manifest writes bootloader at `0x0`, partition table at `0x8000`, OTA selection data at `0xE000`, and application at `0x10000`; it skips NVS (`0x9000`) and badge storage. Leave erase unchecked. Firmware cannot preserve settings if you explicitly erase them.
+| Exact board | Existing Dragon Detector layout accepted for Update |
+|---|---|
+| Spotpear JC3636W518 | This profile's 0.3.x–0.13.x layout |
+| M5Stack StopWatch C152 | This profile's 0.3.x–0.13.x layout |
+| Waveshare AMOLED **1.75C** | This profile's 0.3.x–0.13.x layout; older 16 MB builds need the one-time recon initialization below |
+| XIAO ESP32-S3 + Round Display | This profile's **0.9.2 or newer**, 8 MB layout |
+| Waveshare non-touch LCD 1.28 Lite | This profile's **0.9.4 or newer** layout; unrelated/older ports are not assumed compatible |
+
+The update manifest writes bootloader at `0x0`, partition table at `0x8000`, OTA selection data at `0xE000`, and application at `0x10000`; it skips NVS (`0x9000`) and user filesystems. Leave erase unchecked. Firmware cannot preserve settings if you explicitly erase them.
+
+After installation, open Tools → Utilities on a full board. **Waveshare AMOLED needs no SD card:** Saved files opens internal-flash captures, and Settings → Capture studio starts a recording. Download captures from the web page's Radio tools → Capture library. Badge Studio uploads directly to internal flash. [Screens and controls](GUI.md).
 
 **Waveshare AMOLED 1.75C / 0.9.8:** the build now uses its full 32 MB flash. The original lower 16 MB partition addresses and sizes stay unchanged. Update also skips the new recon filesystem at `0x1000000`; existing badges, settings and saved BLE profiles are preserved. When upgrading older 16 MB firmware, use BLE Lab → Initialize new BLE storage after making a complete backup. This initializes only the upper 16 MB, once. Fresh install writes blank badge and recon filesystems. [BLE Lab and migration details](BLE-LAB.md).
 

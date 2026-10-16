@@ -1,16 +1,44 @@
 # Exact board profiles
 
-| Board | Resolution | Adapter | Storage |
-|---|---|---|---|
-| Spotpear / Guition JC3636W518 | 360×360 ST77916 LCD | Vendor ESP32 Display Panel configuration | microSD logs/PCAP; internal badge/history flash |
-| Waveshare ESP32-S3-Touch-AMOLED-1.75C | 466×466 CO5300 AMOLED, CST9217 touch, AXP2101 | KODE DIY CO5300 / ESP-IDF QSPI, SensorLib, XPowersLib | 32 MB flash: preserved badge/history + dedicated 16 MB BLE Lab storage; live observations in PSRAM |
-| M5Stack StopWatch C152 | 466×466 AMOLED | Pinned M5Unified / M5GFX StopWatch support | 32 MB flash: preserved badge/history + dedicated 16 MB BLE Lab storage; live observations in PSRAM |
+Current firmware: **0.13.2**. Another display on the same ESP32-S3 needs different firmware.
+
+| Feature | Waveshare AMOLED 1.75C | M5Stack StopWatch C152 | Spotpear JC3636W518 | XIAO ESP32-S3 + Round Display | Waveshare LCD 1.28 Lite |
+|---|---|---|---|---|---|
+| Display | 466×466 AMOLED / touch | 466×466 AMOLED / touch | 360×360 LCD / touch | 240×240 LCD / touch | 240×240 LCD / no touch |
+| Flash / PSRAM | 32 / 8 MB | 16 / 8 MB | 16 / 8 MB | 8 / 8 MB | 16 / 2 MB |
+| Physical timing controls | BOOT + short PWR | Yellow Start/Pause + blue Lap | On-screen | BOOT Start/Pause + on-screen Lap | None |
+| Radar / same detection families | Yes | Yes | Yes | Yes | Yes |
+| Six themes / badge / touch menus | Yes | Yes | Yes | Yes | No; fixed green radar |
+| RSSI Hunt / watch lists / history | Yes | Yes | Yes | Yes | Radar RSSI only; no saved history |
+| Notebook / eight modes / 29 radio tools | Yes | Yes | Yes | Yes | No |
+| BLE Lab / GATT / recon sessions / recipes | Yes | Yes | Yes | Yes | No |
+| RTTTL alerts / audible Hunt | Speaker connection | Built-in speaker | Speaker connection | Visual only | Visual only |
+| Haptic alerts | No configured motor | Built-in motor | No | No | No |
+| Stopwatch / clock settings | Yes; RTC when detected | Yes; RTC when detected | Yes; software clock | Yes; RTC when detected | No |
+| Fixed orientation setting | Yes | Yes | Yes | Yes | Fixed radar orientation |
+| SD card support | **No slot / no SD controls** | **No slot / no SD controls** | Optional SD CSV/PCAP + browser | Optional SD CSV/PCAP + browser | No |
+| Internal user storage | 3.94 MiB badge/history + **16 MiB recon** | 7.94 MiB shared | 3.94 MiB shared | 1.94 MiB shared | No persistent user features |
+| Capture buffer in PSRAM | 2 MiB | 1 MiB | 1 MiB | 512 KiB | No recorder |
+| Capture files / profiles download | USB web tools | USB web tools | USB web tools; separate SD logs | USB web tools; separate SD logs | None |
+
+All four full boards use the same classifiers and lab workflows; Waveshare's advantage is dedicated recon storage, not different radio bands or extra processing power. Builds and new file writes enforce a 21% reserve; existing files are never deleted to meet it. [Exact budgets](FLASH-BUDGET.md) · [Feature limits](FEATURE-MATRIX.md) · [GUI tour](GUI.md).
+
+## Storage follows the hardware
+
+**Waveshare AMOLED and M5Stack:** Utilities → Saved files opens the internal capture library. Settings provides Capture studio and Saved captures; SD controls and SD command handlers are excluded from the build. Capture Studio saves Wi-Fi PCAP and BLE CSV in flash. GATT profiles and event logs are in BLE Lab, detection history is separate, and downloads are in the browser's Radio tools / BLE Lab / Detector tools. No card is required.
+
+**Spotpear and XIAO:** Utilities → SD files browses an inserted FAT32 card. Settings retains opt-in SD event logging and SD PCAP. These are separate from internal Capture Studio, badge/history and BLE Lab storage; an absent card does not disable those internal features. Inserted-card behavior is not newly validated by this release.
+
+**Lite:** always-on radar only. It has no storage menu, badge, interactive lab or persistent detection history.
+
+Shared storage sizes are partition allocations, not free-space promises. They include badge/history and lab data; the reserve policy prevents new writes from consuming the final 21%. Updates never reformat these volumes automatically.
 
 [Pin definitions](../firmware/include/board_pins.h) are authoritative for these builds. Waveshare C uses display reset GPIO 1 and touch reset GPIO 2; these are not the non-C board's wiring. It has no SD slot in this profile. M5Unified identifies the StopWatch and rejects an unexpected display.
 
 Manufacturer references:
 
 - [Spotpear exact product](https://spotpear.com/shop/EPS32-S3R8-1.8inch-360x360-Round-LCD-Display-WIFI-Secondary-TouchScreen-AIDA64-Arduino-LVGL-WirelessAida64-Wireless-Power-Video-Electronic-Photo-Frame-MP3.html).
+- [Seeed Round Display documentation](https://wiki.seeedstudio.com/get_start_round_display/) and [XIAO ESP32-S3 documentation](https://wiki.seeedstudio.com/xiao_esp32s3_getting_started/).
 - [Waveshare C-variant hardware/demo source](https://github.com/waveshareteam/ESP32-S3-Touch-AMOLED-1.75C) and [schematic](https://files.waveshare.com/wiki/ESP32-S3-Touch-AMOLED-1.75C/ESP32-S3-Touch-AMOLED-1.75C-schematic.pdf).
 - [M5Stack StopWatch documentation](https://docs.m5stack.com/en/core/StopWatch), [product photographs](https://shop.m5stack.com/products/m5stack-stopwatch-dev-kit-esp32-s3), and [manufacturer demo](https://github.com/m5stack/M5StopWatch-UserDemo).
 
@@ -40,6 +68,6 @@ A fourth profile, `xiao_round`, supports the 240×240 GC9A01/CHSC6X expansion wi
 
 ## Waveshare 1.28 Lite
 
-The `waveshare_lite` profile supports the **non-touch ESP32-S3-LCD-1.28**, with 16 MB flash, 2 MB quad-SPI PSRAM and a 240×240 GC9A01 panel. This is a dedicated always-on passive radar with automatic pages, no audio, touch, menus, badge, clock or persistent history. [Wiring, behavior and recovery](WAVESHARE-LITE.md).
+The `waveshare_lite` profile supports the **non-touch ESP32-S3-LCD-1.28**, with 16 MB flash, 2 MB quad-SPI PSRAM and a 240×240 GC9A01 panel. This is a dedicated always-on passive radar with every contact on one screen, no audio, touch, menus, badge, clock or persistent history. [Wiring, behavior and recovery](WAVESHARE-LITE.md).
 
-Waveshare AMOLED 1.75C also supports the 0.10.0 [mode launcher and radio toolkit](RADIO-TOOLKIT.md). Its 32 MB partition layout is unchanged from 0.9.8. The other profiles do not compile the toolkit or raw-frame adapter.
+All four full profiles compile the [mode launcher and radio toolkit](RADIO-TOOLKIT.md), BLE Lab, notebook and sessions in 0.13.x. Lite excludes interactive labs. Waveshare's 32 MB partition layout remains unchanged from 0.9.8. No current profile implements automatic orientation, MP3 playback, microphone recording, 5/6 GHz or Bluetooth Classic.

@@ -1,20 +1,20 @@
-import {hasFullLab,hasFullRecon,hasSessionTools} from './lab-capabilities.js?v=0.13.1';
-import {sessionName,downloadMission,recipePutCommand,sourceMacCommand} from './mission-tools.js?v=0.13.1';
-import {hasNetworkTools,networkProfileCommand,networkResultsCsv} from './network-tools.js?v=0.13.1';
-import {normalizeHex,probeRows,probeCsv} from './recon-analysis.js?v=0.13.1';
-import {hasReconTools,reconLines,exportCapture,exportReconFile,captureName,importPortalHtml} from './recon-transfer.js?v=0.13.1';
-import {decodeProfile,exportProfile,exportLog,importProfile,labLines,safeProfileName} from './ble-lab.js?v=0.13.1';
-import {localClockEpoch,setClock,readWearable,setOrientation} from './wearable-transfer.js?v=0.13.1';
+import {hasFullLab,hasFullRecon,hasSessionTools} from './lab-capabilities.js?v=0.13.2';
+import {sessionName,downloadMission,recipePutCommand,sourceMacCommand} from './mission-tools.js?v=0.13.2';
+import {hasNetworkTools,networkProfileCommand,networkResultsCsv} from './network-tools.js?v=0.13.2';
+import {normalizeHex,probeRows,probeCsv} from './recon-analysis.js?v=0.13.2';
+import {hasReconTools,reconLines,exportCapture,exportReconFile,captureName,importPortalHtml} from './recon-transfer.js?v=0.13.2';
+import {decodeProfile,exportProfile,exportLog,importProfile,labLines,safeProfileName} from './ble-lab.js?v=0.13.2';
+import {localClockEpoch,setClock,readWearable,setOrientation} from './wearable-transfer.js?v=0.13.2';
 import {deviceQuery} from './device-query.js';
-import {BadgeSerial} from './serial.js?v=0.13.1';
+import {BadgeSerial} from './serial.js?v=0.13.2';
 import {encodeBadge} from './badge-codec.js';
-import {uploadBadge} from './badge-transfer.js?v=0.13.1';
+import {uploadBadge} from './badge-transfer.js?v=0.13.2';
 import {readHistory} from './detector-transfer.js';
-import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasBrandedThemes,hasWearableTools} from './firmware-compat.js?v=0.13.1';
-import {readRadarSettings,saveRadarSettings} from './radar-transfer.js?v=0.13.1';
-import {boardProfiles,connectedProfile,validateManifest,supportsBadge} from './board-profiles.js?v=0.13.1';
-import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan,drawBadgeText} from './badge-editor.js?v=0.13.1';
-import {hasNotebook,readNotebook,customAdvertCommand} from './notebook.js?v=0.13.1';
+import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasBrandedThemes,hasWearableTools} from './firmware-compat.js?v=0.13.2';
+import {readRadarSettings,saveRadarSettings} from './radar-transfer.js?v=0.13.2';
+import {boardProfiles,connectedProfile,validateManifest,supportsBadge} from './board-profiles.js?v=0.13.2';
+import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan,drawBadgeText} from './badge-editor.js?v=0.13.2';
+import {hasNotebook,readNotebook,customAdvertCommand} from './notebook.js?v=0.13.2';
 const $ = id => document.getElementById(id);
 const models = Object.fromEntries(Object.entries(boardProfiles).map(([id,p])=>[id,p.name]));
 let board = '', releaseReady = false, request = 0;
@@ -35,6 +35,8 @@ async function chooseBoard(next) {
   $('hardware-confirm').checked = false; $('download').hidden = true; installEnabled();
   document.querySelectorAll('[data-board]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.board===board)));
   $('selected-board').textContent = models[board];
+  $('board-storage').textContent = boardProfiles[board].storage;
+  $('board-features').textContent = boardProfiles[board].features;
   $('board-status').textContent = 'Checking the matching firmware release…';
   const mode = $('install-mode').value, manifest = `firmware/${board}/${mode}.json`;
   try {
@@ -43,7 +45,7 @@ async function chooseBoard(next) {
     const data = validateManifest(await response.json(),board,mode);
     if(revision !== request)return;
     $('installer').setAttribute('manifest', manifest); releaseReady = true;
-    $('board-status').textContent = `${data.version} · ${mode==='factory'?'Fresh installation replaces saved history, badges and BLE profiles.':board==='waveshare'?'32 MB update preserves badge, history, settings and BLE profiles. When upgrading older firmware, initialize new BLE storage once in the lab.':board==='waveshare_lite'?'Update requires this exact Lite profile’s 0.9.4+ layout. For an older third-party port, choose Fresh installation unless its partitions have been verified.':board==='xiao_round'?'Update preserves files; requires this XIAO + Round Display profile’s 0.9.2 or newer 8 MB layout.':'Update preserves history, badges and settings; requires this board’s existing 0.3.x / 0.4.x / 0.5.x / 0.6.x / 0.7.x / 0.8.x / 0.9.x layout.'}`;
+    $('board-status').textContent = `${data.version} · ${mode==='factory'?'Fresh installation replaces saved history, badges and BLE profiles.':board==='waveshare'?'32 MB update preserves badge, history, settings and BLE profiles. When upgrading older firmware, initialize new BLE storage once in the lab.':board==='waveshare_lite'?'Update requires this exact Lite profile’s 0.9.4+ layout. For an older third-party port, choose Fresh installation unless its partitions have been verified.':board==='xiao_round'?'Update preserves files; requires this XIAO + Round Display profile’s 0.9.2 or newer 8 MB layout.':'Update preserves history, badges and settings; requires this board’s existing 0.3.x–0.13.x layout.'}`;
     $('download').href = `firmware/${board}/SHA256SUMS.txt`; $('download').textContent='Firmware file checksums'; $('download').hidden=false;
     $('install-message').textContent='Confirm your board, then connect its USB port.';
   } catch(error) {

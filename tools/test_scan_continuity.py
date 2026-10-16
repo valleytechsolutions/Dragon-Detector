@@ -23,7 +23,7 @@ async def run(port,output):
         lab=await query('lab status','LAB_STATUS')
         if 'LAB_STATUS' in lab:assert 'owned=0 ' in lab
         before=await query('badge checksum','BADGE_CHECKSUM');results['badge_before']=before
-        cases=['screen radar','screen badge','screen settings','screen notebook','screen notebook-ble','hunt BLE 1 c2:dd:12:00:00:01 0','hunt WiFi 0 02:dd:12:00:00:02 6']
+        cases=['screen radar','screen badge','screen settings','screen utilities','screen files','screen captures','screen notebook','screen notebook-ble','hunt BLE 1 c2:dd:12:00:00:01 0','hunt WiFi 0 02:dd:12:00:00:02 6']
         for command in cases:
             await b.command(command,1);a=scan(await query('scan status','SCAN_STATUS'))
             await asyncio.sleep(8);z=scan(await query('scan status','SCAN_STATUS'))
