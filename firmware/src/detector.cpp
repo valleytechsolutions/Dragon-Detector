@@ -1,4 +1,6 @@
 #include "app.h"
+#include "background_radio.h"
+#include "flash_budget.h"
 #include "recon.h"
 #include <Preferences.h>
 #include <LittleFS.h>
@@ -118,7 +120,7 @@ void detectorLoop(){
     lastWrite=millis();
     bool rotate=journalBytes%sizeof(HistoryRecord) || journalBytes>=1024*sizeof(HistoryRecord);
     uint8_t target=rotate?1-journal:journal;
-    if(LittleFS.totalBytes()-LittleFS.usedBytes()<65536){++storageDrops;return;}
+    if(!dragon::storageFits(LittleFS.totalBytes(),LittleFS.usedBytes(),65536)){++storageDrops;return;}
     File f=LittleFS.open(journals[target],rotate?FILE_WRITE:FILE_APPEND);
     if(!f){++storageDrops;return;}
     HistoryRecord r=historyRecords[i];r.checksum=checksum(r);
@@ -135,12 +137,15 @@ void historyClear(){
 static String csv(const char* s){String out="\"";const char* p=s;while(*p==' '||*p=='\t')++p;if(*p&&strchr("=+-@",*p))out+='\'';for(;*s;++s){if(*s=='"')out+='"';if(*s!='\r'&&*s!='\n')out+=*s;}return out+'"';}
 bool historyExport(){
   if(!historyReady)return false;
+  auto* snapshot=(HistoryRecord*)ps_malloc(historyCount*sizeof(HistoryRecord));
+  if(historyCount&&!snapshot)return false;
+  const size_t count=historyCount;if(count)memcpy(snapshot,historyRecords,count*sizeof(HistoryRecord));RadioTransfer transfer;
   Serial.println("HISTORY_BEGIN");Serial.println("radio,address_type,mac,name,family,confidence,first_epoch,last_epoch,last_boot_uptime_ms,encounters,rssi,peak,channel,evidence");
-  for(size_t i=0;i<historyCount;++i){auto& r=historyRecords[i];char mac[18];macText(r.key.mac,mac);
+  for(size_t i=0;i<count;++i){auto& r=snapshot[i];char mac[18];macText(r.key.mac,mac);
     String row=String(r.key.radio?"BLE":"WiFi")+","+r.key.addressType+","+mac+","+csv(r.name)+","+csv(dragon::familyName(Family(r.family)))+","+String(r.confidence)+","+r.firstEpoch+","+r.lastEpoch+","+r.lastUptime+","+r.encounters+","+r.rssi+","+r.peak+","+r.channel+","+csv(r.evidence);
-    if(Serial.println(row)==0)return false;delay(1);
+    if(Serial.println(row)==0){free(snapshot);return false;}radioTransferTick();delay(1);
   }
-  Serial.println("HISTORY_END");return true;
+  free(snapshot);Serial.println("HISTORY_END");return true;
 }
 bool emitDetection(Contact& c,Family family,Confidence confidence,const char* evidence,bool force){
   if(!detector.enabled(family))return false;
@@ -170,7 +175,7 @@ bool detectorCommand(const String& cmd){
   if(cmd=="axon priority on"||cmd=="axon priority off"){axonPriority=cmd.endsWith("on");detectorSave();Serial.printf("AXON_PRIORITY %u\n",axonPriority);return true;}
   if(cmd=="traffic status"){auto& t=trafficStatus;Serial.printf("TRAFFIC deauth_frames=%lu deauth_alerts=%lu recent=%u channel=%u reason=%u protected=%u ble_alerts=%lu group=%u addresses=%u variants=%u\n",t.disconnectFrames,t.disconnectAlerts,recentDisconnects(),t.channel,t.reason,t.protectedFrame,t.bleAlerts,t.bleGroup,t.bleAddresses,t.bleVariants);return true;}
   if(cmd=="radio active"||cmd=="radio passive"){setActiveBle(cmd=="radio active");Serial.printf("RADIO_MODE active_ble=%u\n",activeBle);return true;}
-  if(cmd=="history export"){bool scanning=radioEnabled;setRadio(false);if(!historyExport())Serial.println("HISTORY_ERROR");setRadio(scanning);return true;}
+  if(cmd=="history export"){if(!historyExport())Serial.println("HISTORY_ERROR");return true;}
   if(cmd=="history clear"){historyClear();Serial.printf("HISTORY_COUNT %u\n",unsigned(historyCount));return true;}
   if(cmd.startsWith("time ")){unsigned long epoch=0;char extra;if(sscanf(cmd.c_str(),"time %lu %c",&epoch,&extra)==1&&configureClock(epoch))Serial.println("TIME_OK");else Serial.println("TIME_ERROR");return true;}
   if(cmd=="detector status"){Serial.printf("DETECTOR history=%u storage=%s minimum=%u mask=%08lx tracked=%d fox=%u\n",unsigned(historyCount),historyReady?"OK":"MISSING",unsigned(detector.minimum),(unsigned long)detector.families,trackedContact,foxTransmit());return true;}

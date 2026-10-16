@@ -11,6 +11,14 @@ for md in [ROOT/'README.md',ROOT/'CREDITS.md',*ROOT.glob('docs/*.md')]:
 for board in ('spotpear','waveshare','stopwatch','xiao_round','waveshare_lite'):
     folder=ROOT/'web/firmware'/board
     records={name:sha for sha,name in (line.split() for line in (folder/'SHA256SUMS.txt').read_text().splitlines())}
+    budget=json.loads((folder/'memory-budget.json').read_text(encoding='utf-8'))
+    info=json.loads((folder/'build-info.json').read_text(encoding='utf-8'))
+    assert info['version']==VERSION and info['board']==board and info['memory']==budget
+    assert budget['app_bytes']==(folder/'firmware.bin').stat().st_size
+    assert budget['reserve_percent']==21
+    assert budget['app_slot_free_bytes']==budget['app_slot_bytes']-budget['app_bytes']
+    assert budget['app_slot_free_bytes']>=(budget['app_slot_bytes']*21+99)//100
+    assert budget['physical_flash_bytes']==info['flash_size']
     for mode in ('factory','update'):
         manifest=json.loads((folder/f'{mode}.json').read_text(encoding='utf-8'))
         assert manifest['version']==VERSION

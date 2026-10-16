@@ -1,4 +1,13 @@
-# Validation status · 0.11.1
+# Validation status · 0.12.0
+
+## Continuous scanning and Recon Notebook · 0.12.0 · 2026-10-15
+
+- On the connected Waveshare AMOLED, normal radar, badge, Settings, Notebook, BLE inspector, BLE Hunt and Wi-Fi Hunt each advanced both listening counters and all eleven Wi-Fi channel dwell counters. Legacy Pause was rejected. Hunt uses a complete sweep plus target priority; it no longer monopolizes one protocol. These are short bench intervals, not a guarantee of reception of every advertisement.
+- Production browser USB modules downloaded both notebook CSVs and history. A complete 434,320-byte deliberately invalid badge upload was rejected after transfer: both radios advanced, no additional queue drops were observed, and the original badge CRC remained `1e889380` with its boot preference intact. A maximum 128-attribute / 72,136-byte GATT file round trip retained byte-for-byte integrity while both radios advanced; the saved workspace was restored. Stored capture downloads passed their CRC checks. Incremental capture saving also left the radar enabled; its resulting CSV passed download validation and the temporary test file was removed. All 23 on-device self-tests passed. The filesystem/partition layout and existing NVS were preserved.
+- A separate laptop receiver observed all five new advertisement formats: marked iBeacon, Eddystone UID, Eddystone telemetry, BTHome and the custom DD-Lab payload. Each ran for four seconds at two payload updates/second, then restored radar. These new formats retain the detector's identity; existing pairing-advertisement modes keep their previous behavior. Format reception is not a demonstration of an effect against an unrelated device.
+- The controlled Windows GATT regression passed discovery/read, writes with and without response, subscription/notification/unsubscription, MTU status, profile save/delete, advertisement replay and a tracker-sound command delivered to a synthetic characteristic. This does not establish real tracker audibility or complete Flipper interoperability.
+- Native/fuzz checks cover all 158 pinned SquachWatch facts, AXEOFF priority, malformed notebook input, full channel sweeps despite scheduling jitter, randomized-address vendor rejection, advertisement formats and reserve arithmetic. All 50 web tests passed, including both update/factory manifests for all five board identities. Every packaged build enforces at least 21% free space in its application slot and includes an exact memory report. ASan/UBSan and all five builds are also required by release CI.
+- This release's physical checks cover the Waveshare only. Other boards have build/package coverage. No claim of full upstream feature parity, all-day battery life, field detection of every product, or simultaneous Wi-Fi/BLE reception is made. See [feature gaps](FEATURE-MATRIX.md) and [flash allocation](FLASH-BUDGET.md).
 
 ## Connected-network diagnostics · 0.11.1 · 2026-10-15
 

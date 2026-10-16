@@ -1,3 +1,5 @@
+> **0.12 update:** Hunt, badge and ordinary screens continue BLE/Wi-Fi detection. Channel selection is now a priority after a full sweep, and manual Pause is removed. Explicit Waveshare radio modes remain exclusive when selected. Open **Tools → System → Recon notebook** for passive payload/probe evidence, or use **Settings → Recon notebook**. [Scan timing and export](RECON-NOTEBOOK.md).
+
 # Daily detection and hunting · 0.10.0
 
 This guide covers the four full-feature boards. The non-touch Waveshare ESP32-S3-LCD-1.28 has a dedicated [Lite radar guide](WAVESHARE-LITE.md); it has no menus, settings or badge mode.

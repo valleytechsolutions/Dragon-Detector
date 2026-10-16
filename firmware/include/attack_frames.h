@@ -9,10 +9,12 @@ enum class AttackMode:uint8_t {
   SaeCommit, ChannelSwitch, Quiet,
   SwiftPair, FastPair, Samsung, Flipper, AppleJuice, SourApple, BleMix,
   ApSpam, Rickroll, FunnyBeacons,
+  IBeacon, EddystoneUid, EddystoneTlm, BTHome, CustomBle,
   Count
 };
 struct AttackDefinition {const char* name;bool ble,needsAp,needsClient;};
 extern const AttackDefinition attackDefinitions[unsigned(AttackMode::Count)];
+inline bool bleRotatesAddress(AttackMode mode){return mode>=AttackMode::SwiftPair&&mode<=AttackMode::BleMix;}
 struct AttackTarget {
   uint8_t bssid[6]{},client[6]{};
   uint8_t channel=1,destinationChannel=6;
@@ -29,5 +31,6 @@ size_t buildWifiAttack(uint8_t* out,size_t capacity,AttackMode mode,
                       uint16_t sequence,const uint8_t entropy[96]);
 size_t buildBleAttack(uint8_t* out,size_t capacity,AttackMode mode,
                      const uint8_t entropy[96]);
+size_t copyBleAdvertisement(uint8_t* out,size_t capacity,const uint8_t* data,size_t length);
 }
 

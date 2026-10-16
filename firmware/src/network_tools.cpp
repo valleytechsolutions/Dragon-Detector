@@ -64,7 +64,7 @@ void networkStop(){if(!active&&!iface)return;scanStop();esp_wifi_disconnect();wi
  if(wifiEvents){esp_event_handler_instance_unregister(WIFI_EVENT,ESP_EVENT_ANY_ID,wifiEvents);wifiEvents=nullptr;}
  if(iface){esp_netif_destroy_default_wifi(iface);iface=nullptr;}active=connected=false;address={};channelLock=oldLock;setRadio(resume);note("Disconnected / previous radar state restored");}
 bool networkConnect(unsigned index){using namespace dragon::toolkit;
- if(index>=8||!valid(profiles[index])||reconOwnsRadio()||bleLabOwnsRadio()||status.recording||ESP.getFreeHeap()<35000){note("Choose a saved profile; stop other radio sessions");return false;}
+ if(index>=8||!valid(profiles[index])||reconOwnsRadio()||reconStorageBusy()||bleLabOwnsRadio()||status.recording||ESP.getFreeHeap()<35000){note("Choose a saved profile; stop other radio sessions");return false;}
  esp_err_t err=esp_netif_init();if(err!=ESP_OK&&err!=ESP_ERR_INVALID_STATE)return false;
  iface=esp_netif_create_default_wifi_sta();if(!iface){note("Network interface unavailable");return false;}
  resume=radioEnabled;oldLock=channelLock;setRadio(false);active=true;connected=false;address={};selected=index;started=millis();lastCheck=0;disconnectReason=0;disconnectCount=0;handledDisconnect=0;attempts=1;lastAttempt=started;

@@ -1,17 +1,18 @@
-import {hasNetworkTools,networkProfileCommand,networkResultsCsv} from './network-tools.js?v=0.11.1';
-import {normalizeHex,probeRows,probeCsv} from './recon-analysis.js?v=0.11.1';
-import {hasReconTools,reconLines,exportCapture,captureName,importPortalHtml} from './recon-transfer.js?v=0.11.1';
-import {decodeProfile,exportProfile,exportLog,importProfile,labLines,safeProfileName} from './ble-lab.js?v=0.11.1';
-import {localClockEpoch,setClock,readWearable,setOrientation} from './wearable-transfer.js?v=0.11.1';
+import {hasNetworkTools,networkProfileCommand,networkResultsCsv} from './network-tools.js?v=0.12.0';
+import {normalizeHex,probeRows,probeCsv} from './recon-analysis.js?v=0.12.0';
+import {hasReconTools,reconLines,exportCapture,captureName,importPortalHtml} from './recon-transfer.js?v=0.12.0';
+import {decodeProfile,exportProfile,exportLog,importProfile,labLines,safeProfileName} from './ble-lab.js?v=0.12.0';
+import {localClockEpoch,setClock,readWearable,setOrientation} from './wearable-transfer.js?v=0.12.0';
 import {deviceQuery} from './device-query.js';
-import {BadgeSerial} from './serial.js?v=0.11.1';
+import {BadgeSerial} from './serial.js?v=0.12.0';
 import {encodeBadge} from './badge-codec.js';
-import {uploadBadge} from './badge-transfer.js?v=0.11.1';
+import {uploadBadge} from './badge-transfer.js?v=0.12.0';
 import {readHistory} from './detector-transfer.js';
-import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasWearableTools} from './firmware-compat.js?v=0.11.1';
-import {readRadarSettings,saveRadarSettings} from './radar-transfer.js?v=0.11.1';
-import {boardProfiles,connectedProfile,validateManifest,supportsBadge} from './board-profiles.js?v=0.11.1';
-import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan,drawBadgeText} from './badge-editor.js?v=0.11.1';
+import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasWearableTools} from './firmware-compat.js?v=0.12.0';
+import {readRadarSettings,saveRadarSettings} from './radar-transfer.js?v=0.12.0';
+import {boardProfiles,connectedProfile,validateManifest,supportsBadge} from './board-profiles.js?v=0.12.0';
+import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan,drawBadgeText} from './badge-editor.js?v=0.12.0';
+import {hasNotebook,readNotebook,customAdvertCommand} from './notebook.js?v=0.12.0';
 const $ = id => document.getElementById(id);
 const models = Object.fromEntries(Object.entries(boardProfiles).map(([id,p])=>[id,p.name]));
 let board = '', releaseReady = false, request = 0;
@@ -65,12 +66,14 @@ function setBadgeProfile(id){
   $('badge-board').value=id;draw();
 }
 function controls(){
-  const labReady=!!serial&&deviceProfile==='waveshare'&&/^0\.(?:9\.(?:[8-9]|\d{2,})|(?:10|11)\.\d+)$/.test(firmwareVersion);
+  const labReady=!!serial&&deviceProfile==='waveshare'&&/^0\.(?:9\.(?:[8-9]|\d{2,})|(?:10|11|12)\.\d+)$/.test(firmwareVersion);
   document.querySelectorAll('#ble-lab button').forEach(b=>b.disabled=busy||!labReady);
   document.querySelectorAll('#radio-tools button').forEach(b=>b.disabled=busy||!serial||deviceProfile!=='waveshare'||!hasReconTools(firmwareVersion));
-  document.querySelectorAll('[data-requires="0.11"]').forEach(b=>b.disabled=busy||!serial||deviceProfile!=='waveshare'||!/^0\.11\.\d+$/.test(firmwareVersion));
+  document.querySelectorAll('[data-requires="0.11"]').forEach(b=>b.disabled=busy||!serial||deviceProfile!=='waveshare'||!/^0\.(?:11|12)\.\d+$/.test(firmwareVersion));
   document.querySelectorAll('[data-requires="0.11.1"]').forEach(b=>b.disabled=busy||!serial||deviceProfile!=='waveshare'||!hasNetworkTools(firmwareVersion));
   const lite=!!boardProfiles[deviceProfile]?.lite;
+  for(const id of ['notebook-open','notebook-probes','notebook-adverts','notebook-memory'])$(id).disabled=busy||!serial||lite||!hasNotebook(firmwareVersion);
+  $('custom-advert-save').disabled=busy||!serial||deviceProfile!=='waveshare'||!hasNotebook(firmwareVersion);
   for(const id of ['show-stopwatch','show-clock','clock-save','clock-sync','orientation-save'])$(id).disabled=busy||!serial||lite||!hasWearableTools(firmwareVersion);
   $('show-activity').disabled=busy||!serial||lite||!hasActivityTools(firmwareVersion);
   $('radar-save').disabled=busy||!serial||lite||!hasRadarTools(firmwareVersion);
@@ -206,7 +209,7 @@ $('history-export').onclick=()=>detectorAction(async link=>{
   const csv=await readHistory(link);
   if(!csv.startsWith('radio,address_type,mac,'))throw new Error('The board returned an invalid CSV header.');
   const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download=`dragon-detections-${new Date().toISOString().slice(0,10)}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);
-  $('detector-status').textContent='History downloaded. Scanning has resumed.';
+  $('detector-status').textContent='History downloaded. Detection remains active.';
 });
 $('sync-time').onclick=()=>detectorAction(async link=>{await link.write(`time ${Math.floor(Date.now()/1000)}`);if(await link.wait(s=>s==='TIME_OK'||s==='TIME_ERROR')!=='TIME_OK')throw new Error('Clock sync failed. Check the RTC.');$('detector-status').textContent='UTC clock synchronized for new history entries.';});
 $('show-radar').onclick=()=>detectorAction(async link=>{await link.write('screen radar');$('detector-status').textContent='Radar view selected.';});
@@ -347,3 +350,13 @@ $('network-remove').onclick=()=>{if(confirm('Delete this saved network and passw
 $('network-scan').onclick=()=>{if(confirm('Ping up to 254 addresses in the joined local subnet?'))reconAction(l=>reconDo(l,'net scan local'));};
 $('network-clear').onclick=()=>{if(confirm('Clear current ping results? Saved CSV files stay intact.'))reconAction(l=>reconDo(l,'net clear'));};
 $('network-download').onclick=()=>reconAction(async l=>{downloadText(networkResultsCsv(await reconLines(l,'net results')),'dragon-local-network.csv','text/csv');$('recon-output').textContent='Local network results downloaded.';});
+
+async function notebookAction(action){await detectorAction(action);$('notebook-status').textContent=$('detector-status').textContent;}
+$('notebook-open').onclick=()=>notebookAction(l=>l.write('screen notebook'));
+for(const kind of ['probes','adverts'])$('notebook-'+kind).onclick=()=>notebookAction(async l=>{
+ $('detector-status').textContent='Reading passive '+kind+' snapshot…';
+ const csv=await readNotebook(l,kind);const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='dragon-notebook-'+kind+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);
+ $('detector-status').textContent='Snapshot downloaded. Radar scanning continued during export.';
+});
+$('notebook-memory').onclick=()=>notebookAction(async l=>{await l.write('memory status');$('detector-status').textContent=await l.wait(s=>s.startsWith('MEMORY '));});
+$('custom-advert-save').onclick=async()=>{await reconAction(l=>reconDo(l,customAdvertCommand($('custom-advert-hex').value)));$('custom-advert-status').textContent=$('recon-output').textContent;};

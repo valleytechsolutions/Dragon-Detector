@@ -1,7 +1,9 @@
 // Dragon BLE Lab. Original MIT implementation; no third-party firmware code.
 #include "ble_lab.h"
+#include "background_radio.h"
 #include "recon.h"
 #include "ble_insights.h"
+#include "flash_budget.h"
 #include "attack_frames.h"
 #ifdef BOARD_AMOLED_175C
 #include "app.h"
@@ -171,28 +173,28 @@ void worker(void*){for(;;){xSemaphoreTake(jobReady,portMAX_DELAY);Job run=job;
  }else if(run!=None){say("Connection no longer available");stopWorker();}
  }}
 bool start(Job next,unsigned index=0){if(!profile||!workerTask||working()||finished||reconOwnsRadio())return false;
- if(next==Discover||next==Clone||next==Replay){if(owned)return false;reconStop();resumeRadio=radioEnabled;setRadio(false);owned=true;cancelled=false;eventCount=eventHead=0;eventDrops=0;}
+ if(next==Discover||next==Clone||next==Replay){if(owned||reconStorageBusy())return false;reconStop();resumeRadio=radioEnabled;setRadio(false);owned=true;cancelled=false;eventCount=eventHead=0;eventDrops=0;}
  else if(next!=Stop&&state!=Monitoring)return false;
  job=next;jobIndex=index;state=Working;say(next==Discover?"Connecting...":next==Clone?"Building local GATT peripheral...":next==Stop?"Stopping lab / restoring radar...":"Request pending...");xSemaphoreGive(jobReady);return true;}
 String path(const char* name){return String("/profiles/")+name+".ddg";}
 bool save(const char* name){if(!storeReady||working()||!safeName(name)||!valid(*profile,bytes(*profile))||!profile->count)return false;String p=path(name);if(recon.exists(p)){say("Name exists. Choose a new name in the web lab.");return false;}
- size_t length=bytes(*profile);if(recon.totalBytes()-recon.usedBytes()<length+16384)return false;recon.remove(p+".part");File f=recon.open(p+".part",FILE_WRITE);if(!f)return false;uint32_t crc=checksum((uint8_t*)profile,length);bool ok=f.write((uint8_t*)profile,length)==length&&f.write((uint8_t*)&crc,4)==4;f.flush();f.close();if(ok)ok=recon.rename(p+".part",p);if(!ok)recon.remove(p+".part");say(ok?"Profile saved to dedicated recon flash":"Profile save failed");return ok;}
+ size_t length=bytes(*profile);if(!dragon::storageFits(recon.totalBytes(),recon.usedBytes(),length+16384))return false;recon.remove(p+".part");File f=recon.open(p+".part",FILE_WRITE);if(!f)return false;uint32_t crc=checksum((uint8_t*)profile,length);bool ok=f.write((uint8_t*)profile,length)==length&&f.write((uint8_t*)&crc,4)==4;f.flush();f.close();if(ok)ok=recon.rename(p+".part",p);if(!ok)recon.remove(p+".part");say(ok?"Profile saved to dedicated recon flash":"Profile save failed");return ok;}
 bool readProfile(const char* name,Profile& p){if(!storeReady||!safeName(name))return false;File f=recon.open(path(name));size_t n=f?f.size():0;if(n<HeaderSize+4||n>sizeof(Profile)+4){f.close();return false;}memset(&p,0,sizeof(p));uint32_t crc=0;bool ok=f.read((uint8_t*)&p,n-4)==n-4&&f.read((uint8_t*)&crc,4)==4;f.close();return ok&&checksum((uint8_t*)&p,n-4)==crc&&valid(p,n-4);}
 void fileList(){Serial.println("LAB_PROFILES");if(storeReady){File d=recon.open("/profiles");for(File f=d.openNextFile();f;f=d.openNextFile()){if(!f.isDirectory()&&String(f.name()).endsWith(".ddg"))Serial.printf("LAB_PROFILE %s %u\n",f.name(),unsigned(f.size()));f.close();}d.close();}Serial.println("LAB_END");}
-bool serialWrite(const uint8_t* p,size_t n){uint32_t at=millis();while(n){size_t k=std::min<size_t>(128,std::min(n,size_t(Serial.availableForWrite())));if(k){k=Serial.write(p,k);p+=k;n-=k;at=millis();}else if(millis()-at>5000)return false;delay(1);}return true;}
-void exportLog(bool previous){File f=storeReady?recon.open(previous?"/events/previous.csv":"/events/current.csv"):File();if(!f){Serial.println("LAB_ERROR no saved log");return;}bool r=radioEnabled;setRadio(false);Serial.printf("LAB_LOG_BEGIN %u\n",unsigned(f.size()));Serial.println("uptime_ms,kind,attribute,length,hex");uint8_t b[256];bool ok=true;while(f.available()&&ok){size_t n=f.read(b,sizeof(b));ok=n&&serialWrite(b,n);}f.close();Serial.println(ok?"LAB_LOG_END":"LAB_ERROR log transfer");setRadio(r);}
-void exportProfile(){if(working()||!profile->count){Serial.println("LAB_ERROR no stable profile");return;}size_t n=bytes(*profile);uint32_t crc=checksum((uint8_t*)profile,n);bool r=radioEnabled;setRadio(false);Serial.printf("LAB_FILE %u %08lx\n",unsigned(n),crc);bool ok=true;char line[540];
- for(size_t off=0;off<n&&ok;off+=256){size_t count=std::min<size_t>(256,n-off);int pos=snprintf(line,sizeof(line),"LAB_DATA %u ",unsigned(off));for(size_t i=0;i<count;++i)pos+=snprintf(line+pos,sizeof(line)-pos,"%02x",((uint8_t*)profile)[off+i]);line[pos++]='\n';ok=serialWrite((uint8_t*)line,pos);}Serial.println(ok?"LAB_FILE_END":"LAB_ERROR transfer");setRadio(r);}
-void importProfile(const String& command){unsigned n=0;unsigned long crc=0;char extra;if(owned||sscanf(command.c_str(),"lab import %u %lx %c",&n,&crc,&extra)!=2||n<HeaderSize||n>sizeof(Profile)){Serial.println("LAB_ERROR import length or busy");return;}
- auto* temp=(Profile*)ps_calloc(1,sizeof(Profile));if(!temp){Serial.println("LAB_ERROR memory");return;}bool r=radioEnabled;setRadio(false);Serial.println("LAB_READY");size_t received=0;uint32_t at=millis(),ack=at;
- while(received<n&&millis()-at<5000){size_t k=std::min<size_t>(256,std::min<size_t>(Serial.available(),n-received));if(k){k=Serial.readBytes((uint8_t*)temp+received,k);received+=k;at=ack=millis();Serial.printf("LAB_ACK %u\n\n",unsigned(received));}else{if(millis()-ack>250){Serial.printf("LAB_ACK %u\n\n",unsigned(received));ack=millis();}delay(1);}}
- bool ok=received==n&&checksum((uint8_t*)temp,n)==crc&&valid(*temp,n);if(ok){memcpy(profile,temp,sizeof(Profile));say("Imported profile / review before emulating");}free(temp);setRadio(r);Serial.println(ok?"LAB_OK imported":"LAB_ERROR invalid profile or CRC");}
+bool serialWrite(const uint8_t* p,size_t n){RadioTransfer transfer;uint32_t at=millis();while(n){size_t k=std::min<size_t>(128,std::min(n,size_t(Serial.availableForWrite())));if(k){k=Serial.write(p,k);p+=k;n-=k;at=millis();}else if(millis()-at>5000)return false;radioTransferTick();delay(1);}return true;}
+void exportLog(bool previous){File f=storeReady?recon.open(previous?"/events/previous.csv":"/events/current.csv"):File();if(!f){Serial.println("LAB_ERROR no saved log");return;}RadioTransfer transfer;Serial.printf("LAB_LOG_BEGIN %u\n",unsigned(f.size()));Serial.println("uptime_ms,kind,attribute,length,hex");uint8_t b[256];bool ok=true;while(f.available()&&ok){size_t n=f.read(b,sizeof(b));ok=n&&serialWrite(b,n);}f.close();Serial.println(ok?"LAB_LOG_END":"LAB_ERROR log transfer");}
+void exportProfile(){if(working()||!profile->count){Serial.println("LAB_ERROR no stable profile");return;}size_t n=bytes(*profile);uint32_t crc=checksum((uint8_t*)profile,n);RadioTransfer transfer;Serial.printf("LAB_FILE %u %08lx\n",unsigned(n),crc);bool ok=true;char line[540];
+ for(size_t off=0;off<n&&ok;off+=256){size_t count=std::min<size_t>(256,n-off);int pos=snprintf(line,sizeof(line),"LAB_DATA %u ",unsigned(off));for(size_t i=0;i<count;++i)pos+=snprintf(line+pos,sizeof(line)-pos,"%02x",((uint8_t*)profile)[off+i]);line[pos++]='\n';ok=serialWrite((uint8_t*)line,pos);}Serial.println(ok?"LAB_FILE_END":"LAB_ERROR transfer");}
+void importProfile(const String& command){unsigned n=0;unsigned long crc=0;char extra;if(owned||reconStorageBusy()||sscanf(command.c_str(),"lab import %u %lx %c",&n,&crc,&extra)!=2||n<HeaderSize||n>sizeof(Profile)){Serial.println("LAB_ERROR import length or busy");return;}
+ auto* temp=(Profile*)ps_calloc(1,sizeof(Profile));if(!temp){Serial.println("LAB_ERROR memory");return;}RadioTransfer transfer;Serial.println("LAB_READY");size_t received=0;uint32_t at=millis(),ack=at;
+ while(received<n&&millis()-at<5000){size_t k=std::min<size_t>(256,std::min<size_t>(Serial.available(),n-received));if(k){k=Serial.readBytes((uint8_t*)temp+received,k);received+=k;at=ack=millis();Serial.printf("LAB_ACK %u\n\n",unsigned(received));}else{if(millis()-ack>250){Serial.printf("LAB_ACK %u\n\n",unsigned(received));ack=millis();}}radioTransferTick();delay(1);}
+ bool ok=received==n&&checksum((uint8_t*)temp,n)==crc&&valid(*temp,n);if(ok){memcpy(profile,temp,sizeof(Profile));say("Imported profile / review before emulating");}free(temp);Serial.println(ok?"LAB_OK imported":"LAB_ERROR invalid profile or CRC");}
 String hex(const uint8_t* p,size_t n,size_t limit=32){String s;char b[4];for(size_t i=0;i<std::min(n,limit);++i){snprintf(b,sizeof(b),"%02x",p[i]);s+=b;if(i+1<std::min(n,limit))s+=' ';}if(n>limit)s+=" ...";return s;}
 const char* stateName(){switch(state.load()){case Working:return "BUSY";case Monitoring:return "CONNECTED";case Emulating:return "EMULATING";case Failed:return "ERROR";default:return "IDLE";}}
 }
 bool bleLabOwnsRadio(){return owned.load();}
 fs::FS* bleLabStorage(){return storeReady&&!owned?&recon:nullptr;}
-bool bleLabStorageSpace(size_t n){return storeReady&&!owned&&recon.totalBytes()-recon.usedBytes()>=n;}
+bool bleLabStorageSpace(size_t n){return storeReady&&!owned&&dragon::storageFits(recon.totalBytes(),recon.usedBytes(),n);}
 void bleLabSelect(const uint8_t* mac,uint8_t type,const char* name){if(owned)return;memcpy(selectedMac,mac,6);selectedType=type;strlcpy(selectedName,name,sizeof(selectedName));++revision;}
 void bleLabObserve(const uint8_t* mac,uint8_t type,int rssi,const uint8_t* data,size_t len,size_t boundary,uint32_t at){if(!advertisements||owned||len>MaxAdvertisement||boundary>len)return;
  if(!advertisementValid(data,boundary)||!advertisementValid(data+boundary,len-boundary))return;
@@ -216,7 +218,7 @@ void bleLabLoop(){
  if(cancelled&&owned&&!working())start(Stop);
  if(state==Monitoring&&client&&!client->isConnected()){say("Peripheral disconnected; returning radio to radar");start(Stop);}
  Event e;for(unsigned i=0;eventQueue&&i<8&&xQueueReceive(eventQueue,&e,0)==pdTRUE;++i){events[eventHead]=e;eventHead=(eventHead+1)%64;eventCount=std::min(64u,eventCount+1);++revision;
-  if(logEnabled&&storeReady){String line=String(e.at)+","+e.kind+","+e.index+","+e.length+","+hex(e.data,e.length,MaxValue)+"\n";File f=recon.open("/events/current.csv",FILE_APPEND);if(f){if(f.size()+line.length()>1024*1024){f.close();recon.remove("/events/previous.csv");recon.rename("/events/current.csv","/events/previous.csv");f=recon.open("/events/current.csv",FILE_WRITE);}if(f&&recon.totalBytes()-recon.usedBytes()>32768){size_t n=f.print(line);loggedBytes+=n;if(n!=line.length())logEnabled=false;}else logEnabled=false;f.close();}}
+  if(logEnabled&&storeReady){String line=String(e.at)+","+e.kind+","+e.index+","+e.length+","+hex(e.data,e.length,MaxValue)+"\n";File f=recon.open("/events/current.csv",FILE_APPEND);if(f){if(f.size()+line.length()>1024*1024){f.close();recon.remove("/events/previous.csv");recon.rename("/events/current.csv","/events/previous.csv");f=recon.open("/events/current.csv",FILE_WRITE);}if(f&&dragon::storageFits(recon.totalBytes(),recon.usedBytes(),32768)){size_t n=f.print(line);loggedBytes+=n;if(n!=line.length())logEnabled=false;}else logEnabled=false;f.close();}}
  }
 }
 bool bleLabCommand(const String& c){if(!c.startsWith("lab "))return false;if(!profile||!workerTask){Serial.println("LAB_ERROR unavailable");return true;}

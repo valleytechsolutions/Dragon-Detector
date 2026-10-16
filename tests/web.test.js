@@ -204,7 +204,7 @@ test('flasher rejects wrong boards, partitions, remote paths and destructive upd
   assert.equal(validateManifest(good,board,mode),good);
   if(board==='waveshare_lite'){const old=structuredClone(good);old.version='0.9.3';assert.throws(()=>validateManifest(old,board,mode),/0.9.4/);}
   if(board==='xiao_round'){const old=structuredClone(good);old.version='0.9.1';assert.throws(()=>validateManifest(old,board,mode),/0.9.2/);}
-  for(const mutate of [d=>d.name+=' wrong',d=>d.builds[0].chipFamily='ESP32',d=>d.builds[0].parts[3].offset=0,d=>d.builds[0].parts[3].path='https://example.com/firmware.bin',d=>d.builds[0].parts.push(d.builds[0].parts[0]),d=>d.builds[0].parts.pop(),d=>d.new_install_prompt_erase=!d.new_install_prompt_erase,d=>d.version='0.11.0']){
+  for(const mutate of [d=>d.name+=' wrong',d=>d.builds[0].chipFamily='ESP32',d=>d.builds[0].parts[3].offset=0,d=>d.builds[0].parts[3].path='https://example.com/firmware.bin',d=>d.builds[0].parts.push(d.builds[0].parts[0]),d=>d.builds[0].parts.pop(),d=>d.new_install_prompt_erase=!d.new_install_prompt_erase,d=>d.version='0.13.0']){
    const bad=structuredClone(good);mutate(bad);assert.throws(()=>validateManifest(bad,board,mode),/manifest/);
   }
   if(mode==='factory'){const bad=structuredClone(good);bad.builds[0].parts[4].offset=p.filesystemOffset===0x810000?0xc10000:0x810000;assert.throws(()=>validateManifest(bad,board,mode));}

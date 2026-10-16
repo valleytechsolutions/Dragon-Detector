@@ -30,7 +30,12 @@ const AttackDefinition attackDefinitions[] = {
   {"BLE mixed pairing",true,false,false},
   {"AP clone / random BSSIDs",false,true,false},
   {"Rickroll beacon playlist",false,false,false},
-  {"Funny beacon playlist",false,false,false}
+  {"Funny beacon playlist",false,false,false},
+  {"BLE iBeacon simulator",true,false,false},
+  {"BLE Eddystone UID",true,false,false},
+  {"BLE Eddystone telemetry",true,false,false},
+  {"BLE BTHome sensor",true,false,false},
+  {"BLE custom advertisement",true,false,false}
 };
 static_assert(sizeof(attackDefinitions)/sizeof(*attackDefinitions)==unsigned(AttackMode::Count));
 bool unicastAddress(const uint8_t mac[6]) {
@@ -109,11 +114,28 @@ size_t buildWifiAttack(uint8_t* out,size_t cap,AttackMode mode,const AttackTarge
   }
   if(n>cap)return 0;memcpy(out,b,n);return n;
 }
+size_t copyBleAdvertisement(uint8_t* out,size_t cap,const uint8_t* data,size_t n){if(!out||!data||!n||n>31||n>cap||!validLegacyAdvert(data,n))return 0;memcpy(out,data,n);return n;}
 size_t buildBleAttack(uint8_t* out,size_t cap,AttackMode mode,const uint8_t e[96]) {
   if(!out||!e)return 0;
   if(mode==AttackMode::BleMix)mode=AttackMode(unsigned(AttackMode::SwiftPair)+(e[0]%6));
   uint8_t b[31]{};size_t n=0;
   switch(mode) {
+    case AttackMode::IBeacon: {
+      const uint8_t data[]={2,1,6,26,0xff,0x4c,0,2,0x15,0x44,0x52,0x41,0x47,0x4f,0x4e,0x4c,0x41,0x42,0,0,0,0,0,0,1,0,1,0,1,0xc5};
+      memcpy(b,data,sizeof(data));memcpy(b+25,e,4);n=sizeof(data);break;
+    }
+    case AttackMode::EddystoneUid: {
+      const uint8_t data[]={2,1,6,3,3,0xaa,0xfe,23,0x16,0xaa,0xfe,0,0xc5,'D','r','a','g','o','n','-','L','a','b',0,0,0,0,0,0,0,0};
+      memcpy(b,data,sizeof(data));memcpy(b+23,e,6);n=sizeof(data);break;
+    }
+    case AttackMode::EddystoneTlm: {
+      const uint8_t data[]={2,1,6,3,3,0xaa,0xfe,17,0x16,0xaa,0xfe,0x20,0,0x0b,0xb8,0x19,0,0,0,0,1,0,0,0,1};
+      memcpy(b,data,sizeof(data));b[14]=e[0];b[16]=e[1];memcpy(b+21,e+2,4);n=sizeof(data);break;
+    }
+    case AttackMode::BTHome: {
+      const uint8_t data[]={2,1,6,11,0x16,0xd2,0xfc,0x40,0,0,1,100,2,0xc4,9,2,9,'D'};
+      memcpy(b,data,sizeof(data));b[9]=e[0];b[11]=e[1]%101;n=sizeof(data);break;
+    }
     case AttackMode::SwiftPair: {
       const uint8_t prefix[]={16,0xff,6,0,3,0,0x80};memcpy(b,prefix,sizeof(prefix));
       char name[11];snprintf(name,sizeof(name),"DD-%02X%02X%02X",e[0],e[1],e[2]);memcpy(b+7,name,9);b[0]=15;n=16;break;

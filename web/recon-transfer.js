@@ -1,5 +1,5 @@
 import {crc32} from './ble-lab.js';
-export function hasReconTools(version){return /^0\.(?:10|11)\.\d+$/.test(version);}
+export function hasReconTools(version){return /^0\.(?:10|11|12)\.\d+$/.test(version);}
 export function captureName(value){if(!/^(wifi-[a-f0-9]{8}\.pcap|(?:ble|portal|net)-[a-f0-9]{8}\.csv)$/.test(value))throw new Error('Choose a saved capture.');return value;}
 export async function reconLines(link,command){
  link.lines=[];const lines=[];const off=link.onLine(line=>{if(line&&/^(RECON_|TOOL_|MODE_STATUS|MODE |TOOL )/.test(line))lines.push(line);});

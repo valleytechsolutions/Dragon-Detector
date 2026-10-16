@@ -4,9 +4,9 @@ import {hasReconTools,captureName,exportCapture,importPortalHtml} from '../web/r
 import {parseBadgeInfo,hasWearableTools} from '../web/firmware-compat.js';
 import {validateManifest,boardProfiles} from '../web/board-profiles.js';
 import {hasNetworkTools,networkProfileCommand,networkResultsCsv} from '../web/network-tools.js';
-test('Network profiles encode spaces and punctuation without command injection; old firmware stays gated',()=>{assert.ok(hasNetworkTools('0.11.1'));for(const v of ['0.11.0','0.12.0','0.11.01'])assert.ok(!hasNetworkTools(v));assert.equal(networkProfileCommand(0,'A B',''), 'net profile put 0 412042 -');assert.equal(networkProfileCommand(7,'lab','12345678'),'net profile put 7 6c6162 3132333435363738');for(const args of [[8,'x',''],[0,'x\nnet disconnect',''],[0,'x','short'],[0,'x','a'.repeat(64)],[0,'é','']])assert.throws(()=>networkProfileCommand(...args));assert.equal(captureName('net-0123abcd.csv'),'net-0123abcd.csv');});
+test('Network profiles encode spaces and punctuation without command injection; old firmware stays gated',()=>{assert.ok(hasNetworkTools('0.11.1'));for(const v of ['0.11.0','0.13.0','0.11.01'])assert.ok(!hasNetworkTools(v));assert.equal(networkProfileCommand(0,'A B',''), 'net profile put 0 412042 -');assert.equal(networkProfileCommand(7,'lab','12345678'),'net profile put 7 6c6162 3132333435363738');for(const args of [[8,'x',''],[0,'x\nnet disconnect',''],[0,'x','short'],[0,'x','a'.repeat(64)],[0,'é','']])assert.throws(()=>networkProfileCommand(...args));assert.equal(captureName('net-0123abcd.csv'),'net-0123abcd.csv');});
 test('Network result export excludes malformed or formula cells',()=>{assert.equal(networkResultsCsv(['RECON_HOST 192.168.1.1 34','RECON_HOST 999.1.1.1 2','RECON_HOST =CMD 4','RECON_HOST 1.2.3.4 99999']), 'ipv4,rtt_ms\n192.168.1.1,34\n');});
-test('0.10 contracts enable supported hardware and keep unknown protocols closed',()=>{assert.ok(hasReconTools('0.10.0'));assert.ok(hasWearableTools('0.10.0'));for(const v of ['0.9.8','0.12.0','1.10.0','0.100.0'])assert.ok(!hasReconTools(v));for(const id of Object.keys(boardProfiles)){const p=boardProfiles[id],state=p.lite?'RADAR_ONLY':'READY';assert.ok(parseBadgeInfo(`BADGE_INFO 0.10.0 ${p.size} ${state} ${p.firmwareName}`));}
+test('0.10 contracts enable supported hardware and keep unknown protocols closed',()=>{assert.ok(hasReconTools('0.10.0'));assert.ok(hasWearableTools('0.10.0'));for(const v of ['0.9.8','0.13.0','1.10.0','0.100.0'])assert.ok(!hasReconTools(v));for(const id of Object.keys(boardProfiles)){const p=boardProfiles[id],state=p.lite?'RADAR_ONLY':'READY';assert.ok(parseBadgeInfo(`BADGE_INFO 0.10.0 ${p.size} ${state} ${p.firmwareName}`));}
  const p=boardProfiles.waveshare,parts=[{path:'bootloader.bin',offset:0},{path:'partitions.bin',offset:0x8000},{path:'boot_app0.bin',offset:0xe000},{path:'firmware.bin',offset:0x10000}];const m={name:`Dragon Detector — ${p.firmwareName} (update)`,version:'0.10.0',new_install_prompt_erase:false,builds:[{chipFamily:'ESP32-S3',parts}]};validateManifest(m,'waveshare','update');parts.push({path:'littlefs.bin',offset:0xc10000},{path:'reconfs.bin',offset:0x1000000});assert.throws(()=>validateManifest(m,'waveshare','update'));m.name=m.name.replace('(update)','(factory)');m.new_install_prompt_erase=true;validateManifest(m,'waveshare','factory');
 });
 function fake(lines){let cb,removed=false;return {get removed(){return removed;},onLine(fn){cb=fn;return()=>removed=true;},async write(c){assert.equal(c,'recon get wifi-0123abcd.pcap');for(const line of lines)cb(line);}};}
@@ -18,3 +18,22 @@ import {normalizeHex,probeRows,probeCsv} from '../web/recon-analysis.js';
 test('recon analysis validates hex and preserves raw probe SSIDs without spreadsheet formulas',()=>{assert.equal(normalizeHex('01:02-03 04'),'01020304');for(const bad of ['0','0 1','01 g2','gg','00'.repeat(513)])assert.throws(()=>normalizeHex(bad));const rows=['RECON_PROBE 10:11:12:13:14:15 ch=6 rssi=-50 age=1 count=4 ssid_hex=3d317fff'];assert.equal(probeRows(rows)[0].hex,'3d317fff');assert.ok(probeCsv(rows).includes("'"+'=1'));assert.ok(hasReconTools('0.11.0'));});
 
 test('HTML import waits for bounded CRC-checked chunk acknowledgements',async()=>{const data=new TextEncoder().encode('<html>Test</html>'),writes=[],responses=['RECON_READY','RECON_ACK '+data.length,'RECON_OK template saved'];const link={lines:[],async write(s){writes.push(s);},async wait(f){const r=responses.shift();assert.ok(f(r));return r;}};await importPortalHtml(link,data);assert.equal(writes.length,2);assert.deepEqual(writes[1],data);await assert.rejects(importPortalHtml(link,new Uint8Array([0])));assert.equal(captureName('portal-0123abcd.csv'),'portal-0123abcd.csv');});
+
+import {hasNotebook,readNotebook,customAdvertCommand} from '../web/notebook.js';
+test('0.12 contracts accept every real board manifest and preserve both Waveshare filesystems',()=>{
+ assert.ok(hasNotebook('0.12.0'));assert.ok(hasReconTools('0.12.0'));assert.ok(hasNetworkTools('0.12.0'));assert.ok(!hasNotebook('0.11.1'));
+ for(const version of ['0.11.1','0.12.0'])for(const [id,p] of Object.entries(boardProfiles))for(const mode of ['update','factory']){
+  const parts=[{path:'bootloader.bin',offset:0},{path:'partitions.bin',offset:0x8000},{path:'boot_app0.bin',offset:0xe000},{path:'firmware.bin',offset:0x10000}];
+  if(mode==='factory'){parts.push({path:'littlefs.bin',offset:p.filesystemOffset});if(id==='waveshare')parts.push({path:'reconfs.bin',offset:p.reconOffset});}
+  const data={name:`Dragon Detector — ${p.firmwareName} (${mode})`,version,new_install_prompt_erase:mode==='factory',builds:[{chipFamily:'ESP32-S3',parts}]};assert.equal(validateManifest(data,id,mode),data);assert.ok(parseBadgeInfo(`BADGE_INFO ${version} ${p.size} ${p.lite?'RADAR_ONLY':'READY'} ${p.firmwareName}`));
+ }
+});
+test('Custom advertising validates lengths before preparing a transmit payload',()=>{
+ assert.equal(customAdvertCommand('02 01 06 04 09 4c 61 62'),'tool payload 02010604094c6162');
+ for(const x of ['', '02010604094c61','0101ff','gg','ff'.repeat(32),'02 01 06\ntool start 1'])assert.throws(()=>customAdvertCommand(x));
+});
+test('Notebook CSV streams bounded snapshots and rejects malformed output',async()=>{
+ const run=lines=>{let cb;return readNotebook({onLine(fn){cb=fn;return()=>{};},async write(c){assert.equal(c,'notebook probes');for(const l of lines)cb(l);}},'probes');};
+ const header='mac,channel,rssi,seen_ms,count,ssid_hex',row='aa:bb:cc:dd:ee:ff,6,-60,1,2,3d434d44';assert.equal(await run(['NOTEBOOK_BEGIN',header,row,'NOTEBOOK_END']),header+'\n'+row+'\n');
+ await assert.rejects(run(['NOTEBOOK_BEGIN',header,'=CMD,6,-60,1,2,00','NOTEBOOK_END']));await assert.rejects(run(['NOTEBOOK_BEGIN','oops','NOTEBOOK_END']));await assert.rejects(run(['NOTEBOOK_ERROR memory']));
+});

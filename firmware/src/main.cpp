@@ -1,10 +1,15 @@
 #include <Arduino.h>
 #include "app.h"
+#include "notebook.h"
+#include "vendor_registry.h"
+#include "background_radio.h"
 #include "ble_lab.h"
 #include "recon.h"
 #include "board_pins.h"
 #include <lvgl.h>
 #include <esp_timer.h>
+#include <esp_ota_ops.h>
+#include <LittleFS.h>
 static String serialLine;
 #ifdef BOARD_AMOLED_175C
 SET_LOOP_TASK_STACK_SIZE(12288);
@@ -23,7 +28,7 @@ static bool serialBytes(const uint8_t* data,size_t length){
     size_t room=Serial.availableForWrite();
     size_t n=room?Serial.write(data+sent,std::min<size_t>(128,std::min(room,length-sent))):0;
     if(n){sent+=n;last=millis();}else if(millis()-last>5000)return false;
-    delay(1);
+    radioTransferTick();delay(1);
   }
   return true;
 }
@@ -48,19 +53,18 @@ static void screenshot(){
   const size_t bytes=size_t(captureWidth)*captureHeight*sizeof(lv_color_t);
   capturePixels=(lv_color_t*)ps_calloc(1,bytes);
   if(!capturePixels){Serial.println("SCREENSHOT_FAILED memory");return;}
-  captureStage(1);const bool wasEnabled=radioEnabled;
+  captureStage(1);RadioTransfer transfer;
   captureStage(2);panelFlush=display->driver->flush_cb;display->driver->flush_cb=captureFlush;
   _lv_inv_area(display,nullptr);lv_obj_invalidate(lv_scr_act());lv_refr_now(display);
   display->driver->flush_cb=panelFlush;
-  // Capture the live sweep before pausing reception for the bulk USB transfer.
-  setRadio(false);
+  // Reception continues while the mirrored pixels are streamed over USB.
   captureStage(3);
   const uint32_t crc=dragon::crc32((const uint8_t*)capturePixels,bytes)^0xffffffffu;
   Serial.printf("SCREENSHOT %u %u %u\n",captureWidth,captureHeight,unsigned(bytes));
   const bool complete=serialBytes((const uint8_t*)capturePixels,bytes);
   Serial.printf("\nSCREENSHOT_%s %08lx\n",complete?"END":"FAILED",crc);
   captureStage(4);free(capturePixels);capturePixels=nullptr;
-  captureStage(5);setRadio(wasEnabled);captureStage(0);
+  captureStage(5);captureStage(0);
 }
 static void health(){
   unsigned count=0;for(auto& c:contacts)if(c.used&&millis()-c.seen<30000)++count;
@@ -73,12 +77,19 @@ static void health(){
 }
 static uint32_t loopLastUs[6]{},loopMaxUs[6]{};
 static void command(const String& c){
+  if(c=="scan status"){Serial.printf("SCAN_STATUS enabled=%u ble_ms=%lu wifi_ms=%lu mode=%u lab=%u hunt=%d priority_channel=%u",radioEnabled,bleListenMs,wifiListenMs,unsigned(reconMode()),bleLabOwnsRadio()||reconOwnsRadio(),trackedContact,channelLock);for(unsigned i=1;i<=11;++i)Serial.printf(" ch%u=%lu",i,channelDwellMs[i]);Serial.println();return;}
+  if(c=="memory status"){auto* app=esp_ota_get_running_partition();size_t size=ESP.getSketchSize(),slot=app?app->size:0;Serial.printf("MEMORY flash=%u app=%u slot=%u app_free=%u reserve_percent=21 legacy_used=%u legacy_total=%u heap=%u psram=%u\n",ESP.getFlashChipSize(),unsigned(size),unsigned(slot),unsigned(slot>=size?slot-size:0),LittleFS.usedBytes(),LittleFS.totalBytes(),ESP.getFreeHeap(),ESP.getFreePsram());return;}
   if(c=="loop diagnostics"){const char* names[]={"board","radio","history","audio","ui","badge"};for(int i=0;i<6;++i)Serial.printf("LOOP_TIMING %s last_us=%lu max_us=%lu\n",names[i],loopLastUs[i],loopMaxUs[i]);Serial.println("LOOP_END");return;}
 #ifdef BOARD_RADAR_LITE
   // A legacy browser/serial command cannot leave Lite paused, in Hunt, dimmed,
   // or on a screen with controls that this board cannot operate.
   const bool allowed=c=="badge info"||c=="status"||c=="contacts"||c=="selftest"||c=="screenshot"||c=="ui status"||c=="radar status"||c=="display status"||c=="axon status"||c=="traffic status"||c=="detector status";
   if(!allowed){Serial.println("LITE_RADAR_ONLY no menus, badge, audio or radio controls");return;}
+#endif
+  if(c.startsWith("vendor ")){uint8_t mac[6];unsigned v[6];char tail;if(sscanf(c.c_str(),"vendor %2x:%2x:%2x:%2x:%2x:%2x %c",&v[0],&v[1],&v[2],&v[3],&v[4],&v[5],&tail)==6){for(unsigned i=0;i<6;++i)mac[i]=v[i];auto* name=dragon::registeredVendor(mac);Serial.printf("REGISTRY_VENDOR %s\n",name?name:"No universal MA-L match");}else Serial.println("REGISTRY_ERROR address");return;}
+  if(c=="registry status"){Serial.printf("REGISTRY entries=%u bits=24 source=IEEE_MA_L\n",dragon::vendorRegistryCount());return;}
+#ifndef BOARD_RADAR_LITE
+  if(notebookCommand(c))return;
 #endif
   if(reconCommand(c) || bleLabCommand(c) || badgeCommand(c) || wearableCommand(c) || detectorCommand(c) || audioCommand(c) || uiCommand(c))return;
   if(c=="status"){health();Serial.printf("SESSION %s\n",sessionPath.c_str());}
@@ -89,7 +100,7 @@ static void command(const String& c){
 #ifdef BOARD_STOPWATCH
   else if(c=="touch status"){extern void stopwatchTouchStatus();stopwatchTouchStatus();}
 #endif
-  else if(c=="pause")setRadio(false);
+  else if(c=="pause")Serial.println("RADIO_ALWAYS_ON select an explicit Waveshare radio mode instead");
   else if(c=="resume")setRadio(true);
   else if(c=="record")audioRecord();
   else if(c=="stop")audioStop();
@@ -103,14 +114,14 @@ static void command(const String& c){
     if(audioStatus().mode==AudioMode::Recording || audioStatus().mode==AudioMode::Playing){Serial.println("PUT_ERROR stop audio first");return;}
     xSemaphoreTake(sdMutex,portMAX_DELAY);bool exists=CardFS.exists(path)||CardFS.exists(path+".part");File file;if(!exists)file=CardFS.open(path+".part",FILE_WRITE);xSemaphoreGive(sdMutex);
     if(!file){Serial.println("PUT_ERROR file exists or cannot open");return;}
-    bool enabled=radioEnabled;setRadio(false);Serial.println("PUT_READY");uint8_t buffer[1024];size_t written=0;uint32_t last=millis();bool ok=true;
-    while(written<size_t(total) && millis()-last<5000){int available=Serial.available();if(available){size_t n=Serial.readBytes(buffer,std::min<size_t>(sizeof(buffer),std::min<size_t>(available,total-written)));xSemaphoreTake(sdMutex,portMAX_DELAY);size_t result=file.write(buffer,n);xSemaphoreGive(sdMutex);if(result!=n){ok=false;break;}written+=n;last=millis();Serial.printf("PUT_ACK %u\n",unsigned(written));}else delay(1);}
-    xSemaphoreTake(sdMutex,portMAX_DELAY);file.close();ok=ok&&written==size_t(total);if(ok)ok=CardFS.rename(path+".part",path);if(!ok)CardFS.remove(path+".part");xSemaphoreGive(sdMutex);setRadio(enabled);Serial.println(ok?"PUT_OK":"PUT_ERROR incomplete transfer");
+    RadioTransfer transfer;Serial.println("PUT_READY");uint8_t buffer[1024];size_t written=0;uint32_t last=millis();bool ok=true;
+    while(written<size_t(total) && millis()-last<5000){int available=Serial.available();if(available){size_t n=Serial.readBytes(buffer,std::min<size_t>(sizeof(buffer),std::min<size_t>(available,total-written)));xSemaphoreTake(sdMutex,portMAX_DELAY);size_t result=file.write(buffer,n);xSemaphoreGive(sdMutex);if(result!=n){ok=false;break;}written+=n;last=millis();Serial.printf("PUT_ACK %u\n",unsigned(written));}radioTransferTick();delay(1);}
+    xSemaphoreTake(sdMutex,portMAX_DELAY);file.close();ok=ok&&written==size_t(total);if(ok)ok=CardFS.rename(path+".part",path);if(!ok)CardFS.remove(path+".part");xSemaphoreGive(sdMutex);Serial.println(ok?"PUT_OK":"PUT_ERROR incomplete transfer");
   }
   else if(c.startsWith("get ") && sdReady){
     xSemaphoreTake(sdMutex,portMAX_DELAY);File file=CardFS.open(c.substring(4));xSemaphoreGive(sdMutex);
-    if(!file||file.isDirectory()){Serial.println("GET_ERROR");return;}bool enabled=radioEnabled;setRadio(false);size_t remaining=file.size();Serial.printf("FILE_BYTES %u\n",unsigned(remaining));uint8_t data[1024];
-    while(remaining){xSemaphoreTake(sdMutex,portMAX_DELAY);size_t n=file.read(data,std::min(sizeof(data),remaining));xSemaphoreGive(sdMutex);if(!n||!serialBytes(data,n))break;remaining-=n;}xSemaphoreTake(sdMutex,portMAX_DELAY);file.close();xSemaphoreGive(sdMutex);Serial.println("\nFILE_END");setRadio(enabled);
+    if(!file||file.isDirectory()){Serial.println("GET_ERROR");return;}RadioTransfer transfer;size_t remaining=file.size();Serial.printf("FILE_BYTES %u\n",unsigned(remaining));uint8_t data[1024];
+    while(remaining){xSemaphoreTake(sdMutex,portMAX_DELAY);size_t n=file.read(data,std::min(sizeof(data),remaining));xSemaphoreGive(sdMutex);if(!n||!serialBytes(data,n))break;remaining-=n;}xSemaphoreTake(sdMutex,portMAX_DELAY);file.close();xSemaphoreGive(sdMutex);Serial.println("\nFILE_END");
   }
   else if(c.startsWith("play "))audioPlay(c.substring(5));
   else if(c=="capture on")setCapture(true);
@@ -141,7 +152,7 @@ void setup(){
 #ifndef BOARD_RADAR_LITE
   uint32_t at=millis();while(millis()-at<1600){uiLoop();delay(5);}
 #endif
-  storageBegin();badgeInit();audioBegin();detectorBegin();radioBegin();bleLabBegin();reconBegin();Serial.println("DRAGON READY");health();
+  storageBegin();badgeInit();audioBegin();detectorBegin();notebookBegin();radioBegin();bleLabBegin();reconBegin();Serial.println("DRAGON READY");health();
 }
 void loop(){
   uint32_t stamp=micros();auto measured=[&](int i){uint32_t end=micros();loopLastUs[i]=end-stamp;loopMaxUs[i]=std::max(loopMaxUs[i],loopLastUs[i]);stamp=end;};

@@ -1,12 +1,14 @@
 // Radio modes and bounded lab sessions. Original MIT adapter; packet builders
 // originate in Valleytech HackerPhone. Marauder MIT notice is retained.
 #include "recon_internal.h"
+#include "background_radio.h"
 #include "portal.h"
 #include "csi_monitor.h"
 #include "network_tools.h"
 #ifdef BOARD_AMOLED_175C
 #include "app.h"
 #include "ble_lab.h"
+#include "ble_insights.h"
 #include "packet_helpers.h"
 #include <Preferences.h>
 #include <NimBLEDevice.h>
@@ -25,8 +27,9 @@ uint16_t seconds=15,rate=10;
 static ReconMode mode=ReconMode::Radar;static Preferences prefs;
 static std::atomic<bool> wifiRecording{false};
 static bool captureModeOwned=false;static ReconMode capturePreviousMode=ReconMode::Radar;static uint8_t capturePreviousLock=0;
-static bool resumeRadio=false,captureEapol=false,saveResume=false;
+static bool resumeRadio=false,captureEapol=false;
 static uint8_t previousLock=0,ownMac[6]{},saeMaterial[96]{},saeClient[6]{},token[128]{};
+static uint8_t customAdvertisement[31]{};static size_t customLength=0;
 static size_t tokenSize=0;static uint16_t sequence=0;static uint32_t lastTx=0,captureAt=0;
 static AttackTarget running;static uint16_t runSeconds=15,runRate=10;
 static uint8_t* packet=nullptr;static uint8_t* beacon=nullptr;static size_t beaconLength=0;
@@ -65,6 +68,7 @@ bool available(AttackMode m,char* why,size_t cap){
  else if(attackDefinitions[unsigned(m)].needsAp&&(!ap||millis()-ap->seen>=30000||ap->channel!=target.channel))error="AP is stale; survey and reselect it";
  else if(cloneMode(m)&&(!ap||!ap->length))error="Scan a complete beacon first";
  else if(m==AttackMode::SsidList&&!ssidCount)error="Add SSIDs in web radio tools";
+ else if(m==AttackMode::CustomBle&&!customLength)error="Set a valid legacy payload in web Radio tools";
  else if(m==AttackMode::ActiveEapol&&captureDirty)error="Save or discard the current capture first";
  else if(seconds<1||seconds>60||rate<1||rate>100)error="Duration 1-60s / rate 1-100 per second";
  if(!error&&attackDefinitions[unsigned(m)].needsAp&&target.hasClient){bool fresh=false;for(unsigned i=0;clients&&i<ClientCapacity;++i)if(clients[i].used&&!memcmp(clients[i].ap,target.bssid,6)&&!memcmp(clients[i].mac,target.client,6)&&millis()-clients[i].seen<30000)fresh=true;if(!fresh)error="Client is stale; survey and reselect it";}
@@ -117,21 +121,24 @@ static void tick(uint32_t now){
  if(m==AttackMode::RandomBeacons||m==AttackMode::Probe||m==AttackMode::Authentication||m==AttackMode::ApSpam){memcpy(source,entropy+48,6);source[0]=(source[0]&0xfc)|2;}
  if(m==AttackMode::SaeCommit){if(crypto==1)return;if(crypto!=2){stop();say("SAE key generation failed");return;}memcpy(entropy,saeMaterial,96);memcpy(source,saeClient,6);}
  if(m==AttackMode::SsidList)strlcpy(running.ssid,ssids[sequence%ssidCount],33);
- size_t n=cloneMode(m)?cloneBeacon(packet,1200,beacon,beaconLength,sequence++,m==AttackMode::ChannelSwitch?37:m==AttackMode::Quiet?40:0,running.destinationChannel):ble?buildBleAttack(packet,1200,m,entropy):buildWifiAttack(packet,1200,m,running,source,sequence++,entropy);
+ size_t n=m==AttackMode::CustomBle?copyBleAdvertisement(packet,1200,customAdvertisement,customLength):cloneMode(m)?cloneBeacon(packet,1200,beacon,beaconLength,sequence++,m==AttackMode::ChannelSwitch?37:m==AttackMode::Quiet?40:0,running.destinationChannel):ble?buildBleAttack(packet,1200,m,entropy):buildWifiAttack(packet,1200,m,running,source,sequence++,entropy);
  if(n&&m==AttackMode::ApSpam){memcpy(packet+10,source,6);memcpy(packet+16,source,6);}
  if(n==128&&m==AttackMode::SaeCommit&&tokenSize){memmove(packet+32+tokenSize,packet+32,96);memcpy(packet+32,token,tokenSize);n+=tokenSize;}
  int result=ESP_ERR_INVALID_ARG;
- if(n&&ble){auto* a=NimBLEDevice::getAdvertising();a->stop();NimBLEAdvertisementData data;uint8_t address[6];memcpy(address,entropy+64,6);address[0]|=0xc0;bool ok=NimBLEDevice::setOwnAddr(NimBLEAddress(address,BLE_ADDR_RANDOM))&&NimBLEDevice::setOwnAddrType(BLE_OWN_ADDR_RANDOM)&&data.addData(packet,n)&&a->setAdvertisementData(data)&&a->start(interval+20);result=ok?ESP_OK:ESP_FAIL;}
+ if(n&&ble){auto* a=NimBLEDevice::getAdvertising();a->stop();NimBLEAdvertisementData data;bool identity=false;
+  if(bleRotatesAddress(m)){uint8_t address[6];memcpy(address,entropy+64,6);address[0]|=0xc0;identity=NimBLEDevice::setOwnAddr(NimBLEAddress(address,BLE_ADDR_RANDOM))&&NimBLEDevice::setOwnAddrType(BLE_OWN_ADDR_RANDOM);}
+  else identity=NimBLEDevice::setOwnAddrType(BLE_OWN_ADDR_PUBLIC);
+  bool ok=identity&&data.addData(packet,n)&&a->setAdvertisementData(data)&&a->start(interval+20);result=ok?ESP_OK:ESP_FAIL;}
  else if(n){if(packet[0]==0x80){uint64_t stamp=esp_timer_get_time();for(unsigned i=0;i<8;++i)packet[24+i]=stamp>>(8*i);}result=esp_wifi_80211_tx(WIFI_IF_STA,packet,n,false);}
  if(result==ESP_OK)++status.accepted;else{++status.errors;status.error=result;stop();snprintf(status.message,sizeof(status.message),"Driver rejected frame (%d); stopped",result);}
 }
 static bool safeFile(const char* p){size_t n=strlen(p);if(n<6||n>=48||strstr(p,".."))return false;for(size_t i=0;i<n;++i)if(!isalnum(uint8_t(p[i]))&&p[i]!='-'&&p[i]!='.'&&p[i]!='_')return false;return true;}
-static bool serialWrite(const char* p,size_t n){uint32_t at=millis();while(n){size_t k=std::min<size_t>(128,std::min(n,size_t(Serial.availableForWrite())));if(k){k=Serial.write((const uint8_t*)p,k);p+=k;n-=k;at=millis();}else if(millis()-at>5000)return false;delay(1);}return true;}
+static bool serialWrite(const char* p,size_t n){RadioTransfer transfer;uint32_t at=millis();while(n){size_t k=std::min<size_t>(128,std::min(n,size_t(Serial.availableForWrite())));if(k){k=Serial.write((const uint8_t*)p,k);p+=k;n-=k;at=millis();}else if(millis()-at>5000)return false;radioTransferTick();delay(1);}return true;}
 unsigned fileList(char names[][48],size_t* sizes,unsigned max){auto* fs=bleLabStorage();if(!fs||status.saving)return 0;File dir=fs->open("/captures");unsigned n=0;for(File f=dir.openNextFile();f&&n<max;f=dir.openNextFile()){String name=f.name();if(!f.isDirectory()&&(name.endsWith(".pcap")||name.endsWith(".csv"))){strlcpy(names[n],name.c_str(),48);sizes[n++]=f.size();}f.close();}dir.close();return n;}
 bool fileRemove(const char* name){auto* fs=bleLabStorage();return !busy()&&safeFile(name)&&fs&&fs->remove(String("/captures/")+name);}
 bool fileExport(const char* name){auto* fs=bleLabStorage();if(busy()||status.recording||!fs||!safeFile(name))return false;File f=fs->open(String("/captures/")+name);if(!f||f.size()>CaptureCapacity){f.close();return false;}
- bool resume=radioEnabled;setRadio(false);Serial.printf("RECON_FILE %u\n",unsigned(f.size()));uint8_t data[128];size_t offset=0;uint32_t crc=0xffffffffu;bool ok=true;
- while(f.available()){size_t n=f.read(data,sizeof(data));if(!n){ok=false;break;}char line[300];int k=snprintf(line,sizeof(line),"RECON_DATA %u ",unsigned(offset));for(size_t i=0;i<n;++i){snprintf(line+k,3,"%02x",data[i]);k+=2;}line[k++]='\n';if(!serialWrite(line,k)){ok=false;break;}crc=dragon::crc32(data,n,crc);offset+=n;}f.close();Serial.printf("RECON_END %u %08lx\n",unsigned(offset),crc^0xffffffffu);setRadio(resume);return ok;}
+ RadioTransfer transfer;Serial.printf("RECON_FILE %u\n",unsigned(f.size()));uint8_t data[128];size_t offset=0;uint32_t crc=0xffffffffu;bool ok=true;
+ while(f.available()){size_t n=f.read(data,sizeof(data));if(!n){ok=false;break;}char line[300];int k=snprintf(line,sizeof(line),"RECON_DATA %u ",unsigned(offset));for(size_t i=0;i<n;++i){snprintf(line+k,3,"%02x",data[i]);k+=2;}line[k++]='\n';if(!serialWrite(line,k)){ok=false;break;}crc=dragon::crc32(data,n,crc);offset+=n;}f.close();Serial.printf("RECON_END %u %08lx\n",unsigned(offset),crc^0xffffffffu);return ok;}
 bool captureSave(){
  if(busy()||status.recording||!captureDirty||!capture||!status.records){say("Stop a nonempty capture before saving");return false;}
  auto* fs=bleLabStorage();if(!fs){say("Recon flash unavailable; initialize it in BLE Lab");return false;}
@@ -141,10 +148,10 @@ bool captureSave(){
  if(saved>=32){say("32 capture slots full; download and delete old files");return false;}
  fs->mkdir("/captures");char name[48];snprintf(name,sizeof(name),"/captures/%s-%08lx.%s",status.bleCapture?"ble":"wifi",esp_random(),status.bleCapture?"csv":"pcap");savePath=name;
  if(fs->exists(savePath)||fs->exists(savePath+".part")){say("Name collision; retry Save");return false;}saveFile=fs->open(savePath+".part",FILE_WRITE);if(!saveFile){say("Cannot create capture file");return false;}
- saveResume=radioEnabled;setRadio(false);status.saving=true;saveOffset=0;saveCrc=0xffffffffu;say("Saving capture to recon flash...");return true;
+ status.saving=true;saveOffset=0;saveCrc=0xffffffffu;say("Saving capture to recon flash...");return true;
 }
 static void saveTick(){if(!status.saving)return;size_t n=std::min<size_t>(4096,status.bytes-saveOffset);bool ok=saveFile.write(capture+saveOffset,n)==n;if(ok){saveCrc=dragon::crc32(capture+saveOffset,n,saveCrc);saveOffset+=n;}
- if(!ok||saveOffset==status.bytes){saveFile.flush();saveFile.close();auto* fs=bleLabStorage();ok=ok&&fs&&fs->rename(savePath+".part",savePath);if(ok){captureDirty=false;snprintf(status.message,sizeof(status.message),"Saved %s / CRC %08lx",savePath.c_str()+10,saveCrc^0xffffffffu);}else{if(fs)fs->remove(savePath+".part");say("Save failed; capture remains in RAM");}status.saving=false;setRadio(saveResume);}
+ if(!ok||saveOffset==status.bytes){saveFile.flush();saveFile.close();auto* fs=bleLabStorage();ok=ok&&fs&&fs->rename(savePath+".part",savePath);if(ok){captureDirty=false;snprintf(status.message,sizeof(status.message),"Saved %s / CRC %08lx",savePath.c_str()+10,saveCrc^0xffffffffu);}else{if(fs)fs->remove(savePath+".part");say("Save failed; capture remains in RAM");}status.saving=false;}
 }
 }
 using namespace dragon::toolkit;
@@ -152,7 +159,8 @@ ReconMode reconMode(){return mode;}
 uint8_t reconRadio(){return reconModes[unsigned(mode)].radio;}
 bool reconAll(){return reconModes[unsigned(mode)].all;}
 bool reconAccepts(Family family,bool ble){return modeAccepts(mode,family,ble);}
-bool reconOwnsRadio(){return status.active||status.saving||portalActive()||csiActive()||networkActive();}
+bool reconStorageBusy(){return status.saving;}
+bool reconOwnsRadio(){return status.active||portalActive()||csiActive()||networkActive();}
 bool reconRecording(){return wifiRecording.load();}
 bool reconSetMode(ReconMode next){if(!validMode(unsigned(next))||busy())return false;if(status.recording&&next!=mode)captureStop();mode=next;prefs.putUChar("mode",unsigned(mode));trackedContact=-1;channelLock=0;radioApplyMode();return true;}
 void reconStop(){networkStop();csiStop();portalStop();stop();captureStop();}
@@ -189,6 +197,8 @@ bool reconCommand(const String& c){
  else if(c.startsWith("recon filter ")){unsigned kind,selected;char tail;bool ok=sscanf(c.c_str(),"recon filter %u %u %c",&kind,&selected,&tail)==2&&selected<2&&setCaptureFilter(kind,selected);Serial.println(ok?"RECON_OK":"RECON_ERROR filter or busy");}
  else if(c.startsWith("recon hop ")&&!busy()&&!status.recording){unsigned mask,dwell;char tail;bool ok=sscanf(c.c_str(),"recon hop %u %u %c",&mask,&dwell,&tail)==2&&mask&&mask<=0x7ff&&dwell>=80&&dwell<=2000;if(ok){hopMask=mask;hopDwell=dwell;channelLock=0;}Serial.println(ok?"RECON_OK":"RECON_ERROR hop mask/dwell");}
  else if(c=="tool list"){for(unsigned i=0;i<unsigned(AttackMode::Count);++i){auto& d=attackDefinitions[i];Serial.printf("TOOL %u ble=%u ap=%u client=%u %s\n",i,d.ble,d.needsAp,d.needsClient,d.name);}Serial.println("RECON_OK");}
+ else if(c.startsWith("tool payload ")&&!busy()){uint8_t data[31],validated[31];size_t count=0;bool ok=lab::decodeHex(c.substring(13).c_str(),data,sizeof(data),count)&&copyBleAdvertisement(validated,sizeof(validated),data,count);if(ok){memcpy(customAdvertisement,validated,count);customLength=count;}Serial.println(ok?"RECON_OK custom advertisement stored in RAM; select BLE custom advertisement to transmit":"RECON_ERROR complete 1-31 byte AD payload required");}
+ else if(c=="tool payload"){Serial.print("RECON_PAYLOAD ");for(size_t i=0;i<customLength;++i)Serial.printf("%02x",customAdvertisement[i]);Serial.println();Serial.println("RECON_OK");}
  else if(c=="tool aps"){for(unsigned i=0;aps&&i<ApCapacity;++i)if(aps[i].used){char mac[18];macText(aps[i].mac,mac);Serial.printf("TOOL_AP %u %s ch=%u rssi=%d age=%lu security=%u name=%s\n",i,mac,aps[i].channel,aps[i].rssi,(millis()-aps[i].seen)/1000,aps[i].security,aps[i].name);}Serial.println("RECON_OK");}
  else if(c=="tool clients"){for(unsigned i=0;clients&&i<ClientCapacity;++i)if(clients[i].used&&target.hasAp&&!memcmp(clients[i].ap,target.bssid,6)){char mac[18];macText(clients[i].mac,mac);Serial.printf("TOOL_CLIENT %u %s rssi=%d age=%lu\n",i,mac,clients[i].rssi,(millis()-clients[i].seen)/1000);}Serial.println("RECON_OK");}
  else if(c=="tool target"){char ap[18],client[18];macText(target.bssid,ap);macText(target.client,client);Serial.printf("RECON_TARGET ap=%s client=%s channel=%u destination=%u name=%s\n",target.hasAp?ap:"none",target.hasClient?client:"AP-scope",target.channel,target.destinationChannel,target.ssid);Serial.println("RECON_OK");}

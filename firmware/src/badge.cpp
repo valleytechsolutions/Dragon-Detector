@@ -1,5 +1,7 @@
 // MIT. DDB1 is an 8-byte header followed by big-endian RGB565 pixels.
 #include "app.h"
+#include "background_radio.h"
+#include "flash_budget.h"
 #include "board_pins.h"
 #include <LittleFS.h>
 #include <Preferences.h>
@@ -50,10 +52,10 @@ bool badgeCommand(const String& c){
   if(c=="badge boot on" || c=="badge boot off"){prefs.putBool("boot",c.endsWith("on"));Serial.println("BADGE_OK");return true;}
   if(!c.startsWith("badge upload "))return false;
   unsigned long length=0,checksum=0;char extra;
-  if(sscanf(c.c_str(),"badge upload %lu %lx %c",&length,&checksum,&extra)!=2 || length!=8+SCREEN_RES*SCREEN_RES*2 || !ready || LittleFS.totalBytes()-LittleFS.usedBytes()<length+16384){Serial.println("BADGE_ERROR size or storage");return true;}
+  if(sscanf(c.c_str(),"badge upload %lu %lx %c",&length,&checksum,&extra)!=2 || length!=8+SCREEN_RES*SCREEN_RES*2 || !ready || !dragon::storageFits(LittleFS.totalBytes(),LittleFS.usedBytes(),length+16384)){Serial.println("BADGE_ERROR size or storage reserve");return true;}
   if(LittleFS.exists("/badges/upload.part"))LittleFS.remove("/badges/upload.part");File f=LittleFS.open("/badges/upload.part",FILE_WRITE);
   if(!f){Serial.println("BADGE_ERROR open");return true;}
-  bool enabled=radioEnabled;setRadio(false);Serial.println("BADGE_READY");
+  RadioTransfer transfer;Serial.println("BADGE_READY");
   static uint8_t buffer[1024];uint8_t header[8]{};size_t received=0;uint32_t crc=0xffffffffu,last=millis(),lastAck=last;bool ok=true;
   while(received<length && millis()-last<5000){
     size_t available=Serial.available();if(!available){
@@ -64,14 +66,14 @@ bool badgeCommand(const String& c){
         if(received)Serial.printf("\nBADGE_ACK %u\n\n",unsigned(received));else Serial.println("\nBADGE_READY\n");
         lastAck=millis();
       }
-      delay(1);continue;
+      radioTransferTick();delay(1);continue;
     }
     size_t n=Serial.readBytes(buffer,std::min(sizeof(buffer),std::min(available,size_t(length-received))));
     if(received<8)memcpy(header+received,buffer,std::min(n,8-received));
     crc=dragon::crc32(buffer,n,crc);if(f.write(buffer,n)!=n){ok=false;break;}
     // Terminate ACK bursts with a short USB packet. Multiple 16-byte ACKs can
     // otherwise fill a native USB-JTAG packet and stall Windows at a boundary.
-    received+=n;last=lastAck=millis();Serial.printf("BADGE_ACK %u\n\n",unsigned(received));delay(1);
+    received+=n;last=lastAck=millis();Serial.printf("BADGE_ACK %u\n\n",unsigned(received));radioTransferTick();delay(1);
   }
   f.flush();f.close();
   if(!ok||received!=length)Serial.printf("BADGE_TRANSFER received=%u expected=%lu write_ok=%u\n",unsigned(received),length,ok);
@@ -85,5 +87,5 @@ bool badgeCommand(const String& c){
   }
   if(!ok)LittleFS.remove("/badges/upload.part");
   if(ok){prefs.putBool("boot",true);if(picture)load();uiShow("badge");}
-  setRadio(enabled);Serial.println(ok?"\nBADGE_OK\n":"\nBADGE_ERROR transfer or checksum\n");return true;
+  Serial.println(ok?"\nBADGE_OK\n":"\nBADGE_ERROR transfer or checksum\n");return true;
 }

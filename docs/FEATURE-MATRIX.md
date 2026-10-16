@@ -1,4 +1,4 @@
-# Reference feature comparison · 0.11.1
+# Reference feature comparison · 0.12.0
 
 This is a feature audit, not a claim that Dragon Detector is an official port or has identical behavior. The original application remains MIT. Reference firmware is not silently linked into it. [Credits and exact source revisions](../CREDITS.md) · [Measured hardware checks](VALIDATION.md).
 
@@ -11,7 +11,7 @@ This is a feature audit, not a claim that Dragon Detector is an official port or
 | Packet/channel analyzer | Existing Activity and Channel monitor; Wi-Fi statistics |
 | Signal monitor / fox hunt / MAC tracking | Existing per-contact Hunt, relative RSSI trace, peak/trend and watch list |
 | Flock, Flipper, Meta, AirTag, iBeacon and Remote ID scanners | Shared radar classifiers, family filters, focused modes and history; evidence quality is shown |
-| Beacon lists/random/Rickroll, AP clone, probe/authentication, deauth/disassociation | Existing 24-tool timed transmitter, selected targets and bounded rates |
+| Beacon lists/random/Rickroll, AP clone, probe/authentication, deauth/disassociation | Existing 29-tool timed transmitter, selected targets and bounded rates |
 | Bad message, association sleep, SAE commit, CSA, quiet | Existing bounded builders and selected-AP/client workflows; driver acceptance is not proof of effect |
 | Evil Portal / KARMA | Local portal, captive DNS, optional HTML, explicit recent probe-SSID selection, bounded submission log; no Internet proxy or automatic disconnect step |
 | Apple/Samsung/Google/Windows/Flipper/mixed BLE advertisement tests | Existing timed BLE transmitter modes |
@@ -30,7 +30,7 @@ This is a feature audit, not a claim that Dragon Detector is an official port or
 
 | Workflow | Status / boundary |
 |---|---|
-| Advertisement inspection, address types, RSSI and protocol hints | Available; common assigned UUID/company labels, not a complete company/OUI database |
+| Advertisement inspection, address types, RSSI and protocol hints | Available; common assigned UUID/company labels and 40,333 IEEE MA-L prefixes; not a complete Bluetooth company-ID or MA-M/MA-S database |
 | GATT discovery, service/characteristic/descriptor values | Available; 16 services / 64 characteristics / 128 attributes / 512-byte values; partial/error markers |
 | Read/write/write-no-response, subscribe/unsubscribe, MTU | Available; requests obey advertised properties and peer access controls |
 | Pairing, passkey, numeric comparison, bonds | Explicit opt-in policy and user input; no implicit PIN, automatic unseen approval or key cloning |
@@ -47,3 +47,9 @@ All **158 table facts** from the pinned SquachWatch revision have parser and rad
 AXEOFF's company/service/address/UUID compatibility paths, priority receive capacity, first-hit alert treatment and distinctive hunt audio remain covered by dedicated regression tests. Eight listening modes provide the focused radar/survey workflows inspired by Unified Blue. New body-camera vendor and BWC payload clues also receive the reserved queue path. No signature or OUI proves malicious activity, camera recording, operator identity or a precise model.
 
 SquachWatch pets/games/chat and social systems remain outside the user's detector scope. The five boards share recognition logic; the new BLE/portal/CSI lab runs only on the 32 MB Waveshare AMOLED profile. Firmware builds and signature fixtures do not substitute for a field trial against every physical product.
+
+## Shared 0.12 additions
+
+Waveshare AMOLED, M5Stack StopWatch, Spotpear and XIAO Round share the passive Recon Notebook: full bounded advertisements, common protocol metadata, probe-request inventory, protocol counters and CSV. Hunt now preserves both radios and a complete Wi-Fi sweep, including under delayed rendering. Normal USB badge/history/SD transfers cooperate with detection. Five new Waveshare advertising tools supplement the existing 24 formats. [Details](RECON-NOTEBOOK.md).
+
+These additions do not mean the boards have exhausted useful features or reached 79% occupied physical flash. The [budget report](FLASH-BUDGET.md) separates app slots, OTA allocation and user storage. The unsupported/unimplemented rows above remain explicit work or hardware limits.

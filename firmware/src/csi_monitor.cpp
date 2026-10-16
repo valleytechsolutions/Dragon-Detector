@@ -34,7 +34,7 @@ void recalibrate(){shape={};baseline={};calibration=window=millis();lastSample=0
 bool csiActive(){return active.load();}
 void csiStop(){if(!active.exchange(false))return;esp_wifi_set_csi(false);esp_wifi_set_csi_rx_cb(nullptr,nullptr);esp_wifi_set_promiscuous(false);esp_wifi_set_mode(WIFI_MODE_NULL);channelLock=oldLock;setRadio(resume);state="STOPPED";strlcpy(message,"CSI stopped / radar restored",sizeof(message));}
 bool csiStart(){using namespace dragon::toolkit;
- if(reconOwnsRadio()||bleLabOwnsRadio()||status.recording||!target.hasAp){strlcpy(message,"Stop other work and select a fresh AP first",sizeof(message));return false;}
+ if(reconOwnsRadio()||reconStorageBusy()||bleLabOwnsRadio()||status.recording||!target.hasAp){strlcpy(message,"Stop other work and select a fresh AP first",sizeof(message));return false;}
  bool fresh=false;for(unsigned i=0;aps&&i<ApCapacity;++i)if(aps[i].used&&!memcmp(aps[i].mac,target.bssid,6)&&millis()-aps[i].seen<30000&&aps[i].channel==target.channel)fresh=true;
  if(!fresh){strlcpy(message,"Selected AP is stale; survey and select it again",sizeof(message));return false;}
  if(!queue){if(!memory)memory=(uint8_t*)ps_malloc(32*sizeof(Sample));if(!memory)return false;queue=xQueueCreateStatic(32,sizeof(Sample),memory,&control);if(!queue)return false;}

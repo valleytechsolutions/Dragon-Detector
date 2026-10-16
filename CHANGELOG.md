@@ -1,5 +1,16 @@
 # Changes
 
+## 0.12.0 — Continuous recon and shared notebook
+
+- Keep both radios scanning through Hunt; visit every Wi-Fi channel despite loop jitter, then give the target extra dwell. Replace ordinary Pause controls with radio health.
+- Continue receiving during badge upload, screenshots, history export and SD USB file transfers; keep transfer streams free of unsolicited alert text.
+- Add a passive notebook to Waveshare, M5Stack, Spotpear and XIAO: 96 probe pairs, 96 complete BLE payloads, protocol metadata/counters, CSV snapshots and on-screen inspection.
+- Add 40,333 factual IEEE MA-L prefixes in a deduplicated flash-only directory; reject randomized/local-address manufacturer claims.
+- Expand Waveshare's 24 tools to 29 with iBeacon, Eddystone UID/telemetry, BTHome and a checked custom legacy advertising payload.
+- Enforce at least 21% free application-slot capacity in packaged builds and reserve 21% of writable flash stores for future writes. Preserve partition offsets and existing badge/settings.
+- Fix manifest-version gates for 0.11 and 0.12 factory/update images across all boards. Add public memory budgets and targeted scan-continuity checks.
+
+
 ## 0.11.1 — Connected-network diagnostics
 
 - Add eight explicitly selected Wi-Fi profiles, DHCP/IP/gateway/DNS display, gateway ping, bounded local-subnet scans and CSV capture-library export on the Waveshare AMOLED.

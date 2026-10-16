@@ -1,4 +1,5 @@
 #include "app.h"
+#include "notebook.h"
 #include "ble_lab.h"
 #include "recon.h"
 #include <WiFi.h>
@@ -57,6 +58,7 @@ static void countAxon(dragon::AxonEvidence clue,bool ble,bool payloadValid,uint3
 
 
 static NimBLEScan* scanner;
+static dragon::WifiSweep wifiSweep;
 static bool configuredActive=false;
 // NimBLE 2.3.6 stop/start/clearResults can free the advertised device that its
 // host task is still delivering. Serialize scanner mutations on that same host
@@ -219,6 +221,7 @@ static void process(const Observation& o){
     bool payloadValid=false;
     auto f=dragon::parseWifiObservation(o.data,o.len,o.len<o.original&&((o.data[0]>>2)&3)==0,payloadValid);
     if(!payloadValid)++malformedFrames;if(!f.valid)return;
+    if(payloadValid)notebookWifi(o.data,o.len,f,o.rssi,o.channel,o.at);
     countAxon(dragon::inspectAxonWifi(o.data,o.len),false,payloadValid,o.at);
     if(f.eapol)++eapolFrames;
     // Data traffic must not evict the disconnect retry cache during a burst.
@@ -247,6 +250,7 @@ static void process(const Observation& o){
     reconBle(o.mac,o.addressType,o.rssi,o.data,o.len,o.advLength,o.at);
     if(reconOwnsRadio())return;
     ++bleFrames;bleLabObserve(o.mac,o.addressType,o.rssi,o.data,o.len,o.advLength,o.at);if(o.len!=o.original){++malformedFrames;return;}
+    notebookBle(o.mac,o.addressType,o.rssi,o.data,o.len,o.advLength,o.at);
     bool payloadValid=false;auto f=dragon::parseBleObservation(o.data,o.len,o.advLength,o.mac,o.addressType,payloadValid);
     if(!payloadValid)++malformedFrames;if(!f.valid)return;
     countAxon(dragon::inspectAxonBle(o.data,o.len,o.advLength,o.mac,o.addressType),true,payloadValid,o.at);
@@ -295,8 +299,9 @@ void setRadio(bool enabled){
   uint8_t pendingIndex;while(xQueueReceive(priorityQueue,&pendingIndex,0)==pdTRUE)xQueueSend(freeSlots,&pendingIndex,0);
   while(xQueueReceive(queue,&pendingIndex,0)==pdTRUE)xQueueSend(freeSlots,&pendingIndex,0);
   uint32_t now=millis();lastHop=lastAccounting=now;
-  bool wifiHunt=(trackedContact>=0&&!contacts[trackedContact].ble)||(trackedContact<0&&reconRadio()==1);
-  blePhase=enabled&&!wifiHunt;schedule.begin(now,blePhase,wifiChannel);
+  schedule.focus=trackedContact>=0&&contacts[trackedContact].ble?dragon::RadioSchedule::Bluetooth:channelLock?dragon::RadioSchedule::Wifi:dragon::RadioSchedule::Balanced;
+  blePhase=enabled&&reconRadio()!=1;schedule.begin(now,blePhase,wifiChannel);
+  wifiSweep.begin(now,wifiChannel);
   if(blePhase&&!scanCommand(ScanAction::Start,activeBle?1000:dragon::RadioSchedule::BleMs)){
     blePhase=false;schedule.begin(now,false,wifiChannel);addAlert("BLE scan failed","Wi-Fi listening resumed");
   }
@@ -319,30 +324,27 @@ void radioLoop(){
   queueDrops=drops.load();
   uint32_t now=millis(),elapsed=now-lastAccounting;lastAccounting=now;
   if(!radioEnabled || !scanner)return;
-  if(trackedContact<0&&reconRadio()){
+  schedule.focus=trackedContact>=0&&contacts[trackedContact].ble?dragon::RadioSchedule::Bluetooth:channelLock?dragon::RadioSchedule::Wifi:dragon::RadioSchedule::Balanced;
+  if(reconRadio()){
     if(reconRadio()==2){if(!scanner->isScanning())scanCommand(ScanAction::Start,10000);bleListenMs+=elapsed;return;}
     wifiListenMs+=elapsed;channelDwellMs[wifiChannel]+=elapsed;
     if(now-lastHop>=reconHopDwell()){lastHop=now;uint8_t c=channelLock?channelLock:reconNextChannel(wifiChannel);if(esp_wifi_set_channel(c,WIFI_SECOND_CHAN_NONE)==ESP_OK)wifiChannel=c;}
     return;
   }
-  if(trackedContact>=0 && contacts[trackedContact].ble){
-    if(!blePhase){esp_wifi_set_promiscuous(false);blePhase=true;scanCommand(ScanAction::Start,activeBle?1000:10000);}
-    if(!scanner->isScanning())scanCommand(ScanAction::Start,activeBle?1000:10000);
-    bleListenMs+=elapsed;return;
-  }
   if(blePhase && !schedule.due(now) && !scanner->isScanning())scanCommand(ScanAction::Start,activeBle?1000:dragon::RadioSchedule::BleMs);
   if(blePhase)bleListenMs+=elapsed;else{wifiListenMs+=elapsed;channelDwellMs[wifiChannel]+=elapsed;}
-  if(!blePhase && trackedContact<0 && schedule.due(now)){
+  if(!blePhase && schedule.due(now) && wifiSweep.full()){
     esp_wifi_set_promiscuous(false);blePhase=true;schedule.begin(now,true,schedule.firstChannel);
     if(!scanCommand(ScanAction::Start,activeBle?1000:dragon::RadioSchedule::BleMs)){blePhase=false;schedule.begin(now,false,wifiChannel);esp_wifi_set_promiscuous(true);addAlert("BLE scan failed","Wi-Fi listening resumed");}
   }else if(blePhase && schedule.due(now)){
     scanCommand(ScanAction::Stop);blePhase=false;schedule.begin(now,false,(schedule.firstChannel%11)+1);
-    wifiChannel=channelLock?channelLock:schedule.firstChannel;
+    wifiChannel=schedule.firstChannel;
+    wifiSweep.begin(now,wifiChannel);
     esp_wifi_set_channel(wifiChannel,WIFI_SECOND_CHAN_NONE);esp_wifi_set_promiscuous(true);lastHop=now;
   }
   bool relocating=trackedContact>=0 && huntSweep(contacts[trackedContact],now);
-  if(!blePhase && now-lastHop>=(relocating?180u:dragon::RadioSchedule::HopMs)){lastHop=now;uint8_t c=channelLock&&!relocating?channelLock:trackedContact>=0?(wifiChannel%11)+1:schedule.channel(now);
-    if(esp_wifi_set_channel(c,WIFI_SECOND_CHAN_NONE)==ESP_OK)wifiChannel=c;
+  if(!blePhase && wifiSweep.hop(now,relocating?0:channelLock)){
+    if(esp_wifi_set_channel(wifiSweep.current,WIFI_SECOND_CHAN_NONE)==ESP_OK)wifiChannel=wifiSweep.current;
   }
 }
 

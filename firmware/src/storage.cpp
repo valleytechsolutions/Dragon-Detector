@@ -1,4 +1,5 @@
 #include "app.h"
+#include "background_radio.h"
 #include "board_pins.h"
 #include <esp_timer.h>
 
@@ -47,7 +48,7 @@ static void append(const String& line){
   if(xSemaphoreTake(sdMutex,pdMS_TO_TICKS(20))!=pdTRUE){++storageDrops;return;}
   if(!eventFile)openLog();
   if(eventFile && eventFile.size()>4*1024*1024){eventFile.close();openLog();}
-  if(!eventFile || eventFile.println(line)==0){++storageDrops;loggingEnabled=false;Serial.println("SD log write failed");}
+  if(!eventFile || eventFile.println(line)==0){++storageDrops;loggingEnabled=false;if(!radioTransferDepth)Serial.println("SD log write failed");}
   xSemaphoreGive(sdMutex);
 }
 void logContact(const Contact& c,const char* event){
@@ -58,7 +59,7 @@ void logContact(const Contact& c,const char* event){
 void addAlert(const char* title,const char* detail,const uint8_t* mac){
   Alert& a=alerts[alertTotal%MAX_ALERTS];a={};a.at=millis();strlcpy(a.title,title,sizeof(a.title));strlcpy(a.detail,detail,sizeof(a.detail));if(mac)macText(mac,a.mac);++alertTotal;
   append(String(a.at)+",alert,,"+a.mac+","+quoted(title)+",,,,,"+quoted(detail));
-  Serial.printf("ALERT %s: %s\n",title,detail);
+  if(!radioTransferDepth)Serial.printf("ALERT %s: %s\n",title,detail);
 }
 bool setCapture(bool enabled){
   if(!sdReady)return false;

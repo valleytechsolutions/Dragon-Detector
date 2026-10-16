@@ -68,6 +68,9 @@ static void axonTests(){
     for(unsigned ms=0;ms<2200;ms+=200)channels|=1u<<s.channel(start+ms);
     assert(channels==0xffe&&s.due(start+2200));
   }
+  for(uint32_t start:{0u,0xfffffff0u})for(auto focus:{RadioSchedule::Bluetooth,RadioSchedule::Wifi}){RadioSchedule s;s.focus=focus;s.begin(start);assert(s.duration()==(focus==RadioSchedule::Bluetooth?4400:2200));assert(!s.due(start+s.duration()-1)&&s.due(start+s.duration()));s.begin(start,false,7);unsigned seen=0;for(unsigned ms=0;ms<2200;ms+=200)seen|=1u<<s.channel(start+ms,6);assert(seen==0xffe);if(focus==RadioSchedule::Wifi){assert(s.channel(start+2200,6)==6);assert(!s.due(start+4399)&&s.due(start+4400));}}
+  // Variable loop latency never skips a channel or shortens its 200 ms dwell.
+  for(uint32_t start:{0u,0xfffffff0u}){WifiSweep sweep;sweep.begin(start,4);unsigned seen=1u<<4;uint32_t now=start;for(unsigned i=0;i<11;++i){now+=200+i*19;assert(sweep.hop(now,6));if(i<10)seen|=1u<<sweep.current;assert(sweep.full()==(i==10));}assert(seen==0xffe&&sweep.current==6);assert(!sweep.hop(now+199,6));}
   // Fuzz the actual transport classifiers, not only the stricter AD decoder.
   uint32_t rng=0x34d;uint8_t data[128];
   for(unsigned i=0;i<50000;++i){for(auto& b:data){rng^=rng<<13;rng^=rng>>17;rng^=rng<<5;b=rng;}size_t size=rng%sizeof(data);size_t split=(rng>>8)%(size+2);
