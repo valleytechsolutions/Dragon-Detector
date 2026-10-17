@@ -229,5 +229,23 @@
     "sha256": "08c0daba66c0d499900e57a817b86fbf722ceb391cdf7ff500c9cccd48cd6ef2",
     "source_bytes_match": false,
     "derivation": "Built-in image generation: isolated circular artwork from supplied phone screenshot; generated derivative, not a pixel-exact crop."
+  },
+  {
+    "file": "media/branding/dragon-ball-source.png",
+    "supplied_name": "dragon-ball-z-dbz-crystal-ball-1-star-png-701751694862293fasot8y7xc.png",
+    "sha256": "a32d8711f5873073f47a68db5b98e51bf27fd99c1e50178c4e294e1c1415f3ae",
+    "source_bytes_match": true
+  },
+  {
+    "file": "media/branding/bwm1-source.png",
+    "supplied_name": "BWM1-official.png",
+    "sha256": "632500d20376048937bd0c86762f9aaaa26655246578930113f9aa4ed7d6f0bb",
+    "source_bytes_match": true
+  },
+  {
+    "file": "media/branding/dragon-detector.png",
+    "supplied_name": "built-in image generation: selected simple derivative",
+    "sha256": "1738a0a372d602bb71a4ebd8ddb33e32232a9d82dba853e9ac8355eddda2ca6b",
+    "source_bytes_match": false
   }
 ]

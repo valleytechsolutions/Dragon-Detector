@@ -3,11 +3,12 @@
 static uint8_t watchFace=0;
 static lv_obj_t* watchDial=nullptr;
 static uint32_t watchFrameAt=0;
+extern lv_img_dsc_t boot_dragon_logo;
 extern "C" { LV_FONT_DECLARE(dragon_watch_digits); }
 #define FWATCH (&dragon_watch_digits)
 struct WatchPalette {const char* name;uint32_t bg,ink,accent,muted;bool analog;};
 static const WatchPalette watches[]={
-  {"BWM",0x080b0e,0xf5ead1,0xc9a568,0x5c5344,true},
+  {"DRAGON BALL / BWM",0x000000,0xfff0cf,0xffb000,0x76532b,false},
   {"VALLEYTECH",0x000000,0xe9edef,0xd9ba79,0x5d6265,true},
   {"JCMK MILITARY",0x000000,0xe6f0d0,0xa7b68b,0x475645,false},
   {nullptr,0,0,0,0,false}, // Retired ID: preserve later saved selections.
@@ -274,6 +275,16 @@ static void watchCovert(lv_draw_ctx_t* ctx,const dragon::Calendar& d,bool valid)
 #include "cyber_runner_watch.inc"
 static void watchDraw(lv_event_t* e){
   auto* ctx=lv_event_get_draw_ctx(e);const auto& p=watches[watchFace];dragon::Calendar d;clockLocal(d);bool valid=wallTime()!=0;char text[64];
+  if(watchFace==0){
+    // Reuse the startup asset: the emblem remains unobscured by hands or text.
+    watchLogo(ctx,boot_dragon_logo,28);
+    for(int i=0;i<60;++i)watchRay(ctx,i/60.f,173,i%5?175:177,p.muted);
+    if(valid){auto s=watchPolar(d.second/60.f,175);disc(ctx,S(s.x),S(s.y),S(3),p.accent);}
+    if(valid)snprintf(text,sizeof(text),"%02d:%02d",d.hour,d.minute);else strcpy(text,"--:--");
+    watchText(ctx,text,70,250,220,FTIMER,p.ink);
+    if(valid)snprintf(text,sizeof(text),"%04d-%02d-%02d",d.year,d.month,d.day);else strcpy(text,"SYNC IN SETTINGS");
+    watchText(ctx,text,70,294,220,F12,p.accent);return;
+  }
   if(watchFace==32||watchFace==33){watchRunnerCyber(ctx,d,valid);return;}
   if(watchFace==30||watchFace==31){watchContainment(ctx,d,valid);return;}
   if(watchFace==29){watchLpl(ctx,d,valid);return;}
@@ -329,7 +340,7 @@ static void buildWatch(){
   watchDial=lv_obj_create(root);lv_obj_remove_style_all(watchDial);lv_obj_set_size(watchDial,SCREEN_RES,SCREEN_RES);lv_obj_clear_flag(watchDial,LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_GESTURE_BUBBLE);
   lv_obj_add_event_cb(watchDial,watchDraw,LV_EVENT_DRAW_MAIN,nullptr);lv_obj_add_event_cb(watchDial,watchGesture,LV_EVENT_GESTURE,nullptr);
   if(watchFace==27){pigFrameAt=millis();pigNextAt=millis();lv_obj_add_event_cb(watchDial,pigTap,LV_EVENT_CLICKED,nullptr);}
-  bool compact=watchFace==10||watchFace==12||watchFace==27||watchFace==28||watchFace>=29;int y=watchFace==27?315:(watchFace==12||watchFace==28||watchFace>=29)?326:watchFace==10?317:279,h=(watchFace==12||watchFace==28||watchFace>=29)?21:27;
+  bool compact=watchFace==0||watchFace==10||watchFace==12||watchFace==27||watchFace==28||watchFace>=29;int y=watchFace==0?316:watchFace==27?315:(watchFace==12||watchFace==28||watchFace>=29)?326:watchFace==10?317:279,h=(watchFace==0||watchFace==12||watchFace==28||watchFace>=29)?21:27;
   auto* b=button(watchDial,watchFace==27?"[+]":LV_SYMBOL_SETTINGS,watchFace==27?126:compact?145:108,y,watchFace==27?48:compact?34:44,h,160);auto* home=button(watchDial,watchFace==27?"[=]":LV_SYMBOL_LIST,watchFace==27?186:compact?181:208,y,watchFace==27?48:compact?34:44,h,2);
   for(auto* o:{b,home}){
     if(watchFace>=29)lv_obj_set_y(o,S(310));

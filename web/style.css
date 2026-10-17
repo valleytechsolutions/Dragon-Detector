@@ -38,3 +38,5 @@ body{isolation:isolate}#radar-background{position:fixed;inset:0;z-index:-1;width
 
 #lpl{--lime:#ecc75b;--muted:#c5bda4;--text:#fff3d4;margin-top:64px;padding:48px 24px;border:1px solid #8b7137;border-radius:20px;background:linear-gradient(145deg,#0b1a30,#030914);color:var(--text);scroll-margin-top:30px}#lpl .theme-gallery figcaption{color:#ecc75b}#lpl .button{border-color:#8b7137;background:#182e48;color:#fff3d4}@media(min-width:1000px){#lpl .theme-gallery{grid-template-columns:repeat(4,minmax(0,1fr))}#locksport .theme-gallery{grid-template-columns:repeat(5,minmax(0,1fr))}}
 #runner-themes{padding-top:65px;scroll-margin-top:30px}#runner-themes .theme-gallery{grid-template-columns:repeat(4,minmax(0,1fr))}@media(max-width:900px){#runner-themes .theme-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.project-logo{display:block;width:min(100%,440px);height:auto;margin:0 auto}.brand img{object-fit:contain}

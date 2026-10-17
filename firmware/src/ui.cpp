@@ -224,6 +224,7 @@ static void radarPick(lv_draw_ctx_t* ctx,float radians){
 }
 static void selectRadarTheme(uint8_t selected){
   radarTheme=selected;dismissNotice();uiApplyTheme(radarTheme);settings.putUChar("radar-theme",radarTheme);
+  if(radarTheme==0){watchFace=0;settings.putUChar("watch-face",watchFace);}
   if(locksport()){watchFace=lpu()?31:lpl()?29:dmac()?24:covert()?12:locksportDark()?11:9;settings.putUChar("watch-face",watchFace);}
   else if(radarTheme==7){watchFace=10;settings.putUChar("watch-face",watchFace);}
   else if(radarTheme>=10){watchFace=radarTheme+3;settings.putUChar("watch-face",watchFace);}

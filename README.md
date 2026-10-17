@@ -1,4 +1,12 @@
-![Dragon Detector promotional artwork](media/cover.png)
+<p align="center"><img src="web/assets/dragon-detector.png" width="280" alt="Dragon Detector: orange Dragon Ball with the BWM emblem"></p>
+
+**0.13.13:** A simple orange Dragon Ball with the BWM emblem is now the project logo, radar mark and universal startup. The matching logo watch keeps time and date below the artwork, with a moving seconds rim. [Release notes](docs/RELEASE-0.13.13.md) · [Artwork](docs/DRAGON-BRAND.md).
+
+| Startup · all five boards | Dragon Ball / BWM watch |
+|---|---|
+| ![New startup on StopWatch](web/assets/startup-01313.png) | ![New logo watch on StopWatch](web/assets/watch-dragon-01313.png) |
+
+Actual StopWatch firmware display captures, 0.13.13. [Artwork and behavior](docs/DRAGON-BRAND.md).
 
 **0.13.12:** Hackazillarex adds a rotating bone sweep and a jumping T-rex logo clock; m33k_t3ch adds cyan/magenta circuits and a neon logo dial. Both themes include animated Lite clocks. **31 themes / 29 full-board logo watches**, with the existing 21% application-slot reserve guard unchanged. [Release notes](docs/RELEASE-0.13.12.md).
 
@@ -14,7 +22,7 @@
 
 **M5Stack StopWatch:** the [M5Burner installation guide](docs/M5BURNER.md) covers the v0.13.12 factory image, checksums and post-install clock setup. The same image and actual StopWatch screenshots are included in [Releases](https://github.com/valleytechsolutions/Dragon-Detector/releases/tag/v0.13.12).
 
-Version **0.13.6** adds DMAC with acrylic pick hands and a Locksport Counter, Nyan Devices with a moving rainbow cat, a Talking Sasquach character watch, and distinct Waveshare, M5Stack, Seeed Studio and LAB5 faces. DagNazty adds a white/black skull-and-talon theme with its own analog watch. 0ct0’s Pig adds a pink ASCII octopus and a wandering, interactive pig that tells the live time. DeFlock adds a navy/steel-blue camera-raven viewfinder watch with large 24-hour time. The collection now includes only logo-based watches. It also adds HaleHound with both supplied logos, animated pink/violet fire and a hellfire radar, plus GhostStrats (black/grey/purple, glowing slit eyes and “Safety is an Illusion.”) and N3rdsec (black/white/gold, supplied skull on the watch and radar), alongside AWOK neon paint/mushroom, Baph0Mau5 occult and WDGWARS world-map themes with matching analog faces, plus a black/silver Covert Instruments × McNally theme with distinct Reaper pick hands, a 24-hour window and a rotating McTickler radar sweep. Every theme now carries through menus, settings, dialogs and utilities, while the supplied BWM2 logo appears alone on black at boot. It also adds white/red TOOOL and near-black/red TOOOL Dark themes, a matching logo watch face and a Locksport Timer with OPEN and SPLIT controls. Church of Malware adds a monochrome circuit radar and a full-emblem binary watch. Analog faces show the date without AM/PM. Twenty-four logo watch faces include 12-hour analog dials; JCMK is a 24-hour digital face and the Covert hybrid adds a separate 24-hour window. ValleyTech retains its Arabic dial and broad gold/silver hands; JCMK and LAB5 digital faces use large numerals.
+Version **0.13.6** adds DMAC with acrylic pick hands and a Locksport Counter, Nyan Devices with a moving rainbow cat, a Talking Sasquach character watch, and distinct Waveshare, M5Stack, Seeed Studio and LAB5 faces. DagNazty adds a white/black skull-and-talon theme with its own analog watch. 0ct0’s Pig adds a pink ASCII octopus and a wandering, interactive pig that tells the live time. DeFlock adds a navy/steel-blue camera-raven viewfinder watch with large 24-hour time. The collection now includes only logo-based watches. It also adds HaleHound with both supplied logos, animated pink/violet fire and a hellfire radar, plus GhostStrats (black/grey/purple, glowing slit eyes and “Safety is an Illusion.”) and N3rdsec (black/white/gold, supplied skull on the watch and radar), alongside AWOK neon paint/mushroom, Baph0Mau5 occult and WDGWARS world-map themes with matching analog faces, plus a black/silver Covert Instruments × McNally theme with distinct Reaper pick hands, a 24-hour window and a rotating McTickler radar sweep. Every theme now carries through menus, settings, dialogs and utilities, while the Dragon Ball / BWM logo now appears alone on black at boot. It also adds white/red TOOOL and near-black/red TOOOL Dark themes, a matching logo watch face and a Locksport Timer with OPEN and SPLIT controls. Church of Malware adds a monochrome circuit radar and a full-emblem binary watch. Analog faces show the date without AM/PM. Twenty-four logo watch faces include 12-hour analog dials; JCMK is a 24-hour digital face and the Covert hybrid adds a separate 24-hour window. ValleyTech retains its Arabic dial and broad gold/silver hands; JCMK and LAB5 digital faces use large numerals.
 
 Storage controls match the hardware. **Waveshare AMOLED and M5Stack have no SD controls:** Utilities → Saved files opens captures in internal flash, and Settings provides Capture studio and Saved captures. Spotpear and XIAO retain their optional SD tools. [Hardware feature comparison](docs/HARDWARE.md) · [GUI tour](docs/GUI.md).
 
@@ -129,7 +137,7 @@ Actual CRC-verified Waveshare firmware renders. [Clock faces and easy time setup
 
 | Dragon Ball | Black / gold / red |
 |---|---|
-| ![Dragon Ball theme, actual M5Stack LVGL render](media/radar-dragon-v091.png) | ![Black/gold/red theme, actual M5Stack LVGL render](media/radar-gold-v091.png) |
+| ![Dragon Ball theme, actual M5Stack LVGL render](web/assets/radar-dragon-01313.png) | ![Black/gold/red theme, actual M5Stack LVGL render](media/radar-gold-v091.png) |
 
 Settings → Theme & radar labels saves the theme, label preference and recent-signal retention. The images are actual 466×466 renderer captures of received contacts, not physical-panel photographs.
 

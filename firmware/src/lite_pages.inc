@@ -21,8 +21,14 @@ static void liteHand(lv_draw_ctx_t* ctx,float angle,float length,uint32_t rgb,bo
 }
 static void litePageDraw(lv_event_t* e){
   auto* ctx=lv_event_get_draw_ctx(e);const auto& p=dragon::UiPalettes[radarTheme];
-  disc(ctx,120,120,118,p.border);disc(ctx,120,120,116,p.bg);
+  const bool dragonClock=litePage==LitePage::Clock&&radarTheme==0;
+  disc(ctx,120,120,118,dragonClock?0x76532b:p.border);disc(ctx,120,120,116,dragonClock?0x000000:p.bg);
   if(litePage==LitePage::Clock){
+    if(radarTheme==0){
+      themeArtwork(ctx,boot_dragon_logo,16);
+      for(int i=0;i<60;++i){float a=i*.104719755f;line(ctx,120+sinf(a)*113,120-cosf(a)*113,120+sinf(a)*116,120-cosf(a)*116,0x76532b);}
+      if(clockValid){float a=clockFrame.second*.104719755f;disc(ctx,120+sinf(a)*114,120-cosf(a)*114,2,0xffb000);}return;
+    }
     if(radarTheme==29){themeArtwork(ctx,watch_logo_hackazillarex,90);dinoRun(ctx,radarFrameAt);return;}
     if(radarTheme==30){themeArtwork(ctx,watch_logo_m33k,68);cyberRim(ctx,radarFrameAt,clockValid?clockFrame.second:-1);return;}
     for(int i=0;i<60;++i){float a=i*.104719755f;int r=i%5?91:86;line(ctx,120+sinf(a)*r,120-cosf(a)*r,120+sinf(a)*96,120-cosf(a)*96,i%5?p.border:p.accent,i%5?1:2);}
@@ -55,7 +61,7 @@ static void setLitePage(LitePage next){
   lv_obj_set_style_text_font(pageValue,next==LitePage::Signals||next==LitePage::Status?&lv_font_montserrat_14:&lv_font_montserrat_22,0);
   lv_obj_set_y(pageValue,next==LitePage::Clock?158:next==LitePage::Timer?95:76);
   lv_obj_set_y(pageSub,next==LitePage::Clock?187:next==LitePage::Timer?138:171);
-  bool special=next==LitePage::Clock&&radarTheme>=29;
+  bool special=next==LitePage::Clock&&(radarTheme==0||radarTheme>=29);
   if(radarLogos[radarTheme]&&!special)lv_obj_clear_flag(logo,LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(logo,LV_OBJ_FLAG_HIDDEN);
   if(special){lv_obj_add_flag(pageTitle,LV_OBJ_FLAG_HIDDEN);lv_obj_set_y(pageValue,radarTheme==29?24:157);lv_obj_set_y(pageSub,radarTheme==29?48:188);}
   lv_obj_invalidate(root);
@@ -76,6 +82,7 @@ static void updateLitePage(){
   for(auto* o:{pageTitle,pageSub,pageHint})lv_obj_set_style_text_color(o,color(p.muted),0);
   lv_obj_set_style_text_color(pageValue,color(p.ink),0);
   lv_obj_set_style_bg_color(pageValue,color(p.bg),0);lv_obj_set_style_bg_opa(pageValue,LV_OPA_COVER,0);
+  if(litePage==LitePage::Clock&&radarTheme==0){lv_obj_set_style_text_color(pageValue,color(0xfff0cf),0);lv_obj_set_style_text_color(pageSub,color(0xffb000),0);lv_obj_set_style_bg_color(pageValue,color(0x000000),0);}
   if(litePage==LitePage::Radar){lv_label_set_text(pageHint,"TAP THEME / HOLD PAGE");if(!noticeAt||uint32_t(millis()-noticeAt)>5000)lv_obj_clear_flag(pageHint,LV_OBJ_FLAG_HIDDEN);return;}
   timerFrame=stopwatch.elapsed(stopwatchNow());clockLocal(clockFrame);clockValid=wallTime()!=0;
   lv_obj_invalidate(pageCanvas);

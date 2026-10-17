@@ -193,16 +193,16 @@ async function loadImage(file,stock=false){
     if(next.width*next.height>40000000){next.close();throw new Error('Choose an image below 40 megapixels.');}
     if(revision!==imageRequest){next.close();return;}
     photo?.close();photo=next;photoName=file.name;turns=0;mirror=false;
-    if(stock){zoom=1;offsetX=offsetY=0;draw();$('studio-status').textContent='BWM stock badge centered and sized for the round screen. Add text below, or upload as it is.';}
+    if(stock){zoom=1;offsetX=offsetY=0;draw();$('studio-status').textContent='Dragon Detector logo centered and sized for the round screen. Add text below, or upload as it is.';}
     else {fit();$('studio-status').textContent='Whole image fitted inside the circle. Drag to position, or choose Fill circle for a full-screen crop.';}
   }catch(error){$('studio-status').textContent=error.message;}
 }
 $('image').onchange=e=>{const file=e.target.files[0];e.target.value='';loadImage(file);};
 async function loadStock(){
   if(busy)return;const revision=++imageRequest;
-  try {const response=await fetch(`assets/bwm-badge-${size}.png`);if(!response.ok)throw new Error('The stock badge could not load. Choose your own image or try again.');
+  try {const response=await fetch(`assets/dragon-badge-${size}.png`);if(!response.ok)throw new Error('The stock badge could not load. Choose your own image or try again.');
     const blob=await response.blob();if(revision!==imageRequest)return;
-    await loadImage(new File([blob],'BWM stock badge.png',{type:'image/png'}),true);
+    await loadImage(new File([blob],'Dragon Detector logo.png',{type:'image/png'}),true);
   }catch(error){if(revision===imageRequest)$('studio-status').textContent=error.message;}
 }
 $('stock-bwm').onclick=loadStock;
