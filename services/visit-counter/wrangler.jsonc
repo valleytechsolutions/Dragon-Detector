@@ -1,0 +1,9 @@
+{
+  "name": "dragon-detector-visits",
+  "main": "worker.js",
+  "compatibility_date": "2026-10-16",
+  "workers_dev": true,
+  "observability": {"enabled": false},
+  "durable_objects": {"bindings": [{"name": "VISITS", "class_name": "VisitCounter"}]},
+  "migrations": [{"tag": "v1", "new_sqlite_classes": ["VisitCounter"]}]
+}

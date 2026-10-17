@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {localClockEpoch,setClock,readWearable,setOrientation} from '../web/wearable-transfer.js';
+import {localClockEpoch,setClock,syncComputerClock,readWearable,setOrientation} from '../web/wearable-transfer.js';
 import {hasWearableTools} from '../web/firmware-compat.js';
 test('local time conversion honors offsets, leap days, and invalid dates',()=>{
  assert.equal(localClockEpoch('2024-02-29T00:00:00',0),1709164800);
@@ -12,6 +12,14 @@ test('local time conversion honors offsets, leap days, and invalid dates',()=>{
  assert.ok(hasWearableTools('0.9.0'));for(const v of ['0.8.0','0.14.0','0.90.0','1.9.0'])assert.ok(!hasWearableTools(v));
 });
 function linkWith(responses){const writes=[];return {writes,async write(line){writes.push(line);},async wait(predicate){const r=responses.shift();assert.ok(predicate(r),r);return r;}};}
+test('one-click sync copies the instant and current local offset, including fractional zones',async()=>{
+ for(const minutes of [-720,-300,-240,0,330,345,840]){
+  const now=new Date('2026-10-16T20:10:30.987Z');now.getTimezoneOffset=()=>-minutes;
+  const link=linkWith(['TIME_OK','CLOCK_OK']);await syncComputerClock(link,now);
+  assert.deepEqual(link.writes,['time 1792181430',`clock offset ${minutes}`]);
+ }
+ const link=linkWith([]);await assert.rejects(syncComputerClock(link,new Date(NaN)),/Invalid clock/);assert.equal(link.writes.length,0);
+});
 test('clock writes require acknowledgments and propagate RTC failure',async()=>{
  let link=linkWith(['TIME_OK','CLOCK_OK']);await setClock(link,1709164800,-240);assert.deepEqual(link.writes,['time 1709164800','clock offset -240']);
  link=linkWith(['TIME_ERROR']);await assert.rejects(setClock(link,1709164800,0),/clock could not/);assert.equal(link.writes.length,1);

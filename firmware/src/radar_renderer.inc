@@ -42,10 +42,10 @@ static void callout(lv_draw_ctx_t* ctx,const Dot& dot,unsigned slot,const char* 
     ctx->clip_area=saved;
   }
 #else
-  lv_draw_rect_dsc_t box;lv_draw_rect_dsc_init(&box);box.radius=S(4);box.bg_color=color(dragon::RadarLabelBackground);box.bg_opa=LV_OPA_COVER;
+  lv_draw_rect_dsc_t box;lv_draw_rect_dsc_init(&box);box.radius=uiAscii()?0:S(4);box.bg_color=color(dragon::RadarLabelBackground);box.bg_opa=LV_OPA_COVER;
   box.border_color=color(c);box.border_opa=LV_OPA_80;box.border_width=dot.index==radarPrimary?2:1;
   lv_area_t area{(lv_coord_t)x,(lv_coord_t)y,(lv_coord_t)(x+w),(lv_coord_t)(y+h)};lv_draw_rect(ctx,&box,&area);
-  lv_draw_label_dsc_t d;lv_draw_label_dsc_init(&d);d.color=color(c);d.font=FCALLOUT;
+  lv_draw_label_dsc_t d;lv_draw_label_dsc_init(&d);d.color=color(c);d.font=uiFont(FCALLOUT);
   lv_area_t textArea{(lv_coord_t)(x+S(4)),(lv_coord_t)(y+S(3)),(lv_coord_t)(x+w-S(4)),(lv_coord_t)(y+h-S(3))};
   // Clip locally so an unusually long translated/family label cannot escape.
   lv_area_t clip;if(_lv_area_intersect(&clip,ctx->clip_area,&textArea)){const lv_area_t* saved=ctx->clip_area;ctx->clip_area=&clip;lv_draw_label(ctx,&d,&textArea,text,nullptr);ctx->clip_area=saved;}
@@ -67,20 +67,56 @@ static void radarDraw(lv_event_t* e){
   glass.bg_color=color(theme.top);glass.bg_grad.dir=LV_GRAD_DIR_VER;glass.bg_grad.stops[0].color=glass.bg_color;glass.bg_grad.stops[1].color=color(theme.bottom);
   lv_area_t field{(lv_coord_t)S(9),(lv_coord_t)S(9),(lv_coord_t)(SCREEN_RES-S(9)-1),(lv_coord_t)(SCREEN_RES-S(9)-1)};lv_draw_rect(ctx,&glass,&field);
   static const int reaches[]={77,119,143,157,166,169,166,157,143,119,77};
-  for(int n=0;n<11;++n){int axis=CENTER+S(n*30-150),reach=S(reaches[n]);line(ctx,axis,CENTER-reach,axis,CENTER+reach,theme.grid,S(1),180);line(ctx,CENTER-reach,axis,CENTER+reach,axis,theme.grid,S(1),180);}
+  if(radarTheme<6)for(int n=0;n<11;++n){int axis=CENTER+S(n*30-150),reach=S(reaches[n]);line(ctx,axis,CENTER-reach,axis,CENTER+reach,theme.grid,S(1),180);line(ctx,CENTER-reach,axis,CENTER+reach,axis,theme.grid,S(1),180);}
+  else if(radarTheme==6||radarTheme==8||radarTheme==9||radarTheme==21){
+    // Pin chambers evoke a lock cylinder while leaving signal labels legible.
+    for(int i=0;i<5;++i){int x=S(140+i*20);line(ctx,x-S(6),S(112),x-S(6),S(160),theme.grid,S(1));line(ctx,x+S(6),S(112),x+S(6),S(160),theme.grid,S(1));
+      for(int n=0;n<5;++n)line(ctx,x-S(4),S(114+n*4),x+S(4),S(117+n*4),theme.grid,S(1));
+      line(ctx,x,S(140+(i%3)*3),x,S(157),theme.ring,S(3),100);
+    }
+    line(ctx,S(124),S(163),S(236),S(163),theme.ring,S(1),100);
+  }else if(radarTheme==10)radarAwokArt(ctx);
+  else if(radarTheme==11)radarBaphArt(ctx);
+  else if(radarTheme==12)radarWdgArt(ctx);
+  else if(radarTheme==13)radarGhostArt(ctx);
+  else if(radarTheme==14)radarN3rdArt(ctx);
+  else if(radarTheme==15)radarHaleArt(ctx);
+  else if(radarTheme==16)radarWaveArt(ctx);
+  else if(radarTheme==17)radarM5Art(ctx);
+  else if(radarTheme==18)radarLabArt(ctx);
+  else if(radarTheme==19)radarSasquachArt(ctx);
+  else if(radarTheme==20)radarNyanArt(ctx);
+  else if(radarTheme==22)radarSeeedArt(ctx);
+  else if(radarTheme==23)radarDagArt(ctx);
+  else if(radarTheme==24)radarPigArt(ctx);
+  else if(radarTheme==25)radarDeflockArt(ctx);
+  else{
+    for(int side:{-1,1})for(int n=0;n<4;++n){int y=115+n*30,x=180+side*(102+n%2*12),elbow=x-side*32;
+      disc(ctx,S(x),S(y),S(4),0x686868);disc(ctx,S(x),S(y),S(2),0x080808);
+      line(ctx,S(x),S(y),S(elbow),S(y),0x505050,S(2));line(ctx,S(elbow),S(y),S(elbow-side*18),S(y+18),0x505050,S(2));line(ctx,S(elbow-side*18),S(y+18),S(180+side*32),S(y+18),0x505050,S(2));
+    }
+  }
   lv_draw_arc_dsc_t arc;lv_draw_arc_dsc_init(&arc);arc.color=color(theme.ring);arc.width=S(1);arc.opa=160;lv_point_t center{(lv_coord_t)CENTER,(lv_coord_t)CENTER};
-  if(radarTheme)for(int radius=42;radius<169;radius+=42)lv_draw_arc(ctx,&arc,&center,S(radius),0,359);
-  arc.width=S(2);lv_draw_arc(ctx,&arc,&center,S(170),0,359);
+  if(radarTheme&&radarTheme!=24)for(int radius=42;radius<169;radius+=42)lv_draw_arc(ctx,&arc,&center,S(radius),0,359);
+  if(radarTheme!=24){arc.width=S(2);lv_draw_arc(ctx,&arc,&center,S(170),0,359);}
 #endif
   // Sweep and pulse are animation, not measurements of bearing or RF activity.
   static uint32_t sweepAt=0;if(radioEnabled)sweepAt=now;
   float angle=(sweepAt%6000)*.00104719755f,dx=cosf(angle),dy=sinf(angle);
+#ifndef BOARD_RADAR_LITE
+  if(radarTheme==9)radarPick(ctx,angle);
+  else if(radarTheme==24)radarPigSweep(ctx,angle);
+  else {
+#endif
   lv_draw_rect_dsc_t trail;lv_draw_rect_dsc_init(&trail);trail.bg_color=color(theme.sweep);
   for(int n=0;n<18;++n){float nextX=dx*.998629535f+dy*.052335956f,nextY=dy*.998629535f-dx*.052335956f;
     lv_point_t wedge[]={{(lv_coord_t)CENTER,(lv_coord_t)CENTER},{(lv_coord_t)(CENTER+int(dx*S(166))),(lv_coord_t)(CENTER+int(dy*S(166)))},{(lv_coord_t)(CENTER+int(nextX*S(166))),(lv_coord_t)(CENTER+int(nextY*S(166)))}};
     trail.bg_opa=58-n*3;lv_draw_triangle(ctx,&trail,wedge);dx=nextX;dy=nextY;
   }
   line(ctx,CENTER,CENTER,CENTER+int(cosf(angle)*S(166)),CENTER+int(sinf(angle)*S(166)),theme.sweep,S(2),200);
+#ifndef BOARD_RADAR_LITE
+  }
+#endif
   if(!radarPrepared || uint32_t(now-radarPrepared)>=250){
     radarPrepared=now;radarCount=0;
     for(size_t i=0;i<MAX_CONTACTS;++i)if(radarVisible(contacts[i],now))radarOrder[radarCount++]=i;
@@ -95,6 +131,9 @@ static void radarDraw(lv_event_t* e){
   }
   // Paint low-priority dots first so a coincident tracker cannot cover Axon.
   for(int i=dotCount-1;i>=0;--i){auto& dot=dots[i];auto& c=contacts[dot.index];int x=dot.x,y=dot.y;uint32_t age=now-c.seen;uint8_t opacity=std::max<uint8_t>(205,dragon::radarOpacity(age));Family family=visibleFamily(c,now,detector.families);uint32_t deviceColor=dragon::familyColor(family);
+    #ifndef BOARD_RADAR_LITE
+    if(radarTheme==24){asciiMark(ctx,age>=30000?"?":dot.index==trackedContact?"@":"*",x*360/SCREEN_RES,y*360/SCREEN_RES,deviceColor);continue;}
+#endif
     bool tracker=dragon::trackerFamily(family);disc(ctx,x,y,S(tracker?4:8),dragon::RadarLabelBackground);
     if(age>=30000){auto stale=arc;stale.color=color(deviceColor);stale.opa=opacity;stale.width=S(2);lv_point_t point{(lv_coord_t)x,(lv_coord_t)y};
       for(int a=0;a<360;a+=90)lv_draw_arc(ctx,&stale,&point,S(6),a,a+48);
@@ -116,6 +155,9 @@ static void radarDraw(lv_event_t* e){
   for(unsigned j=0;j<labelCount;++j){auto& dot=dots[labels[j]];labelKeys[j]=dot.key;dot.labelSlot=slots[j];auto& c=contacts[dot.index];uint32_t age=now-c.seen;
     char state[24],text[64];if(age>=10000)snprintf(state,sizeof(state),"%lus ago",(unsigned long)(age/1000));else snprintf(state,sizeof(state),"%d dBm",c.rssi);
     Family family=c.match.family;snprintf(text,sizeof(text),"%s\n%s",radarFamilyName(family),state);callout(ctx,dot,slots[j],text,dragon::familyColor(family));
+    #ifndef BOARD_RADAR_LITE
+    if(radarTheme==24)asciiMark(ctx,"*",dot.x*360/SCREEN_RES,dot.y*360/SCREEN_RES,dragon::familyColor(family));else
+#endif
     disc(ctx,dot.x,dot.y,S(5),dragon::familyColor(family));
   }
   // Decorative center cursor, not a compass. Keep it above the sweep/labels.
@@ -123,6 +165,8 @@ static void radarDraw(lv_event_t* e){
   for(int sign:{-1,1}){line(ctx,CENTER+sign*3,CENTER,CENTER+sign*8,CENTER,0x86bda5,1);line(ctx,CENTER,CENTER+sign*3,CENTER,CENTER+sign*8,0x86bda5,1);}
   disc(ctx,CENTER,CENTER,1,0xd4f9e7);
 #else
-  for(int y=-7;y<=6;++y){int half=(y+7)/2;line(ctx,CENTER-S(half),CENTER+S(y),CENTER+S(half),CENTER+S(y),0xff6651,S(1)+1);}
+  if(radarTheme==24)asciiMark(ctx,"+",180,180,theme.sweep);
+  else if(radarTheme==9){disc(ctx,CENTER,CENTER,S(7),0x000000);disc(ctx,CENTER,CENTER,S(5),0xc5cdd3);disc(ctx,CENTER,CENTER,S(3),0x30383e);line(ctx,CENTER-S(2),CENTER+S(1),CENTER+S(2),CENTER-S(1),0xe7ecef,std::max(1,S(1)));}
+  else for(int y=-7;y<=6;++y){int half=(y+7)/2;line(ctx,CENTER-S(half),CENTER+S(y),CENTER+S(half),CENTER+S(y),theme.sweep,S(1)+1);}
 #endif
 }

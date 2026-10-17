@@ -6,9 +6,11 @@
 
 **[Open the web flasher & detector tools](https://valleytechsolutions.github.io/Dragon-Detector/)** · [Install guide](docs/FLASHING.md) · [Controls](docs/USER-GUIDE.md) · [Detection evidence](docs/DETECTION.md) · [Credits](CREDITS.md)
 
-Version **0.13.2** makes storage controls match the hardware. **Waveshare AMOLED and M5Stack have no SD controls:** Utilities → Saved files opens captures in internal flash, and Settings provides Capture studio and Saved captures. Spotpear and XIAO retain their optional SD tools. [Hardware feature comparison](docs/HARDWARE.md) · [GUI tour](docs/GUI.md).
+Version **0.13.6** adds DMAC with acrylic pick hands and a Locksport Counter, Nyan Devices with a moving rainbow cat, a Talking Sasquach character watch, and distinct Waveshare, M5Stack, Seeed Studio and LAB5 faces. DagNazty adds a white/black skull-and-talon theme with its own analog watch. 0ct0’s Pig adds a pink ASCII octopus and a wandering, interactive pig that tells the live time. DeFlock adds a navy/steel-blue camera-raven viewfinder watch with large 24-hour time. The collection now includes only logo-based watches. It also adds HaleHound with both supplied logos, animated pink/violet fire and a hellfire radar, plus GhostStrats (black/grey/purple, glowing slit eyes and “Safety is an Illusion.”) and N3rdsec (black/white/gold, supplied skull on the watch and radar), alongside AWOK neon paint/mushroom, Baph0Mau5 occult and WDGWARS world-map themes with matching analog faces, plus a black/silver Covert Instruments × McNally theme with distinct Reaper pick hands, a 24-hour window and a rotating McTickler radar sweep. Every theme now carries through menus, settings, dialogs and utilities, while the supplied BWM2 logo appears alone on black at boot. It also adds white/red TOOOL and near-black/red TOOOL Dark themes, a matching logo watch face and a Locksport Timer with OPEN and SPLIT controls. Church of Malware adds a monochrome circuit radar and a full-emblem binary watch. Analog faces show the date without AM/PM. Twenty-four logo watch faces include 12-hour analog dials; JCMK is a 24-hour digital face and the Covert hybrid adds a separate 24-hour window. ValleyTech retains its Arabic dial and broad gold/silver hands; JCMK and LAB5 digital faces use large numerals.
 
-**Six radar themes** include Valleytech, Biscuit Shop and Marauder with their supplied logos. Select one in **Settings → Radar theme & labels** or the USB web tools. [Theme previews](docs/THEMES.md).
+Storage controls match the hardware. **Waveshare AMOLED and M5Stack have no SD controls:** Utilities → Saved files opens captures in internal flash, and Settings provides Capture studio and Saved captures. Spotpear and XIAO retain their optional SD tools. [Hardware feature comparison](docs/HARDWARE.md) · [GUI tour](docs/GUI.md).
+
+**Twenty-six complete themes** include Covert Instruments × McNally, TOOOL, TOOOL Dark, Church of Malware, Valleytech, Biscuit Shop and Marauder with their supplied logos. Select one in **Settings → Theme & radar labels** or the USB web tools. [Theme previews](docs/THEMES.md).
 
 The 0.13 series brings the **29 timed Wi-Fi/BLE tools, eight modes and BLE Lab to all four full boards**. New workflows include saved recon sessions, historical AP archives, bounded recipes, HID report decoding and a GATT bridge with cached reads. **Tools → Recon → Attacks** opens the attack lists directly; **Utilities** replaces Daily. Normal screens retain background detection. All five profiles share the 158-fact SquachWatch audit and AXEOFF priority handling. [New workflows and limits](docs/RECON-013.md) · [Memory reserve](docs/FLASH-BUDGET.md) · [Feature comparison](docs/FEATURE-MATRIX.md).
 
@@ -18,7 +20,18 @@ Update preserves badge, history, settings, GATT profiles and saved captures. Act
 |---|---|---|
 | ![Utilities on Waveshare](media/waveshare-utilities-0132.png) | ![Settings on Waveshare](media/waveshare-settings-0132.png) | ![Capture studio on Waveshare](media/waveshare-captures-0132.png) |
 
-CRC-verified logical display captures from the connected Waveshare running 0.13.2; these are firmware renders, not panel photographs. [More GUI pictures](docs/GUI.md) · [Open Radio tools](https://valleytechsolutions.github.io/Dragon-Detector/#radio-tools).
+CRC-verified logical display captures from the connected Waveshare running 0.13.3; these are firmware renders, not panel photographs. [More GUI pictures](docs/GUI.md) · [Open Radio tools](https://valleytechsolutions.github.io/Dragon-Detector/#radio-tools).
+
+## Locksport collection
+
+Choose **TOOOL**, **TOOOL Dark**, **Covert Instruments / McNally**, or **DMAC** in Settings → Theme & radar labels. Each selects its own logo watch and colors the entire interface. DMAC calls the timing page **Locksport Counter**; the other three use **Locksport Timer**.
+
+| TOOOL | TOOOL Dark | Covert Instruments × McNally | DMAC |
+|---|---|---|---|
+| ![TOOOL watch](web/assets/watch-toool-0136.png) | ![TOOOL Dark watch](web/assets/watch-toool-dark-0136.png) | ![Covert pick watch](web/assets/watch-covert-0136.png) | ![DMAC acrylic-pick watch](web/assets/watch-dmac-0136.png) |
+| ![TOOOL timer](web/assets/timer-toool-0136.png) | ![TOOOL Dark timer](web/assets/timer-toool-dark-0136.png) | ![Covert timer](web/assets/timer-covert-0136.png) | ![DMAC counter](web/assets/timer-dmac-0136.png) |
+
+**START / PAUSE** controls the attempt, **SPLIT** records a milestone, **OPEN** records the final split and stops, and **RESET** confirms before clearing. A theme-colored comet circles the outer rim every ten seconds while counting, freezes on PAUSE/OPEN, and returns to the top on RESET. The latest 50 splits remain available in LOG until reset or reboot. These are native Waveshare display captures. The same features and panel-sized artwork are built for **Seeed XIAO + Round Display, Spotpear / Guition, and M5Stack StopWatch**. [Full theme gallery](docs/THEMES.md) · [Controls](docs/STOPWATCH-CLOCK-ORIENTATION.md) · [Artwork credits](CREDITS.md).
 
 ## Flash in three steps
 
@@ -71,7 +84,7 @@ Logical 240×240 captures from the connected XIAO, not panel photographs.
 
 *Green radar theme with animated sweep, labeled signals and owner-supplied BWM1 logo. Inward means stronger filtered RSSI, with no numerical distance scale. Actual 466×466 LVGL render from M5Stack StopWatch C152, not a panel photograph. Targets opens the paged list; the speaker button toggles quiet mode.*
 
-- **Six radar themes:** Green radar (default), Dragon Ball, Black / gold / red, Valleytech, Biscuit Shop and Marauder. Each of the 26 device families has its own fixed color for dots, labels and leaders, with a [color legend](docs/RADAR-COLORS.md). Animated sweep, pulsing signals, automatic priority tags and tap-to-reveal tracker tags. All contacts share one radar; tap a selected dot again for evidence and Hunt; choose your theme in Settings or the USB web tools.
+- **Twenty-six complete themes:** classic radar palettes, branded maker and community watches, the locksport collection, 0ct0’s Pig and DeFlock. [Browse every theme and its controls](docs/THEMES.md). Each of the 26 device families has its own fixed color for dots, labels and leaders, with a [color legend](docs/RADAR-COLORS.md). Animated sweep, pulsing signals, automatic priority tags and tap-to-reveal tracker tags. All contacts share one radar; tap a selected dot again for evidence and Hunt; choose your theme in Settings or the USB web tools.
 - **Audited signature coverage:** all 158 table entries in the pinned SquachWatch reference have recognition and radar tests. Includes Flipper, Wi-Fi Pineapple, Pwnagotchi, nyanBOX, Biscuit, Flock, Axon/TASER, Raven, camera glasses, Find My/DULT, SmartTag, Google Find Hub, Tile, Ring/camera/ALPR vendors, decoded drone Remote ID, iBeacon, pentest devices, disconnect bursts and SSID security conflicts. [Coverage and comparison](docs/DETECTION-PARITY.md).
 - **All recognized candidates on radar:** first sightings appear immediately; device types use fixed colors and trackers use smaller dots. Intermittent signals remain for up to two minutes with a segmented marker and explicit last-seen age. A paged Targets list, quick quiet toggle and live radio-health screen make crowded areas easier to navigate.
 - **Traffic awareness:** Wi-Fi deauthentication/disassociation bursts and BLE pairing/tag spam candidates, with a radar activity banner, counts, protocol/channel evidence and a dedicated Activity screen. See [how traffic detection works](docs/RADAR-AND-ACTIVITY.md).
@@ -88,13 +101,13 @@ Logical 240×240 captures from the connected XIAO, not panel photographs.
 
 ## Stopwatch, clock and orientation
 
-**Tools → Utilities** now includes a real start/pause/lap stopwatch and a clock. M5Stack yellow/blue and Waveshare BOOT/short PWR operate timing controls; the four full-feature boards also have touch buttons. The latest 50 laps remain available while detection keeps running. Settings provides RTC date/time and local UTC offset, saved 0°/90°/180°/270° orientation on the four full-feature boards (Lite has a fixed orientation). [Controls, behavior and hardware limits](docs/STOPWATCH-CLOCK-ORIENTATION.md).
+**Tools → Utilities** now includes a real start/pause/lap stopwatch and twenty-four swipeable watch faces, including TOOOL, Church of Malware binary, character, maker and community logo designs. Both TOOOL themes and Covert Instruments × McNally offer Locksport Timer; DMAC offers Locksport Counter with the same OPEN and SPLIT controls. All analog dials use 12 hours. JCMK military, DeFlock, 0ct0’s Pig and the Covert hybrid’s digital window use 24-hour time. Connecting Studio automatically syncs local date, time and timezone. M5Stack yellow/blue and Waveshare BOOT/short PWR operate timing controls; the four full-feature boards also have touch buttons. The latest 50 laps remain available while detection keeps running. Settings provides RTC date/time and local UTC offset, saved 0°/90°/180°/270° orientation on the four full-feature boards (Lite has a fixed orientation). [Controls, behavior and hardware limits](docs/STOPWATCH-CLOCK-ORIENTATION.md).
 
-| Stopwatch · 0.9 | Clock · 0.9 |
+| Chronograph · 0.13.3 | ValleyTech clock · 0.13.6 |
 |---|---|
-| ![Stopwatch with elapsed time and touch controls](media/stopwatch-timer-v09.png) | ![Clock with local date and UTC offset](media/stopwatch-clock-v09.png) |
+| ![Chronograph stopwatch](web/assets/watch-stopwatch-0133.png) | ![ValleyTech analog watch](web/assets/watch-valleytech-0136.png) |
 
-Actual logical renderer captures from the attached M5Stack. Orientation changes only through Settings or the USB tools; fresh installations stay upright. [Clock and orientation web controls](https://valleytechsolutions.github.io/Dragon-Detector/#detector) are available after connecting firmware 0.9.
+Actual CRC-verified Waveshare firmware renders. [Five faces and easy time setup](docs/STOPWATCH-CLOCK-ORIENTATION.md). Orientation changes only through Settings or USB tools. Connecting the current Studio copies the computer's local time; resync after daylight-saving changes or a software-clock restart.
 
 ## Choose your radar
 
@@ -102,7 +115,7 @@ Actual logical renderer captures from the attached M5Stack. Orientation changes 
 |---|---|
 | ![Dragon Ball theme, actual M5Stack LVGL render](media/radar-dragon-v091.png) | ![Black/gold/red theme, actual M5Stack LVGL render](media/radar-gold-v091.png) |
 
-Settings → Radar theme & labels saves the theme, label preference and recent-signal retention. The images are actual 466×466 renderer captures of received contacts, not physical-panel photographs.
+Settings → Theme & radar labels saves the theme, label preference and recent-signal retention. The images are actual 466×466 renderer captures of received contacts, not physical-panel photographs.
 
 ## On-device display settings
 
@@ -162,3 +175,5 @@ The older Spotpear multimedia and StopWatch releases remain in `hardware/` for r
 See [BUILDING.md](docs/BUILDING.md). CI tests the packet parser and tracking code, builds every board, and packages matching firmware, manifests and SHA-256 checksums. A successful `main` build feeds the GitHub Pages deployment from the same source commit.
 
 Original current application, web and tooling code is **[MIT](LICENSE)**, by **Your Pal Kal / Valleytech Custom Solutions**. Dependencies keep their own notices; historical `hardware/` projects retain their existing licenses. Thanks to **Colonel Panic / OUI Spy / Unified Blue**, **JustCallMeKoko / ESP32 Marauder**, Flock Noir, **skizzophrenic / SquachWatch**, OpenDroneID, CodeHedge, and the hardware/library authors. Read [CREDITS.md](CREDITS.md) for the exact scope and provenance.
+
+The web flasher includes a shared page-visit counter from this release onward. [Counter behavior and maintenance](docs/VISIT-COUNTER.md).

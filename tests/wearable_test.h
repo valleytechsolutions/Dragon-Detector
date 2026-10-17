@@ -2,6 +2,8 @@
 #include "radar_colors.h"
 #include <limits>
 static void wearableTests(){
+  for(int h=0;h<24;++h){assert(hour12(h)>=1&&hour12(h)<=12);assert(hour24(hour12(h),h>=12)==h);}
+  assert(hour24(12,false)==0&&hour24(12,true)==12&&hour12(0)==12&&hour12(23)==11);
   Stopwatch s;assert(s.elapsed(99)==0&&!s.lap(99));s.start(1000000);s.start(2000000);
   assert(s.elapsed(2500000)==1500000);assert(s.lap(2500000));assert(!s.lap(2500000));
   s.pause(3000000);assert(s.elapsed(999000000)==2000000);assert(!s.lap(4000000));
@@ -10,6 +12,12 @@ static void wearableTests(){
   s.start(0);for(int i=1;i<=75;++i)assert(s.lap(i*1000000ull));
   assert(s.retained()==50&&s.newest()->number==75&&s.newest(49)->number==26&&s.newest(50)==nullptr);
   assert(s.elapsed(50ull*86400000000ull)==50ull*86400000000ull); // beyond millis() wrap
+  Stopwatch pick;assert(!pick.finish(100));pick.start(100);assert(!pick.finish(100)&&pick.running);
+  assert(pick.lap(1000100));pick.pause(2000100);pick.start(9000100);
+  assert(pick.finish(10000100)&&!pick.running&&pick.finished);
+  assert(pick.elapsed(999999999)==3000000&&pick.newest()->total==3000000&&pick.newest()->split==2000000);
+  assert(!pick.finish(10000200)&&pick.lapCount==2);pick.start(11000100);assert(!pick.finished);
+  pick.pause(12000100);assert(pick.elapsed(0)==4000000);assert(pick.reset()&&!pick.finished&&!pick.retained());
   assert(dateEpoch({2000,1,1,0,0,0})==946684800u);
   assert(dateEpoch({2024,2,29,0,0,0})==1709164800u);
   assert(dateEpoch({2099,12,31,23,59,59})==4102444799u);

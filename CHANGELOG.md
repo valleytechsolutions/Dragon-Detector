@@ -1,5 +1,59 @@
 # Changes
 
+## 0.13.6 — Complete themes, locksport and community watches
+
+- Adds DeFlock (theme 25, watch 28): supplied camera-raven artwork, navy/steel-blue menus and radar, viewfinder details, large 24-hour time and an optical seconds rim.
+- Adds 0ct0’s Pig (theme 24, watch 27), an ASCII octopus radar/interface and a wandering pig with live 24-hour speech-bubble time, gaze changes and tap reactions.
+- Adds a shared web-flasher page-visit counter at the top right. Counts begin with this release; previews only read the count.
+
+- Adds DagNazty (theme 23, watch 26): white field, black accents, supplied skull, talon details and unique tapered analog hands on all four full boards.
+
+- Adds Seeed Studio (theme 22, watch 25): original logo, lime/deep teal/white palette, leaf-circuit radar and unique Arabic analog watch across all four full boards.
+- Adds an orbiting comet to TOOOL, TOOOL Dark, Covert and DMAC timing screens. Each ten-second lap follows elapsed attempt time; pause/open freezes it, resume continues and reset returns it to the top.
+
+- Removes the white ValleyTech backing plate and uses its transparent silver mark on the radar. DMAC radar/watch/counter use a circular logo without white corners. M5Stack retains its supplied white circular artwork.
+
+- Adds DMAC (theme 21, watch 24): original teal/pink logo, separate acrylic McTickler hands with copper inlays, full GUI colors and a Locksport Counter using START/PAUSE, SPLIT, OPEN and confirmed RESET.
+- Adds Nyan Devices with a moving pixel cat/rainbow radar, Talking Sasquach with a portrait-head radar and cartoon character arms as watch hands, and unique Waveshare waveform, M5Stack modular hybrid and LAB5 digital watches. Themes 16–20 map to faces 19–23.
+- Removes unbranded Neon analog/digital, Fairytale, Steampunk and Galaxy from swipe/USB selection. Their saved IDs 3–7 fall back to BWM; existing logo IDs stay stable.
+- Adds HaleHound (theme 15, face 18), with both supplied logos, a pink/violet hellfire radar and animated flames on the analog watch. The bounded animation uses no per-frame allocation and redraws only two small flame regions between clock ticks.
+- Adds GhostStrats with glowing purple slit eyes, faceted grey details and “Safety is an Illusion.”, plus N3rdsec with its original skull, black/white/gold palette and broad gold/silver analog hands. They append themes 13–14 and faces 16–17.
+- Adds AWOK (neon paint drips/mushrooms), Baph0Mau5 (violet sigils/moon ornament), and WDGWARS (cyan/magenta world-map and radio motifs), each with original supplied artwork, matching analog watch and full GUI palette. These append theme indices 10–12 and face indices 13–15; previous saved indices stay intact.
+- Adds Covert Instruments × McNally: black/white/silver radar and Locksport Timer, original supplied logos, distinct silver Reaper McTickler minute and short-hook hour profiles, and a separate 24-hour digital window.
+- Applies each saved theme across menus, settings, dialogs, lists, clock setup, standard stopwatch, BLE Lab and radio tools. Shared palettes enforce readable foregrounds, secondary labels and action buttons. Detection-family colors remain meaningful, with dark contrast plates on light menus.
+- Uses the supplied BWM2 logo alone, centered on black with a fade at boot, regardless of the selected theme. No device or theme names appear on the boot screen. Indexed artwork reduces flash use; original supplied source images are retained. The compact vector hands rotate without per-frame framebuffer allocation. Covert radar replaces its line/wedge sweep with the silver McTickler, drawn behind signal dots and labels.
+
+- Adds Church of Malware: a monochrome circuit radar and full-emblem binary watch. White weighted bits around the unobstructed emblem show 12-hour H plus M/S; AM/PM sits with the hour.
+- Removes AM/PM from every analog date. Existing digital 12-hour/24-hour behavior is preserved. Twenty-four selectable logo watches and twenty-six complete themes preserve existing valid saved indices.
+- Studio verifies each theme preference by reading it back, avoiding dependence on a short USB acknowledgment that some boards delay.
+
+- Adds TOOOL Dark across radar, analog watch, Locksport Timer and split log: near-black surfaces, red accents and soft white details. Its original logo sits in a circular inset; the light TOOOL option remains available.
+- Adds a white/red TOOOL radar theme with the supplied logo and pin-tumbler details. Selecting it also selects a new 12-hour analog watch with Arabic numerals, red/dark hands and a machined cylinder motif. Existing theme and watch indices stay unchanged.
+- With TOOOL, TOOOL Dark or Covert Instruments × McNally selected, Stopwatch becomes Locksport Timer: START/PAUSE, SPLIT, OPEN to record and stop at one timestamp, and confirmed RESET for the next attempt. The latest 50 splits are available in LOG; elapsed time excludes pauses and continues across page/theme/time changes.
+- Touch and existing hardware secondary keys use OPEN in either TOOOL mode. Covert Instruments and DMAC also use OPEN; the remaining themes retain ordinary lap behavior. Results remain in RAM and reset on reboot or confirmed reset.
+- Studio recognizes theme indices 6–21 and gates them to 0.13.6+. All four full boards share the theme, watch and timer; Lite remains unchanged.
+
+## 0.13.5 — Clearer ValleyTech dial and larger digital time
+
+- Replaces ValleyTech's cogwheels with a quiet black dial, all twelve Arabic numerals, the original gold VTS logo, and wider beveled gold/silver hands. ValleyTech no longer runs gear animation.
+- Both digital faces use crisp native-size time glyphs more than twice the previous size, with repositioned seconds, AM/PM, date and ornaments. JCMK remains the sole 24-hour face.
+- Compact digit-only fonts cover all three display sizes and are excluded from Lite. The bundled Montserrat font license accompanies every board package.
+- Biscuit, Steampunk and the remaining clock designs retain their existing appearance and behavior.
+
+## 0.13.4 — Themed watchmaking and 12-hour time
+
+- Nine swipeable faces. All analog dials and the neon digital face use 12-hour time; only the JCMK military face uses 24-hour time. Face-name captions are replaced by original logos or drawn emblems.
+- ValleyTech gains black/gold/silver sculpted clockwork with engraved rosettes, Biscuit Shop gains dark monochrome rotating gears, and new fairytale, brass steampunk and galaxy faces use detailed analog dials. BWM and the two neon designs remain available.
+- Manual time setup uses a 1–12 hour wheel and AM/PM. Midnight/noon conversion is tested for all 24 hours; RTC and UTC storage remain unchanged.
+- Animated mechanisms redraw only their changing region between seconds. All four full boards share the renderer; Lite remains radar-only. Existing automatic USB time sync and monotonic stopwatch behavior remain available.
+
+## 0.13.3 — Pocket-watch faces and effortless local time
+
+- Five saved, swipeable clock faces on Waveshare AMOLED, M5Stack StopWatch, Spotpear and XIAO: Atelier, Porcelain, Nocturne, Neon Circuit and Afterhours. The last two use cyberpunk palettes; three faces are analog and two digital. Lite remains radar-only.
+- Connecting in Studio automatically sets local date, time and the current timezone offset. A single Sync my local time button refreshes it after travel or daylight saving changes.
+- Settings → Clock & date explains automatic setup; manual setup uses date/hour/minute wheels and an advanced timezone editor. Invalid month/day combinations clamp safely. Clock faces hide routine detection banners while listening continues.
+- Restyle the stopwatch as a restrained chronograph while preserving monotonic elapsed time, pause/resume, laps and hardware keys.
+
 ## 0.13.2 — Hardware-aware storage and clearer installation
 
 - Remove SD menus, settings, command handlers, card prompts and logging/browser allocation from Waveshare AMOLED and M5Stack builds. Skip CSV formatting when SD logging is unavailable or disabled.
@@ -10,7 +64,7 @@
 ## 0.13.1 — Branded radar themes
 
 - Added Valleytech (silver/cyan), Biscuit Shop (warm amber) and Marauder (black/red), each with the owner-supplied radar logo, on all four full boards.
-- Theme selection is available in Settings → Radar theme & labels and the USB web tools. New choices are gated on older firmware. Existing theme indices, badge, preferences and partitions are preserved.
+- Theme selection is available in Settings → Theme & radar labels and the USB web tools. New choices are gated on older firmware. Existing theme indices, badge, preferences and partitions are preserved.
 - Native-resolution logo assets avoid runtime scaling and retain the original source PNGs. Device-family colors, labels, sweep animation and background scanning are unchanged. Lite stays fixed green.
 - Web gallery and theme guide show CRC-verified Waveshare renders; attribution records identify the supplied artwork separately from MIT application code.
 

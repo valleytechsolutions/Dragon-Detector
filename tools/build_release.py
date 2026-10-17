@@ -26,6 +26,9 @@ def build(board,skip):
     for name,path in sources.items():
         assert path.is_file(),path
         shutil.copyfile(path,out/name)
+    # Each standalone board ZIP also carries the embedded fonts' license.
+    shutil.copyfile(ROOT/'docs/licenses/Montserrat-OFL.txt',out/'FONT-LICENSE.txt')
+    shutil.copyfile(ROOT/'docs/licenses/Unscii-NOTICE.txt',out/'ASCII-FONT-NOTICE.txt')
     filesystem_segments=[('littlefs.bin',fs_offset)]
     if board=='waveshare':
         # A second independent LittleFS. Updates NEVER write either filesystem.

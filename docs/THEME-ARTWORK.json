@@ -1,0 +1,191 @@
+[
+  {
+    "file": "media/theme-logos/covert-instruments.png",
+    "supplied_name": "CI.png",
+    "sha256": "efcb69d6669a5469b4844f7b764ca92801b06c3609090edabfb3d3a22a8339fd",
+    "source_bytes_match": true,
+    "direct_copy_before_source_replacement": false
+  },
+  {
+    "file": "media/theme-logos/mcnally-source.webp",
+    "supplied_name": "mcnally_creator_kit_f671b581-3adc-46cb-8598-5af9e5f0eb7c.webp",
+    "sha256": "9336c2a47a223c60303ce5cfbd19ad5ea56ac3924d7b1a2344c578079876bffe",
+    "source_bytes_match": true,
+    "direct_copy_before_source_replacement": false
+  },
+  {
+    "file": "media/BWM2-official.png",
+    "supplied_name": "BWM2-official.png",
+    "sha256": "8e71a4d0f10d88b81a56b9680a96f7c85a05d6575f39f510d7ffa34038b5ee48",
+    "source_bytes_match": true,
+    "direct_copy_before_source_replacement": false
+  },
+  {
+    "file": "media/theme-logos/awok-source.jxl",
+    "supplied_name": "AWOK_TM.jxl",
+    "sha256": "047547bb825d0e222d89f67ad0a8d36439c6a1a0e89869efc3296bea1e2f1541",
+    "source_bytes_match": true,
+    "direct_copy_before_source_replacement": false
+  },
+  {
+    "file": "media/theme-logos/awok-mushrooms.png",
+    "supplied_name": "115850341.png",
+    "sha256": "23608d89d58b735d8ce6703691f583fa39653971124037c9113c59bdc4fa1061",
+    "source_bytes_match": true,
+    "direct_copy_before_source_replacement": false
+  },
+  {
+    "file": "media/theme-logos/baph0mau5.jpg",
+    "supplied_name": "images.jpg",
+    "sha256": "9017ee1be492b7a6f67f1dae7462f659d34bb438f8ac501af8838390f5c2593f",
+    "source_bytes_match": false,
+    "direct_copy_before_source_replacement": true
+  },
+  {
+    "file": "media/theme-logos/wdgwars.jpg",
+    "supplied_name": "images.jpg",
+    "sha256": "3c449e46b0e987c414f1fd46084b317115c0db940106e62532004f36a71dbbb4",
+    "source_bytes_match": true,
+    "direct_copy_before_source_replacement": false
+  },
+  {
+    "file": "media/theme-logos/ghoststrats-profile.jpg",
+    "supplied_name": "channels4_profile.jpg",
+    "sha256": "33182efcd41e9b3b4c40741e02bd4c723467307188b34b75a418f677c1a9ca07",
+    "source_bytes_match": true,
+    "direct_copy_before_source_replacement": false
+  },
+  {
+    "file": "media/theme-logos/ghoststrats-banner.jpg",
+    "supplied_name": "channels4_banner.jpg",
+    "sha256": "8573ce43fe75e68fe78a1c68c6c5c3690423aec9b83a7584d90a6e98161d1917",
+    "source_bytes_match": true,
+    "direct_copy_before_source_replacement": false
+  },
+  {
+    "file": "media/theme-logos/n3rdsec.jpg",
+    "supplied_name": "n3rdsec.jpg",
+    "sha256": "e544c19831e700766409be0cd70d16340601facbf3d614ad623605c999bf0505",
+    "source_bytes_match": true,
+    "direct_copy_before_source_replacement": false
+  },
+  {
+    "file": "media/theme-logos/halehound-splash.webp",
+    "supplied_name": "hh-stl-splash.webp",
+    "sha256": "b5576498aa3ace609888d9429f2619bcb06bb753f3b0eb32fe518581fd900496",
+    "source_bytes_match": true,
+    "direct_copy_before_source_replacement": false
+  },
+  {
+    "file": "media/theme-logos/halehound-wordmark.webp",
+    "supplied_name": "HOUND_LOGO_1280x640_e9cd8634-c7b6-4077-91e4-7658e7153c3b.webp",
+    "sha256": "2010e22155b5531cdd2542ead0b2ad71a1c894d57754f0a19c30ac20a173e9d1",
+    "source_bytes_match": true,
+    "direct_copy_before_source_replacement": false
+  },
+  {
+    "file": "media/theme-logos/waveshare.png",
+    "supplied_name": "ws-logo-green.png",
+    "sha256": "f4220ef62d08b0d58a6eafba29f4eb6fc0b8306916d05184a6bfd56778e64673",
+    "source_bytes_match": true,
+    "direct_copy_before_source_replacement": false
+  },
+  {
+    "file": "media/theme-logos/m5stack.jpg",
+    "supplied_name": "m5stack.jpg",
+    "sha256": "dda7619a11cd6ce37408a6fe7025ef38e91b949cc043b0e7e889120ff2fd2355",
+    "source_bytes_match": true,
+    "direct_copy_before_source_replacement": false
+  },
+  {
+    "file": "media/theme-logos/lab5.jpg",
+    "supplied_name": "602fe6bc-8a3b-4134-86d6-f2260a127cc2_jpg_bc251359-9788-4777-9800-19375a442a9ecover.jpg",
+    "sha256": "fd60437b97b0506768cdbff146d80250591f73dae3b4ec7b90d27d7afb66d868",
+    "source_bytes_match": true,
+    "direct_copy_before_source_replacement": false
+  },
+  {
+    "file": "media/theme-logos/sasquach-cartoon.jpg",
+    "supplied_name": "channels4_profile.jpg",
+    "sha256": "b621be4a2322fad98cf7c2f49814423b8c54fcd5b3c54bde17df5b1bbbc0850c",
+    "source_bytes_match": true,
+    "direct_copy_before_source_replacement": false
+  },
+  {
+    "file": "media/theme-logos/sasquach-head.jpg",
+    "supplied_name": "images.jpg",
+    "sha256": "c9769d823622ae2d021e3cfae5b767b3d0f18eb9287a310cab6a0fc16955fb1e",
+    "source_bytes_match": true,
+    "direct_copy_before_source_replacement": false
+  },
+  {
+    "file": "media/theme-logos/nyan-devices.png",
+    "supplied_name": "nyanDevices-logo.png",
+    "sha256": "0934700a32156e7ccbeeb69239c8e60d3ddcd942d1603b66545e4e0c6b7aeb47",
+    "source_bytes_match": true,
+    "direct_copy_before_source_replacement": false
+  },
+  {
+    "file": "media/theme-logos/dmac-pick-profile.webp",
+    "supplied_name": "Acrylicmctickler.webp",
+    "sha256": "95f65f39488309387d65e8b65c09e4b50e4b399ddb1e113a58529beaed2c9591",
+    "source_bytes_match": true,
+    "direct_copy_before_source_replacement": false
+  },
+  {
+    "file": "media/theme-logos/dmac-pick-angle.webp",
+    "supplied_name": "acrylicmctickler2.webp",
+    "sha256": "1b2b7994feb8c2c5263081154a956c2eb1c04f880260c1afd9a8f7eb574e09ef",
+    "source_bytes_match": true,
+    "direct_copy_before_source_replacement": false
+  },
+  {
+    "file": "media/theme-logos/dmac.jpg",
+    "supplied_name": "dmac logo.jpg",
+    "sha256": "f46ef676fad23111319a9be4ca5d56b4d5ee175f9cc279b7f0f3579e88f6dc3b",
+    "source_bytes_match": true,
+    "direct_copy_before_source_replacement": false
+  },
+  {
+    "file": "media/theme-logos/seeed-studio.png",
+    "supplied_name": "seeed_studio logo.png",
+    "sha256": "c987943a7ca519a4b77d731ff8fbd2c28f3d275c04a547e9a507f8ad0c8d7039",
+    "source_bytes_match": true,
+    "direct_copy_before_source_replacement": false
+  },
+  {
+    "file": "media/theme-logos/seeed-studio-source.avif",
+    "supplied_name": "2015\u65b0LOGO04.original.avif",
+    "sha256": "950247a3477492fd901c55a34a018b8945a868ffd0b4ac73450f02d721c3ef95",
+    "source_bytes_match": true,
+    "direct_copy_before_source_replacement": false
+  },
+  {
+    "file": "media/theme-logos/dagnazty.jpg",
+    "supplied_name": "38539274.jpg",
+    "sha256": "64d8eccf06d50db3e07ad474bb6740daa9a22b6636f8dbc9ee7bd9f1dbc7f308",
+    "source_bytes_match": true,
+    "direct_copy_before_source_replacement": false
+  },
+  {
+    "file": "media/theme-logos/octosec-pig-reference.png",
+    "supplied_name": "images.png",
+    "sha256": "7cb6e6a3cab0ea8ad9b94c8c73a2f7bf2b337db5803dd64a4f9ffb3084e6ec45",
+    "source_bytes_match": true,
+    "direct_copy_before_source_replacement": false
+  },
+  {
+    "file": "media/theme-logos/octosec.webp",
+    "supplied_name": "fd0e13cca4a61c4d77cd8e1db0386dfd.webp",
+    "sha256": "3b5004bb2afe751058388516b240f8d46069ec7c75ee3e9170e776d5245f368b",
+    "source_bytes_match": true,
+    "direct_copy_before_source_replacement": false
+  },
+  {
+    "file": "media/theme-logos/deflock.png",
+    "supplied_name": "unnamed.png",
+    "sha256": "17a39b35e4b7fca5c0474f8f183a3509a271c11e94c6106a3eabfddb0b7cb21c",
+    "source_bytes_match": true,
+    "direct_copy_before_source_replacement": false
+  }
+]

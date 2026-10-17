@@ -1,21 +1,23 @@
-import {hasFullLab,hasFullRecon,hasSessionTools} from './lab-capabilities.js?v=0.13.2';
-import {sessionName,downloadMission,recipePutCommand,sourceMacCommand} from './mission-tools.js?v=0.13.2';
-import {hasNetworkTools,networkProfileCommand,networkResultsCsv} from './network-tools.js?v=0.13.2';
-import {normalizeHex,probeRows,probeCsv} from './recon-analysis.js?v=0.13.2';
-import {hasReconTools,reconLines,exportCapture,exportReconFile,captureName,importPortalHtml} from './recon-transfer.js?v=0.13.2';
-import {decodeProfile,exportProfile,exportLog,importProfile,labLines,safeProfileName} from './ble-lab.js?v=0.13.2';
-import {localClockEpoch,setClock,readWearable,setOrientation} from './wearable-transfer.js?v=0.13.2';
+import {updateVisitCounter} from './visit-counter.js?v=0.13.6';
+import {hasFullLab,hasFullRecon,hasSessionTools} from './lab-capabilities.js?v=0.13.3';
+import {sessionName,downloadMission,recipePutCommand,sourceMacCommand} from './mission-tools.js?v=0.13.3';
+import {hasNetworkTools,networkProfileCommand,networkResultsCsv} from './network-tools.js?v=0.13.3';
+import {normalizeHex,probeRows,probeCsv} from './recon-analysis.js?v=0.13.3';
+import {hasReconTools,reconLines,exportCapture,exportReconFile,captureName,importPortalHtml} from './recon-transfer.js?v=0.13.3';
+import {decodeProfile,exportProfile,exportLog,importProfile,labLines,safeProfileName} from './ble-lab.js?v=0.13.3';
+import {localClockEpoch,setClock,syncComputerClock,readWearable,setOrientation} from './wearable-transfer.js?v=0.13.3';
 import {deviceQuery} from './device-query.js';
-import {BadgeSerial} from './serial.js?v=0.13.2';
+import {BadgeSerial} from './serial.js?v=0.13.3';
 import {encodeBadge} from './badge-codec.js';
-import {uploadBadge} from './badge-transfer.js?v=0.13.2';
+import {uploadBadge} from './badge-transfer.js?v=0.13.3';
 import {readHistory} from './detector-transfer.js';
-import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasBrandedThemes,hasWearableTools} from './firmware-compat.js?v=0.13.2';
-import {readRadarSettings,saveRadarSettings} from './radar-transfer.js?v=0.13.2';
-import {boardProfiles,connectedProfile,validateManifest,supportsBadge} from './board-profiles.js?v=0.13.2';
-import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan,drawBadgeText} from './badge-editor.js?v=0.13.2';
-import {hasNotebook,readNotebook,customAdvertCommand} from './notebook.js?v=0.13.2';
+import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasBrandedThemes,hasCommunityThemes,hasWearableTools} from './firmware-compat.js?v=0.13.6';
+import {readRadarSettings,saveRadarSettings} from './radar-transfer.js?v=0.13.6';
+import {boardProfiles,connectedProfile,validateManifest,supportsBadge} from './board-profiles.js?v=0.13.3';
+import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan,drawBadgeText} from './badge-editor.js?v=0.13.3';
+import {hasNotebook,readNotebook,customAdvertCommand} from './notebook.js?v=0.13.3';
 const $ = id => document.getElementById(id);
+void updateVisitCounter($('visit-count'));
 const models = Object.fromEntries(Object.entries(boardProfiles).map(([id,p])=>[id,p.name]));
 let board = '', releaseReady = false, request = 0;
 let installerReady=false,installerFailed=false;
@@ -81,8 +83,10 @@ function controls(){
   for(const id of ['notebook-open','notebook-probes','notebook-adverts','notebook-memory'])$(id).disabled=busy||!serial||lite||!hasNotebook(firmwareVersion);
   $('custom-advert-save').disabled=busy||!serial||!reconReady||!hasNotebook(firmwareVersion);
   for(const id of ['show-stopwatch','show-clock','clock-save','clock-sync','orientation-save'])$(id).disabled=busy||!serial||lite||!hasWearableTools(firmwareVersion);
+  $('clock-sync').disabled=busy||lite||(!!serial&&!hasWearableTools(firmwareVersion));
+  $('clock-sync').textContent=serial?'Sync my local time':'Connect & sync local time';
   $('show-activity').disabled=busy||!serial||lite||!hasActivityTools(firmwareVersion);
-  for(const option of $('radar-theme').options)if(option.dataset.branded)option.disabled=!!serial&&!hasBrandedThemes(firmwareVersion);
+  for(const option of $('radar-theme').options)if(option.dataset.branded)option.disabled=!!serial&&!(['toool','church','toool-dark','covert','awok','baph0mau5','wdgwars','ghoststrats','n3rdsec','halehound','waveshare','m5stack','lab5','sasquach','nyan','dmac','seeed','dagnazty','octo-pig','deflock'].includes(option.value)?hasCommunityThemes(firmwareVersion):hasBrandedThemes(firmwareVersion));
   $('radar-save').disabled=busy||!serial||lite||!hasRadarTools(firmwareVersion);
   for(const id of ['history-export','show-radar','sync-time','display-save','sound-save','tone-load','tone-save','tone-preview','tone-reset','tone-stop'])$(id).disabled=busy||!serial||lite||!hasDetectorTools(firmwareVersion);
   if(deviceProfile==='xiao_round'||lite)for(const id of ['sound-save','tone-load','tone-save','tone-preview','tone-reset','tone-stop'])$(id).disabled=true;
@@ -178,14 +182,16 @@ $('connect').onclick=async()=>{
     }
     $('studio-status').textContent=`${match.board} is ready. Choose and position your image.`;draw();
     if(hasDetectorTools(firmwareVersion)){
-      await link.write(`time ${Math.floor(Date.now()/1000)}`);const clockSynced=await link.wait(s=>s==='TIME_OK'||s==='TIME_ERROR')==='TIME_OK';
+      let clockSynced=false;
+      if(hasWearableTools(firmwareVersion)){try{await syncComputerClock(link);clockSynced=true;}catch(error){$('wearable-status').textContent=error.message;}}
+      else{await link.write(`time ${Math.floor(Date.now()/1000)}`);clockSynced=await link.wait(s=>s==='TIME_OK'||s==='TIME_ERROR')==='TIME_OK';}
       const config=await deviceQuery(link,'display status',s=>s.startsWith('DISPLAY_SETTINGS '));
       const values=/brightness=(\d+) output=-?\d+ dim=(\d+) off=(\d+) dim_level=(\d+)/.exec(config);
       if(values)for(const [i,id] of ['display-brightness','display-dim','display-off','display-level'].entries()){const value=values[i+1];if(!Array.from($(id).options).some(o=>o.value===value))$(id).add(new Option(value,value));$(id).value=value;}
       await loadAudio(link);
       if(hasWearableTools(firmwareVersion))await loadWearable(link);
       if(hasRadarTools(firmwareVersion)){const radar=await readRadarSettings(link);$('radar-theme').value=radar.theme;$('radar-labels').checked=radar.labels;$('radar-recent').checked=radar.recent;}
-      $('detector-status').textContent=`${match.board} connected. ${clockSynced?'UTC clock synchronized.':'Clock sync unavailable; badge upload is ready.'} History stays on your device until you download it.`;
+      $('detector-status').textContent=`${match.board} connected. ${clockSynced?'Local date and time synchronized.':'Clock sync unavailable; badge upload is ready.'} History stays on your device until you download it.`;
     }else $('detector-status').textContent='Connected to 0.3.x. Update to the current firmware for history and detector controls.';
   }catch(error){if(link)await link.close();serial=null;firmwareVersion='';deviceProfile='';$('studio-status').textContent=error.message;$('detector-status').textContent=error.message;}
   finally{busy=false;draw();}
@@ -218,10 +224,14 @@ $('history-export').onclick=()=>detectorAction(async link=>{
   const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download=`dragon-detections-${new Date().toISOString().slice(0,10)}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);
   $('detector-status').textContent='History downloaded. Detection remains active.';
 });
-$('sync-time').onclick=()=>detectorAction(async link=>{await link.write(`time ${Math.floor(Date.now()/1000)}`);if(await link.wait(s=>s==='TIME_OK'||s==='TIME_ERROR')!=='TIME_OK')throw new Error('Clock sync failed. Check the RTC.');$('detector-status').textContent='UTC clock synchronized for new history entries.';});
+$('sync-time').onclick=()=>detectorAction(async link=>{
+  if(hasWearableTools(firmwareVersion)){await syncComputerClock(link);await loadWearable(link);}
+  else{await link.write(`time ${Math.floor(Date.now()/1000)}`);if(await link.wait(s=>s==='TIME_OK'||s==='TIME_ERROR')!=='TIME_OK')throw new Error('Clock sync failed. Check the RTC.');}
+  $('detector-status').textContent='Date and time synchronized.';
+});
 $('show-radar').onclick=()=>detectorAction(async link=>{await link.write('screen radar');$('detector-status').textContent='Radar view selected.';});
 $('show-activity').onclick=()=>detectorAction(async link=>{await link.write('screen activity');$('detector-status').textContent='Radio Activity selected on the board: deauthentication and BLE spam evidence.';});
-$('radar-save').onclick=()=>detectorAction(async link=>{if($('radar-theme').selectedOptions[0].dataset.branded&&!hasBrandedThemes(firmwareVersion))throw new Error('Update to firmware 0.13.1 to use branded themes.');await saveRadarSettings(link,{theme:$('radar-theme').value,labels:$('radar-labels').checked,recent:$('radar-recent').checked});$('detector-status').textContent='Radar theme, labels and recent-signal preferences saved on your detector.';});
+$('radar-save').onclick=()=>detectorAction(async link=>{if(['toool','church','toool-dark','covert','awok','baph0mau5','wdgwars','ghoststrats','n3rdsec','halehound','waveshare','m5stack','lab5','sasquach','nyan','dmac','seeed','dagnazty','octo-pig','deflock'].includes($('radar-theme').value)&&!hasCommunityThemes(firmwareVersion))throw new Error('Update to firmware 0.13.6 to use the community themes.');if($('radar-theme').selectedOptions[0].dataset.branded&&!hasBrandedThemes(firmwareVersion))throw new Error('Update to firmware 0.13.1 to use branded themes.');await saveRadarSettings(link,{theme:$('radar-theme').value,labels:$('radar-labels').checked,recent:$('radar-recent').checked});$('detector-status').textContent='Radar theme, labels and recent-signal preferences saved on your detector.';});
 $('display-save').onclick=()=>detectorAction(async link=>{const values=['display-brightness','display-dim','display-off','display-level'].map(id=>Number($(id).value));await link.write('display set '+values.join(' '));const reply=await link.wait(s=>s==='DISPLAY_OK'||s==='DISPLAY_ERROR');if(reply!=='DISPLAY_OK')throw new Error('Display settings were rejected.');$('detector-status').textContent='Display preferences saved on your detector.';});
 draw();loadStock();
 
@@ -249,10 +259,10 @@ async function loadWearable(link){
   $('orientation-mode').value=state.orientation;
   $('wearable-status').textContent=`${state.rtc?'RTC detected · saved time survives restart':'Software clock · set again after restart'}. Display orientation stays at your saved angle.`;
 }
-$('clock-sync').onclick=()=>detectorAction(async link=>{await setClock(link,Math.floor(Date.now()/1000),-new Date().getTimezoneOffset());await loadWearable(link);$('detector-status').textContent='Computer time and current UTC offset saved.';});
+$('clock-sync').onclick=()=>serial?detectorAction(async link=>{await syncComputerClock(link);await loadWearable(link);$('detector-status').textContent='Computer time and current UTC offset saved.';}):$('connect').onclick();
 $('clock-save').onclick=()=>detectorAction(async link=>{const offset=Number($('clock-offset').value);await setClock(link,localClockEpoch($('clock-local').value,offset),offset);await loadWearable(link);$('detector-status').textContent='Local clock saved. Stopwatch elapsed time is unchanged.';});
 $('orientation-save').onclick=()=>detectorAction(async link=>{await setOrientation(link,$('orientation-mode').value);await loadWearable(link);$('detector-status').textContent='Orientation preference saved.';});
-for(const page of ['stopwatch','clock'])$('show-'+page).onclick=()=>detectorAction(async link=>{await link.write('screen '+page);$('detector-status').textContent=page==='clock'?'Clock displayed.':'Stopwatch displayed. Tap Start, then Lap; Home leaves it running.';});
+for(const page of ['stopwatch','clock'])$('show-'+page).onclick=()=>detectorAction(async link=>{await link.write('screen '+page);$('detector-status').textContent=page==='clock'?'Clock displayed.':'Timer displayed. The TOOOL theme provides OPEN and SPLIT controls; Home leaves a running timer running.';});
 
 async function labAction(fn){if(!serial||busy||!hasFullLab(deviceProfile,firmwareVersion))return;busy=true;controls();try{await fn(serial);}catch(e){$('lab-output').textContent=e.message;}finally{busy=false;controls();}}
 async function labCommand(link,command){link.lines=[];await link.write(command);const reply=await link.wait(s=>/^LAB_(OK|ERROR|LOG|DIFF)/.test(s),10000);$('lab-output').textContent=reply;if(reply.startsWith('LAB_ERROR'))throw new Error(reply);return reply;}

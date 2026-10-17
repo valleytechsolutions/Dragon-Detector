@@ -87,6 +87,7 @@ bool wearableCommand(const String& c){
   if(c=="stopwatch start"){stopwatch.start(stopwatchNow());Serial.println("STOPWATCH_OK");return true;}
   if(c=="stopwatch pause"){stopwatch.pause(stopwatchNow());Serial.println("STOPWATCH_OK");return true;}
   if(c=="stopwatch lap"){Serial.println(stopwatch.lap(stopwatchNow())?"STOPWATCH_OK":"STOPWATCH_ERROR not running or zero lap");return true;}
+  if(c=="stopwatch finish"){Serial.println(stopwatch.finish(stopwatchNow())?"STOPWATCH_OK":"STOPWATCH_ERROR not running or zero attempt");return true;}
   if(c=="stopwatch reset"){Serial.println(stopwatch.reset()?"STOPWATCH_OK":"STOPWATCH_ERROR pause before reset");return true;}
   return false;
 }

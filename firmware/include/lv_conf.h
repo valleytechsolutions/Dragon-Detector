@@ -26,6 +26,9 @@
 #define LV_FONT_MONTSERRAT_12 1
 #define LV_FONT_MONTSERRAT_14 1
 #define LV_FONT_MONTSERRAT_22 1
+#ifndef BOARD_RADAR_LITE
+#define LV_FONT_MONTSERRAT_28 1
+#endif
 #define LV_FONT_DEFAULT &lv_font_montserrat_10
 #elif defined(BOARD_AMOLED_175C) || defined(BOARD_STOPWATCH)
 // 466 px panel: each 360 px layout font moves up to keep the same proportions.
@@ -35,6 +38,7 @@
 #define LV_FONT_MONTSERRAT_20 1
 #define LV_FONT_MONTSERRAT_26 1
 #define LV_FONT_MONTSERRAT_40 1
+#define LV_FONT_MONTSERRAT_48 1
 #define LV_FONT_DEFAULT &lv_font_montserrat_18
 #else
 #define LV_FONT_MONTSERRAT_12 1
@@ -44,6 +48,7 @@
 #define LV_FONT_MONTSERRAT_20 1
 #define LV_FONT_MONTSERRAT_24 1
 #define LV_FONT_MONTSERRAT_32 1
+#define LV_FONT_MONTSERRAT_40 1
 #define LV_FONT_DEFAULT &lv_font_montserrat_14
 #endif
 #define LV_USE_LOG 0

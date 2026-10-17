@@ -1,4 +1,8 @@
 import {deviceQuery} from './device-query.js';
+export async function syncComputerClock(link,now=new Date()){
+  // Date computes the offset for this instant, including local daylight saving.
+  await setClock(link,Math.floor(now.getTime()/1000),-now.getTimezoneOffset());
+}
 export function localClockEpoch(value,offset){
   const m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(value);
   if(!m||!Number.isInteger(offset)||offset< -720||offset>840)throw new Error('Choose a valid local date/time and UTC offset.');

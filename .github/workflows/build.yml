@@ -16,7 +16,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: node --test tests/web.test.js tests/wearable-web.test.js tests/ble-lab-web.test.js tests/recon-web.test.js
+      - run: node --test tests/web.test.js tests/wearable-web.test.js tests/ble-lab-web.test.js tests/recon-web.test.js tests/theme-palette.test.js tests/visit-counter.test.js
       - run: python tools/test_core.py --cxx g++
       - run: python tools/test_core.py --cxx g++ --sanitize
   build:

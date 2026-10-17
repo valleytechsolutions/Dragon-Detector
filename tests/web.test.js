@@ -4,7 +4,7 @@ import {crc32,encodeBadge,cropGeometry,fitCircleZoom} from '../web/badge-codec.j
 import {BadgeSerial} from '../web/serial.js';
 import {uploadBadge,BADGE_CHUNK_SIZE} from '../web/badge-transfer.js';
 import {readHistory} from '../web/detector-transfer.js';
-import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasBrandedThemes} from '../web/firmware-compat.js';
+import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasBrandedThemes,hasCommunityThemes} from '../web/firmware-compat.js';
 import {readRadarSettings,saveRadarSettings} from '../web/radar-transfer.js';
 import {readFileSync} from 'node:fs';
 import {boardProfiles,connectedProfile,validateManifest,supportsBadge} from '../web/board-profiles.js';
@@ -32,7 +32,7 @@ test('studio reads both legacy paged and 0.9.6+ single-screen radar settings',as
     const link={async write(command){assert.equal(command,'radar status');},async wait(match){const response=`RADAR_SETTINGS theme=2 labels=1 recent=1 ${tail}`;assert.ok(match(response));return response;}};
     assert.deepEqual(await readRadarSettings(link),{theme:'gold',labels:true,recent:true});
   }
-  const invalid={async write(){},async wait(){return 'RADAR_SETTINGS theme=9 labels=1 recent=1 pages=1 plotted=0 primary=-1';}};
+  const invalid={async write(){},async wait(){return 'RADAR_SETTINGS theme=26 labels=1 recent=1 pages=1 plotted=0 primary=-1';}};
   await assert.rejects(readRadarSettings(invalid),/Invalid radar settings/);
 });
 
@@ -85,18 +85,25 @@ test('USB handshake accepts current/legacy boards and gates detector/activity to
 });
 
 test('branded themes require 0.13.1 firmware',()=>{for(const v of ['0.12.9','0.13.0','invalid'])assert.equal(hasBrandedThemes(v),false);for(const v of ['0.13.1','0.13.12'])assert.equal(hasBrandedThemes(v),true);});
+test('Community themes require firmware 0.13.6 while preserving older branded themes',()=>{
+  for(const v of ['0.12.9','0.13.0','0.13.5','0.13.06','invalid'])assert.equal(hasCommunityThemes(v),false);
+  for(const v of ['0.13.6','0.13.9','0.13.10'])assert.equal(hasCommunityThemes(v),true);
+});
 
-test('radar settings preserve all themes and gate each acknowledged write',async()=>{
-  for(const [index,theme] of ['dragon','green','gold','valleytech','biscuit','marauder'].entries()){
-    const writes=[];const replies=[`RADAR_SETTINGS theme=${index} labels=1 recent=0 page=1 pages=2 plotted=6`,`RADAR_THEME ${index}`,'RADAR_LABELS 1','RADAR_RECENT 0'];
-    const link={write:async s=>writes.push(s),wait:async match=>{const s=replies.shift();assert.ok(match(s));return s;}};
-    const config=await readRadarSettings(link);assert.deepEqual(config,{theme,labels:true,recent:false});await saveRadarSettings(link,config);
-    assert.deepEqual(writes,['radar status',`radar theme ${theme}`,'radar labels on','radar recent off']);
+test('radar settings read back every write, including when USB acknowledgment is held',async()=>{
+  const themes=['dragon','green','gold','valleytech','biscuit','marauder','toool','church','toool-dark','covert','awok','baph0mau5','wdgwars','ghoststrats','n3rdsec','halehound','waveshare','m5stack','lab5','sasquach','nyan','dmac','seeed','dagnazty','octo-pig','deflock'];
+  for(const [index,theme] of themes.entries()){
+    const writes=[];let current={theme:index,labels:0,recent:1};
+    const link={write:async s=>{writes.push(s);if(s.startsWith('radar labels '))current.labels=Number(s.endsWith('on'));if(s.startsWith('radar recent '))current.recent=Number(s.endsWith('on'));},wait:async match=>{const line=`RADAR_SETTINGS theme=${current.theme} labels=${current.labels} recent=${current.recent} pages=1 plotted=6 primary=-1`;assert.ok(match(line));return line;}};
+    assert.equal((await readRadarSettings(link)).theme,theme);
+    await saveRadarSettings(link,{theme,labels:true,recent:false});
+    assert.deepEqual(writes,['radar status',`radar theme ${theme}`,'radar status','radar labels on','radar status','radar recent off','radar status']);
+    assert.deepEqual(current,{theme:index,labels:1,recent:0});
   }
-  let writes=0;const link={write:async()=>writes++,wait:async()=> 'RADAR_THEME 0'};
-  await assert.rejects(saveRadarSettings(link,{theme:'unknown',labels:true,recent:true}),/Invalid/);assert.equal(writes,0);
-  await assert.rejects(saveRadarSettings(link,{theme:'green',labels:true,recent:true}),/acknowledged/);assert.equal(writes,1);
-  await assert.rejects(readRadarSettings(link),/Invalid radar settings/);
+  let writes=[];const link={write:async s=>writes.push(s),wait:async()=> 'RADAR_SETTINGS theme=0 labels=1 recent=0 pages=1 plotted=6 primary=-1'};
+  await assert.rejects(saveRadarSettings(link,{theme:'unknown',labels:true,recent:true}),/Invalid/);assert.equal(writes.length,0);
+  await assert.rejects(saveRadarSettings(link,{theme:'green',labels:true,recent:true}),/not saved/);assert.deepEqual(writes,['radar theme green','radar status','radar status']);
+  for(const theme of ['26','99','100','00','-1']){link.wait=async()=> 'RADAR_SETTINGS theme='+theme+' labels=1 recent=0 pages=1 plotted=6 primary=-1';await assert.rejects(readRadarSettings(link),/Invalid radar settings/);}
 });
 test('CRC matches firmware IEEE CRC-32 wire contract',()=>assert.equal(crc32(new TextEncoder().encode('123456789')),0xcbf43926));
 for(const size of [240,360,466])test(`DDB1 ${size}: header, exact size and RGB565 byte order`,()=>{

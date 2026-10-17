@@ -8,6 +8,7 @@
 #include "board_pins.h"
 #include "radar_layout.h"
 #include "notifications.h"
+#include "ui_theme.h"
 #include <lvgl.h>
 #include <math.h>
 #include <esp_heap_caps.h>
@@ -17,7 +18,9 @@
 extern void scr_lvgl_init();
 extern void set_brightness(uint8_t);
 extern const lv_img_dsc_t vts_logo;
-extern const lv_img_dsc_t radar_logo,radar_logo_valleytech,radar_logo_biscuit,radar_logo_marauder;
+extern const lv_img_dsc_t radar_logo,radar_logo_valleytech,radar_logo_biscuit,radar_logo_marauder,radar_logo_toool,radar_logo_church,watch_logo_church,radar_logo_ci,watch_logo_ci,watch_logo_mcnally;
+extern const lv_img_dsc_t boot_bwm_logo;
+extern const lv_img_dsc_t radar_logo_awok,watch_logo_awok,radar_logo_baph,watch_logo_baph,radar_logo_wdgwars,watch_logo_wdgwars,radar_logo_n3rdsec,watch_logo_n3rdsec,radar_logo_halehound,watch_logo_halehound,watch_logo_halehound_splash,radar_logo_waveshare,watch_logo_waveshare,radar_logo_m5stack,watch_logo_m5stack,radar_logo_lab5,watch_logo_lab5,radar_logo_sasquach,watch_logo_sasquach,radar_logo_nyan,watch_logo_nyan,radar_logo_dmac,watch_logo_dmac,radar_logo_seeed,watch_logo_seeed,radar_logo_dagnazty,watch_logo_dagnazty,radar_logo_deflock,watch_logo_deflock;
 // The layout is authored for the 360 px round panel. S() maps it onto the
 // board's panel; label/button/row helpers apply it, so callers pass 360 px units.
 #if SCREEN_RES<=240
@@ -50,7 +53,7 @@ extern const lv_img_dsc_t radar_logo,radar_logo_valleytech,radar_logo_biscuit,ra
 #define FTIMER (&lv_font_montserrat_32)
 #endif
 static const int CENTER=SCREEN_RES/2;
-enum Page {Boot,Radar,Menu,Devices,Details,Alerts,Channels,Files,Audio,Settings,About,Badge,Hunt,Detectors,History,HistoryDetail,Rules,Controls,Display,Diagnostics,Activity,RadarStyle,Stopwatch,Laps,Clock,ClockEdit,Orientation,FamilyColors,BleLab,Recon,Notebook,NotebookProbes,NotebookBle,NotebookDetail};
+enum Page {Boot,Radar,Menu,Devices,Details,Alerts,Channels,Files,Audio,Settings,About,Badge,Hunt,Detectors,History,HistoryDetail,Rules,Controls,Display,Diagnostics,Activity,RadarStyle,Stopwatch,Laps,Clock,ClockEdit,Orientation,FamilyColors,BleLab,Recon,Notebook,NotebookProbes,NotebookBle,NotebookDetail,ClockSettings,ClockWheels,Startup};
 static unsigned notebookPage=0,notebookRows=0;
 static dragon::DeviceKey notebookKeys[10];
 static dragon::notebook::Advert notebookSelection;
@@ -60,6 +63,13 @@ static bool openRadioTools=false;
 static int menuTab=0,filter=0,selected=-1,filePage=0,brightness=100,historyPage=0;
 static bool radarLabels=true;
 static uint8_t radarTheme=1;
+static bool covert(){return radarTheme==9;}
+static bool dmac(){return radarTheme==21;}
+static bool locksport(){return radarTheme==6||radarTheme==8||covert()||dmac();}
+static bool locksportDark(){return locksport()&&radarTheme!=6;}
+static uint32_t locksportBg(){return uiColors().bg;}
+static uint32_t locksportInk(){return uiColors().ink;}
+static uint32_t locksportAccent(){return uiColors().accent;}
 struct RadarPalette {uint32_t top,bottom,grid,ring,dot,sweep,text,panel;};
 static const RadarPalette radarPalettes[]={
   {0x20b970,0x0c9553,0x095134,0xe0e5cd,0xffec50,0xb9ff72,0xfffae2,0x064a2e},
@@ -67,14 +77,35 @@ static const RadarPalette radarPalettes[]={
   {0x19130b,0x070707,0x3e301b,0xa88742,0xffd166,0xe54138,0xffe4a3,0x21190f},
   {0x091820,0x03090e,0x183440,0x71919d,0xdcebf0,0x63d5ef,0xe5f3f9,0x10242e},
   {0x22180e,0x0c0805,0x49331e,0xaf7c40,0xffdf9e,0xffc56b,0xffecd0,0x2e2014},
-  {0x000000,0x100405,0x36161b,0xa34550,0xf0eeee,0xff354e,0xffe9ec,0x240c11}
+  {0x000000,0x100405,0x36161b,0xa34550,0xf0eeee,0xff354e,0xffe9ec,0x240c11},
+  {0xffffff,0xfaf3f4,0xead8dc,0xc8102e,0xc8102e,0xdb1737,0x601323,0xffffff},
+  {0x111111,0x000000,0x282828,0x9b9b9b,0xffffff,0xededed,0xf5f5f5,0x111111},
+  {0x160d12,0x050507,0x41202b,0xb52a48,0xffe8ee,0xf33c60,0xf4e9ed,0x180e14},
+  {0x090b0d,0x000000,0x252b30,0x858e95,0xf6f6f6,0xd6dde2,0xf2f4f6,0x111315},
+  {0x0f1736,0x05091b,0x30265b,0xab74d9,0xffff79,0xeb5df4,0xfff7fd,0x111731},
+  {0x170c24,0x040207,0x392347,0x965ad9,0xffd568,0xca88f9,0xfff1da,0x1b1025},
+  {0x03151e,0x000308,0x123844,0x33a6bb,0xf8dbff,0x43e9f4,0xe5fbff,0x071b25},
+  {0x17101f,0x030205,0x30243d,0x86629b,0xf4eaff,0xcf91ff,0xf3eef8,0x17141e},
+  {0x17140c,0x020202,0x322b1a,0xb49451,0xffffff,0xe7c775,0xf7f4ec,0x191714},
+  {0x24091e,0x050207,0x482040,0xae489e,0xffdec8,0xff76c5,0xffeff8,0x210d20},
+  {0x10210a,0x030802,0x293d16,0x6ea72e,0xf6ffe5,0xafe653,0xf1f8ed,0x132017},
+  {0x081d2a,0x02070c,0x183748,0x4594bd,0xe9f8ff,0x61caff,0xf1f8ff,0x10212e},
+  {0x0e112e,0x040616,0x292754,0x9b60d6,0xffb55a,0x3fe5ff,0xf6f6ff,0x141a35},
+  {0x11261e,0x020907,0x244638,0x4f9d85,0xffd692,0x78d5c1,0xf9ead3,0x102621},
+  {0x19112e,0x04040e,0x36234f,0xaf66c6,0xffe58f,0xff75cf,0xfff4fc,0x1a1530},
+  {0x073346,0x030a12,0x164759,0x328ca3,0xffe6f4,0xf16ab8,0xf5f8fc,0x102531},
+  {0x07343f,0x021116,0x1b4e51,0x6b9b51,0xf7fbef,0xa7d52c,0xf7fbef,0x07303a},
+  {0xffffff,0xf7f7f5,0xe1e1dd,0x767671,0x101010,0x181818,0x161616,0xffffff},
+  {0x080808,0x080808,0x301723,0x6b304c,0xffdbe9,0xff89b6,0xffdbe9,0x1d1017},
+  {0x152131,0x152131,0x29445b,0x678ba5,0xe5f4ff,0xabcde2,0xf0f6fb,0x1c2d40}
 };
 // Persistent indices 0..2 remain unchanged for existing settings.
-static const char* radarThemeNames[]={"Dragon Ball","Green radar","Black / gold / red","Valleytech","Biscuit Shop","Marauder"};
-static const char* radarThemeCommands[]={"dragon","green","gold","valleytech","biscuit","marauder"};
-static const char* radarThemeDescriptions[]={"Emerald grid / colored device families","Green phosphor / rings and live sweep","Dark field / gold rings / red sweep","Silver rings / cyan sweep / VTS logo","Warm amber / cream / Biscuit Shop logo","Black field / red sweep / JCMK logo"};
-static const lv_img_dsc_t* radarLogos[]={&radar_logo,&radar_logo,&radar_logo,&radar_logo_valleytech,&radar_logo_biscuit,&radar_logo_marauder};
+static const char* radarThemeNames[]={"Dragon Ball","Green radar","Black / gold / red","Valleytech","Biscuit Shop","Marauder","TOOOL","Church of Malware","TOOOL Dark","Covert Instruments / McNally","AWOK","Baph0Mau5","WDGWARS","GhostStrats","N3rdsec","HaleHound","Waveshare","M5Stack","LAB5","Talking Sasquach","Nyan Devices","DMAC","Seeed Studio","DagNazty","0ct0's Pig","DeFlock"};
+static const char* radarThemeCommands[]={"dragon","green","gold","valleytech","biscuit","marauder","toool","church","toool-dark","covert","awok","baph0mau5","wdgwars","ghoststrats","n3rdsec","halehound","waveshare","m5stack","lab5","sasquach","nyan","dmac","seeed","dagnazty","octo-pig","deflock"};
+static const char* radarThemeDescriptions[]={"Emerald grid / colored device families","Green phosphor / rings and live sweep","Dark field / gold rings / red sweep","Silver rings / cyan sweep / VTS logo","Warm amber / cream / Biscuit Shop logo","Black field / red sweep / JCMK logo","White / red / locksport timer + watch","Monochrome circuits / binary watch","Near-black / red / locksport timer + watch","Black / silver / pick hands + locksport timer","Midnight ink / neon paint / mushroom dial","Violet ritual dial / sigils / ember gold","Cyan / magenta / world map / signal dial","Black / grey / purple / glowing slit eyes","Black / white / gold / original skull","Black / hot pink / violet / living hellfire","Green / silver / precision waveform dial","Blue / white / modular hybrid dial","Neon laboratory / large 12-hour digital","Forest / teal / character-arm watch","Pink / rainbow / flying Nyan Cat","Teal / pink / acrylic picks / locksport counter","Lime / deep teal / leaf-circuit maker dial","White / black / skull and talon dial","Pink ASCII octopus / interactive wandering pig","Navy / steel blue / camera-raven viewfinder"};
+static const lv_img_dsc_t* radarLogos[]={&radar_logo,&radar_logo,&radar_logo,&radar_logo_valleytech,&radar_logo_biscuit,&radar_logo_marauder,&radar_logo_toool,&radar_logo_church,&radar_logo_toool,&radar_logo_ci,&radar_logo_awok,&radar_logo_baph,&radar_logo_wdgwars,nullptr,&radar_logo_n3rdsec,&radar_logo_halehound,&radar_logo_waveshare,&radar_logo_m5stack,&radar_logo_lab5,&radar_logo_sasquach,&radar_logo_nyan,&radar_logo_dmac,&radar_logo_seeed,&radar_logo_dagnazty,nullptr,&radar_logo_deflock};
 static constexpr unsigned RadarThemeCount=sizeof(radarThemeNames)/sizeof(radarThemeNames[0]);
+static_assert(dragon::UiPaletteCount==RadarThemeCount,"All themes need UI palettes");
 static_assert(sizeof(radarPalettes)/sizeof(radarPalettes[0])==RadarThemeCount && sizeof(radarLogos)/sizeof(radarLogos[0])==RadarThemeCount && sizeof(radarThemeCommands)/sizeof(radarThemeCommands[0])==RadarThemeCount && sizeof(radarThemeDescriptions)/sizeof(radarThemeDescriptions[0])==RadarThemeCount,"Every radar theme needs a palette, logo and menu/USB name");
 static HistoryRecord historySelection;
 static int devicePage=0,deviceRows=0,deviceTotal=0;
@@ -101,7 +132,7 @@ static uint32_t inputActions=0;
 static int lastInputAction=-1;
 static int outputBrightness=-1;
 static Preferences settings;
-static lv_obj_t *timerValue=nullptr,*timerState=nullptr,*timerLap=nullptr,*timerStartButton=nullptr,*timerSecondary=nullptr,*clockValue=nullptr,*clockDate=nullptr,*editValue=nullptr,*editPreview=nullptr,*editField=nullptr;
+static lv_obj_t *timerValue=nullptr,*timerState=nullptr,*timerLap=nullptr,*timerStartButton=nullptr,*timerSecondary=nullptr,*timerSplit=nullptr,*clockValue=nullptr,*clockDate=nullptr,*editValue=nullptr,*editPreview=nullptr,*editField=nullptr;
 static dragon::Calendar editDate;
 static int editIndex=0,editOffset=0;
 static lv_obj_t* resetBox=nullptr;
@@ -112,8 +143,8 @@ struct FileRow {String path;bool dir;uint32_t size;};static FileRow files[96];st
 #endif
 struct Dot {int x,y,index;dragon::DeviceKey key;int labelSlot=-1;};static Dot dots[MAX_CONTACTS];static int dotCount=0;
 static lv_color_t color(uint32_t c){return lv_color_hex(c);}
-static lv_obj_t* label(lv_obj_t* parent,const char* text,int x,int y,int w=0,const lv_font_t* font=F14,uint32_t c=0xd9efe0){
-  auto* o=lv_label_create(parent);lv_label_set_text(o,text);lv_obj_set_pos(o,S(x),S(y));if(w)lv_obj_set_width(o,S(w));lv_obj_set_style_text_font(o,font,0);lv_obj_set_style_text_color(o,color(c),0);return o;
+static lv_obj_t* label(lv_obj_t* parent,const char* text,int x,int y,int w=0,const lv_font_t* font=F14,uint32_t c=uiColors().ink){
+  auto* o=lv_label_create(parent);lv_label_set_text(o,text);lv_obj_set_pos(o,S(x),S(y));if(w)lv_obj_set_width(o,S(w));lv_obj_set_style_text_font(o,uiFont(font),0);lv_obj_set_style_text_color(o,color(c),0);return o;
 }
 static void go(Page p){
 if(p==Radar){recipeStop();reconStop();bleLabStop();}
@@ -123,19 +154,34 @@ if(page==Recon&&p!=Recon)reconLeave();
 if(page==BleLab&&p!=BleLab)bleLabStop();pending=p;}
 static void action(lv_event_t* e);
 static lv_obj_t* button(lv_obj_t* parent,const char* text,int x,int y,int w,int h,int id){
-  auto* b=lv_btn_create(parent);lv_obj_set_pos(b,S(x),S(y));lv_obj_set_size(b,S(w),S(h));lv_obj_set_style_pad_all(b,S(8),0);lv_obj_set_style_bg_color(b,color(0x132b22),0);lv_obj_set_style_radius(b,S(13),0);lv_obj_set_style_border_width(b,1,0);lv_obj_set_style_border_color(b,color(0x31543a),0);lv_obj_set_style_shadow_width(b,0,0);
+  auto* b=lv_btn_create(parent);lv_obj_set_pos(b,S(x),S(y));lv_obj_set_size(b,S(w),S(h));lv_obj_set_style_pad_all(b,S(8),0);lv_obj_set_style_bg_color(b,color(uiColors().surface),0);lv_obj_set_style_radius(b,uiAscii()?0:S(13),0);lv_obj_set_style_border_width(b,1,0);lv_obj_set_style_border_color(b,color(uiColors().border),0);lv_obj_set_style_shadow_width(b,0,0);
   lv_obj_add_event_cb(b,action,LV_EVENT_CLICKED,(void*)(intptr_t)id);auto* t=label(b,text,0,0,w-16);lv_obj_set_style_text_align(t,LV_TEXT_ALIGN_CENTER,0);lv_obj_center(t);return b;
 }
 static void dismissNotice(){if(notice){lv_obj_del(notice);notice=nullptr;}}
+static lv_obj_t* circleLogo(lv_obj_t* parent,const lv_img_dsc_t* source,int y){
+  auto* clip=lv_obj_create(parent);lv_obj_remove_style_all(clip);lv_obj_set_size(clip,source->header.w,source->header.h);lv_obj_align(clip,LV_ALIGN_TOP_MID,0,S(y));lv_obj_set_style_radius(clip,LV_RADIUS_CIRCLE,0);lv_obj_set_style_clip_corner(clip,true,0);lv_obj_clear_flag(clip,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);
+  auto* image=lv_img_create(clip);lv_img_set_src(image,source);lv_obj_center(image);lv_obj_clear_flag(image,LV_OBJ_FLAG_CLICKABLE);
+  return clip;
+}
+static void locksportColors(lv_obj_t* object){
+  if(lv_obj_check_type(object,&lv_label_class))lv_obj_set_style_text_color(object,color(uiColors().ink),0);
+  if(lv_obj_check_type(object,&lv_btn_class)||lv_obj_check_type(object,&lv_msgbox_class)){
+    lv_obj_set_style_bg_color(object,color(uiColors().surface),0);lv_obj_set_style_border_color(object,color(uiColors().accent),0);
+  }
+  if(lv_obj_check_type(object,&lv_btnmatrix_class)){
+    lv_obj_set_style_bg_color(object,color(locksportBg()),LV_PART_ITEMS);lv_obj_set_style_text_color(object,color(locksportAccent()),LV_PART_ITEMS);
+  }
+  for(unsigned i=0;i<lv_obj_get_child_cnt(object);++i)locksportColors(lv_obj_get_child(object,i));
+}
 void uiNotify(const char* text,const char* detail,const dragon::DeviceKey* key,bool watched){
   dragon::DetectionNotice item;strlcpy(item.title,text,sizeof(item.title));strlcpy(item.detail,detail,sizeof(item.detail));item.watched=watched;item.at=millis();item.hasKey=key!=nullptr;if(key){item.key=*key;int i=findContact(*key);if(i>=0)item.family=contacts[i].match.family;}
   for(unsigned f=0;f<unsigned(Family::Count);++f)if(!strcmp(text,dragon::familyName(Family(f)))){item.family=Family(f);break;}
-  if(page==BleLab||page==Stopwatch||page==ClockEdit||(notice&&noticePriority>=item.priority())){noticeQueue.push(item);return;}
+  if(page==Boot||page==Startup||page==BleLab||page==Stopwatch||page==Clock||page==ClockSettings||page==ClockWheels||page==ClockEdit||(notice&&noticePriority>=item.priority())){noticeQueue.push(item);return;}
   dismissNotice();noticeAt=millis();noticeWatch=watched;noticeHasKey=key!=nullptr;if(key)noticeKey=*key;
   noticePriority=item.priority();uint32_t accent=dragon::familyColor(item.family);
   if(detector.wakeAlert)lastInteraction=millis();
   notice=lv_obj_create(lv_layer_top());lv_obj_set_size(notice,S(260),S(108));lv_obj_set_pos(notice,S(50),S(218));lv_obj_clear_flag(notice,LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_set_style_bg_color(notice,color(0x071510),0);lv_obj_set_style_border_color(notice,color(accent),0);lv_obj_set_style_border_width(notice,2,0);lv_obj_set_style_radius(notice,S(16),0);lv_obj_set_style_pad_all(notice,0,0);
+  lv_obj_set_style_bg_color(notice,color(uiColors().bg),0);lv_obj_set_style_border_color(notice,color(accent),0);lv_obj_set_style_border_width(notice,2,0);lv_obj_set_style_radius(notice,S(16),0);lv_obj_set_style_pad_all(notice,0,0);
   auto* heading=label(notice,text,10,7,240,F16,accent);lv_obj_set_style_text_align(heading,LV_TEXT_ALIGN_CENTER,0);
   String safe=detector.privacy?String("Detection observed. Open evidence for details."):String(detail);
   auto* message=label(notice,safe.c_str(),12,31,236,F12);lv_obj_set_height(message,S(30));lv_label_set_long_mode(message,LV_LABEL_LONG_DOT);
@@ -144,15 +190,16 @@ void uiNotify(const char* text,const char* detail,const dragon::DeviceKey* key,b
 }
 static void title(const char* text,const char* subtitle=nullptr){
   auto* t=label(root,text,55,39,250,F20);lv_obj_set_style_text_align(t,LV_TEXT_ALIGN_CENTER,0);
-  if(subtitle){auto* s=label(root,subtitle,55,67,250,F12,0x8caf99);lv_obj_set_style_text_align(s,LV_TEXT_ALIGN_CENTER,0);}
+  if(subtitle){auto* s=label(root,subtitle,55,67,250,F12,uiColors().muted);lv_obj_set_style_text_align(s,LV_TEXT_ALIGN_CENTER,0);}
   button(root,LV_SYMBOL_HOME,149,307,62,33,1);
 }
-static void legible(lv_obj_t* o){lv_obj_set_style_bg_color(o,color(0x092317),0);lv_obj_set_style_bg_opa(o,LV_OPA_80,0);lv_obj_set_style_radius(o,7,0);}
+static void legible(lv_obj_t* o){lv_obj_set_style_bg_color(o,color(uiColors().surface),0);lv_obj_set_style_bg_opa(o,LV_OPA_80,0);lv_obj_set_style_radius(o,7,0);}
 static lv_obj_t* scrollBody(int y=91,int h=211){
   auto* o=lv_obj_create(root);lv_obj_set_pos(o,S(44),S(y));lv_obj_set_size(o,S(272),S(h));lv_obj_set_style_bg_opa(o,LV_OPA_TRANSP,0);lv_obj_set_style_border_width(o,0,0);lv_obj_set_style_pad_all(o,0,0);lv_obj_set_scroll_dir(o,LV_DIR_VER);return o;
 }
-static void row(lv_obj_t* parent,const char* top,const char* bottom,int index,int id,uint32_t c=0xd9efe0){
-  auto* b=button(parent,"",1,index*59,256,54,id);auto* heading=label(b,top,0,0,231,F14,c);auto* detail=label(b,bottom,0,22,231,F12,0x88a995);
+static void row(lv_obj_t* parent,const char* top,const char* bottom,int index,int id,uint32_t c=uiColors().ink){
+  auto* b=button(parent,"",1,index*59,256,54,id);auto* heading=label(b,top,0,0,231,F14,c);auto* detail=label(b,bottom,0,22,231,F12,uiColors().muted);
+  if(uiColors().light&&c!=uiColors().ink){lv_obj_set_style_bg_color(heading,color(dragon::RadarLabelBackground),0);lv_obj_set_style_bg_opa(heading,LV_OPA_COVER,0);}
   lv_label_set_long_mode(heading,LV_LABEL_LONG_DOT);lv_obj_set_height(heading,S(19));lv_label_set_long_mode(detail,LV_LABEL_LONG_DOT);lv_obj_set_height(detail,S(17));
 }
 static void centered(lv_obj_t* o){lv_obj_set_style_text_align(o,LV_TEXT_ALIGN_CENTER,0);}
@@ -161,39 +208,77 @@ static void durationText(char* out,size_t length,uint64_t us){
   if(h)snprintf(out,length,"%u:%02u:%02u.%02u",h,unsigned(cs/6000%60),unsigned(cs/100%60),unsigned(cs%100));
   else snprintf(out,length,"%02u:%02u.%02u",unsigned(cs/6000),unsigned(cs/100%60),unsigned(cs%100));
 }
+static lv_obj_t* timerOrbit=nullptr;
+static void updateTimerOrbit(uint64_t elapsed);
 static void updateTimer(){
-  if(!timerValue)return;char text[48],lap[90],split[40];durationText(text,sizeof(text),stopwatch.elapsed(stopwatchNow()));lv_label_set_text(timerValue,text);
-  lv_obj_set_style_text_font(timerValue,stopwatch.elapsed(stopwatchNow())>=360000000000ull?F20:FTIMER,0);
-  lv_label_set_text(timerState,stopwatch.running?"RUNNING  /  RADIO LISTENING":"PAUSED  /  READY");
-  lv_label_set_text(lv_obj_get_child(timerStartButton,0),stopwatch.running?"PAUSE":"START");
-  lv_label_set_text(lv_obj_get_child(timerSecondary,0),stopwatch.running?"LAP":"RESET");
-  if(auto* l=stopwatch.newest()){durationText(split,sizeof(split),l->split);snprintf(lap,sizeof(lap),"LAP %lu   %s",l->number,split);}else strcpy(lap,"No laps yet");lv_label_set_text(timerLap,lap);
+  if(!timerValue)return;uint64_t elapsed=stopwatch.elapsed(stopwatchNow());char text[48],lap[90],split[40];durationText(text,sizeof(text),elapsed);lv_label_set_text(timerValue,text);
+  lv_obj_set_style_text_font(timerValue,elapsed>=360000000000ull?uiFont(F20):uiAscii()?&dragon_ascii_digits:FTIMER,0);
+  updateTimerOrbit(elapsed);
+  lv_label_set_text(timerState,locksport()?(stopwatch.running?"P I C K I N G":stopwatch.finished?"O P E N E D":stopwatch.elapsed(0)?"P A U S E D":"R E A D Y"):(stopwatch.running?"M E A S U R I N G":"R E A D Y"));
+  lv_label_set_text(lv_obj_get_child(timerStartButton,0),stopwatch.running?"PAUSE":stopwatch.elapsed(0)?"RESUME":"START");
+  lv_label_set_text(lv_obj_get_child(timerSecondary,0),stopwatch.running?(locksport()?"OPEN":"LAP"):"RESET");
+  if(timerSplit){if(stopwatch.running)lv_obj_clear_state(timerSplit,LV_STATE_DISABLED);else lv_obj_add_state(timerSplit,LV_STATE_DISABLED);}
+  if(locksport()){
+    bool enabled=stopwatch.running||stopwatch.elapsed(0);
+    if(enabled)lv_obj_clear_state(timerSecondary,LV_STATE_DISABLED);else lv_obj_add_state(timerSecondary,LV_STATE_DISABLED);
+    lv_obj_set_style_text_color(lv_obj_get_child(timerSecondary,0),color(!enabled&&locksportDark()?uiColors().muted:uiColors().onAccent),0);
+  }
+  if(auto* l=stopwatch.newest()){durationText(split,sizeof(split),l->split);snprintf(lap,sizeof(lap),"%s %lu   %s",locksport()?"SPLIT":"LAP",l->number,split);}else strcpy(lap,locksport()?"Start when your pick is ready":"No laps yet");lv_label_set_text(timerLap,lap);
 }
 static void resetStopwatch(){
   if(stopwatch.running||!stopwatch.elapsed(stopwatchNow())||resetBox)return;
   static const char* choices[]={"Keep","Reset",""};
-  resetBox=lv_msgbox_create(root,"RESET STOPWATCH?","Clear elapsed time and all laps?",choices,true);lv_obj_set_width(resetBox,S(260));lv_obj_center(resetBox);
+  resetBox=lv_msgbox_create(root,locksport()?"NEW ATTEMPT?":"RESET STOPWATCH?",locksport()?"Clear this attempt and its splits?":"Clear elapsed time and all laps?",choices,true);lv_obj_set_width(resetBox,S(260));lv_obj_center(resetBox);
+  locksportColors(resetBox);
   lv_obj_add_event_cb(resetBox,[](lv_event_t* e){auto* box=lv_event_get_current_target(e);if(lv_msgbox_get_active_btn(box)==1)stopwatch.reset();lv_msgbox_close(box);resetBox=nullptr;updateTimer();},LV_EVENT_VALUE_CHANGED,nullptr);
   lv_obj_add_event_cb(resetBox,[](lv_event_t*){resetBox=nullptr;},LV_EVENT_DELETE,nullptr);
 }
 static void updateDateEditor(){
   char value[40],preview[110];int values[]={editDate.year,editDate.month,editDate.day,editDate.hour,editDate.minute,editDate.second,editOffset};
-  if(editIndex==6)snprintf(value,sizeof(value),"%c%02d:%02d",editOffset<0?'-':'+',abs(editOffset)/60,abs(editOffset)%60);else snprintf(value,sizeof(value),"%02d",values[editIndex]);
-  snprintf(preview,sizeof(preview),"%04d-%02d-%02d   %02d:%02d:%02d\nUTC%c%02d:%02d",editDate.year,editDate.month,editDate.day,editDate.hour,editDate.minute,editDate.second,editOffset<0?'-':'+',abs(editOffset)/60,abs(editOffset)%60);
+  if(editIndex==6)snprintf(value,sizeof(value),"%c%02d:%02d",editOffset<0?'-':'+',abs(editOffset)/60,abs(editOffset)%60);else if(editIndex==3)snprintf(value,sizeof(value),"%02d %s",dragon::hour12(editDate.hour),editDate.hour>=12?"PM":"AM");else snprintf(value,sizeof(value),"%02d",values[editIndex]);
+  snprintf(preview,sizeof(preview),"%04d-%02d-%02d\n%02d:%02d:%02d %s  UTC%c%02d:%02d",editDate.year,editDate.month,editDate.day,dragon::hour12(editDate.hour),editDate.minute,editDate.second,editDate.hour>=12?"PM":"AM",editOffset<0?'-':'+',abs(editOffset)/60,abs(editOffset)%60);
   lv_label_set_text(editValue,value);lv_label_set_text(editField,dateFields[editIndex]);lv_label_set_text(editPreview,preview);
 }
+static void radarPick(lv_draw_ctx_t* ctx,float radians);
+static void radarAwokArt(lv_draw_ctx_t* ctx);
+static void radarBaphArt(lv_draw_ctx_t* ctx);
+static void radarWdgArt(lv_draw_ctx_t* ctx);
+static void radarGhostArt(lv_draw_ctx_t* ctx);
+static void radarN3rdArt(lv_draw_ctx_t* ctx);
+static void radarHaleArt(lv_draw_ctx_t* ctx);
+static void radarWaveArt(lv_draw_ctx_t* ctx);
+static void radarM5Art(lv_draw_ctx_t* ctx);
+static void radarLabArt(lv_draw_ctx_t* ctx);
+static void radarSasquachArt(lv_draw_ctx_t* ctx);
+static void radarNyanArt(lv_draw_ctx_t* ctx);
+static void radarSeeedArt(lv_draw_ctx_t* ctx);
+static void radarDagArt(lv_draw_ctx_t* ctx);
+static void radarDeflockArt(lv_draw_ctx_t* ctx);
+static void radarPigArt(lv_draw_ctx_t* ctx);
+static void radarPigSweep(lv_draw_ctx_t* ctx,float angle);
+static void asciiMark(lv_draw_ctx_t* ctx,const char* text,int x,int y,uint32_t ink);
 #include "radar_renderer.inc"
+#include "watch_faces.inc"
+static void radarPick(lv_draw_ctx_t* ctx,float radians){
+  watchPick(ctx,radians/WatchTau+.25f,pickMcTickler,pickMcTicklerTriangles,true,1.16f);
+}
+static void selectRadarTheme(uint8_t selected){
+  radarTheme=selected;dismissNotice();uiApplyTheme(radarTheme);settings.putUChar("radar-theme",radarTheme);
+  if(locksport()){watchFace=dmac()?24:covert()?12:locksportDark()?11:9;settings.putUChar("watch-face",watchFace);}
+  else if(radarTheme==7){watchFace=10;settings.putUChar("watch-face",watchFace);}
+  else if(radarTheme>=10){watchFace=radarTheme+3;settings.putUChar("watch-face",watchFace);}
+}
 static void huntDraw(lv_event_t* e){
   auto* ctx=lv_event_get_draw_ctx(e);auto* obj=lv_event_get_target(e);lv_area_t area;lv_obj_get_coords(obj,&area);
-  for(int i=0;i<4;++i)line(ctx,area.x1,area.y1+S(i*14),area.x2,area.y1+S(i*14),0x244832);
+  for(int i=0;i<4;++i)line(ctx,area.x1,area.y1+S(i*14),area.x2,area.y1+S(i*14),uiColors().border);
   if(trackedContact<0)return;auto& trace=contacts[trackedContact].trace;
   uint32_t now=millis();
   for(unsigned i=0;i<48;++i){int current=trace.recent(i,now);if(current==dragon::SignalHistory::Gap)continue;int b=constrain((-current-25)*42/80,0,42);
     // Sparse advertisers may never fill adjacent buckets. Keep each received
     // sample visible without drawing across the missing reception between them.
-    disc(ctx,area.x1+S(i*240/47),area.y1+S(b),S(1),0xb9f65e);
+    disc(ctx,area.x1+S(i*240/47),area.y1+S(b),S(1),uiColors().accent);
     int previous=i?trace.recent(i-1,now):dragon::SignalHistory::Gap;if(previous==dragon::SignalHistory::Gap)continue;int a=constrain((-previous-25)*42/80,0,42);
-    line(ctx,area.x1+S((i-1)*240/47),area.y1+S(a),area.x1+S(i*240/47),area.y1+S(b),0xb9f65e,2);
+    line(ctx,area.x1+S((i-1)*240/47),area.y1+S(a),area.x1+S(i*240/47),area.y1+S(b),uiColors().accent,2);
   }
 }
 static void radarTap(lv_event_t*){lv_point_t p;lv_indev_get_point(lv_indev_get_act(),&p);int nearest=S(18)*S(18),idx=-1;for(int i=0;i<dotCount;++i){int d=(dots[i].x-p.x)*(dots[i].x-p.x)+(dots[i].y-p.y)*(dots[i].y-p.y);if(d<nearest && contactKey(contacts[dots[i].index])==dots[i].key){nearest=d;idx=dots[i].index;}}
@@ -211,24 +296,31 @@ static void loadFiles(){
   if(dir&&dir.isDirectory()){File f=dir.openNextFile();while(f){if(fileCount>=96){filesTruncated=true;f.close();break;}String name=f.name();String path=directory=="/"?"/"+name:directory+"/"+name;files[fileCount++]={path,f.isDirectory(),uint32_t(f.size())};f.close();f=dir.openNextFile();}}dir.close();xSemaphoreGive(sdMutex);
 }
 #endif
+static void drawStartup(){
+  lv_obj_set_style_bg_color(root,color(0x000000),0);
+  auto* img=lv_img_create(root);lv_img_set_src(img,&boot_bwm_logo);lv_obj_center(img);
+  lv_obj_clear_flag(img,LV_OBJ_FLAG_CLICKABLE);
+  lv_anim_t a;lv_anim_init(&a);lv_anim_set_var(&a,img);lv_anim_set_values(&a,LV_OPA_TRANSP,LV_OPA_COVER);lv_anim_set_time(&a,900);lv_anim_set_exec_cb(&a,[](void* o,int32_t v){lv_obj_set_style_opa((lv_obj_t*)o,v,0);});lv_anim_start(&a);
+}
 static void build(){
   // BLE Lab owns its complete screen and returns before the shared mic label
   // is rebuilt. Never retain a label from the page that is about to be freed.
   micBadge=nullptr;
-  timerValue=timerState=timerLap=timerStartButton=timerSecondary=clockValue=clockDate=editValue=editPreview=editField=nullptr;
+  timerOrbit=nullptr;timerValue=timerState=timerLap=timerStartButton=timerSecondary=timerSplit=clockValue=clockDate=editValue=editPreview=editField=nullptr;
   badgeUnload();page=pending;pageAt=millis();statusLabel=audioLabel=audioMeter=radar=trackingLabel=huntValue=huntMeta=huntGauge=huntGraph=diagnosticsLabel=activityLabel=radarActivity=nullptr;radarPrepared=0;
-  lv_obj_clean(root);lv_obj_set_style_bg_color(root,color(0x071510),0);
+  lv_obj_clean(root);lv_obj_set_style_bg_color(root,color(uiColors().bg),0);
   #ifndef BOARD_RADAR_LITE
   if(page==BleLab){bleLabView(root);return;}
   if(page==Recon){reconView(root,openRadioTools);return;}
 #endif
-  if(page==Badge){lv_obj_set_style_bg_color(root,color(0x000000),0);badgeView(root);
+  if(page==Startup){dismissNotice();drawStartup();return;}
+  else if(page==Badge){lv_obj_set_style_bg_color(root,color(0x000000),0);badgeView(root);
   }else if(page==Radar){
     radar=lv_obj_create(root);lv_obj_remove_style_all(radar);lv_obj_set_pos(radar,0,0);lv_obj_set_size(radar,SCREEN_RES,SCREEN_RES);lv_obj_clear_flag(radar,LV_OBJ_FLAG_SCROLLABLE);lv_obj_add_flag(radar,LV_OBJ_FLAG_CLICKABLE);
     lv_obj_add_event_cb(radar,radarDraw,LV_EVENT_DRAW_MAIN,nullptr);lv_obj_add_event_cb(radar,radarTap,LV_EVENT_CLICKED,nullptr);
-    // A light LVGL plate makes the unmodified black VTS artwork legible.
-    if(radarTheme==3){auto* plate=lv_obj_create(root);lv_obj_remove_style_all(plate);lv_obj_set_size(plate,radarLogos[radarTheme]->header.w+S(5),radarLogos[radarTheme]->header.h+S(4));lv_obj_align(plate,LV_ALIGN_TOP_MID,0,S(15));lv_obj_set_style_bg_color(plate,color(0xffffff),0);lv_obj_set_style_bg_opa(plate,LV_OPA_COVER,0);lv_obj_set_style_radius(plate,S(4),0);lv_obj_clear_flag(plate,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);}
-    auto* logo=lv_img_create(root);lv_img_set_src(logo,radarLogos[radarTheme]);lv_obj_align(logo,LV_ALIGN_TOP_MID,0,S(17));lv_obj_clear_flag(logo,LV_OBJ_FLAG_CLICKABLE);
+    // Preserve the transparent VTS silhouette, using silver ink on the dark radar.
+    if(radarTheme==8||radarTheme==14||dmac()||radarTheme==22||radarTheme==23)circleLogo(root,radarLogos[radarTheme],17);
+    else if(radarTheme!=13&&radarTheme!=24){auto* logo=lv_img_create(root);lv_img_set_src(logo,radarLogos[radarTheme]);lv_obj_align(logo,LV_ALIGN_TOP_MID,0,S(17));lv_obj_clear_flag(logo,LV_OBJ_FLAG_CLICKABLE);if(radarTheme==10||radarTheme==3){lv_obj_set_style_img_recolor(logo,color(radarTheme==3?0xe1e8ec:0xffffff),0);lv_obj_set_style_img_recolor_opa(logo,LV_OPA_COVER,0);}}
     const auto& theme=radarPalettes[radarTheme];
     statusLabel=label(root,"LISTENING",56,66,248,F12,theme.text);lv_obj_set_style_text_align(statusLabel,LV_TEXT_ALIGN_CENTER,0);legible(statusLabel);lv_obj_set_style_bg_color(statusLabel,color(theme.panel),0);lv_obj_set_style_bg_opa(statusLabel,LV_OPA_60,0);
     radarActivity=label(root,"",75,84,210,F12,0xffbc76);lv_obj_set_style_text_align(radarActivity,LV_TEXT_ALIGN_CENTER,0);legible(radarActivity);lv_obj_add_flag(radarActivity,LV_OBJ_FLAG_CLICKABLE);lv_obj_add_event_cb(radarActivity,action,LV_EVENT_CLICKED,(void*)116);
@@ -237,16 +329,16 @@ static void build(){
     auto* targets=button(root,"TARGETS",90,301,90,32,96);
     auto* tools=button(root,"TOOLS",187,301,78,32,2);
     auto* quiet=button(root,detector.quiet?LV_SYMBOL_MUTE:LV_SYMBOL_VOLUME_MAX,270,257,38,34,97);
-    for(auto* b:{targets,tools,quiet}){lv_obj_set_style_bg_color(b,color(theme.panel),0);lv_obj_set_style_bg_opa(b,LV_OPA_80,0);lv_obj_set_style_border_color(b,color(theme.ring),0);lv_obj_set_style_border_opa(b,LV_OPA_60,0);}
+    for(auto* b:{targets,tools,quiet}){lv_obj_set_style_bg_color(b,color(theme.panel),0);lv_obj_set_style_bg_opa(b,LV_OPA_80,0);lv_obj_set_style_border_color(b,color(theme.ring),0);lv_obj_set_style_border_opa(b,LV_OPA_60,0);if(locksport())lv_obj_set_style_text_color(lv_obj_get_child(b,0),color(theme.text),0);}
   }else if(page==Menu){
     title("DRAGON TOOLS");const char* tabs[]={"RECON","UTILITIES","SYSTEM"};
-    for(int i=0;i<3;++i){auto* b=button(root,tabs[i],47+i*89,76,86,32,10+i);if(menuTab==i)lv_obj_set_style_bg_color(b,color(0x36582b),0);}
+    for(int i=0;i<3;++i){auto* b=button(root,tabs[i],47+i*89,76,86,32,10+i);if(menuTab==i)lv_obj_set_style_bg_color(b,color(uiColors().raised),0);}
     #ifndef BOARD_RADAR_LITE
     if(menuTab==0){button(root,"Modes",57,115,119,40,7100);button(root,"Attacks",184,115,119,40,7103);button(root,"Wi-Fi",57,162,119,40,20);button(root,"Bluetooth",184,162,119,40,21);button(root,"History",57,209,119,40,60);button(root,"Hunt",184,209,119,40,57);button(root,"Radio tools",57,257,119,39,7102);button(root,"BLE Lab",184,257,119,39,7000);}
 #else
     if(menuTab==0){button(root,"Wi-Fi",57,119,119,49,20);button(root,"Bluetooth",184,119,119,49,21);button(root,"History",57,176,119,49,60);button(root,"Hunt",184,176,119,49,57);button(root,"Detectors",57,233,119,45,61);button(root,"Activity",184,233,119,45,116);}
     #endif
-    if(menuTab==1){button(root,"Stopwatch",57,119,119,49,130);button(root,"Clock",184,119,119,49,133);button(root,"My badge",57,176,119,49,50);
+    if(menuTab==1){button(root,dmac()?"Locksport\ncounter":locksport()?"Locksport\ntimer":"Stopwatch",57,119,119,49,130);button(root,"Clock",184,119,119,49,133);button(root,"My badge",57,176,119,49,50);
 #if BOARD_HAS_SD
     button(root,"SD files",184,176,119,49,32);
 #else
@@ -287,10 +379,10 @@ static void build(){
     title("DRAGON HUNT",reconRadio()?"Selected survey mode owns this radio":"Target priority / both radios scanning");
     if(trackedContact<0){label(root,"Choose a target, then HUNT.\nWalk and compare the signal.\nStronger readings move inward.",65,125,234,F14);button(root,"Nearby contacts",75,230,210,44,21);}
     else {
-      auto& c=contacts[trackedContact];char mac[18];displayMac(c.mac,mac);auto* name=label(root,*c.name?displayName(c.name).c_str():mac,65,92,230,F14,0xe8d66e);lv_obj_set_style_text_align(name,LV_TEXT_ALIGN_CENTER,0);
-      huntValue=label(root,"LISTENING",70,119,220,F20,0xc9fc68);lv_obj_set_style_text_align(huntValue,LV_TEXT_ALIGN_CENTER,0);
-      huntGauge=lv_bar_create(root);lv_obj_set_pos(huntGauge,S(70),S(151));lv_obj_set_size(huntGauge,S(220),S(14));lv_bar_set_range(huntGauge,-105,-25);lv_obj_set_style_bg_color(huntGauge,color(0x274c30),0);lv_obj_set_style_bg_color(huntGauge,color(0xd2e75a),LV_PART_INDICATOR);
-      huntMeta=label(root,"Waiting for target",62,172,240,F12,0x9fbb91);lv_obj_set_style_text_align(huntMeta,LV_TEXT_ALIGN_CENTER,0);
+      auto& c=contacts[trackedContact];char mac[18];displayMac(c.mac,mac);auto* name=label(root,*c.name?displayName(c.name).c_str():mac,65,92,230,F14,uiColors().accent);lv_obj_set_style_text_align(name,LV_TEXT_ALIGN_CENTER,0);
+      huntValue=label(root,"LISTENING",70,119,220,F20,uiColors().accent);lv_obj_set_style_text_align(huntValue,LV_TEXT_ALIGN_CENTER,0);
+      huntGauge=lv_bar_create(root);lv_obj_set_pos(huntGauge,S(70),S(151));lv_obj_set_size(huntGauge,S(220),S(14));lv_bar_set_range(huntGauge,-105,-25);lv_obj_set_style_bg_color(huntGauge,color(uiColors().raised),0);lv_obj_set_style_bg_color(huntGauge,color(uiColors().accent),LV_PART_INDICATOR);
+      huntMeta=label(root,"Waiting for target",62,172,240,F12,uiColors().muted);lv_obj_set_style_text_align(huntMeta,LV_TEXT_ALIGN_CENTER,0);
       huntGraph=lv_obj_create(root);lv_obj_remove_style_all(huntGraph);lv_obj_set_pos(huntGraph,S(60),S(219));lv_obj_set_size(huntGraph,S(240),S(43));lv_obj_add_event_cb(huntGraph,huntDraw,LV_EVENT_DRAW_MAIN,nullptr);
       button(root,"Mark",62,272,76,31,58);button(root,"Target",144,272,76,31,59);button(root,"Stop",226,272,72,31,54);
     }
@@ -383,10 +475,10 @@ static void build(){
     }
   }else if(page==Settings){
     title("SETTINGS");body=scrollBody();int n=0;
-    row(body,"Clock & date",rtcAvailable?"Set battery-backed RTC / local time":"Software clock / USB time sync",n++,133);
+    row(body,"Clock & date",rtcAvailable?"Set battery-backed RTC / local time":"Software clock / USB time sync",n++,160);
     row(body,"Orientation","Choose a saved fixed angle",n++,135);
     row(body,"Display & timeouts","Brightness, dimming and screen off",n++,71);
-    row(body,"Radar theme & labels",radarThemeNames[radarTheme],n++,117);
+    row(body,"Theme & radar labels",radarThemeNames[radarTheme],n++,117);
     row(body,"Audio & hunt tones","Volume, target focus and RTTTL alerts",n++,31);
     row(body,"Detection filters","Radar families / audible alert threshold",n++,61);
     row(body,activeBle?"BLE scan: ACTIVE":"BLE scan: PASSIVE",activeBle?"Requests scan-response names; transmits":"Listen only; tap for scan-response names",n++,98);
@@ -412,32 +504,51 @@ static void build(){
 #endif
     row(body,"Boot to radar","Clear the saved badge startup choice",n++,55);
   }else if(page==Stopwatch){
-    dismissNotice();title("STOPWATCH","Elapsed time continues off this page");
-    timerState=label(root,"",50,98,260,F12,0xaad86e);centered(timerState);
-    timerValue=label(root,"00:00.00",33,130,294,FTIMER,0xe8ffac);centered(timerValue);
-    timerLap=label(root,"",50,184,260,F14);centered(timerLap);
+    dismissNotice();lv_obj_set_style_bg_color(root,color(locksport()?locksportBg():uiColors().bg),0);buildChronographFrame();
+    if(locksport()){
+      if(!covert()&&!dmac()){circleLogo(root,&radar_logo_toool,20);centered(label(root,"LOCKSPORT TIMER",48,74,264,F20,locksportAccent()));}
+      button(root,LV_SYMBOL_HOME,149,307,62,33,1);
+    }else title("CHRONOGRAPH","Precision stopwatch");
+    timerState=label(root,"",50,locksport()?106:98,260,F12,locksport()?locksportAccent():uiColors().accent);centered(timerState);
+    timerValue=label(root,"00:00.00",33,locksport()?136:130,294,FTIMER,locksport()?locksportInk():uiColors().ink);centered(timerValue);
+    timerLap=label(root,"",50,184,260,F14,uiColors().muted);centered(timerLap);
     timerStartButton=button(root,"START",55,220,122,47,131);timerSecondary=button(root,"LAP",184,220,122,47,132);
-    button(root,"LAPS",70,278,70,28,134);button(root,"TOOLS",220,278,70,28,2);updateTimer();
+    for(auto* b:{timerStartButton,timerSecondary}){lv_obj_set_style_bg_color(b,color(uiColors().surface),0);lv_obj_set_style_border_color(b,color(uiColors().border),0);}
+    if(locksport()){timerSplit=button(root,"SPLIT",65,278,72,28,168);button(root,"LOG",144,278,72,28,134);}else button(root,"LAPS",70,278,70,28,134);button(root,"TOOLS",223,278,72,28,2);
+    for(unsigned i=0;i<lv_obj_get_child_cnt(root);++i){auto* b=lv_obj_get_child(root,i);if(lv_obj_check_type(b,&lv_btn_class)){lv_obj_set_style_bg_color(b,color(locksport()?(uiColors().surface):uiColors().surface),0);lv_obj_set_style_border_color(b,color(uiColors().border),0);lv_obj_set_style_text_color(lv_obj_get_child(b,0),color(locksport()?locksportInk():uiColors().ink),0);}}
+    if(locksport()){lv_obj_set_style_bg_color(timerSecondary,color(uiColors().accent),0);lv_obj_set_style_text_color(lv_obj_get_child(timerSecondary,0),color(uiColors().onAccent),0);}
+    if(locksportDark())for(auto* b:{timerSecondary,timerSplit}){
+      lv_obj_set_style_bg_color(b,color(uiColors().surface),LV_STATE_DISABLED);
+      lv_obj_set_style_color_filter_opa(b,LV_OPA_TRANSP,LV_STATE_DISABLED);
+      lv_obj_set_style_opa(b,LV_OPA_50,LV_STATE_DISABLED);
+    }
+    updateTimer();
   }else if(page==Laps){
-    title("LAPS","Latest 50 retained / split + total");body=scrollBody(91,178);
+    if(locksport()){lv_obj_set_style_bg_color(root,color(locksportBg()),0);buildChronographFrame();}
+    title(locksport()?"PICKING SPLITS":"LAPS","Latest 50 retained / split + total");body=scrollBody(91,178);
     char top[80],sub[70],split[40],total[40];
-    for(size_t i=0;i<stopwatch.retained();++i){auto* lap=stopwatch.newest(i);durationText(split,sizeof(split),lap->split);durationText(total,sizeof(total),lap->total);snprintf(top,sizeof(top),"LAP %lu    %s",lap->number,split);snprintf(sub,sizeof(sub),"Total %s",total);row(body,top,sub,i,130);}
-    if(!stopwatch.retained())label(body,"Start the timer, then tap LAP.\nLaps exclude paused time.\nTimer and laps reset at reboot.",8,22,240);
+    for(size_t i=0;i<stopwatch.retained();++i){auto* lap=stopwatch.newest(i);durationText(split,sizeof(split),lap->split);durationText(total,sizeof(total),lap->total);snprintf(top,sizeof(top),"%s %lu    %s",locksport()?"SPLIT":"LAP",lap->number,split);snprintf(sub,sizeof(sub),"Total %s",total);row(body,top,sub,i,130);}
+    if(!stopwatch.retained())label(body,locksport()?"START begins your attempt.\nSPLIT records a milestone.\nOPEN records and stops.\nReset clears this attempt.":"Start the timer, then tap LAP.\nLaps exclude paused time.\nTimer and laps reset at reboot.",8,22,240);
     button(root,"Back to timer",91,272,178,32,130);
+    if(locksport())locksportColors(root);
   }else if(page==Clock){
-    title("CLOCK",rtcAvailable?"Battery-backed RTC / local time":"Software clock / resets at reboot");
-    clockValue=label(root,"--:--:--",35,115,290,FTIMER,0xe8ffac);centered(clockValue);
-    clockDate=label(root,"Set time or sync over USB",45,170,270,F14);centered(clockDate);
-    button(root,"Set date & time",73,232,214,44,136);button(root,"TOOLS",220,287,70,28,2);
+    buildWatch();
+  }else if(page==ClockSettings){
+    dismissNotice();title("DATE & TIME","Automatic setup with your computer");
+    auto* help=label(root,"1. Open Dragon Detector Studio.\n2. Connect your detector by USB.\n3. Click Connect detector.\n\nLocal time and date sync for you.",58,100,244,F14);centered(help);
+    auto* info=label(root,rtcAvailable?"RTC keeps time across restarts.":"Sync after each restart.",58,213,244,F12,uiColors().accent);centered(info);
+    button(root,"Set manually",66,249,142,36,136);button(root,"Clock",218,249,76,36,133);
+  }else if(page==ClockWheels){
+    buildClockWheels();
   }else if(page==ClockEdit){
     dismissNotice();title("SET LOCAL TIME","Changes apply only when you save");
     editPreview=label(root,"",49,87,262,F12);centered(editPreview);
-    editField=label(root,"",55,136,250,F14,0xaad86e);centered(editField);
+    editField=label(root,"",55,136,250,F14,uiColors().accent);centered(editField);
     editValue=label(root,"",95,162,170,FTIMER);centered(editValue);
     auto* minus=button(root,"-",48,162,42,46,137);auto* plus=button(root,"+",270,162,42,46,138);
     lv_obj_add_event_cb(minus,action,LV_EVENT_LONG_PRESSED_REPEAT,(void*)137);lv_obj_add_event_cb(plus,action,LV_EVENT_LONG_PRESSED_REPEAT,(void*)138);
     button(root,"< FIELD",65,221,109,35,139);button(root,"FIELD >",185,221,109,35,140);
-    button(root,"Cancel",73,269,100,33,133);button(root,"Save",185,269,100,33,141);updateDateEditor();
+    button(root,"Cancel",73,269,100,33,160);button(root,"Save",185,269,100,33,141);updateDateEditor();
   }else if(page==Orientation){
     title("ORIENTATION","Saved angle / touch follows the display");body=scrollBody();int n=0;
     for(int r=0;r<4;++r){char text[50];snprintf(text,sizeof(text),"%s%d degrees",((4-displayRotation)&3)==r?LV_SYMBOL_OK "  ":"",r*90);row(body,text,"Clockwise / retained after restart",n++,144+r);}
@@ -445,7 +556,7 @@ static void build(){
     title("DEVICE COLORS","Same family color in every theme");body=scrollBody();
     for(unsigned i=0;i<unsigned(Family::Count);++i)row(body,dragon::familyName(Family(i)),"Dot, leader and label",i,0,dragon::familyColor(Family(i)));
   }else if(page==RadarStyle){
-    title("RADAR STYLE");body=scrollBody();int n=0;
+    title("THEME & RADAR","Menus / utilities / radar");body=scrollBody();int n=0;
     for(unsigned i=0;i<RadarThemeCount;++i){String name=String(radarTheme==i?LV_SYMBOL_OK "  ":"")+radarThemeNames[i];row(body,name.c_str(),radarThemeDescriptions[i],n++,9000+i);}
     row(body,"Device color legend","Unique family colors in every theme",n++,150);
     row(body,radarLabels?"Device labels: ON":"Device labels: OFF",radarLabels?"Priority tags + tapped dot / all dots visible":"All dots together / tap for evidence",n++,121);
@@ -469,7 +580,7 @@ static void action(lv_event_t* e){
   ++inputActions;lastInputAction=int(intptr_t(lv_event_get_user_data(e)));
   lastInteraction=millis();
   int id=(intptr_t)lv_event_get_user_data(e);
-  if(id>=9000 && id<9000+int(RadarThemeCount)){radarTheme=id-9000;settings.putUChar("radar-theme",radarTheme);go(RadarStyle);page=Boot;return;}
+  if(id>=9000 && id<9000+int(RadarThemeCount)){selectRadarTheme(id-9000);go(RadarStyle);page=Boot;return;}
 #if BOARD_HAS_SD
   if(id>=2000 && id<2096){int i=id-2000;if(i>=fileCount)return;if(files[i].dir){directory=files[i].path;go(Files);page=Boot;}else{String ext=files[i].path;ext.toLowerCase();if(ext.endsWith(".mp3")||ext.endsWith(".wav")){audioPlay(files[i].path);go(Audio);}else{
       xSemaphoreTake(sdMutex,portMAX_DELAY);File f=CardFS.open(files[i].path);String text;while(f && f.available() && text.length()<2048){char ch=f.read();text+=(ch=='\n'||ch=='\t'||(ch>=32&&ch<127))?ch:'.';}f.close();xSemaphoreGive(sdMutex);
@@ -492,20 +603,23 @@ static void action(lv_event_t* e){
 #endif
   switch(id){
     case 150:go(FamilyColors);break;
+    case 161:editIndex=6;go(ClockEdit);break;
+    case 160:go(ClockSettings);break;
     case 130:go(Stopwatch);break;
     case 131:if(!resetBox){stopwatch.toggle(stopwatchNow());updateTimer();}break;
-    case 132:if(!resetBox){if(stopwatch.running)stopwatch.lap(stopwatchNow());else resetStopwatch();updateTimer();}break;
+    case 132:if(!resetBox){if(stopwatch.running){if(locksport())stopwatch.finish(stopwatchNow());else stopwatch.lap(stopwatchNow());}else resetStopwatch();updateTimer();}break;
+    case 168:if(!resetBox&&stopwatch.running){stopwatch.lap(stopwatchNow());updateTimer();}break;
     case 133:go(Clock);break;
     case 134:go(Laps);break;
     case 135:go(Orientation);break;
-    case 136:clockLocal(editDate);editOffset=clockOffsetMinutes;editIndex=0;go(ClockEdit);break;
+    case 136:clockLocal(editDate);editOffset=clockOffsetMinutes;editIndex=3;editDate.second=0;go(ClockWheels);break;
     case 137:case 138:{
       int delta=id==138?1:-1;int* fields[]={&editDate.year,&editDate.month,&editDate.day,&editDate.hour,&editDate.minute,&editDate.second,&editOffset};
       int low[]={2000,1,1,0,0,0,-720},high[]={2099,12,dragon::monthDays(editDate.year,editDate.month),23,59,59,840};
       int& value=*fields[editIndex];value+=delta*(editIndex==6?15:1);if(value>high[editIndex])value=low[editIndex];if(value<low[editIndex])value=high[editIndex];editDate.day=std::min(editDate.day,dragon::monthDays(editDate.year,editDate.month));updateDateEditor();break;
     }
     case 139:case 140:editIndex=(editIndex+(id==140?1:6))%7;updateDateEditor();break;
-    case 141:{int64_t epoch=int64_t(dragon::dateEpoch(editDate))-editOffset*60;if(dragon::validEpoch(epoch)&&configureClock(epoch)){configureClockOffset(editOffset);go(Clock);}else {lv_label_set_text(editPreview,"Could not save time.\nCheck date / RTC connection.");}break;}
+    case 141:{int64_t epoch=int64_t(dragon::dateEpoch(editDate))-editOffset*60;if(dragon::validEpoch(epoch)&&configureClock(epoch)){configureClockOffset(editOffset);go(Clock);}else {if(editPreview)lv_label_set_text(editPreview,"Could not save time.\nCheck date / RTC connection.");else{auto* box=lv_msgbox_create(root,"TIME NOT SAVED","Check the date, timezone and RTC connection.",nullptr,true);lv_obj_set_width(box,S(260));lv_obj_center(box);}}break;}
     case 144:case 145:case 146:case 147:configureOrientation((id-144)*90);go(Orientation);page=Boot;break;
     case 1:go(Radar);break;case 2:go(Menu);break;
     case 10:case 11:case 12:menuTab=id-10;go(Menu);page=Boot;break;
@@ -603,7 +717,7 @@ bool uiTouch(bool pressed,int,int){
   // Navigation uses visible Tools/Home buttons. Leave drags to LVGL lists.
   return true;
 }
-void uiShow(const String& name){if(name=="radar")recipeStop();
+void uiShow(const String& name){if(name=="startup"){go(Startup);page=Boot;return;}if(name=="radar")recipeStop();
 #ifndef BOARD_RADAR_LITE
   if(name=="modes"||name=="tools"){openRadioTools=name=="tools";go(Recon);return;}
   if(name=="lab"){go(BleLab);return;}
@@ -620,6 +734,7 @@ void uiShow(const String& name){if(name=="radar")recipeStop();
   if(name=="utilities"){menuTab=1;go(Menu);return;}
   if(name=="notebook"){go(Notebook);return;}if(name=="notebook-ble"){notebookPage=0;go(NotebookBle);return;}if(name=="notebook-probes"){notebookPage=0;go(NotebookProbes);return;}
   if(name=="device-colors"){go(FamilyColors);return;}
+  if(name=="clock-settings"){go(ClockSettings);return;}if(name=="clock-edit"){clockLocal(editDate);editOffset=clockOffsetMinutes;editDate.second=0;go(ClockWheels);return;}
   if(name=="stopwatch"){go(Stopwatch);return;}if(name=="clock"){go(Clock);return;}if(name=="orientation"){go(Orientation);return;}if(name=="laps"){go(Laps);return;}
   if(name=="radar-style"){go(RadarStyle);return;}
   lastInteraction=millis();
@@ -628,18 +743,16 @@ void uiShow(const String& name){if(name=="radar")recipeStop();
 }
 void uiBegin(){
   settings.begin("dd-ui",false);
+  watchFace=settings.getUChar("watch-face",0);if(!watchFaceAllowed(watchFace)){watchFace=0;settings.putUChar("watch-face",watchFace);}
   if(!settings.getBool("panel-v04",false)){settings.putUChar("brightness",100);settings.putBool("panel-v04",true);}
   brightness=settings.getUChar("brightness",100);if(brightness<25||brightness>100)brightness=100;candidatesOnly=settings.getBool("candidates",true);
   if(!settings.getBool("radar-v07",false)){settings.putBool("radar-labels",true);settings.putUChar("radar-theme",1);settings.putBool("radar-v07",true);}
   radarLabels=settings.getBool("radar-labels",true);radarRecent=settings.getBool("radar-recent",true);radarTheme=settings.getUChar("radar-theme",1);if(radarTheme>=RadarThemeCount)radarTheme=1;
-  scr_lvgl_init();set_brightness(brightness);lastInteraction=millis();root=lv_scr_act();lv_obj_clear_flag(root,LV_OBJ_FLAG_SCROLLABLE);lv_obj_set_style_bg_color(root,color(0x071510),0);
+  scr_lvgl_init();uiApplyTheme(radarTheme);set_brightness(brightness);lastInteraction=millis();root=lv_scr_act();lv_obj_clear_flag(root,LV_OBJ_FLAG_SCROLLABLE);lv_obj_set_style_bg_color(root,color(uiColors().bg),0);
 #ifndef BOARD_RADAR_LITE
   pinMode(BTN_PIN,INPUT_PULLUP);
 #endif
-  auto* img=lv_img_create(root);lv_img_set_src(img,&vts_logo);lv_obj_align(img,LV_ALIGN_CENTER,0,S(-25));
-  auto* name=label(root,"DRAGON DETECTOR",49,266,262,F20,0xd6f49a);lv_obj_set_style_text_align(name,LV_TEXT_ALIGN_CENTER,0);
-  label(root,"VALLEYTECH  /  INITIALIZING",70,296,225,F12,0x91b178);
-  lv_anim_t a;lv_anim_init(&a);lv_anim_set_var(&a,img);lv_anim_set_values(&a,S(200),S(256));lv_anim_set_time(&a,900);lv_anim_set_exec_cb(&a,[](void* o,int32_t v){lv_img_set_zoom((lv_obj_t*)o,v);});lv_anim_start(&a);
+  drawStartup();
   pageAt=millis();
 }
 void uiLoop(){
@@ -647,8 +760,8 @@ void uiLoop(){
   int level=detector.offSeconds&&idle>=uint32_t(detector.offSeconds)*1000?0:detector.dimSeconds&&idle>=uint32_t(detector.dimSeconds)*1000?detector.idleBrightness:brightness;
   if(level!=outputBrightness){outputBrightness=level;set_brightness(level);}
   if(notice&&!noticeWatch&&millis()-noticeAt>=6000)dismissNotice();
-  if(!notice&&page!=BleLab&&page!=Recon&&page!=Stopwatch&&page!=ClockEdit){dragon::DetectionNotice next;if(noticeQueue.take(millis(),next)&&detector.enabled(next.family)&&(!detector.quiet||next.watched)&&(!next.hasKey||!(deviceRules(next.key)&(RuleIgnore|RuleSnooze))))uiNotify(next.title,next.detail,next.hasKey?&next.key:nullptr,next.watched);}
-  if(page==Boot && pending==Boot && millis()-pageAt>2200)pending=Radar;
+  if(!notice&&page!=Boot&&page!=Startup&&page!=BleLab&&page!=Recon&&page!=Stopwatch&&page!=Clock&&page!=ClockSettings&&page!=ClockWheels&&page!=ClockEdit){dragon::DetectionNotice next;if(noticeQueue.take(millis(),next)&&detector.enabled(next.family)&&(!detector.quiet||next.watched)&&(!next.hasKey||!(deviceRules(next.key)&(RuleIgnore|RuleSnooze))))uiNotify(next.title,next.detail,next.hasKey?&next.key:nullptr,next.watched);}
+  if(((page==Boot&&pending==Boot)||(page==Startup&&pending==Startup)) && millis()-pageAt>2200)pending=Radar;
   if(page!=pending)build();
 #ifndef BOARD_RADAR_LITE
   if(page==BleLab)bleLabViewLoop();
@@ -656,7 +769,7 @@ void uiLoop(){
 #endif
   if(millis()-lastUpdate>(page==Stopwatch?50:100)){lastUpdate=millis();if(micBadge){if(audioStatus().mode==AudioMode::Recording)lv_obj_clear_flag(micBadge,LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(micBadge,LV_OBJ_FLAG_HIDDEN);}
     if(page==Stopwatch)updateTimer();
-    if(page==Clock&&clockValue){dragon::Calendar d;clockLocal(d);char value[40],date[100];snprintf(value,sizeof(value),"%02d:%02d:%02d",d.hour,d.minute,d.second);snprintf(date,sizeof(date),"%04d-%02d-%02d\nUTC%c%02d:%02d",d.year,d.month,d.day,clockOffsetMinutes<0?'-':'+',abs(clockOffsetMinutes)/60,abs(clockOffsetMinutes)%60);lv_label_set_text(clockValue,wallTime()?value:"--:--:--");lv_label_set_text(clockDate,wallTime()?date:"Set time or sync over USB");}
+    if(page==Clock)watchTick();
     if(page==Radar && radar){
       radarFrameAt=millis();
       bool deauth=detector.enabled(Family::Deauth)&&trafficStatus.disconnectActive(millis()),spam=detector.enabled(Family::BleSpam)&&trafficStatus.bleActive(millis());
@@ -664,6 +777,7 @@ void uiLoop(){
       if(deauth||spam)lv_obj_clear_flag(radarActivity,LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(radarActivity,LV_OBJ_FLAG_HIDDEN);
       if(trackedContact>=0 && trackingLabel){auto& t=contacts[trackedContact];uint32_t age=millis()-t.seen;String line=age>10000?"SIGNAL LOST / HUNT":String("HUNT / ")+t.signal.direction();lv_label_set_text(trackingLabel,line.c_str());}
       else if(trackingLabel){char primary[64];if(radarPrimary>=0){auto& c=contacts[radarPrimary];snprintf(primary,sizeof(primary),"%s / %d dBm",radarFamilyName(c.match.family),c.rssi);lv_obj_set_style_text_color(trackingLabel,color(familyColor(c.match.family)),0);}else{strlcpy(primary,reconMode()==dragon::ReconMode::Radar?"TAP A DOT FOR ITS TAG":dragon::reconModes[unsigned(reconMode())].name,sizeof(primary));lv_obj_set_style_text_color(trackingLabel,color(radarPalettes[radarTheme].text),0);}lv_label_set_text(trackingLabel,primary);}
+      if(locksport()&&trackingLabel){if(trackedContact>=0)lv_obj_set_style_text_color(trackingLabel,color(familyColor(contacts[trackedContact].match.family)),0);lv_obj_set_style_bg_color(trackingLabel,color((radarPrimary>=0||trackedContact>=0)?dragon::RadarLabelBackground:locksportBg()),0);lv_obj_set_style_bg_opa(trackingLabel,LV_OPA_COVER,0);lv_obj_set_style_radius(trackingLabel,S(5),0);}
       lv_obj_invalidate(radar);int count=0;for(auto& c:contacts)if(radarVisible(c,millis()))++count;char s[96];int n=snprintf(s,sizeof(s),"%s %s / %d %s",radioEnabled?(blePhase?"BLE":"WI-FI"):"PAUSED",captureEnabled?"PCAP":"RX",count,count==1?"target":"targets");
       int battery=batteryPercent();if(battery>=0)snprintf(s+n,sizeof(s)-n,"  /  %s%d%%",batteryCharging()?LV_SYMBOL_CHARGE " ":"",battery);
 #ifdef BOARD_XIAO_ROUND
@@ -697,10 +811,21 @@ void uiKey(bool home){lastInteraction=millis();go(home?Radar:page==Menu?Badge:Me
 bool uiStopwatchKey(bool start,uint64_t at){
   if(page!=Stopwatch||pending!=Stopwatch)return false;lastInteraction=millis();
   if(resetBox)return true;
-  if(!at)at=stopwatchNow();if(start)stopwatch.toggle(at);else if(stopwatch.running)stopwatch.lap(at);else resetStopwatch();
+  if(!at)at=stopwatchNow();if(start)stopwatch.toggle(at);else if(stopwatch.running){if(locksport())stopwatch.finish(at);else stopwatch.lap(at);}else resetStopwatch();
   updateTimer();return true;
 }
 bool uiCommand(const String& cmd){
+  if(cmd=="clock pig"){
+    if(watchFace!=27||page!=Clock){Serial.println("CLOCK_PIG_ERROR select the Pig watch");return true;}
+    dragon::Calendar d;clockLocal(d);Serial.printf("CLOCK_PIG x=%d target=%d look=%d reacting=%u time=%02d:%02d:%02d valid=%u\n",int(std::lround(pigX)),pigTarget,pigLook,pigReacting,d.hour,d.minute,d.second,wallTime()!=0);return true;
+  }
+  if(cmd=="clock pig left"||cmd=="clock pig right"){
+    if(watchFace!=27||page!=Clock){Serial.println("CLOCK_PIG_ERROR select the Pig watch");return true;}
+    pigReact(cmd.endsWith("left")?144:216);Serial.println("CLOCK_PIG_OK");return true;
+  }
+  if(cmd=="clock face"){Serial.printf("CLOCK_FACE index=%u name=%s\n",watchFace,watches[watchFace].name);return true;}
+  if(cmd.startsWith("clock face ")){String value=cmd.substring(11);unsigned number=0;bool valid=value.length()>0&&value.length()<=2;for(unsigned i=0;i<value.length();++i){if(value[i]<'0'||value[i]>'9'){valid=false;break;}number=number*10+unsigned(value[i]-'0');}if(valid&&watchFaceAllowed(number)){watchFace=number;settings.putUChar("watch-face",watchFace);pending=Clock;page=Boot;Serial.println("CLOCK_FACE_OK");}else Serial.println("CLOCK_FACE_ERROR");return true;}
+
   if(cmd=="ui layout"){lv_obj_update_layout(root);Serial.printf("UI_LAYOUT count=%lu page=%u\n",lv_obj_get_child_cnt(root),unsigned(page));for(unsigned i=0;i<lv_obj_get_child_cnt(root);++i){auto* o=lv_obj_get_child(root,i);lv_area_t a;lv_obj_get_coords(o,&a);Serial.printf("UI_WIDGET %u x=%d y=%d w=%d h=%d hidden=%u opa=%u children=%lu type=%s\n",i,a.x1,a.y1,a.x2-a.x1+1,a.y2-a.y1+1,lv_obj_has_flag(o,LV_OBJ_FLAG_HIDDEN),lv_obj_get_style_opa(o,0),lv_obj_get_child_cnt(o),lv_obj_check_type(o,&lv_label_class)?"label":lv_obj_check_type(o,&lv_btn_class)?"button":"object");}Serial.println("UI_LAYOUT_END");return true;}
 
   if(cmd=="ui status"){Serial.printf("UI_STATUS page=%u actions=%lu last_action=%d\n",unsigned(page),inputActions,lastInputAction);return true;}
@@ -709,7 +834,7 @@ bool uiCommand(const String& cmd){
   if(cmd=="radar labels on"||cmd=="radar labels off"){radarLabels=cmd.endsWith("on");settings.putBool("radar-labels",radarLabels);Serial.printf("RADAR_LABELS %u\n",radarLabels);return true;}
   if(cmd=="radar recent on"||cmd=="radar recent off"){radarRecent=cmd.endsWith("on");settings.putBool("radar-recent",radarRecent);Serial.printf("RADAR_RECENT %u\n",radarRecent);return true;}
   if(cmd=="radar next"||cmd=="radar previous"){Serial.println("RADAR_ALL_CONTACTS no pages");return true;}
-  if(cmd.startsWith("radar theme ")){for(unsigned i=0;i<RadarThemeCount;++i)if(cmd.substring(12)==radarThemeCommands[i]){radarTheme=i;settings.putUChar("radar-theme",radarTheme);go(Radar);page=Boot;Serial.printf("RADAR_THEME %u\n",radarTheme);return true;}Serial.println("RADAR_THEME_ERROR unknown theme");return true;}
+  if(cmd.startsWith("radar theme ")){for(unsigned i=0;i<RadarThemeCount;++i)if(cmd.substring(12)==radarThemeCommands[i]){selectRadarTheme(i);go(Radar);page=Boot;Serial.printf("RADAR_THEME %u\n",radarTheme);return true;}Serial.println("RADAR_THEME_ERROR unknown theme");return true;}
   if(cmd=="display status"){Serial.printf("DISPLAY_SETTINGS brightness=%d output=%d dim=%u off=%u dim_level=%u wake=%u\n",brightness,outputBrightness,detector.dimSeconds,detector.offSeconds,detector.idleBrightness,detector.wakeAlert);return true;}
   if(cmd.startsWith("display set ")){
     unsigned b=0,dim=0,off=0,level=0;char extra;

@@ -1,0 +1,8 @@
+Unscii-8 by viznut
+https://github.com/viznut/unscii
+
+The ASCII subset of unscii-8.ttf is public domain / CC0.
+The generated native-size glyph data in firmware/src/ascii_fonts.c derives
+only from that subset, with nearest-neighbour resizing.
+The Unifont-derived unscii-16-full variants are not used.
+CC0 text: https://creativecommons.org/publicdomain/zero/1.0/legalcode
