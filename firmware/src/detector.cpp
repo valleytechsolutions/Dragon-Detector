@@ -6,6 +6,7 @@
 #include <LittleFS.h>
 #include <esp_timer.h>
 #include <time.h>
+#include <sys/time.h>
 
 dragon::DetectorSettings detector;
 bool axonPriority=true;
@@ -16,8 +17,7 @@ bool historyReady=false;
 static Preferences prefs;
 struct Rule {dragon::DeviceKey key;uint8_t flags=0;};
 static Rule rules[RULE_LIMIT];
-static uint32_t bootId=0,sequence=0,epochBase=0;
-static uint64_t epochAt=0;
+static uint32_t bootId=0,sequence=0;
 static uint32_t persistedAt[HISTORY_LIMIT]{};
 static bool dirty[HISTORY_LIMIT]{};
 static uint8_t journal=0;
@@ -27,8 +27,11 @@ static size_t writeCursor=0;
 static const char* journals[]={"/detections-0.dat","/detections-1.dat"};
 static constexpr uint32_t HISTORY_MAGIC=0x34484444;
 static uint32_t checksum(const HistoryRecord& r){return dragon::crc32((const uint8_t*)&r,offsetof(HistoryRecord,checksum))^0xffffffffu;}
-uint32_t wallTime(){return epochBase?epochBase+uint32_t((esp_timer_get_time()-epochAt)/1000000):0;}
-void setWallTime(uint32_t epoch){epochBase=epoch;epochAt=esp_timer_get_time();}
+// IDF's RTC + high-resolution system clock retains its epoch across powered
+// software resets. A power-on reset clears it; never invent elapsed offline time.
+// Stopwatch measurements remain on esp_timer_get_time(), independent of UTC.
+uint32_t wallTime(){time_t now=time(nullptr);return dragon::validEpoch(now)?uint32_t(now):0;}
+void setWallTime(uint32_t epoch){if(!dragon::validEpoch(epoch))return;timeval tv{time_t(epoch),0};settimeofday(&tv,nullptr);}
 dragon::DeviceKey contactKey(const Contact& c){return keyOf(c);}
 uint8_t deviceRules(const dragon::DeviceKey& key){for(auto& r:rules)if(r.flags&&r.key==key)return r.flags;return 0;}
 bool ruleAt(size_t i,dragon::DeviceKey& key,uint8_t& flags){if(i>=RULE_LIMIT||!rules[i].flags)return false;key=rules[i].key;flags=rules[i].flags;return true;}

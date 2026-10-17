@@ -1,3 +1,14 @@
+# 0.13.9 validation
+
+All five local firmware builds and packages pass the unchanged 21% reserve guard. Connected M5Stack StopWatch and Waveshare AMOLED candidates pass 23/23 self-tests, real web clock-module set/readback, powered restart retention, both VTS fade stages, Ghostbusters/LPU radar/watch/menu/timer renders and monotonic timing checks (advance, pause freeze, resume and OPEN). StopWatch reports RTC available; this AMOLED reports RTC unavailable and uses ESP32 system time. Both receive Wi-Fi and BLE with zero receive/storage drops in the post-restart test. StopWatch's earlier post-flash startup had eight receive drops; counters after the tested restart were zero. One AMOLED USB response timed out during capture; reopening the port recovered communication, and the complete repeated check passed. No device panic or heap failure was observed. This is a short USB/runtime check, not an extended load or physical-touch test.
+
+
+The local Spotpear candidate passed 23/23 on-device self-tests, actual web clock-module sync/readback, powered software-restart time retention, both new theme/watch/timer captures, and continuing Wi-Fi/BLE reception with zero drops during the short check. Its software clock had no external RTC. Wi-Fi provisioning was deferred by the owner, so live NTP and cold-power recovery are not claimed as tested. Screenshots are native framebuffer captures, not panel photographs.
+
+72 web tests and the native suite (including 150,000 malformed-input fuzz cases, Lite gesture rollover and clock scheduling) pass. All 135 packed theme assets across three resolutions decode through the native firmware decoder to their exact original pixel CRC32. The lossless conversion uses additional PSRAM, measured on the hardware checks, with no frame-by-frame allocation.
+
+Final clean-CI firmware, published hashes, actual device checks and per-board budgets accompany this release as `RELEASE-VERIFICATION.json`. Lite hardware work remains stopped; XIAO and new Lite pages are build/package-tested, not newly panel-tested. These limitations also appear in the release notes.
+
 # Validation status · 0.13.8
 
 ## Post-release board audit and connected-device updates

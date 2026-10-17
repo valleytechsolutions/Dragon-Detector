@@ -1,4 +1,4 @@
-# Stopwatch, clock and orientation · 0.13.6
+# Stopwatch, clock and orientation · 0.13.9
 
 Open **Tools → Utilities → Stopwatch**. Start begins or resumes elapsed time; Pause stops it; Lap records a split while running. Reset is available only while paused and asks before clearing the timer and laps. Home, Tools and the lap list leave a running timer running. Detection continues in the background; detection popups do not cover the timing controls. Audio alerts retain their existing settings.
 
@@ -11,7 +11,7 @@ The timer uses a 64-bit monotonic microsecond clock and displays hundredths. Clo
 | Spotpear / Guition JC3636W518 | Touch Start / Pause | Touch Lap / Reset | Software clock |
 | Seeed XIAO ESP32-S3 + Round Display | BOOT or touch | Touch Lap / Reset | BM8563 / PCF8563-compatible |
 
-All boards have the same touch controls. Hardware stopwatch shortcuts apply only on the Stopwatch page. M5Stack navigation elsewhere retains yellow = radar and blue = Tools/Badge. Waveshare BOOT opens Tools outside Stopwatch; short PWR returns to radar. Long PWR retains the board's power-off behavior; it is not a lap shortcut.
+The four full boards have the same touch controls. [Lite uses BOOT tap/double/hold](WAVESHARE-LITE.md). Hardware stopwatch shortcuts apply only on the Stopwatch page. M5Stack navigation elsewhere retains yellow = radar and blue = Tools/Badge. Waveshare BOOT opens Tools outside Stopwatch; short PWR returns to radar. Long PWR retains the board's power-off behavior; it is not a lap shortcut.
 
 ## TOOOL Locksport Timer
 
@@ -23,15 +23,15 @@ On M5Stack, the blue secondary button performs OPEN while picking; on Waveshare,
 
 DMAC uses the same controls under **Locksport counter**. Its original teal/pink logo, silver details and acrylic pick hands carry through the full GUI. Select **DMAC** to choose watch 24 automatically.
 
-A small comet follows the outer rim in all four locksport themes. Each lap represents ten seconds of elapsed attempt time. PAUSE and OPEN freeze it; RESUME continues from the same position; RESET returns it to twelve. The motion stays outside the timer digits and buttons.
+A small comet follows the outer rim in the locksport themes except LPU. Each lap represents ten seconds of elapsed attempt time. PAUSE and OPEN freeze it; RESUME continues from the same position; RESET returns it to twelve. The motion stays outside the timer digits and buttons.
 
 ## Set the clock
 
-The fastest setup is **Connect detector** in the local or hosted Studio: connection copies the computer's actual date, time and current timezone offset automatically. **Sync my local time** refreshes it in one click. Use this after travel, a daylight-saving change, or a restart on a board without a working RTC. History remains UTC; the watch shows local time.
+The fastest setup is **Connect detector** in the local or hosted Studio: connection copies the computer's actual date, time and current timezone offset automatically. **Sync my local time** refreshes it in one click. Use this after travel, a daylight-saving change, or complete power loss on a board without a working RTC and without Wi-Fi recovery. History remains UTC; the watch shows local time.
 
 On the device, open **Settings → Clock & date → Set manually**. Scroll the year/month/day, 1–12 hour/minute and AM/PM wheels, then tap **Save**. Seconds start at zero. Short months and leap years clamp the selected day. **Zone** opens the advanced field editor, including UTC offset and seconds. Cancel/Home discards the unsaved draft. The offset remains fixed until changed or resynced; it does not contain geographic daylight-saving rules.
 
-## Twenty-five clock faces
+## Twenty-seven logo clock faces
 
 Open **Tools → Utilities → Clock**, then swipe left or right. The chosen face is remembered across restarts. All analog faces use a 12-hour dial. Date labels never include AM/PM. LAB5 and the M5Stack digital window use 12-hour time. **JCMK military uses 24-hour digital time; both Covert hybrids also have a separate 24-hour window.** Original logos and drawn emblems replace decorative face-name captions.
 
@@ -96,3 +96,11 @@ Rotation preserves AMOLED even-coordinate update windows, RGB565 byte order and 
 `loop diagnostics` — recent/maximum main-loop stage durations, useful for diagnosing drawing or storage stalls (0.9.1).
 
 Firmware 0.9 exposes these commands; older versions keep their earlier protocol. See [validation](VALIDATION.md) for physical-board test limits and [hardware sources](HARDWARE.md) for the actual components.
+
+## Lockpickers United and Ghostbusters · 0.13.9
+
+Select Lockpickers United for the monochrome logo, silver pick hands and Locksport Timer. Sixty moving pins mark seconds on its watch/timer; PAUSE and OPEN freeze them. Ghostbusters has a black/white/red containment dial, proton-stream radar and separate 24-hour window. All GUI pages follow the selected palette.
+
+## Saved Wi-Fi time recovery
+
+All four full boards can opt into periodic Internet time from one saved network. It runs at boot and every six hours, with 15-minute retries and bounded radio ownership. The offset stays fixed until resynced. [Full Spotpear setup guide](SPOTPEAR-CLOCK.md) · [GitHub wiki](https://github.com/valleytechsolutions/Dragon-Detector/wiki/Spotpear-Clock-Setup).

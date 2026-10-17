@@ -19,6 +19,7 @@ jobs:
       - run: node --test tests/*.test.js
       - run: python tools/test_core.py --cxx g++
       - run: python tools/test_core.py --cxx g++ --sanitize
+      - run: python tools/test_theme_assets.py --cxx g++
   build:
     needs: test
     runs-on: ubuntu-latest

@@ -2,9 +2,9 @@
 
 Firmware **0.13.8** offers twenty-seven themes, including Covert Instruments × McNally, TOOOL, TOOOL Dark and Church of Malware, on Waveshare AMOLED, M5Stack StopWatch, Spotpear and Seeed XIAO + Round Display.
 
-The saved theme also controls menus, settings, dialogs, utility screens, BLE Lab and radio tools. Watch designs remain independently swipeable. The boot screen always shows the supplied BWM2 logo alone on black. Custom badge artwork and detection-family colors retain their meaning.
+The saved theme also controls menus, settings, dialogs, utility screens, BLE Lab and radio tools. Watch designs remain independently swipeable. The boot animation on all five profiles now fades in the supplied VTS logo alone on a white field, preserving its black and gray artwork. Custom badge artwork and detection-family colors retain their meaning.
 
-Open **Tools → System → Settings → Theme & radar labels** and scroll to the theme. It saves immediately; tap Home to return to radar. Or connect through the [web tools](https://valleytechsolutions.github.io/Dragon-Detector/#detector), choose Radar appearance → Theme, and save. Older firmware keeps its original three choices until updated. Waveshare Lite cycles the 27 radar palettes/logos with BOOT and saves the selection. It remains radar-only; its LPL theme also includes the central emblem and rotating scales.
+Open **Tools → System → Settings → Theme & radar labels** and scroll to the theme. It saves immediately; tap Home to return to radar. Or connect through the [web tools](https://valleytechsolutions.github.io/Dragon-Detector/#detector), choose Radar appearance → Theme, and save. Older firmware keeps its original three choices until updated. Waveshare Lite cycles all 29 themes with BOOT and saves the selection. Hold BOOT to cycle radar, compact clock, timer, signals and diagnostics; see [Lite controls](WAVESHARE-LITE.md). Its LPL radar includes the central emblem and rotating scales.
 
 | Valleytech | Biscuit Shop | Marauder |
 |---|---|---|
@@ -13,7 +13,7 @@ Open **Tools → System → Settings → Theme & radar labels** and scroll to th
 
 These are CRC-verified 466×466 logical display captures from the Waveshare, not panel photographs. The small logo is sized natively for each panel. The Valleytech silhouette is isolated on the dark radar, rendered in silver without a white backing; Biscuit's white logo uses transparency; the JCMK source retains its black background. [Unmodified sources and attribution](../CREDITS.md#radar-theme-artwork--0131).
 
-Green radar (default), Dragon Ball and Black / gold / red keep their BWM1 logo. Existing saved selections stay unchanged. All twenty-seven themes share the same [26 device-family colors](RADAR-COLORS.md), labels and leader lines. Radio status, target count, battery indicator, RSSI placement, scan scheduling and badge images are unaffected by a theme change.
+Green radar (default), Dragon Ball and Black / gold / red keep their BWM1 logo. Existing saved selections stay unchanged. All twenty-nine themes share the same [26 device-family colors](RADAR-COLORS.md), labels and leader lines. Radio status, target count, battery indicator, RSSI placement, scan scheduling and badge images are unaffected by a theme change.
 
 USB names: `radar theme dragon`, `green`, `gold`, `valleytech`, `biscuit`, `marauder`, `toool`, `church`, `toool-dark`, `covert`, `awok`, `baph0mau5`, `wdgwars`, `ghoststrats`, `n3rdsec`, `halehound`, `waveshare`, `m5stack`, `lab5`, `sasquach`, `nyan`, `dmac`, `seeed`, `dagnazty`, `octo-pig`, `deflock`, or `lpl` (prefix each with `radar theme`). `radar status` reports saved indices 0–26 in that order. Unknown themes are rejected without changing the current selection.
 
@@ -57,7 +57,7 @@ Select **Covert Instruments / McNally** or send `radar theme covert`. It selects
 
 ## AWOK, Baph0Mau5 and WDGWARS · 0.13.6
 
-Each theme colors every menu, setting, dialog and the standard stopwatch. Choosing it selects its matching analog watch; the watch remains independently swipeable. All use 12-hour hands and date-only labels. The BWM2 logo-only startup remains the same.
+Each theme colors every menu, setting, dialog and the standard stopwatch. Choosing it selects its matching analog watch; the watch remains independently swipeable. All use 12-hour hands and date-only labels. The shared VTS logo-only startup is independent of theme.
 
 | Theme / USB name | Design | Watch index |
 |---|---|---|
@@ -74,7 +74,7 @@ Map and signal motifs do not indicate a measured location or bearing. Moon ornam
 
 ## GhostStrats and N3rdsec · 0.13.6
 
-GhostStrats uses black, grey and purple throughout the GUI, with glowing slit eyes on its radar and watch. The analog face has silver/purple hands, faceted details and the requested “Safety is an Illusion.” tagline. N3rdsec uses black, white and gold, with the original skull on both radar and watch, an Arabic dial and broad gold/silver hands. Selecting either theme also selects its watch; both retain the ordinary stopwatch. The shared BWM logo-only startup remains independent of theme. USB commands are `radar theme ghoststrats` (13) and `radar theme n3rdsec` (14); watch indices are 16 and 17.
+GhostStrats uses black, grey and purple throughout the GUI, with glowing slit eyes on its radar and watch. The analog face has silver/purple hands, faceted details and the requested “Safety is an Illusion.” tagline. N3rdsec uses black, white and gold, with the original skull on both radar and watch, an Arabic dial and broad gold/silver hands. Selecting either theme also selects its watch; both retain the ordinary stopwatch. The shared VTS logo-only startup remains independent of theme. USB commands are `radar theme ghoststrats` (13) and `radar theme n3rdsec` (14); watch indices are 16 and 17.
 
 | GhostStrats | N3rdsec |
 |---|---|
@@ -83,7 +83,7 @@ GhostStrats uses black, grey and purple throughout the GUI, with glowing slit ey
 
 ## HaleHound · 0.13.6
 
-Black, hot pink and violet theme the complete GUI. Both original supplied logos appear on the Roman analog watch, with moving layered flames and rising embers on either side. The radar has a matching wordmark and subdued animated hellfire behind signal dots and labels. Flames use monotonic frame time, so setting the clock does not stop their motion. The ordinary stopwatch remains available; the BWM boot logo remains unchanged. USB command: `radar theme halehound` (theme 15, watch 18).
+Black, hot pink and violet theme the complete GUI. Both original supplied logos appear on the Roman analog watch, with moving layered flames and rising embers on either side. The radar has a matching wordmark and subdued animated hellfire behind signal dots and labels. Flames use monotonic frame time, so setting the clock does not stop their motion. The ordinary stopwatch remains available; the shared VTS boot logo remains independent of theme. USB command: `radar theme halehound` (theme 15, watch 18).
 
 | Animated-fire analog watch | Hellfire radar |
 |---|---|
@@ -91,7 +91,7 @@ Black, hot pink and violet theme the complete GUI. Both original supplied logos 
 
 ## Maker and character themes · 0.13.6
 
-All nine themes below carry their colors through menus, settings, dialogs and utilities. Selecting one selects its unique watch. The universal BWM2 startup remains unchanged.
+All nine themes below carry their colors through menus, settings, dialogs and utilities. Selecting one selects its unique watch. The universal VTS startup is shared by all boards.
 
 | Theme / USB name | Theme / watch ID | Design |
 |---|---|---|
@@ -187,3 +187,19 @@ The watch combines both marks with a rope-like gold bezel, Roman chapter ring, s
 | ![LPL balance-scale radar](../web/assets/radar-lpl-0138.png) | ![LPL lockpick watch](../web/assets/watch-lpl-0138.png) | ![LPL Locksport Timer](../web/assets/timer-lpl-0138.png) |
 
 Select **Covert Instruments / LockPickingLawyer**, or send `radar theme lpl` on a full board. It is appended as theme 26 and watch 29, leaving existing saved indices unchanged. Lite includes the palette, both radar logos and rotating scales; full boards include the watch and timer. The supplied original JPEG is retained unchanged and displayed within a circular mask, without a white square. [Attribution](../CREDITS.md#covert-instruments-and-lockpickinglawyer--0138).
+
+## Ghostbusters and Lockpickers United · 0.13.9
+
+The catalog now contains 29 GUI themes and 27 selectable logo watches on full boards. Existing indices stay unchanged: Ghostbusters is theme 27 / watch 30; LPU is theme 28 / watch 31.
+
+| Ghostbusters radar | Ghostbusters watch | LPU radar |
+|---|---|---|
+| ![Proton stream](../web/assets/radar-ghostbusters-0139.png) | ![Containment watch](../web/assets/watch-ghostbusters-0139.png) | ![LPU pin rim](../web/assets/radar-lpu-0139.png) |
+
+| LPU watch | LPU Locksport Timer | LPU menu |
+|---|---|---|
+| ![Silver lockpick hands](../web/assets/watch-lpu-0139.png) | ![Moving pin seconds](../web/assets/timer-lpu-0139.png) | ![Full monochrome GUI](../web/assets/menu-lpu-0139.png) |
+
+Actual Waveshare framebuffer renders. Ghostbusters uses the supplied original no-ghost logo, a red/white proton stream, containment-trap details and a protected 24-hour window. LPU places the supplied emblem prominently, adds two silver pick hands, and uses sixty moving pin positions to count seconds. Radar pins follow the sweep; timer pins follow elapsed attempt time and stop on PAUSE/OPEN. Both include full GUI palettes. Artwork attribution is in [CREDITS](../CREDITS.md).
+
+Lite receives both radar palettes/logos and compact clock/timer layouts, including the LPU pin rim. It does not load the complete full-board watch scenes. [Lite controls](WAVESHARE-LITE.md).

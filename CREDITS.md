@@ -175,3 +175,15 @@ The installer continues to use [ESP Web Tools 10.4.0](https://github.com/esphome
 - The user supplied the LockPickingLawyer seal, retained unchanged as `media/theme-logos/lockpickinglawyer.jpg`, and the CI door mark (identical to the existing `media/theme-logos/covert-instruments.png`). These marks belong to their respective owners; their inclusion does not imply affiliation, endorsement or a grant of trademark rights.
 - Native-size indexed conversion preserves the original artwork. The LPL seal uses a circular display mask; the navy/gold UI, rope-like watch bezel and rotating two-pan balance are code-drawn ornament. The silver hands reuse the Reaper short-hook and McTickler profiles credited above.
 - Included on Waveshare AMOLED, Spotpear, Seeed XIAO Round and M5Stack StopWatch. Waveshare Lite includes the radar palette, CI header, LPL emblem and rotating scales; watches and timers remain full-board features.
+
+## Ghostbusters and Lockpickers United · 0.13.9
+
+The owner supplied [the Ghostbusters no-ghost logo](media/theme-logos/ghostbusters.jpg), originally `ghostbusters-logo-1.jpg`, and [the Lockpickers United logo](media/theme-logos/lockpickers-united.jpg), originally `LPU-logo.jpg`. Both source files are retained byte-for-byte; SHA-256 provenance is in [the artwork ledger](docs/THEME-ARTWORK.json). These artworks/trademarks remain their respective owners' property and are not relicensed under the software's MIT license. Inclusion is an optional appearance theme, without an affiliation or endorsement claim.
+
+The proton stream, containment-trap dial and moving pin-rim animation are original drawing code. LPU uses the already credited Reaper short-hook and McTickler hand profiles. Native indexed assets are now losslessly compressed with this project's bounded LZ4-block encoder/decoder, then decoded once into PSRAM. The compression preserves their prior palette and pixels; it introduces no new artwork source.
+
+Clock recovery uses the bundled Espressif ESP-IDF system-time and `esp_netif_sntp` APIs. No additional external firmware is incorporated. [Espressif system-time documentation](https://docs.espressif.com/projects/esp-idf/en/v5.3.3/esp32s3/api-reference/system/system_time.html).
+
+## Universal VTS startup · 0.13.9
+
+The owner supplied [VTS-official.png](media/VTS-official.png), retained byte-for-byte with its source hash in the artwork ledger. Every board, including Lite, fades in this black/gray logo on a matching white field, with no title or additional words. Native panel-size copies fit entirely inside each circular display. This replaces the historical BWM2 startup; the old original remains archived for attribution.

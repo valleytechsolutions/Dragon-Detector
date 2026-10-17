@@ -1,10 +1,10 @@
 ![Dragon Detector promotional artwork](media/cover.png)
 
-**0.13.8:** [Animated web flasher](https://valleytechsolutions.github.io/Dragon-Detector/), automatic local-time setup after closing the installer, 27 BOOT-button radar themes on [Waveshare Lite](docs/WAVESHARE-LITE.md), a cleaner Covert Instruments radar, and the new [Covert Instruments × LockPickingLawyer locksport collection](docs/THEMES.md#covert-instruments--lockpickinglawyer--0138). Full boards retain all 27 themes and 25 logo watches. [Release notes](docs/RELEASE-0.13.8.md).
+**0.13.9:** Ghostbusters and Lockpickers United, 29 GUI themes and 27 logo watches, a shared VTS boot animation, five BOOT-operated Lite pages, lossless artwork compression, and optional saved-Wi-Fi clock recovery on all four full boards. [Release notes](docs/RELEASE-0.13.9.md) · [Spotpear time setup wiki](https://github.com/valleytechsolutions/Dragon-Detector/wiki/Spotpear-Clock-Setup).
 
 # Dragon Detector · Detection & Hunt Edition
 
-**A Dragon Radar-inspired detector for five ESP32-S3 board profiles, including a radar-only Lite edition.** Observe device signatures, hunt a selected signal, and keep the evidence in local history. Create a custom image badge in the browser, sized for your exact board.
+**A Dragon Radar-inspired detector for five ESP32-S3 board profiles, including a compact button-operated Lite edition.** Observe device signatures, hunt a selected signal, and keep the evidence in local history. Create a custom image badge in the browser, sized for your exact board.
 
 **[Open the web flasher & detector tools](https://valleytechsolutions.github.io/Dragon-Detector/)** · [Install guide](docs/FLASHING.md) · [Controls](docs/USER-GUIDE.md) · [Detection evidence](docs/DETECTION.md) · [Credits](CREDITS.md)
 
@@ -51,7 +51,7 @@ Choose **TOOOL**, **TOOOL Dark**, **Covert Instruments / McNally**, or **DMAC** 
 | **Waveshare ESP32-S3-Touch-AMOLED-1.75C** | 466×466 round AMOLED · **32 MB / BLE Lab** | Touch + BOOT / short PWR | `waveshare` |
 | **M5Stack StopWatch C152** | 466×466 round AMOLED | Touch + yellow/blue keys, haptics | `stopwatch` |
 | **Seeed XIAO ESP32-S3 + Round Display** | 240×240 round LCD | Touch + BOOT, microSD, RTC; no speaker | `xiao_round` |
-| **Waveshare ESP32-S3-LCD-1.28 — Lite** | 240×240 round LCD | **Radar only:** no touch/audio; full brightness, all contacts on one radar | `waveshare_lite` |
+| **Waveshare ESP32-S3-LCD-1.28 — Lite** | 240×240 round LCD | BOOT-operated radar, clock, timer, signals and diagnostics; no touch/audio | `waveshare_lite` |
 
 The Waveshare **C variant** has different reset wiring from the non-C 1.75. Firmware is not interchangeable just because a board contains an ESP32-S3. [Board details and manufacturer links](docs/HARDWARE.md).
 
@@ -60,9 +60,9 @@ The Waveshare **C variant** has different reset wiring from the non-C 1.75. Firm
 | Flash | 32 MB | 16 MB | 16 MB | 8 MB | 16 MB |
 | SD card controls | None | None | Optional CSV/PCAP + browser | Optional CSV/PCAP + browser | None |
 | Internal user storage | 3.94 MiB badge/history + 16 MiB recon | 7.94 MiB shared | 3.94 MiB shared | 1.94 MiB shared | No user file features |
-| Six themes, badge, stopwatch, radio tools, BLE Lab | Yes | Yes | Yes | Yes | Radar only |
+| 29 themes, badge, stopwatch, radio tools, BLE Lab | Yes | Yes | Yes | Yes | Compact radar/clock/timer; no badge or active labs |
 | Sound / haptics | Speaker connector | Speaker + haptics | Speaker connector | Visual alerts | Visual alerts |
-| Clock | RTC | RTC | Software | RTC | No clock UI |
+| Clock | RTC | RTC | Software | RTC | Software + USB sync |
 
 All five share the detection engine. The four full boards share the interactive toolset; storage capacity, controls and peripherals differ. These are partition capacities before filesystem overhead, not guaranteed free space. See the [complete hardware feature matrix](docs/HARDWARE.md) and [measured flash reserve](docs/FLASH-BUDGET.md).
 
@@ -96,20 +96,28 @@ Logical 240×240 captures from the connected XIAO, not panel photographs.
 - **Your requested display defaults:** 100% brightness, always on, no automatic dimming. Settings offers independent dim and screen-off timers, dim level and wake-on-alert.
 - **Hear the hunt:** 26 original device-family melodies, a distinct Axon alert and double heartbeat, signal-dependent pitch/cadence, and a lost-signal cue. Edit, preview, silence or reset RTTTL tones in the [USB audio editor](https://valleytechsolutions.github.io/Dragon-Detector/#sound).
 - **More room for reception:** 384 contacts in PSRAM, bounded packet processing, indexed packet queues and faster lookups across every board. Passive BLE is the default; optional active scanning requests response-only names. Assigned service IDs are recognized in 16-, 32- and exact Bluetooth Base 128-bit encodings. See [checking a Flipper or Pineapple Pager](docs/DEVICE-CHECKS.md).
-- **Shared firmware:** all five profiles use the same detection, tracking, radar renderer and release pipeline. The four full profiles also include history and interactive controls. Lite excludes badge/menu/audio/clock features and persistent history; it keeps scanning with all families enabled. The original three profiles have synthesized RTTTL speaker alerts. Seeed XIAO Round uses visual alerts because it has no speaker. StopWatch adds haptics; Spotpear and Seeed XIAO Round add optional SD CSV/PCAP.
+- **Shared firmware:** all five profiles use the same detection, tracking, radar renderer and release pipeline. The four full profiles also include history and interactive controls. Lite adds compact clock, timing, signal and diagnostic pages while scanning with all families enabled; it excludes badge, touch menus, audio, active labs and persistent history. The original three profiles have synthesized RTTTL speaker alerts. Seeed XIAO Round uses visual alerts because it has no speaker. StopWatch adds haptics; Spotpear and Seeed XIAO Round add optional SD CSV/PCAP.
 - **Badge Studio:** board-specific 240/360/466px previews, fit/fill, drag, zoom, rotate, mirror, fine positioning, background color, alignment guides and PNG export. USB identifies the exact board before a CRC-checked upload; interrupted transfers preserve the previous badge.
 
 **A detected signature does not prove malicious intent, ownership, recording state or a particular product model.** AirTag/Find My family matches may be another compatible accessory; Biscuit Pro and Ultra are not reliably distinguishable from their shared advertisements. Radar radius reflects filtered signal strength, not measured distance. Angle is decorative, not direction. These radios cannot detect silent devices, Bluetooth Classic, or 5/6 GHz Wi-Fi.
 
+## New Ghostbusters and Lockpickers United themes
+
+| Ghostbusters | Lockpickers United | LPU Locksport Timer |
+|---|---|---|
+| ![Ghostbusters containment watch](web/assets/watch-ghostbusters-0139.png) | ![LPU silver pick watch](web/assets/watch-lpu-0139.png) | ![LPU timer with moving pins](web/assets/timer-lpu-0139.png) |
+
+Actual Waveshare firmware framebuffers. Ghostbusters has a proton-stream radar and no-ghost containment dial. LPU has a prominent original emblem, silver lockpick hands, and sixty rim pins that lift to mark seconds on the watch and timer. The timer pauses the pins with the attempt. [Full showcase](docs/THEMES.md#ghostbusters-and-lockpickers-united--0139).
+
 ## Stopwatch, clock and orientation
 
-**Tools → Utilities** now includes a real start/pause/lap stopwatch and twenty-four swipeable watch faces, including TOOOL, Church of Malware binary, character, maker and community logo designs. Both TOOOL themes and Covert Instruments × McNally offer Locksport Timer; DMAC offers Locksport Counter with the same OPEN and SPLIT controls. All analog dials use 12 hours. JCMK military, DeFlock, 0ct0’s Pig and the Covert hybrid’s digital window use 24-hour time. Connecting Studio automatically syncs local date, time and timezone. M5Stack yellow/blue and Waveshare BOOT/short PWR operate timing controls; the four full-feature boards also have touch buttons. The latest 50 laps remain available while detection keeps running. Settings provides RTC date/time and local UTC offset, saved 0°/90°/180°/270° orientation on the four full-feature boards (Lite has a fixed orientation). [Controls, behavior and hardware limits](docs/STOPWATCH-CLOCK-ORIENTATION.md).
+**Tools → Utilities** now includes a real start/pause/lap stopwatch and twenty-seven swipeable logo watch faces, including TOOOL, Church of Malware binary, character, maker and community logo designs. Both TOOOL themes and Covert Instruments × McNally offer Locksport Timer; DMAC offers Locksport Counter with the same OPEN and SPLIT controls. All analog dials use 12 hours. JCMK military, DeFlock, 0ct0’s Pig and the Covert hybrid’s digital window use 24-hour time. Connecting Studio automatically syncs local date, time and timezone. M5Stack yellow/blue and Waveshare BOOT/short PWR operate timing controls; the four full-feature boards also have touch buttons. The latest 50 laps remain available while detection keeps running. Settings provides RTC date/time and local UTC offset, saved 0°/90°/180°/270° orientation on the four full-feature boards (Lite has a fixed orientation). [Controls, behavior and hardware limits](docs/STOPWATCH-CLOCK-ORIENTATION.md).
 
 | Chronograph · 0.13.3 | ValleyTech clock · 0.13.6 |
 |---|---|
 | ![Chronograph stopwatch](web/assets/watch-stopwatch-0133.png) | ![ValleyTech analog watch](web/assets/watch-valleytech-0136.png) |
 
-Actual CRC-verified Waveshare firmware renders. [Five faces and easy time setup](docs/STOPWATCH-CLOCK-ORIENTATION.md). Orientation changes only through Settings or USB tools. Connecting the current Studio copies the computer's local time; resync after daylight-saving changes or a software-clock restart.
+Actual CRC-verified Waveshare firmware renders. [Clock faces and easy time setup](docs/STOPWATCH-CLOCK-ORIENTATION.md). Orientation changes only through Settings or USB tools. Connecting the current Studio copies the computer's local time; resync after daylight-saving changes or complete power loss without another time source.
 
 ## Choose your radar
 

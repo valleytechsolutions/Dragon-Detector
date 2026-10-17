@@ -18,9 +18,10 @@
 extern void scr_lvgl_init();
 extern void set_brightness(uint8_t);
 extern const lv_img_dsc_t vts_logo;
-extern const lv_img_dsc_t radar_logo,radar_logo_valleytech,radar_logo_biscuit,radar_logo_marauder,radar_logo_toool,radar_logo_church,watch_logo_church,radar_logo_ci,watch_logo_ci,watch_logo_mcnally;
-extern const lv_img_dsc_t boot_bwm_logo,watch_logo_lpl;
-extern const lv_img_dsc_t radar_logo_awok,watch_logo_awok,radar_logo_baph,watch_logo_baph,radar_logo_wdgwars,watch_logo_wdgwars,radar_logo_n3rdsec,watch_logo_n3rdsec,radar_logo_halehound,watch_logo_halehound,watch_logo_halehound_splash,radar_logo_waveshare,watch_logo_waveshare,radar_logo_m5stack,watch_logo_m5stack,radar_logo_lab5,watch_logo_lab5,radar_logo_sasquach,watch_logo_sasquach,radar_logo_nyan,watch_logo_nyan,radar_logo_dmac,watch_logo_dmac,radar_logo_seeed,watch_logo_seeed,radar_logo_dagnazty,watch_logo_dagnazty,radar_logo_deflock,watch_logo_deflock;
+extern const lv_img_dsc_t radar_logo;
+extern lv_img_dsc_t radar_logo_valleytech,radar_logo_biscuit,radar_logo_marauder,radar_logo_toool,radar_logo_church,watch_logo_church,radar_logo_ci,watch_logo_ci,watch_logo_mcnally;
+extern lv_img_dsc_t watch_logo_lpl;
+extern lv_img_dsc_t radar_logo_awok,watch_logo_awok,radar_logo_baph,watch_logo_baph,radar_logo_wdgwars,watch_logo_wdgwars,radar_logo_n3rdsec,watch_logo_n3rdsec,radar_logo_halehound,watch_logo_halehound,watch_logo_halehound_splash,radar_logo_waveshare,watch_logo_waveshare,radar_logo_m5stack,watch_logo_m5stack,radar_logo_lab5,watch_logo_lab5,radar_logo_sasquach,watch_logo_sasquach,radar_logo_nyan,watch_logo_nyan,radar_logo_dmac,watch_logo_dmac,radar_logo_seeed,watch_logo_seeed,radar_logo_dagnazty,watch_logo_dagnazty,radar_logo_deflock,watch_logo_deflock;
 // The layout is authored for the 360 px round panel. S() maps it onto the
 // board's panel; label/button/row helpers apply it, so callers pass 360 px units.
 #if SCREEN_RES<=240
@@ -64,9 +65,10 @@ static int menuTab=0,filter=0,selected=-1,filePage=0,brightness=100,historyPage=
 static bool radarLabels=true;
 static uint8_t radarTheme=1;
 static bool covert(){return radarTheme==9;}
+static bool lpu(){return radarTheme==28;}
 static bool lpl(){return radarTheme==26;}
 static bool dmac(){return radarTheme==21;}
-static bool locksport(){return radarTheme==6||radarTheme==8||covert()||dmac()||lpl();}
+static bool locksport(){return radarTheme==6||radarTheme==8||covert()||dmac()||lpl()||lpu();}
 static bool locksportDark(){return locksport()&&radarTheme!=6;}
 static uint32_t locksportBg(){return uiColors().bg;}
 static uint32_t locksportInk(){return uiColors().ink;}
@@ -188,7 +190,7 @@ static void updateTimer(){
     if(enabled)lv_obj_clear_state(timerSecondary,LV_STATE_DISABLED);else lv_obj_add_state(timerSecondary,LV_STATE_DISABLED);
     lv_obj_set_style_text_color(lv_obj_get_child(timerSecondary,0),color(!enabled&&locksportDark()?uiColors().muted:uiColors().onAccent),0);
   }
-  if(auto* l=stopwatch.newest()){durationText(split,sizeof(split),l->split);snprintf(lap,sizeof(lap),"%s %lu   %s",locksport()?"SPLIT":"LAP",l->number,split);}else strcpy(lap,locksport()?"Start when your pick is ready":"No laps yet");lv_label_set_text(timerLap,lap);
+  if(auto* l=stopwatch.newest()){durationText(split,sizeof(split),l->split);snprintf(lap,sizeof(lap),"%s %lu   %s",locksport()?"SPLIT":"LAP",l->number,split);}else strcpy(lap,locksport()?(stopwatch.running?"OPEN stops this attempt":stopwatch.elapsed(0)?"Resume when ready":"Start when your pick is ready"):"No laps yet");lv_label_set_text(timerLap,lap);
 }
 static void resetStopwatch(){
   if(stopwatch.running||!stopwatch.elapsed(stopwatchNow())||resetBox)return;
@@ -229,7 +231,7 @@ static void radarPick(lv_draw_ctx_t* ctx,float radians){
 }
 static void selectRadarTheme(uint8_t selected){
   radarTheme=selected;dismissNotice();uiApplyTheme(radarTheme);settings.putUChar("radar-theme",radarTheme);
-  if(locksport()){watchFace=lpl()?29:dmac()?24:covert()?12:locksportDark()?11:9;settings.putUChar("watch-face",watchFace);}
+  if(locksport()){watchFace=lpu()?31:lpl()?29:dmac()?24:covert()?12:locksportDark()?11:9;settings.putUChar("watch-face",watchFace);}
   else if(radarTheme==7){watchFace=10;settings.putUChar("watch-face",watchFace);}
   else if(radarTheme>=10){watchFace=radarTheme+3;settings.putUChar("watch-face",watchFace);}
 }
@@ -261,12 +263,8 @@ static void loadFiles(){
   if(dir&&dir.isDirectory()){File f=dir.openNextFile();while(f){if(fileCount>=96){filesTruncated=true;f.close();break;}String name=f.name();String path=directory=="/"?"/"+name:directory+"/"+name;files[fileCount++]={path,f.isDirectory(),uint32_t(f.size())};f.close();f=dir.openNextFile();}}dir.close();xSemaphoreGive(sdMutex);
 }
 #endif
-static void drawStartup(){
-  lv_obj_set_style_bg_color(root,color(0x000000),0);
-  auto* img=lv_img_create(root);lv_img_set_src(img,&boot_bwm_logo);lv_obj_center(img);
-  lv_obj_clear_flag(img,LV_OBJ_FLAG_CLICKABLE);
-  lv_anim_t a;lv_anim_init(&a);lv_anim_set_var(&a,img);lv_anim_set_values(&a,LV_OPA_TRANSP,LV_OPA_COVER);lv_anim_set_time(&a,900);lv_anim_set_exec_cb(&a,[](void* o,int32_t v){lv_obj_set_style_opa((lv_obj_t*)o,v,0);});lv_anim_start(&a);
-}
+#include "startup_logo.inc"
+static void drawStartup(){showStartupLogo(root);}
 static void build(){
   // BLE Lab owns its complete screen and returns before the shared mic label
   // is rebuilt. Never retain a label from the page that is about to be freed.
@@ -471,7 +469,7 @@ static void build(){
   }else if(page==Stopwatch){
     dismissNotice();lv_obj_set_style_bg_color(root,color(locksport()?locksportBg():uiColors().bg),0);buildChronographFrame();
     if(locksport()){
-      if(!covert()&&!dmac()&&!lpl()){circleLogo(root,&radar_logo_toool,20);centered(label(root,"LOCKSPORT TIMER",48,74,264,F20,locksportAccent()));}
+      if(!covert()&&!dmac()&&!lpl()&&!lpu()){circleLogo(root,&radar_logo_toool,20);centered(label(root,"LOCKSPORT TIMER",48,74,264,F20,locksportAccent()));}
       button(root,LV_SYMBOL_HOME,149,307,62,33,1);
     }else title("CHRONOGRAPH","Precision stopwatch");
     timerState=label(root,"",50,locksport()?106:98,260,F12,locksport()?locksportAccent():uiColors().accent);centered(timerState);
@@ -501,7 +499,7 @@ static void build(){
   }else if(page==ClockSettings){
     dismissNotice();title("DATE & TIME","Automatic setup with your computer");
     auto* help=label(root,"1. Open Dragon Detector Studio.\n2. Connect your detector by USB.\n3. Click Connect detector.\n\nLocal time and date sync for you.",58,100,244,F14);centered(help);
-    auto* info=label(root,rtcAvailable?"RTC keeps time across restarts.":"Sync after each restart.",58,213,244,F12,uiColors().accent);centered(info);
+    auto* info=label(root,rtcAvailable?"RTC keeps time across restarts.":"Resync after complete power loss.",58,213,244,F12,uiColors().accent);centered(info);
     button(root,"Set manually",66,249,142,36,136);button(root,"Clock",218,249,76,36,133);
   }else if(page==ClockWheels){
     buildClockWheels();
@@ -707,6 +705,7 @@ void uiShow(const String& name){if(name=="startup"){go(Startup);page=Boot;return
   if(name=="badge")go(Badge);else if(name=="radar")go(Radar);else if(name=="menu")go(Menu);else if(name=="wifi"){filter=1;go(Devices);}else if(name=="ble"){filter=2;go(Devices);}else if(name=="audio")go(Audio);else if(name=="alerts")go(Alerts);else if(name=="channels")go(Channels);else if(name=="about")go(About);else if(name=="settings")go(Settings);else if(name=="hunt")go(Hunt);else if(name=="detectors")go(Detectors);else if(name=="history")go(History);else if(name=="display")go(Display);else if(name=="health")go(Diagnostics);else if(name=="targets"){filter=0;devicePage=0;go(Devices);}
 }
 void uiBegin(){
+  if(!prepareThemeLogos())Serial.println("THEME_LOGOS PSRAM allocation failed / fallback logos");
   settings.begin("dd-ui",false);
   watchFace=settings.getUChar("watch-face",0);if(!watchFaceAllowed(watchFace)){watchFace=0;settings.putUChar("watch-face",watchFace);}
   if(!settings.getBool("panel-v04",false)){settings.putUChar("brightness",100);settings.putBool("panel-v04",true);}

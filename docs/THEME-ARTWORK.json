@@ -187,5 +187,26 @@
     "sha256": "17a39b35e4b7fca5c0474f8f183a3509a271c11e94c6106a3eabfddb0b7cb21c",
     "source_bytes_match": true,
     "direct_copy_before_source_replacement": false
+  },
+  {
+    "file": "media/theme-logos/ghostbusters.jpg",
+    "supplied_name": "ghostbusters-logo-1.jpg",
+    "sha256": "6501631cbd7745bd640aa550830ee4ee6fda57b614e2a0bd7fb88187daf46633",
+    "source_bytes_match": true,
+    "direct_copy_before_source_replacement": true
+  },
+  {
+    "file": "media/theme-logos/lockpickers-united.jpg",
+    "supplied_name": "LPU-logo.jpg",
+    "sha256": "22d481c1c8c71285d4a65d900caa0099d8976f9feac19a17a7f667cda1d31c12",
+    "source_bytes_match": true,
+    "direct_copy_before_source_replacement": true
+  },
+  {
+    "file": "media/VTS-official.png",
+    "supplied_name": "VTS OFIICIAL LOGO.png",
+    "sha256": "704dc0daf32a201379dd2c18c7756b44fc3cf215ebcd9839cb7d6abfb7167748",
+    "source_bytes_match": true,
+    "direct_copy_before_source_replacement": true
   }
 ]

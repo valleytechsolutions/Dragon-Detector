@@ -6,17 +6,28 @@ First supported in **0.9.4**, build profile `waveshare_lite`. Use the [exact non
 
 Actual 240×240 framebuffer capture from the connected board, not a panel photograph. The displayed signal is a protocol candidate; it does not identify a particular accessory model.
 
-## A dedicated radar
+## Five BOOT-operated pages · 0.13.9
 
-- Boots straight to the saved radar theme (green with BWM logo on first use), with live sweep and Wi-Fi/BLE reception status. Fine range rings, segmented arcs and edge ticks replace the dense grid; every device keeps its unique family color.
-- Always 100% backlight; no dimming or timeout. The displayed **100% is brightness, not battery charge**.
-- All contacts appear together as family-colored dots. Up to four priority devices receive readable tags and leaders; Axon is first. Trackers remain small dots. There are no automatic pages. Lite has no touch hardware, so tap-to-reveal is available only on the full touch boards.
-- Signal radius uses the same median-filtered, smoothed RSSI as the full firmware. Stronger signals move inward. Neither the angle nor radius is a measured direction or distance.
-- All 26 detector families remain enabled, including the 0.9.3 Axon priority/receive fixes, ALPR, Find My accessories, Ring, Flipper and Wi-Fi/BLE activity detection. [Signature coverage and limitations](DETECTION.md) apply equally to Lite.
-- Passive BLE scanning and passive Wi-Fi reception alternate on the one shared radio, with Wi-Fi channels 1–11. Reception continues while drawing, but alternating modes/channel hopping still create listening gaps. No active probing, wireless attacks or fox transmitter.
-- No touch interface, menus, badge mode, stopwatch, RTC interface, motion rotation, speaker code, SD capture, or persistent history. Volatile contacts/alerts reset at reboot. Old full-UI preferences cannot disable families, dim the screen or start a badge.
-- **Press BOOT to cycle all 27 radar palettes and logos** (0.13.8; 26 themes in 0.13.7). Each press advances once; holding it does not repeat. The theme name appears briefly, and the selection is saved one second after the last change. RESET restarts the board. Hold BOOT while tapping RESET for ROM download/recovery as before; release BOOT before normal theme controls arm.
-- Lite uses a compact shared instrument layout, including native GhostStrats slit eyes, an ASCII octopus, and the dual-logo LPL radar with rotating scales. It does not load the full boards’ watch faces, locksport timers or elaborate animated scenes.
+Hold BOOT for about 0.8 seconds to cycle **Radar → Clock → Timer → Signals → Diagnostics**. Release between holds. Detection continues on each page. Boot still opens the saved radar theme at full brightness; 100% means backlight, not battery charge.
+
+| Page | Tap | Double tap | Hold |
+|---|---|---|---|
+| Radar / Clock | Next of 29 themes | Next theme | Next page |
+| Stopwatch, running | Pause | Lap | Next page |
+| Locksport timer, running | Pause | OPEN (final split and stop) | Next page |
+| Timer, paused | Start/resume | Reset attempt and laps | Next page |
+| Signals | Next recent visible contact | Next contact | Next page |
+| Diagnostics | No action | No action | Return to radar |
+
+Single taps wait 300 ms to distinguish double taps. BOOT held during startup is ignored until released; BOOT + RESET download/recovery remains available. Themes save one second after the last change.
+
+The compact clock has a logo, analog dial, 24-hour readout and separate date. GhostStrats and 0ct0's Pig use native marks. Covert/DMAC/LPL/LPU have compact pick-style hands; LPU has moving pin seconds. These share a lightweight layout instead of the full boards' elaborate watch scenes. Clock sync from the installer or Studio is supported; Lite has no external RTC or Wi-Fi recovery. Time survives a powered software restart, but complete power loss requires USB sync again. The UTC offset is saved.
+
+Timer durations are monotonic and independent of clock corrections. The last 50 laps/splits remain in RAM until reset/reboot. TOOOL, TOOOL Dark, Covert/McNally, CI/LPL, DMAC and LPU use locksport behavior. A moving rim indicator follows elapsed time and freezes on pause/OPEN; LPU uses 60 animated pins.
+
+Radar retains all 26 detector families and displays recent contacts using filtered RSSI. Signal radius and decorative sweep angle are not measured distance or bearing. The signal page shows name/family, protocol, RSSI, MAC and age; diagnostics shows reception/drop counters, memory, uptime and clock state. Passive Wi-Fi/BLE alternate on the shared 2.4 GHz radio; channel hopping creates listening gaps. There is no touch, badge, speaker, SD capture, active lab or persistent history.
+
+The new pages are build/native-test checked. Physical Lite startup and gesture testing remain unverified; troubleshooting was stopped at the owner's request.
 
 ## Hardware configuration
 
@@ -30,7 +41,7 @@ Actual 240×240 framebuffer capture from the connected board, not a panel photog
 | USB | CH343P UART bridge, 115200 diagnostics; native USB CDC disabled |
 | Input / sound | BOOT / GPIO 0, active low with pull-up; no touch or onboard speaker/buzzer |
 
-An 11,520-byte display tile uses internal RAM; the 384-contact store and receive queues use PSRAM. Animation time and RSSI positions stay fixed while the tiles of one frame are drawn. Radar artwork is rendered at startup and on a theme change into the same reusable 115,200-byte PSRAM cache. Animation is capped at twelve updates per second; the earlier green-radar hardware check measured about 66 ms per draw, down from 101 ms before this refinement. This leaves time between frames for reception; no menu objects, audio tasks or flash history journal run in Lite. The QMI8658 is intentionally unused. Battery percentage is not inferred from an uncalibrated ADC.
+An 11,520-byte display tile uses internal RAM; the 384-contact store and receive queues use PSRAM. Animation time and RSSI positions stay fixed while the tiles of one frame are drawn. Radar artwork is rendered at startup and on a theme change into the same reusable 115,200-byte PSRAM cache. Animation is capped at twelve updates per second; the earlier green-radar hardware check measured about 66 ms per draw, down from 101 ms before this refinement. This leaves time between frames for reception; a fixed set of lightweight page objects is reused; no audio tasks or flash history journal run in Lite. The QMI8658 is intentionally unused. Battery percentage is not inferred from an uncalibrated ADC.
 
 ## Install and recover
 
@@ -40,6 +51,8 @@ Fresh installation erases the previous firmware/data. Back up a third-party port
 
 Build: `python -m platformio run -e waveshare_lite`. Package: `python tools/build_release.py --board waveshare_lite`. Factory/update manifests and SHA-256 checksums are published with the other boards. The badge editor recognizes Lite but disables incompatible controls.
 
-Read-only USB diagnostics: `status`, `contacts`, `selftest`, `axon status`, `traffic status`, `detector status`, `radar status`, `display status`, `ui status`, `loop diagnostics`, `badge info`. The developer `screenshot` command briefly pauses reception for its serial transfer and resumes it afterward. Commands that pause scanning, enter Hunt, transmit, change display settings or upload a badge are rejected.
+Read-only USB diagnostics: `status`, `contacts`, `selftest`, `axon status`, `traffic status`, `detector status`, `radar status`, `display status`, `ui status`, `loop diagnostics`, `badge info`. The developer `screenshot` command briefly pauses reception for its serial transfer and resumes it afterward. Timing commands include `time <epoch>`, `clock offset <minutes>`, `clock status`, `stopwatch start/pause/lap/finish/reset/status/laps`, and `screen radar/clock/stopwatch/signals/diagnostics` (choose one command alternative). `system restart` restarts when idle. Commands that enter Hunt, transmit, change display settings or upload a badge are rejected.
 
 See [validation status](VALIDATION.md) for checks actually completed. A matching signature is evidence of a radio pattern, not proof of malicious intent or recording state.
+
+All five profiles share the supplied VTS logo-only fade-in at startup. Lite switches to radar automatically after the brief splash; BOOT recovery remains unchanged.

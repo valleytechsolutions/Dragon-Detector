@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {syncInstalledClock,finishInstallSession} from '../web/install-clock.js';
 import {boardProfiles} from '../web/board-profiles.js';
-function rig(board='waveshare',{rtc=1,offset=345,valid=1,identity,drift=0,openFails=0}={}){
+function rig(board='waveshare',{rtc=1,offset=345,valid=1,identity,drift=0,openFails=0,version='0.13.7'}={}){
   const events=[],writes=[],now=new Date('2026-10-16T20:10:30Z');now.getTimezoneOffset=()=>-offset;
   const epoch=now.getTime()/1000;let openings=0;
   const options={now:()=>now,delay:async()=>{},makeLink:()=>({
@@ -10,7 +10,7 @@ function rig(board='waveshare',{rtc=1,offset=345,valid=1,identity,drift=0,openFa
     async close(){events.push('close');},
     async write(command){writes.push(command);this.command=command;},
     async wait(match){
-      const reply=this.command==='badge info'?`BADGE_INFO 0.13.7 ${boardProfiles[board].size} READY ${identity||boardProfiles[board].firmwareName}`:
+      const reply=this.command==='badge info'?`BADGE_INFO ${version} ${boardProfiles[board].size} ${boardProfiles[board].lite?(version==='0.13.7'?'RADAR_ONLY':'LITE'):'READY'} ${identity||boardProfiles[board].firmwareName}`:
         this.command.startsWith('time ')?'TIME_OK':this.command.startsWith('clock offset ')?'CLOCK_OK':
         this.command==='clock status'?`CLOCK_STATUS rtc=${rtc} valid=${valid} epoch=${epoch+drift} offset=${offset}`:'ORIENTATION_STATUS manual=1 degrees=0';
       assert.ok(match(reply),reply);return reply;
@@ -28,10 +28,10 @@ test('post-install clock verifies each full board, current offset and RTC state'
     }
   }
 });
-test('installer ownership is released before clock connection; opt-out and Lite never write',async()=>{
+test('installer ownership is released before clock connection; opt-out never writes',async()=>{
   const r=rig();await finishInstallSession({async close(){r.events.push('installer-close');}},'waveshare',true,r.options);
   assert.deepEqual(r.events,['installer-close','open','close']);
-  for(const [board,enabled] of [['waveshare',false],['waveshare_lite',true]]){
+  for(const [board,enabled] of [['waveshare',false],['waveshare_lite',false]]){
     const r=rig();assert.deepEqual(await finishInstallSession({async close(){r.events.push('installer-close');}},board,enabled,r.options),{skipped:true});
     assert.deepEqual(r.events,['installer-close']);assert.deepEqual(r.writes,[]);
   }
@@ -57,4 +57,12 @@ test('stale or invalid readback is never reported as successful setup',async()=>
     const r=rig('waveshare',details);await assert.rejects(syncInstalledClock({},'waveshare',r.options),/readback/);
     assert.equal(r.events.filter(x=>x==='close').length,3);
   }
+});
+
+test('Lite timing is version gated after exact identity verification',async()=>{
+ const old=rig('waveshare_lite');const result=await syncInstalledClock({},'waveshare_lite',old.options);
+ assert.equal(result.skipped,true);assert.deepEqual(old.writes,['badge info']);assert.deepEqual(old.events,['open','close']);
+ const current=rig('waveshare_lite',{version:'0.13.9',rtc:0});
+ const synced=await syncInstalledClock({},'waveshare_lite',current.options);assert.equal(synced.valid,true);assert.equal(synced.rtc,false);
+ assert.deepEqual(current.writes,['badge info',`time ${current.epoch}`,'clock offset 345','clock status','orientation status']);
 });

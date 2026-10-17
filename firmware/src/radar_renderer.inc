@@ -17,6 +17,7 @@ static void disc(lv_draw_ctx_t* ctx,int x,int y,int r,uint32_t c,int opa=255){
   lv_draw_rect_dsc_t d;lv_draw_rect_dsc_init(&d);d.radius=LV_RADIUS_CIRCLE;d.bg_color=color(c);d.bg_opa=opa;lv_area_t a{(lv_coord_t)(x-r),(lv_coord_t)(y-r),(lv_coord_t)(x+r),(lv_coord_t)(y+r)};lv_draw_rect(ctx,&d,&a);
 }
 #include "lpl_radar.inc"
+#include "containment_radar.inc"
 static const char* radarFamilyName(Family f){
 #if SCREEN_RES<=240
   // Keep the family on one line, leaving the second line for signal/age.
@@ -93,7 +94,7 @@ static void radarDraw(lv_event_t* e){
   else if(radarTheme==23)radarDagArt(ctx);
   else if(radarTheme==24)radarPigArt(ctx);
   else if(radarTheme==25)radarDeflockArt(ctx);
-  else if(radarTheme==26){} // Emblem is drawn once below the rings.
+  else if(radarTheme>=26){} // Emblem is drawn once below the rings.
   else{
     for(int side:{-1,1})for(int n=0;n<4;++n){int y=115+n*30,x=180+side*(102+n%2*12),elbow=x-side*32;
       disc(ctx,S(x),S(y),S(4),0x686868);disc(ctx,S(x),S(y),S(2),0x080808);
@@ -108,7 +109,9 @@ static void radarDraw(lv_event_t* e){
   // Sweep and pulse are animation, not measurements of bearing or RF activity.
   static uint32_t sweepAt=0;if(radioEnabled)sweepAt=now;
   float angle=(sweepAt%6000)*.00104719755f,dx=cosf(angle),dy=sinf(angle);
-  if(radarTheme==26)radarLplScales(ctx,(sweepAt%12000)*.000523598776f);
+  if(radarTheme==28){locksportPinRim(ctx,uint64_t(sweepAt%6000)*10000);lpuEmblem(ctx,150);}
+  if(radarTheme==27)ghostProtonSweep(ctx,angle,sweepAt);
+  else if(radarTheme==26)radarLplScales(ctx,(sweepAt%12000)*.000523598776f);
 #ifndef BOARD_RADAR_LITE
   else if(radarTheme==9)radarPick(ctx,angle);
   else if(radarTheme==24)radarPigSweep(ctx,angle);

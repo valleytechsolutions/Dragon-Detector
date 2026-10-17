@@ -66,9 +66,11 @@ static const WatchPalette watches[]={
   {"DAGNAZTY",0xf7f7f5,0x101010,0x161616,0x73736d,true},
   {"0ct0's Pig",0x080808,0xffdbe9,0xff89b6,0x9b5c78,false},
   {"DEFLOCK",0x152131,0xf0f6fb,0xb1d8ec,0x56788f,false},
-  {"CI / LOCKPICKINGLAWYER",0x030914,0xfff3d4,0xecc75b,0x8b7137,true}
+  {"CI / LOCKPICKINGLAWYER",0x030914,0xfff3d4,0xecc75b,0x8b7137,true},
+  {"GHOSTBUSTERS",0x000000,0xffffff,0xff4b48,0x82414b,true},
+  {"LOCKPICKERS UNITED",0x000000,0xffffff,0xe5e9ec,0x687177,true}
 };
-static constexpr uint8_t WatchFaces[]={0,1,2,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29};
+static constexpr uint8_t WatchFaces[]={0,1,2,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31};
 static constexpr unsigned WatchCount=sizeof(WatchFaces)/sizeof(WatchFaces[0]);
 static bool watchFaceAllowed(unsigned face){for(auto id:WatchFaces)if(id==face)return true;return false;}
 static unsigned watchFacePosition(){for(unsigned i=0;i<WatchCount;++i)if(WatchFaces[i]==watchFace)return i;return 0;}
@@ -296,8 +298,10 @@ static void watchCovert(lv_draw_ctx_t* ctx,const dragon::Calendar& d,bool valid)
 #include "community_dials.inc"
 #include "octopig.inc"
 #include "lpl_watch.inc"
+#include "containment_watch.inc"
 static void watchDraw(lv_event_t* e){
   auto* ctx=lv_event_get_draw_ctx(e);const auto& p=watches[watchFace];dragon::Calendar d;clockLocal(d);bool valid=wallTime()!=0;char text[64];
+  if(watchFace==30||watchFace==31){watchContainment(ctx,d,valid);return;}
   if(watchFace==29){watchLpl(ctx,d,valid);return;}
   if(watchFace==28){watchDeflock(ctx,d,valid);return;}
   if(watchFace==27){watchPig(ctx,d,valid);return;}
@@ -351,26 +355,32 @@ static void buildWatch(){
   watchDial=lv_obj_create(root);lv_obj_remove_style_all(watchDial);lv_obj_set_size(watchDial,SCREEN_RES,SCREEN_RES);lv_obj_clear_flag(watchDial,LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_GESTURE_BUBBLE);
   lv_obj_add_event_cb(watchDial,watchDraw,LV_EVENT_DRAW_MAIN,nullptr);lv_obj_add_event_cb(watchDial,watchGesture,LV_EVENT_GESTURE,nullptr);
   if(watchFace==27){pigFrameAt=millis();pigNextAt=millis();lv_obj_add_event_cb(watchDial,pigTap,LV_EVENT_CLICKED,nullptr);}
-  bool compact=watchFace==10||watchFace==12||watchFace==27||watchFace==28||watchFace==29;int y=watchFace==27?315:(watchFace==12||watchFace==28||watchFace==29)?326:watchFace==10?317:279,h=(watchFace==12||watchFace==28||watchFace==29)?21:27;
+  bool compact=watchFace==10||watchFace==12||watchFace==27||watchFace==28||watchFace>=29;int y=watchFace==27?315:(watchFace==12||watchFace==28||watchFace>=29)?326:watchFace==10?317:279,h=(watchFace==12||watchFace==28||watchFace>=29)?21:27;
   auto* b=button(watchDial,watchFace==27?"[+]":LV_SYMBOL_SETTINGS,watchFace==27?126:compact?145:108,y,watchFace==27?48:compact?34:44,h,160);auto* home=button(watchDial,watchFace==27?"[=]":LV_SYMBOL_LIST,watchFace==27?186:compact?181:208,y,watchFace==27?48:compact?34:44,h,2);
-  for(auto* o:{b,home}){lv_obj_set_style_bg_opa(o,LV_OPA_TRANSP,0);lv_obj_set_style_border_width(o,0,0);lv_obj_set_style_text_color(lv_obj_get_child(o,0),color(p.muted),0);}
+  for(auto* o:{b,home}){
+    if(watchFace>=29)lv_obj_set_y(o,S(310));
+    lv_obj_set_style_pad_all(o,0,0);lv_obj_set_style_bg_opa(o,LV_OPA_TRANSP,0);lv_obj_set_style_border_width(o,0,0);
+    auto* icon=lv_obj_get_child(o,0);lv_obj_set_style_text_font(icon,uiFont(F12),0);lv_obj_set_style_text_color(icon,color(p.muted),0);lv_obj_center(icon);
+  }
 }
 static void watchTick(){
   if(!watchDial)return;
   if(watchFace==27)pigTick(millis());
-  static uint32_t lastEpoch=0;uint32_t epoch=wallTime(),now=millis();bool mechanism=watchFace==8||watchFace==18;
+  static uint32_t lastEpoch=0;uint32_t epoch=wallTime(),now=millis();bool mechanism=watchFace==8||watchFace==18||watchFace>=30;
   if(epoch!=lastEpoch){lastEpoch=epoch;watchFrameAt=now;lv_obj_invalidate(watchDial);}
   else if(mechanism&&now-watchFrameAt>=200){watchFrameAt=now;
     // The clock hands are redrawn over animated ornament in the same clipped pass.
     if(watchFace==18){
       for(int x:{61,247}){lv_area_t flame{(lv_coord_t)S(x),(lv_coord_t)S(132),(lv_coord_t)S(x+52),(lv_coord_t)S(253)};lv_obj_invalidate_area(watchDial,&flame);}return;
     }
+    if(watchFace>=30){lv_obj_invalidate(watchDial);return;}
     // Redraw only the mechanism between seconds, with the hands on top.
     lv_area_t area{(lv_coord_t)S(78),(lv_coord_t)S(141),(lv_coord_t)S(282),(lv_coord_t)S(253)};lv_obj_invalidate_area(watchDial,&area);
   }
 }
 static void updateTimerOrbit(uint64_t elapsed){
   if(!timerOrbit)return;
+  if(lpu()){lv_obj_invalidate(timerOrbit);return;}
   // A ten-second lap follows monotonic attempt time: pause/OPEN freeze it,
   // resume continues from that position, and reset returns it to twelve.
   float turn=(elapsed%10000000ull)/10000000.f;
@@ -392,13 +402,15 @@ static void buildChronographFrame(){
       watchLogo(ctx,radar_logo_ci,20,0,false,false,-28);watchLogo(ctx,watch_logo_lpl,14,0,false,true,25);
       watchText(ctx,"LOCKSPORT TIMER",48,74,264,F20,uiColors().accent);
     }
+    if(lpu()&&page==Stopwatch){watchLogo(ctx,radar_logo_lpu,14);watchText(ctx,"LOCKSPORT TIMER",48,74,264,F20,uiColors().accent);}
     if(dmac()&&page==Stopwatch){watchLogo(ctx,radar_logo_dmac,20,0,false,true);watchText(ctx,"LOCKSPORT COUNTER",38,74,284,F20,uiColors().accent);}
     if(locksport())for(float angle:{.125f,.375f,.625f,.875f}){auto at=watchPolar(angle,171);watchScrew(ctx,at.x,at.y,uiColors().accent,locksportBg());}
   },LV_EVENT_DRAW_MAIN,nullptr);
   if(locksport()&&page==Stopwatch){
     timerOrbit=lv_obj_create(frame);lv_obj_remove_style_all(timerOrbit);lv_obj_set_size(timerOrbit,SCREEN_RES,SCREEN_RES);
     lv_obj_clear_flag(timerOrbit,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);
-    for(unsigned i=0;i<7;++i){
+    if(lpu())lv_obj_add_event_cb(timerOrbit,[](lv_event_t* e){locksportPinRim(lv_event_get_draw_ctx(e),stopwatch.elapsed(stopwatchNow()));},LV_EVENT_DRAW_MAIN,nullptr);
+    else for(unsigned i=0;i<7;++i){
       auto* dot=lv_obj_create(timerOrbit);lv_obj_remove_style_all(dot);int size=S(i==6?6:i>3?4:3);lv_obj_set_size(dot,size,size);
       lv_obj_set_style_radius(dot,LV_RADIUS_CIRCLE,0);lv_obj_set_style_bg_color(dot,color(uiColors().accent),0);lv_obj_set_style_bg_opa(dot,lv_opa_t(45+i*35),0);
       lv_obj_clear_flag(dot,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);

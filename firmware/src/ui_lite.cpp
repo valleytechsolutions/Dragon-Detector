@@ -55,13 +55,24 @@ static void prepareLiteBackdrop(lv_obj_t* root){
 }
 #include "radar_renderer.inc"
 static lv_obj_t *root,*radar,*status,*activity,*pageLabel,*notice,*logo;
+static lv_obj_t* liteStartup=nullptr;
+static uint32_t liteStartupAt=0;
+#include "startup_logo.inc"
+static void startLiteSplash(){
+  if(liteStartup)lv_obj_del(liteStartup);
+  liteStartup=lv_obj_create(root);lv_obj_remove_style_all(liteStartup);
+  lv_obj_set_size(liteStartup,SCREEN_RES,SCREEN_RES);lv_obj_clear_flag(liteStartup,LV_OBJ_FLAG_SCROLLABLE);
+  showStartupLogo(liteStartup);liteStartupAt=millis();
+}
 static uint32_t noticeAt=0,lastFrame=0,frames=0;
 static lv_obj_t* text(const char* value,int y,int width,const lv_font_t* font,uint32_t rgb){
   auto* o=lv_label_create(root);lv_label_set_text(o,value);lv_obj_set_size(o,width,LV_SIZE_CONTENT);lv_obj_set_pos(o,(SCREEN_RES-width)/2,y);
   lv_obj_set_style_text_font(o,font,0);lv_obj_set_style_text_color(o,color(rgb),0);lv_obj_set_style_text_align(o,LV_TEXT_ALIGN_CENTER,0);
   lv_label_set_long_mode(o,LV_LABEL_LONG_DOT);return o;
 }
+#include "lite_pages.inc"
 void uiBegin(){
+  if(!prepareThemeLogos())Serial.println("THEME_LOGOS PSRAM allocation failed / fallback logos");
   prefsReady=litePrefs.begin("lite-ui",false);
   if(prefsReady){unsigned saved=litePrefs.getUChar("theme",1);radarTheme=saved<RadarThemeCount?saved:1;}
   candidatesOnly=true;radarRecent=true;scr_lvgl_init();root=lv_scr_act();lv_obj_clear_flag(root,LV_OBJ_FLAG_SCROLLABLE);lv_obj_set_style_bg_color(root,color(radarPalettes[radarTheme].bottom),0);
@@ -74,29 +85,35 @@ void uiBegin(){
   pageLabel=text("",193,150,&lv_font_montserrat_10,radarPalettes[radarTheme].text);
   notice=text("",207,132,&lv_font_montserrat_10,dragon::UiPalettes[radarTheme].ink);
   lv_obj_set_height(notice,13);lv_obj_add_flag(activity,LV_OBJ_FLAG_HIDDEN);lv_obj_add_flag(notice,LV_OBJ_FLAG_HIDDEN);
+  createLitePages();
+  startLiteSplash();
 }
 void uiLoop(){
   const uint32_t now=millis();
+  if(liteStartup&&uint32_t(now-liteStartupAt)>=2200){lv_obj_del(liteStartup);liteStartup=nullptr;}
   if(themeDirty&&uint32_t(now-themeChangedAt)>=1000){
     if(prefsReady&&litePrefs.putUChar("theme",radarTheme)!=1)Serial.println("LITE_THEME save failed");
     themeDirty=false;
   }
   // Leave time between full radar draws to drain reception queues on the S3R2.
-  if(uint32_t(now-lastFrame)>=83){lastFrame=radarFrameAt=now;++frames;lv_obj_invalidate(radar);
+  if(uint32_t(now-lastFrame)>=83){lastFrame=radarFrameAt=now;++frames;
+    if(litePage==LitePage::Radar){lv_obj_invalidate(radar);
     char value[80];snprintf(value,sizeof(value),"%s RX   %02d SIGNALS   100%%",blePhase?"BLE":"WI-FI",radarCount);lv_label_set_text(status,value);
     const bool deauth=trafficStatus.disconnectActive(now),spam=trafficStatus.bleActive(now);
     lv_label_set_text(activity,deauth&&spam?"DEAUTH + BLE BURST":deauth?"DEAUTH ACTIVITY":spam?"BLE SPAM CANDIDATE":"");
     if(deauth||spam)lv_obj_clear_flag(activity,LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(activity,LV_OBJ_FLAG_HIDDEN);
     snprintf(value,sizeof(value),"%s",themeChangedAt&&uint32_t(now-themeChangedAt)<4000?radarThemeNames[radarTheme]:radarCount?"RSSI  /  STRONGER INWARD":"SCANNING  /  BLE + WI-FI");
     lv_label_set_text(pageLabel,value);
+    }
+    updateLitePage();
     if(!noticeAt||uint32_t(now-noticeAt)>5000)lv_obj_add_flag(notice,LV_OBJ_FLAG_HIDDEN);
   }
   lv_timer_handler();
 }
 void uiNotify(const char* title,const char*,const dragon::DeviceKey*,bool){
-  if(!notice)return;noticeAt=millis();lv_label_set_text(notice,title);lv_obj_clear_flag(notice,LV_OBJ_FLAG_HIDDEN);
+  if(!notice||litePage!=LitePage::Radar)return;noticeAt=millis();lv_label_set_text(notice,title);lv_obj_clear_flag(notice,LV_OBJ_FLAG_HIDDEN);lv_obj_add_flag(pageHint,LV_OBJ_FLAG_HIDDEN);
 }
-void uiShow(const String&){}
+void uiShow(const String& name){if(name=="startup"){startLiteSplash();return;}for(unsigned i=0;i<5;++i)if(name==litePageNames[i]){setLitePage(LitePage(i));return;}}
 void uiKey(bool held){
   if(held||!root)return;
   radarTheme=(radarTheme+1)%RadarThemeCount;themeDirty=true;themeChangedAt=millis();
@@ -112,7 +129,7 @@ void uiKey(bool held){
 }
 bool uiStopwatchKey(bool,uint64_t){return false;}
 bool uiCommand(const String& c){
-  if(c=="ui status"){Serial.printf("UI_STATUS page=radar lite=1 frames=%lu backdrop=%u frame_ms=83\n",frames,liteBackdrop.data?1:0);return true;}
+  if(c=="ui status"){Serial.printf("UI_STATUS page=%s lite=1 frames=%lu backdrop=%u frame_ms=83\n",litePageNames[unsigned(litePage)],frames,liteBackdrop.data?1:0);return true;}
   if(c=="radar status"){Serial.printf("RADAR_SETTINGS theme=%u labels=1 recent=1 pages=1 plotted=%u primary=%d\n",radarTheme,dotCount,radarPrimary);return true;}
   if(c=="display status"){Serial.println("DISPLAY_SETTINGS brightness=100 output=100 dim=0 off=0 dim_level=0 wake=0");return true;}
   return false;

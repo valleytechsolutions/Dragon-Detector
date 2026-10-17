@@ -1,23 +1,23 @@
 # Exact board profiles
 
-Current firmware: **0.13.8**. Another display on the same ESP32-S3 needs different firmware.
+Current firmware: **0.13.9**. Another display on the same ESP32-S3 needs different firmware.
 
 | Feature | Waveshare AMOLED 1.75C | M5Stack StopWatch C152 | Spotpear JC3636W518 | XIAO ESP32-S3 + Round Display | Waveshare LCD 1.28 Lite |
 |---|---|---|---|---|---|
 | Display | 466×466 AMOLED / touch | 466×466 AMOLED / touch | 360×360 LCD / touch | 240×240 LCD / touch | 240×240 LCD / no touch |
 | Flash / PSRAM | 32 / 8 MB | 16 / 8 MB | 16 / 8 MB | 8 / 8 MB | 16 / 2 MB |
-| Physical timing controls | BOOT + short PWR | Yellow Start/Pause + blue Lap | On-screen | BOOT Start/Pause + on-screen Lap | None |
+| Physical timing controls | BOOT + short PWR | Yellow Start/Pause + blue Lap | On-screen | BOOT Start/Pause + on-screen Lap | BOOT tap / double-tap / hold |
 | Radar / same detection families | Yes | Yes | Yes | Yes | Yes |
-| 27 themes / badge / touch menus | Yes | Yes | Yes | Yes | No; BOOT-selectable radar palettes |
-| RSSI Hunt / watch lists / history | Yes | Yes | Yes | Yes | Radar RSSI only; no saved history |
+| 29 themes / badge / touch menus | Yes | Yes | Yes | Yes | 29 themes; no badge/touch |
+| RSSI Hunt / watch lists / history | Yes | Yes | Yes | Yes | Radar + signal details; no saved history |
 | Notebook / eight modes / 29 radio tools | Yes | Yes | Yes | Yes | No |
 | BLE Lab / GATT / recon sessions / recipes | Yes | Yes | Yes | Yes | No |
 | RTTTL alerts / audible Hunt | Speaker connection | Built-in speaker | Speaker connection | Visual only | Visual only |
 | Haptic alerts | No configured motor | Built-in motor | No | No | No |
-| Stopwatch / clock settings | Yes; RTC when detected | Yes; RTC when detected | Yes; software clock | Yes; RTC when detected | No |
+| Stopwatch / clock settings | Yes; RTC when detected | Yes; RTC when detected | Yes; software clock | Yes; RTC when detected | Compact clock/timer; USB time setup |
 | Fixed orientation setting | Yes | Yes | Yes | Yes | Fixed radar orientation |
 | SD card support | **No slot / no SD controls** | **No slot / no SD controls** | Optional SD CSV/PCAP + browser | Optional SD CSV/PCAP + browser | No |
-| Internal user storage | 3.94 MiB badge/history + **16 MiB recon** | 7.94 MiB shared | 3.94 MiB shared | 1.94 MiB shared | Theme selection only; no file features |
+| Internal user storage | 3.94 MiB badge/history + **16 MiB recon** | 7.94 MiB shared | 3.94 MiB shared | 1.94 MiB shared | Theme + UTC offset settings; no file features |
 | Capture buffer in PSRAM | 2 MiB | 1 MiB | 1 MiB | 512 KiB | No recorder |
 | Capture files / profiles download | USB web tools | USB web tools | USB web tools; separate SD logs | USB web tools; separate SD logs | None |
 
@@ -29,7 +29,7 @@ All four full boards use the same classifiers and lab workflows; Waveshare's adv
 
 **Spotpear and XIAO:** Utilities → SD files browses an inserted FAT32 card. Settings retains opt-in SD event logging and SD PCAP. These are separate from internal Capture Studio, badge/history and BLE Lab storage; an absent card does not disable those internal features. Inserted-card behavior is not newly validated by this release.
 
-**Lite:** always-on radar only. It has no storage menu, badge, interactive lab or persistent detection history.
+**Lite:** radar, compact clock, stopwatch/locksport timer, signal details and diagnostics, operated with BOOT. It has no storage menu, badge, interactive lab or persistent detection history.
 
 Shared storage sizes are partition allocations, not free-space promises. They include badge/history and lab data; the reserve policy prevents new writes from consuming the final 21%. Updates never reformat these volumes automatically.
 

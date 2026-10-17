@@ -28,7 +28,9 @@ static Match ble(const std::vector<uint8_t>& p){auto f=parseBle(p.data(),p.size(
 #include "hid_decoder_test.h"
 #include "mission_test.h"
 #include "theme_button_test.h"
+#include "lite_controls_test.h"
 int main(){
+  liteControlsTests();
   themeButtonTests();
   missionTests();
   hidDecoderTests();

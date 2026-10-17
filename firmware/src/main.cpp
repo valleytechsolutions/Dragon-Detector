@@ -89,14 +89,20 @@ static void health(){
 }
 static uint32_t loopLastUs[6]{},loopMaxUs[6]{};
 static void command(const String& c){
+  if(c=="system restart"){
+    if(stopwatch.running||reconOwnsRadio()||bleLabOwnsRadio()||reconStorageBusy()){Serial.println("SYSTEM_ERROR stop timing and radio sessions first");return;}
+    Serial.println("SYSTEM_RESTARTING");Serial.flush();delay(50);ESP.restart();return;
+  }
   if(c=="scan status"){Serial.printf("SCAN_STATUS enabled=%u ble_ms=%lu wifi_ms=%lu mode=%u lab=%u hunt=%d priority_channel=%u",radioEnabled,bleListenMs,wifiListenMs,unsigned(reconMode()),bleLabOwnsRadio()||reconOwnsRadio(),trackedContact,channelLock);for(unsigned i=1;i<=11;++i)Serial.printf(" ch%u=%lu",i,channelDwellMs[i]);Serial.println();return;}
   if(c=="memory status"){auto* app=esp_ota_get_running_partition();size_t size=ESP.getSketchSize(),slot=app?app->size:0;Serial.printf("MEMORY flash=%u app=%u slot=%u app_free=%u reserve_percent=21 legacy_used=%u legacy_total=%u heap=%u psram=%u\n",ESP.getFlashChipSize(),unsigned(size),unsigned(slot),unsigned(slot>=size?slot-size:0),LittleFS.usedBytes(),LittleFS.totalBytes(),ESP.getFreeHeap(),ESP.getFreePsram());return;}
   if(c=="loop diagnostics"){const char* names[]={"board","radio","history","audio","ui","badge"};for(int i=0;i<6;++i)Serial.printf("LOOP_TIMING %s last_us=%lu max_us=%lu\n",names[i],loopLastUs[i],loopMaxUs[i]);Serial.println("LOOP_END");return;}
 #ifdef BOARD_RADAR_LITE
-  // A legacy browser/serial command cannot leave Lite paused, in Hunt, dimmed,
-  // or on a screen with controls that this board cannot operate.
+  // Only locally operable Lite pages and timing controls are added here. Radio
+  // ownership, audio, badge upload and full touch menus remain unavailable.
   const bool allowed=c=="badge info"||c=="status"||c=="contacts"||c=="selftest"||c=="screenshot"||c=="ui status"||c=="radar status"||c=="display status"||c=="axon status"||c=="traffic status"||c=="detector status";
-  if(!allowed){Serial.println("LITE_RADAR_ONLY no menus, badge, audio or radio controls");return;}
+  const bool timing=c.startsWith("time ")||c=="clock status"||c.startsWith("clock offset ")||c=="orientation status"||c=="stopwatch status"||c=="stopwatch laps"||c=="stopwatch start"||c=="stopwatch pause"||c=="stopwatch reset"||c=="stopwatch lap"||c=="stopwatch finish";
+  const bool page=c=="screen radar"||c=="screen clock"||c=="screen stopwatch"||c=="screen signals"||c=="screen diagnostics"||c=="screen startup";
+  if(!allowed&&!timing&&!page){Serial.println("LITE_LIMITED no touch menus, badge, audio or radio controls");return;}
 #endif
   if(c.startsWith("vendor ")){uint8_t mac[6];unsigned v[6];char tail;if(sscanf(c.c_str(),"vendor %2x:%2x:%2x:%2x:%2x:%2x %c",&v[0],&v[1],&v[2],&v[3],&v[4],&v[5],&tail)==6){for(unsigned i=0;i<6;++i)mac[i]=v[i];auto* name=dragon::registeredVendor(mac);Serial.printf("REGISTRY_VENDOR %s\n",name?name:"No universal MA-L match");}else Serial.println("REGISTRY_ERROR address");return;}
   if(c=="registry status"){Serial.printf("REGISTRY entries=%u bits=24 source=IEEE_MA_L\n",dragon::vendorRegistryCount());return;}
@@ -171,9 +177,7 @@ void setup(){
   if(!contacts.data){Serial.println("FATAL: contact storage allocation failed");while(true)delay(100);}
   for(size_t i=0;i<MAX_CONTACTS;++i)new(&contacts[i]) Contact{};
   runSelfTests();boardBegin();uiBegin();wearableBegin();
-#ifndef BOARD_RADAR_LITE
   uint32_t at=millis();while(millis()-at<1600){uiLoop();delay(5);}
-#endif
   storageBegin();badgeInit();audioBegin();detectorBegin();notebookBegin();
 #ifndef BOARD_RADAR_LITE
   if(!dragon::vendorRegistryBegin())Serial.println("REGISTRY unavailable: PSRAM allocation or integrity check");

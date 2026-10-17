@@ -1,20 +1,20 @@
-# Reference feature comparison · 0.13.8
+# Reference feature comparison · 0.13.9
 
 This is a feature audit, not a claim that Dragon Detector is an official port or has identical behavior. The original application remains MIT. Reference firmware is not silently linked into it. [Credits and exact source revisions](../CREDITS.md) · [Measured hardware checks](VALIDATION.md).
 
 ## AMOLED feature parity across boards
 
-The v0.13.8 source audit confirms that Waveshare AMOLED, M5Stack StopWatch, Spotpear and Seeed XIAO Round already share the full UI, 27 themes, 25 selectable logo watch faces, stopwatch/locksport timers, notebook, Hunt, mode launcher and lab workflows below. No additional port is needed to expose those existing features on these four profiles. The physical controls, audio, RTC and SD support follow each board's hardware; capture and session limits are intentionally smaller where memory or storage is smaller.
+The v0.13.9 source audit confirms that Waveshare AMOLED, M5Stack StopWatch, Spotpear and Seeed XIAO Round already share the full UI, 29 themes, 27 selectable logo watch faces, stopwatch/locksport timers, notebook, Hunt, mode launcher and lab workflows below. No additional port is needed to expose those existing features on these four profiles. The physical controls, audio, RTC and SD support follow each board's hardware; capture and session limits are intentionally smaller where memory or storage is smaller.
 
 | Profile | Capture buffer | Recon session limit | Application slot free |
 |---|---:|---:|---:|
-| Waveshare AMOLED | 2 MiB | 2 MiB | 52.90% |
-| M5Stack StopWatch | 1 MiB | 256 KiB | 25.33% |
-| Spotpear | 1 MiB | 256 KiB | 56.32% |
-| Seeed XIAO Round | 512 KiB | 256 KiB | 21.04% |
-| Waveshare Lite | No recorder | No session UI | 72.63% |
+| Waveshare AMOLED | 2 MiB | 2 MiB | 56.57% |
+| M5Stack StopWatch | 1 MiB | 256 KiB | 30.84% |
+| Spotpear | 1 MiB | 256 KiB | 58.33% |
+| Seeed XIAO Round | 512 KiB | 256 KiB | 22.44% |
+| Waveshare Lite | No recorder | No session UI | 71.87% |
 
-Lite shares detection and 27 BOOT-selectable radar themes, but remains a dedicated passive radar. Its 2 MiB PSRAM and single BOOT control require a separate reduced-memory interface before adding the full workflows. Full-board watches, timers and labs are not advertised as available on Lite. Every profile retains the existing 21% application-slot reserve, and writable filesystems enforce the same reserve for new writes. [Exact budgets and remaining growth](FLASH-BUDGET.md) · [Hardware capabilities](HARDWARE.md).
+Lite shares detection and all 29 BOOT-selectable themes. It adds compact clock, timing, signal and diagnostic pages. Its 2 MiB PSRAM and single BOOT control still exclude the full touch UI, badge, recorder and active labs. All profiles retain the 21% application-slot reserve and managed-storage reserve. [Exact budgets](FLASH-BUDGET.md) · [Hardware capabilities](HARDWARE.md).
 
 ## Marauder: all four full boards
 
@@ -34,7 +34,7 @@ Lite shares detection and 27 BOOT-selectable radar themes, but remains a dedicat
 | CSI motion monitor | Experimental independent amplitude-shape monitor; calibrated signal-change score, low-data state and 120-point CSV. No phase-fusion equivalence or occupancy guarantee |
 | Save/load SSIDs, custom HTML, capture browser | Recon flash playlist/template/capture library; checked browser download and individual deletion |
 | Recon missions / desktop tool | Named sessions with independently encoded RCN1/PRB1/REL1 files and checked ZIP download; no GPS fix. External desktop integration is not yet tested |
-| Join / saved network profiles / IP ping scan | Connected network: eight explicit profiles, DHCP/IP/gateway/DNS, gateway ping, at most 254 local-subnet addresses, CSV; no automatic reconnection |
+| Join / saved network profiles / IP ping scan | Connected network: eight explicit profiles, DHCP/IP/gateway/DNS, gateway ping, at most 254 local-subnet addresses, CSV; optional saved-Wi-Fi clock recovery; ordinary reconnection remains explicit |
 | Save/load AP lists, arbitrary source-MAC configuration, command scripts | Historical AP CSV save/load/export, volatile source-MAC configuration and reviewed bounded recipes. Archives cannot be loaded as fresh target observations |
 | USB BadUSB / DuckyScript | Not implemented in this USB-CDC stopwatch build |
 | GPS wardriving / WiGLE / NMEA | No supported local GPS in this board profile; broadcast Remote ID coordinates are different data |
@@ -69,3 +69,7 @@ Waveshare AMOLED, M5Stack StopWatch, Spotpear and XIAO Round share the passive R
 These additions do not mean the boards have exhausted useful features or reached 79% occupied physical flash. The [budget report](FLASH-BUDGET.md) separates app slots, OTA allocation and user storage. The unsupported/unimplemented rows above remain explicit work or hardware limits.
 
 The [0.13 guide](RECON-013.md) documents session, recipe, archive, HID and bridge limits. USB BadUSB/DuckyScript and Chimera JSON protocol compatibility remain unimplemented; unsupported radio bands and external GPS require different hardware.
+
+### Clock and Lite expansion · 0.13.9
+
+All four full boards now support opt-in saved-Wi-Fi time recovery. Lite adds a compact themed analog/digital clock, stopwatch/locksport timer, signal inspector and diagnostics, preserving passive reception. Its 2 MiB PSRAM and lack of touch still exclude the full-board labs and UI. Lossless logos recover flash capacity; the 21% guard is unchanged. See [Lite controls](WAVESHARE-LITE.md) and [Spotpear clock setup](SPOTPEAR-CLOCK.md).

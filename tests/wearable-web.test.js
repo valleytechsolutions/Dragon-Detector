@@ -33,3 +33,14 @@ test('hardware status and orientation commands are strictly bounded',async()=>{
  await assert.rejects(setOrientation(linkWith([]),'auto'),/Choose/);
  await assert.rejects(setOrientation(linkWith(['ORIENTATION_ERROR unavailable']),'90'),/unavailable/);
 });
+
+import {hasClockTools,hasWifiClock,hasRetainedClock,parseBadgeInfo} from '../web/firmware-compat.js';
+test('clock recovery and Lite timing capabilities reject unsupported boards and versions',()=>{
+ for(const version of ['0.13.8','0.13.09','0.14.0','1.13.9','']){assert.equal(hasRetainedClock(version),false);assert.equal(hasClockTools('waveshare_lite',version),false);assert.equal(hasWifiClock('spotpear',version),false);}
+ for(const board of ['waveshare','stopwatch','spotpear','xiao_round'])assert.equal(hasWifiClock(board,'0.13.9'),true);
+ for(const board of ['waveshare_lite','other'])assert.equal(hasWifiClock(board,'0.13.9'),false);
+ assert.equal(hasClockTools('waveshare_lite','0.13.9'),true);
+ assert.ok(parseBadgeInfo('BADGE_INFO 0.13.9 240 LITE Waveshare ESP32-S3-LCD-1.28 Lite'));
+ assert.equal(parseBadgeInfo('BADGE_INFO 0.13.8 240 LITE Waveshare ESP32-S3-LCD-1.28 Lite'),null);
+ assert.equal(parseBadgeInfo('BADGE_INFO 0.13.9 360 LITE Spotpear JC3636W518'),null);
+});
