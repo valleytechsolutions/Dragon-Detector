@@ -45,7 +45,7 @@
 #define LCD_RESET 1
 #define LCD_COL_OFFSET 6
 
-// Touch, AXP2101, QMI8658 and PCF85063 share this bus.
+// Touch, AXP2101 and QMI8658 share this bus. Probe optional RTC revisions.
 #define IIC_SDA 15
 #define IIC_SCL 14
 #define TP_INT 11

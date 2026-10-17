@@ -1,5 +1,5 @@
-import {startRadarBackground} from './radar-background.js?v=0.13.9';
-import {finishInstallSession,syncInstalledClock} from './install-clock.js?v=0.13.9';
+import {startRadarBackground} from './radar-background.js?v=0.13.10';
+import {finishInstallSession,syncInstalledClock} from './install-clock.js?v=0.13.10';
 import {updateVisitCounter} from './visit-counter.js?v=0.13.6';
 import {hasFullLab,hasFullRecon,hasSessionTools} from './lab-capabilities.js?v=0.13.3';
 import {sessionName,downloadMission,recipePutCommand,sourceMacCommand} from './mission-tools.js?v=0.13.3';
@@ -7,15 +7,17 @@ import {hasNetworkTools,networkProfileCommand,networkResultsCsv} from './network
 import {normalizeHex,probeRows,probeCsv} from './recon-analysis.js?v=0.13.3';
 import {hasReconTools,reconLines,exportCapture,exportReconFile,captureName,importPortalHtml} from './recon-transfer.js?v=0.13.3';
 import {decodeProfile,exportProfile,exportLog,importProfile,labLines,safeProfileName} from './ble-lab.js?v=0.13.3';
-import {localClockEpoch,setClock,syncComputerClock,readWearable,setOrientation} from './wearable-transfer.js?v=0.13.3';
+import {localClockEpoch,setClock,readWearable,setOrientation} from './wearable-transfer.js?v=0.13.10';
+import {syncVerifiedClock,clockResultText} from './clock-verification.js?v=0.13.10';
+import {clockInstallDialogClass} from './clock-install-dialog.js?v=0.13.10';
 import {deviceQuery} from './device-query.js';
 import {BadgeSerial} from './serial.js?v=0.13.3';
 import {encodeBadge} from './badge-codec.js';
 import {uploadBadge} from './badge-transfer.js?v=0.13.3';
 import {readHistory} from './detector-transfer.js';
-import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasBrandedThemes,hasCommunityThemes,hasLplTheme,hasWearableTools,hasClockTools,hasWifiClock,hasRetainedClock} from './firmware-compat.js?v=0.13.9';
-import {readRadarSettings,saveRadarSettings} from './radar-transfer.js?v=0.13.9';
-import {boardProfiles,connectedProfile,validateManifest,supportsBadge} from './board-profiles.js?v=0.13.9';
+import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasBrandedThemes,hasCommunityThemes,hasLplTheme,hasWearableTools,hasClockTools,hasWifiClock,hasRetainedClock} from './firmware-compat.js?v=0.13.10';
+import {readRadarSettings,saveRadarSettings} from './radar-transfer.js?v=0.13.10';
+import {boardProfiles,connectedProfile,validateManifest,supportsBadge} from './board-profiles.js?v=0.13.10';
 import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan,drawBadgeText} from './badge-editor.js?v=0.13.3';
 import {hasNotebook,readNotebook,customAdvertCommand} from './notebook.js?v=0.13.3';
 const $ = id => document.getElementById(id);
@@ -35,7 +37,10 @@ function installEnabled(){
   else if(releaseReady)$('install-message').textContent='Confirm your board, then connect its USB port.';
 }
 const installerTimer=setTimeout(()=>{installerFailed=true;installEnabled();},10000);
-customElements.whenDefined('ewt-install-dialog').then(()=>{clearTimeout(installerTimer);installerReady=true;installEnabled();});
+customElements.whenDefined('ewt-install-dialog').then(()=>{
+  customElements.define('dragon-clock-install-dialog',clockInstallDialogClass(customElements.get('ewt-install-dialog')));
+  clearTimeout(installerTimer);installerReady=true;installEnabled();
+}).catch(error=>{clearTimeout(installerTimer);installerFailed=true;installEnabled();$('clock-setup-status').textContent=error.message;});
 installEnabled();
 async function chooseBoard(next) {
   if(installActive)return;
@@ -48,7 +53,7 @@ async function chooseBoard(next) {
   $('board-features').textContent = boardProfiles[board].features;
   $('auto-clock-label').hidden=false;
   $('finish-clock').hidden=true;
-  $('clock-setup-status').textContent='Local date, time and current time-zone offset will be set after you close the installer.';
+  $('clock-setup-status').textContent='Keep USB connected: local date, time and timezone will be set and verified automatically after flashing.';
   $('board-status').textContent = 'Checking the matching firmware release…';
   const mode = $('install-mode').value, manifest = `firmware/${board}/${mode}.json`;
   try {
@@ -81,8 +86,7 @@ function installLock(active){
   for(const element of document.querySelectorAll('[data-board],#install-mode,#hardware-confirm,#auto-clock'))element.disabled=active;
 }
 function clockSetupResult(result){
-  $('clock-setup-status').textContent=result.skipped?'Installer closed. Automatic clock setup was not requested.':
-    `Local date and time verified on ${boardProfiles[result.board].name}. ${result.rtc?'Saved to the device RTC.':'This board currently has no usable RTC; reconnect and sync after power loss.'}`;
+  $('clock-setup-status').textContent=clockResultText(result);
   $('finish-clock').hidden=true;
 }
 function clockSetupFailure(error){
@@ -96,16 +100,17 @@ $('install-button').onclick=async()=>{
   let port;
   try{
     port=await navigator.serial.requestPort();await port.open({baudRate:115200,bufferSize:8192});
-    const dialog=document.createElement('ewt-install-dialog');
+    const dialog=document.createElement('dragon-clock-install-dialog');
+    dialog.installMode=$('install-mode').value;dialog.autoClock=autoClock;
     dialog.port=port;dialog.manifestPath=$('installer').getAttribute('manifest');
     dialog.addEventListener('closed',async()=>{
-      $('clock-setup-status').textContent=autoClock?'Checking the running board and setting local time…':'Closing installer USB connection…';
+      $('clock-setup-status').textContent=autoClock?'Step 2 of 2: setting date, time and timezone; verifying the clock…':'Closing installer USB connection…';
       try{const result=await finishInstallSession(port,selected,autoClock);clockSetupResult(result);}
       catch(error){if(autoClock)clockSetupFailure(error);else $('clock-setup-status').textContent='Installer closed. USB may need reconnecting.';}
       finally{installLock(false);$('install-button').focus();}
     },{once:true});
     document.body.appendChild(dialog);
-    $('clock-setup-status').textContent=autoClock?'After installation, close the installer window. Local time setup will then run automatically.':'Close the installer window when finished.';
+    $('clock-setup-status').textContent=autoClock?'Step 1 of 2: installing firmware. Keep USB connected for automatic clock setup and verification.':'Close the installer window when finished.';
   }catch(error){
     if(port)try{await port.close();}catch{}
     $('clock-setup-status').textContent=error.name==='NotFoundError'?'No USB port selected.':`Unable to open installer: ${error.message}`;
@@ -238,14 +243,14 @@ $('connect').onclick=async()=>{
     serial=link;firmwareVersion=match.version;deviceProfile=profile;setBadgeProfile(profile);
     $('device-label').textContent=`${match.size} × ${match.size} · ${boardProfiles[profile].lite?'LITE':'CONNECTED'}`;$('disconnect').hidden=false;
     if(boardProfiles[profile].lite){
-      if(hasClockTools(profile,firmwareVersion)){await syncComputerClock(link);await loadWearable(link);}
+      if(hasClockTools(profile,firmwareVersion)){await syncVerifiedClock(link,deviceProfile,firmwareVersion);await loadWearable(link);}
       $('studio-status').textContent=$('detector-status').textContent=hasClockTools(profile,firmwareVersion)?'Lite connected and local time set. Hold BOOT to cycle radar, clock, timer, signals and status. Tap changes themes or starts/pauses the timer; double tap records a lap/open or resets a paused timer.':'Older Lite radar firmware connected. Update to 0.13.9 for clock, timer, signal and status pages.';
       return;
     }
     $('studio-status').textContent=`${match.board} is ready. Choose and position your image.`;draw();
     if(hasDetectorTools(firmwareVersion)){
-      let clockSynced=false;
-      if(hasWearableTools(firmwareVersion)){try{await syncComputerClock(link);clockSynced=true;}catch(error){$('wearable-status').textContent=error.message;}}
+      let clockSynced=false,clockMessage='';
+      if(hasWearableTools(firmwareVersion)){try{clockMessage=clockResultText(await syncVerifiedClock(link,deviceProfile,firmwareVersion));clockSynced=true;}catch(error){clockMessage=error.message;}}
       else{await link.write(`time ${Math.floor(Date.now()/1000)}`);clockSynced=await link.wait(s=>s==='TIME_OK'||s==='TIME_ERROR')==='TIME_OK';}
       const config=await deviceQuery(link,'display status',s=>s.startsWith('DISPLAY_SETTINGS '));
       const values=/brightness=(\d+) output=-?\d+ dim=(\d+) off=(\d+) dim_level=(\d+)/.exec(config);
@@ -253,7 +258,7 @@ $('connect').onclick=async()=>{
       await loadAudio(link);
       if(hasWearableTools(firmwareVersion))await loadWearable(link);
       if(hasRadarTools(firmwareVersion)){const radar=await readRadarSettings(link);$('radar-theme').value=radar.theme;$('radar-labels').checked=radar.labels;$('radar-recent').checked=radar.recent;}
-      $('detector-status').textContent=`${match.board} connected. ${clockSynced?'Local date and time synchronized.':'Clock sync unavailable; badge upload is ready.'} History stays on your device until you download it.`;
+      $('detector-status').textContent=`${match.board} connected. ${clockMessage||(clockSynced?'Local date and time synchronized.':'Clock sync unavailable; badge upload is ready.')} History stays on your device until you download it.`;
     }else $('detector-status').textContent='Connected to 0.3.x. Update to the current firmware for history and detector controls.';
   }catch(error){if(link)await link.close();serial=null;firmwareVersion='';deviceProfile='';$('studio-status').textContent=error.message;$('detector-status').textContent=error.message;}
   finally{busy=false;draw();installEnabled();}
@@ -287,7 +292,7 @@ $('history-export').onclick=()=>detectorAction(async link=>{
   $('detector-status').textContent='History downloaded. Detection remains active.';
 });
 $('sync-time').onclick=()=>detectorAction(async link=>{
-  if(hasWearableTools(firmwareVersion)){await syncComputerClock(link);await loadWearable(link);}
+  if(hasWearableTools(firmwareVersion)){const result=await syncVerifiedClock(link,deviceProfile,firmwareVersion);await loadWearable(link);$('detector-status').textContent=clockResultText(result);return;}
   else{await link.write(`time ${Math.floor(Date.now()/1000)}`);if(await link.wait(s=>s==='TIME_OK'||s==='TIME_ERROR')!=='TIME_OK')throw new Error('Clock sync failed. Check the RTC.');}
   $('detector-status').textContent='Date and time synchronized.';
 });
@@ -321,7 +326,7 @@ async function loadWearable(link){
   $('orientation-mode').value=state.orientation;
   $('wearable-status').textContent=`${state.rtc?'RTC detected · saved time survives restart':(hasRetainedClock(firmwareVersion)?'Clock retained across powered software restarts; resync after full power loss':'Software clock · set again after restart')}. ${boardProfiles[deviceProfile]?.lite?'Lite orientation is fixed.':'Display orientation stays at your saved angle.'}`;
 }
-$('clock-sync').onclick=()=>serial?detectorAction(async link=>{await syncComputerClock(link);await loadWearable(link);$('detector-status').textContent='Computer time and current UTC offset saved.';}):$('connect').onclick();
+$('clock-sync').onclick=()=>serial?detectorAction(async link=>{const result=await syncVerifiedClock(link,deviceProfile,firmwareVersion);await loadWearable(link);$('detector-status').textContent=clockResultText(result);}):$('connect').onclick();
 $('clock-save').onclick=()=>detectorAction(async link=>{const offset=Number($('clock-offset').value);await setClock(link,localClockEpoch($('clock-local').value,offset),offset);await loadWearable(link);$('detector-status').textContent='Local clock saved. Stopwatch elapsed time is unchanged.';});
 $('orientation-save').onclick=()=>detectorAction(async link=>{await setOrientation(link,$('orientation-mode').value);await loadWearable(link);$('detector-status').textContent='Orientation preference saved.';});
 for(const page of ['stopwatch','clock'])$('show-'+page).onclick=()=>detectorAction(async link=>{await link.write('screen '+page);$('detector-status').textContent=page==='clock'?'Clock displayed.':'Timer displayed. The TOOOL theme provides OPEN and SPLIT controls; Home leaves a running timer running.';});

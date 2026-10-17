@@ -1,6 +1,6 @@
 # Exact board profiles
 
-Current firmware: **0.13.9**. Another display on the same ESP32-S3 needs different firmware.
+Current firmware: **0.13.10**. Another display on the same ESP32-S3 needs different firmware.
 
 | Feature | Waveshare AMOLED 1.75C | M5Stack StopWatch C152 | Spotpear JC3636W518 | XIAO ESP32-S3 + Round Display | Waveshare LCD 1.28 Lite |
 |---|---|---|---|---|---|
@@ -14,7 +14,7 @@ Current firmware: **0.13.9**. Another display on the same ESP32-S3 needs differe
 | BLE Lab / GATT / recon sessions / recipes | Yes | Yes | Yes | Yes | No |
 | RTTTL alerts / audible Hunt | Speaker connection | Built-in speaker | Speaker connection | Visual only | Visual only |
 | Haptic alerts | No configured motor | Built-in motor | No | No | No |
-| Stopwatch / clock settings | Yes; RTC when detected | Yes; RTC when detected | Yes; software clock | Yes; RTC when detected | Compact clock/timer; USB time setup |
+| Stopwatch / clock settings | Yes; USB / saved-Wi-Fi system clock | Yes; RTC when detected | Yes; software clock | Yes; RTC when detected | Compact clock/timer; USB time setup |
 | Fixed orientation setting | Yes | Yes | Yes | Yes | Fixed radar orientation |
 | SD card support | **No slot / no SD controls** | **No slot / no SD controls** | Optional SD CSV/PCAP + browser | Optional SD CSV/PCAP + browser | No |
 | Internal user storage | 3.94 MiB badge/history + **16 MiB recon** | 7.94 MiB shared | 3.94 MiB shared | 1.94 MiB shared | Theme + UTC offset settings; no file features |
@@ -60,7 +60,7 @@ On current StopWatch firmware, USB `touch status` reports controller samples and
 
 ## Clock, motion and timing controls · 0.9
 
-[M5Stack StopWatch official documentation](https://docs.m5stack.com/en/core/StopWatch) identifies the RX8130CE RTC, BMI270 IMU and GPIO 2/1 yellow/blue keys. [Waveshare 1.75C documentation](https://docs.waveshare.com/ESP32-S3-Touch-AMOLED-1.75C) describes the onboard RTC/IMU and programmable BOOT/PWR buttons; the adapter probes PCF85063 (0x51) on its existing SDA15/SCL14 bus and reads short PWR events from AXP2101. Version 0.9.1 uses manual display orientation on all boards and does not poll motion sensors. The Spotpear JC3636W518 profile uses touch timing controls and a software clock. [User guide](STOPWATCH-CLOCK-ORIENTATION.md).
+[M5Stack StopWatch official documentation](https://docs.m5stack.com/en/core/StopWatch) identifies the RX8130CE RTC, BMI270 IMU and GPIO 2/1 yellow/blue keys. The Waveshare **1.75C** must not be confused with the non-C 1.75: the [C schematic](https://files.waveshare.com/wiki/ESP32-S3-Touch-AMOLED-1.75C/ESP32-S3-Touch-AMOLED-1.75C-schematic.pdf) contains no PCF85063 calendar RTC. Its AXP2101 RTCLDO is a power rail, not a calendar. On the tested 32 MB unit, the codecs, PMU, touch and IMU acknowledge on SDA15/SCL14 at both 100/400 kHz; address 0x51 does not. The adapter retains optional PCF85063 probing for revisions that provide one, but does not promise an RTC on this profile. Use USB synchronization or opt-in saved-Wi-Fi recovery after full shutdown. Short PWR events come from AXP2101. Version 0.9.1 uses manual display orientation on all boards and does not poll motion sensors. The Spotpear JC3636W518 profile uses touch timing controls and a software clock. [User guide](STOPWATCH-CLOCK-ORIENTATION.md).
 
 ## Seeed XIAO ESP32-S3 + Round Display · 0.9.2
 

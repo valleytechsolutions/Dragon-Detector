@@ -1,3 +1,9 @@
+# 0.13.10 clock correction validation
+
+The earlier 0.13.9 AMOLED check verified USB synchronization and a powered software restart, **not** a hardware RTC or retention through shutdown. The owner subsequently found the clock unset after a power cycle. Direct diagnostic firmware confirms no ACK at 0x51 at either 100/400 kHz; 0x18, 0x34, 0x40, 0x5A and 0x6B acknowledge at both rates. This agrees with the exact 1.75C schematic, which has no PCF85063 calendar device. The non-C model must not be substituted as evidence for the C model.
+
+Local checks: 77 web tests pass, including missing/invalid/stopped RTC rejection, UTC offsets, automatic installer handoff and preservation of Update mode. A browser fixture runs the real pinned ESP Web Tools 10.4.0 dialog lifecycle and confirms automatic close only after post-flash initialization, plus update/factory erase behavior. That fixture does not itself flash hardware. The local 0.13.10 AMOLED build is app-only flashed with verified hashes and its time is set using the actual flasher clock module; hardware diagnostics correctly report no external RTC. Final CI/published-binary verification is recorded separately below when complete.
+
 # Published 0.13.9 device and release audit
 
 The [v0.13.9 release](https://github.com/valleytechsolutions/Dragon-Detector/releases/tag/v0.13.9) is published from `14e2719fd6648ed1d054402c246d37b109a9220b`. [CI](https://github.com/valleytechsolutions/Dragon-Detector/actions/runs/39004637749) passed all five builds, 72 web tests, native/fuzz tests, sanitizer checks and all 135 asset-decoder checks. [Pages deployment](https://github.com/valleytechsolutions/Dragon-Detector/actions/runs/39004913322) succeeded. Public manifests, image segments and web modules/artwork match their CI/source files. All eight uploaded release assets passed byte-for-byte download/hash verification.

@@ -42,7 +42,7 @@ def build(board,skip):
     segments=[('bootloader.bin',0),('partitions.bin',0x8000),('boot_app0.bin',0xe000),('firmware.bin',app_offset)]
     for mode in ('factory','update'):
         selected=segments+(filesystem_segments if mode=='factory' else [])
-        manifest={'name':f'Dragon Detector — {BOARDS[board][0]} ({mode})','version':VERSION,'new_install_prompt_erase':mode=='factory','builds':[{'chipFamily':'ESP32-S3','parts':[{'path':name,'offset':offset} for name,offset in selected]}]}
+        manifest={'name':f'Dragon Detector — {BOARDS[board][0]} ({mode})','version':VERSION,'new_install_prompt_erase':True,'new_install_improv_wait_time':0,'builds':[{'chipFamily':'ESP32-S3','parts':[{'path':name,'offset':offset} for name,offset in selected]}]}
         (out/f'{mode}.json').write_text(json.dumps(manifest,indent=2)+'\n',encoding='utf-8')
     # A merged factory image is also provided for esptool/M5Burner-style tools.
     args=['-m','esptool','--chip','esp32s3','merge-bin','-o',str(out/'factory-0x0.bin')]

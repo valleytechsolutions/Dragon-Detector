@@ -1,4 +1,4 @@
-# Stopwatch, clock and orientation · 0.13.9
+# Stopwatch, clock and orientation · 0.13.10
 
 Open **Tools → Utilities → Stopwatch**. Start begins or resumes elapsed time; Pause stops it; Lap records a split while running. Reset is available only while paused and asks before clearing the timer and laps. Home, Tools and the lap list leave a running timer running. Detection continues in the background; detection popups do not cover the timing controls. Audio alerts retain their existing settings.
 
@@ -7,7 +7,7 @@ The timer uses a 64-bit monotonic microsecond clock and displays hundredths. Clo
 | Board | Start / pause while on Stopwatch | Lap while running / reset while paused | Clock hardware |
 |---|---|---|---|
 | M5Stack StopWatch C152 | Yellow button | Blue button | RX8130CE |
-| Waveshare ESP32-S3-Touch-AMOLED-1.75C | BOOT button | Short PWR press | PCF85063, when detected |
+| Waveshare ESP32-S3-Touch-AMOLED-1.75C | BOOT button | Short PWR press | ESP32 system clock; USB / saved Wi-Fi after shutdown |
 | Spotpear / Guition JC3636W518 | Touch Start / Pause | Touch Lap / Reset | Software clock |
 | Seeed XIAO ESP32-S3 + Round Display | BOOT or touch | Touch Lap / Reset | BM8563 / PCF8563-compatible |
 
@@ -26,6 +26,8 @@ DMAC uses the same controls under **Locksport counter**. Its original teal/pink 
 A small comet follows the outer rim in the locksport themes except LPU. Each lap represents ten seconds of elapsed attempt time. PAUSE and OPEN freeze it; RESUME continues from the same position; RESET returns it to twelve. The motion stays outside the timer digits and buttons.
 
 ## Set the clock
+
+See [automatic flash-time setup and RTC verification](CLOCK-SETUP.md).
 
 The fastest setup is **Connect detector** in the local or hosted Studio: connection copies the computer's actual date, time and current timezone offset automatically. **Sync my local time** refreshes it in one click. Use this after travel, a daylight-saving change, or complete power loss on a board without a working RTC and without Wi-Fi recovery. History remains UTC; the watch shows local time.
 

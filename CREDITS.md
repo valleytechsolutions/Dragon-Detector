@@ -168,7 +168,7 @@ The owner supplied the unchanged [camera-raven illustration](media/theme-logos/d
 
 ### 0.13.7 installer and Lite refinements
 
-The installer continues to use [ESP Web Tools 10.4.0](https://github.com/esphome/esp-web-tools/tree/10.4.0), with its published dialog port/manifest properties and close event for local clock setup. The dependency is pinned independently of firmware versions. The animated flasher radar is original code-drawn decoration. Lite reuses the already credited supplied theme artwork and native GhostStrats/ASCII marks; no new third-party art was added.
+The installer continues to use [ESP Web Tools 10.4.0](https://github.com/esphome/esp-web-tools/tree/10.4.0), with its dialog port/manifest properties and normal close event for local clock setup. In 0.13.10, `web/clock-install-dialog.js` also adapts the pinned `_initialize`, `_startInstall` and `_closeDialog` hooks to hand off automatically and enforce the selected erase mode. These version-specific hooks have lifecycle tests and must be rechecked before changing the dependency. The dependency is pinned independently of firmware versions. The animated flasher radar is original code-drawn decoration. Lite reuses the already credited supplied theme artwork and native GhostStrats/ASCII marks; no new third-party art was added.
 
 ## Covert Instruments and LockPickingLawyer · 0.13.8
 

@@ -1,8 +1,8 @@
 import {BadgeSerial} from './serial.js?v=0.13.3';
 import {deviceQuery} from './device-query.js';
-import {parseBadgeInfo,hasWearableTools,hasClockTools} from './firmware-compat.js?v=0.13.9';
-import {connectedProfile,boardProfiles} from './board-profiles.js?v=0.13.9';
-import {syncComputerClock,readWearable} from './wearable-transfer.js?v=0.13.3';
+import {parseBadgeInfo,hasWearableTools,hasClockTools} from './firmware-compat.js?v=0.13.10';
+import {connectedProfile,boardProfiles} from './board-profiles.js?v=0.13.10';
+import {syncVerifiedClock} from './clock-verification.js?v=0.13.10';
 
 // Called only after the installer has relinquished this exact granted port.
 // Never guess among getPorts(): another attached detector could be changed.
@@ -22,10 +22,7 @@ export async function syncInstalledClock(port,board,{
         error.identity=true;throw error;
       }
       if(!hasClockTools(board,info.version))return {skipped:true,reason:'This older Lite firmware has no clock.'};
-      await syncComputerClock(link,now());
-      const clock=await readWearable(link),current=now();
-      if(!clock.valid||clock.offset!==-current.getTimezoneOffset()||Math.abs(clock.epoch-current.getTime()/1000)>10)
-        throw new Error('Clock readback did not match this computer.');
+      const clock=await syncVerifiedClock(link,board,info.version,{now,delay});
       return {...clock,board,version:info.version};
     }catch(error){failure=error;if(error.identity)throw error;}
     finally{await link.close();}

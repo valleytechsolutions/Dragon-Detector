@@ -24,6 +24,7 @@ bool configureClock(uint32_t epoch){if(!dragon::validEpoch(epoch))return false;s
 void configureClockOffset(int minutes){clockOffsetMinutes=constrain(minutes,-720,840);timePrefs.putInt("utc-offset",clockOffsetMinutes);}
 void clockLocal(dragon::Calendar& date){uint32_t epoch=wallTime();if(!epoch){date={};return;}time_t local=int64_t(epoch)+clockOffsetMinutes*60;tm t{};gmtime_r(&local,&t);date={t.tm_year+1900,t.tm_mon+1,t.tm_mday,t.tm_hour,t.tm_min,t.tm_sec};}
 bool wearableCommand(const String& c){
+ if(c=="clock hardware"){Serial.println("CLOCK_HARDWARE detected=0 valid=0 epoch=0");return true;}
  if(c=="clock status"){Serial.printf("CLOCK_STATUS rtc=0 valid=%u epoch=%lu offset=%d\n",wallTime()!=0,wallTime(),clockOffsetMinutes);return true;}
  if(c=="orientation status"){Serial.println("ORIENTATION_STATUS manual=1 degrees=0");return true;}
  if(c.startsWith("clock offset ")){int value;char extra;bool ok=sscanf(c.c_str(),"clock offset %d %c",&value,&extra)==1&&value>=-720&&value<=840;if(ok)configureClockOffset(value);Serial.println(ok?"CLOCK_OK":"CLOCK_ERROR offset");return true;}

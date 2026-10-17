@@ -16,6 +16,7 @@ export function hasRadarTools(version){return /^0\.(?:[789]|10|11|12|13)\.\d+$/.
 
 export function hasWearableTools(version){return /^0\.(?:9|10|11|12|13)\.\d+$/.test(version);}
 export function hasRetainedClock(version){return /^0\.13\.(?:9|[1-9]\d+)$/.test(version);}
+export function hasHardwareClockCheck(version){return /^0\.13\.[1-9]\d+$/.test(version);}
 export function hasClockTools(board,version){return board==='waveshare_lite'?hasRetainedClock(version):hasWearableTools(version);}
 export function hasWifiClock(board,version){return ['waveshare','stopwatch','spotpear','xiao_round'].includes(board)&&hasRetainedClock(version);}
 

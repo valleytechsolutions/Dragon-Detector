@@ -56,6 +56,11 @@ void wearableBegin(){
 }
 bool configureClock(uint32_t epoch){
   if(!dragon::validEpoch(epoch))return false;
+#if defined(BOARD_STOPWATCH) || defined(BOARD_XIAO_ROUND)
+  // These profiles promise a hardware clock. Never silently report a volatile
+  // software-only write as successful if their RTC is disconnected or failed.
+  if(!rtcAvailable)return false;
+#endif
   if(rtcAvailable&&!boardWriteRtc(epoch))return false;
   setWallTime(epoch);return true;
 }
@@ -78,6 +83,10 @@ static void reply(const char* format,...){
   if(n%64==0)Serial.write('\n');
 }
 bool wearableCommand(const String& c){
+  if(c=="clock hardware"){
+    uint32_t epoch=0;bool valid=rtcAvailable&&boardReadRtc(epoch);
+    reply("CLOCK_HARDWARE detected=%u valid=%u epoch=%lu\n",rtcAvailable,valid,valid?epoch:0);return true;
+  }
   if(c=="clock status"){reply("CLOCK_STATUS rtc=%u valid=%u epoch=%lu offset=%d\n",rtcAvailable,wallTime()!=0,wallTime(),clockOffsetMinutes);return true;}
   if(c.startsWith("clock offset ")){int minutes;char extra;if(sscanf(c.c_str(),"clock offset %d %c",&minutes,&extra)!=1||minutes< -720||minutes>840){Serial.println("CLOCK_ERROR offset");return true;}configureClockOffset(minutes);Serial.println("CLOCK_OK");return true;}
   if(c=="orientation status"){reply("ORIENTATION_STATUS manual=1 degrees=%u\n",((4-displayRotation)&3)*90);return true;}

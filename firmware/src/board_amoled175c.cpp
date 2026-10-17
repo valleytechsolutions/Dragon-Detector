@@ -106,7 +106,10 @@ void boardLoop(){
   if(powerReady&&now-polled>=50){polled=now;power.getIrqStatus();bool lap=power.isPekeyShortPressIrq();power.clearIrqStatus();if(lap&&!uiStopwatchKey(false))uiKey(true);}
 }
 // Small checked I2C reads avoid accepting an uninitialized RTC date after a
-// failed bus transaction. PCF85063 time is stored in UTC, 24-hour mode.
+// failed bus transaction. The 1.75C schematic does not populate the PCF85063
+// fitted to the non-C 1.75. Probe it for hardware revisions that do provide one;
+// never advertise an external RTC just because the ESP32 system clock is set.
+// A detected PCF85063 stores UTC in 24-hour mode.
 static bool rtcRead(uint8_t reg,uint8_t* data,size_t count){
   Wire.beginTransmission(0x51);Wire.write(reg);if(Wire.endTransmission(false)!=0)return false;
   if(Wire.requestFrom(uint8_t(0x51),uint8_t(count))!=count)return false;
@@ -114,7 +117,12 @@ static bool rtcRead(uint8_t reg,uint8_t* data,size_t count){
 }
 static bool rtcWrite(uint8_t reg,const uint8_t* data,size_t count){Wire.beginTransmission(0x51);Wire.write(reg);Wire.write(data,count);return Wire.endTransmission()==0;}
 void boardSensorsBegin(){
-  uint8_t ctrl=0;rtcAvailable=rtcRead(0,&ctrl,1);
+  uint8_t ctrl=0;rtcAvailable=false;
+  for(unsigned attempt=0;attempt<3&&!rtcAvailable;++attempt){
+    Wire.beginTransmission(0x51);
+    if(Wire.endTransmission()==0)rtcAvailable=rtcRead(0,&ctrl,1);
+    if(!rtcAvailable)delay(5);
+  }
 }
 static int decodeBcd(uint8_t v){return (v&15)<=9&&(v>>4)<=9?(v>>4)*10+(v&15):-1;}
 bool boardReadRtc(uint32_t& epoch){

@@ -1,5 +1,7 @@
 ![Dragon Detector promotional artwork](media/cover.png)
 
+**0.13.10:** Automatic post-flash clock setup now verifies local date/time and reads hardware RTCs directly, including a ticking check. Update installs preserve saved settings. Waveshare **1.75C** uses USB or saved-Wi-Fi recovery after shutdown; its schematic does not contain the PCF85063 fitted to the non-C model. [Clock fix release notes](docs/RELEASE-0.13.10.md) · [Clock setup](docs/CLOCK-SETUP.md).
+
 **0.13.9:** Ghostbusters and Lockpickers United, 29 GUI themes and 27 logo watches, a shared VTS boot animation, five BOOT-operated Lite pages, lossless artwork compression, and optional saved-Wi-Fi clock recovery on all four full boards. [Release notes](docs/RELEASE-0.13.9.md) · [Spotpear time setup wiki](https://github.com/valleytechsolutions/Dragon-Detector/wiki/Spotpear-Clock-Setup).
 
 # Dragon Detector · Detection & Hunt Edition
@@ -62,7 +64,7 @@ The Waveshare **C variant** has different reset wiring from the non-C 1.75. Firm
 | Internal user storage | 3.94 MiB badge/history + 16 MiB recon | 7.94 MiB shared | 3.94 MiB shared | 1.94 MiB shared | No user file features |
 | 29 themes, badge, stopwatch, radio tools, BLE Lab | Yes | Yes | Yes | Yes | Compact radar/clock/timer; no badge or active labs |
 | Sound / haptics | Speaker connector | Speaker + haptics | Speaker connector | Visual alerts | Visual alerts |
-| Clock | RTC | RTC | Software | RTC | Software + USB sync |
+| Clock | USB / saved Wi-Fi | RTC | Software | RTC | Software + USB sync |
 
 All five share the detection engine. The four full boards share the interactive toolset; storage capacity, controls and peripherals differ. These are partition capacities before filesystem overhead, not guaranteed free space. See the [complete hardware feature matrix](docs/HARDWARE.md) and [measured flash reserve](docs/FLASH-BUDGET.md).
 
