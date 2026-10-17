@@ -247,5 +247,26 @@
     "supplied_name": "built-in image generation: selected simple derivative",
     "sha256": "1738a0a372d602bb71a4ebd8ddb33e32232a9d82dba853e9ac8355eddda2ca6b",
     "source_bytes_match": false
+  },
+  {
+    "file": "media/theme-logos/capsule-corp-source.webp",
+    "supplied_name": "Capsule_corp_logo.webp",
+    "sha256": "cd08062e76eaaaead4153e45006d5ff902d53c506f224b53124c5c7da1a1b180",
+    "source_bytes_match": true,
+    "derivation": "Unchanged supplied original."
+  },
+  {
+    "file": "media/theme-logos/capsule-corp.png",
+    "supplied_name": "Capsule_corp_logo.webp",
+    "sha256": "8256ecd51d8a2548f68aa7183283ab795f4744706482505dc4660e5b9c3f4c81",
+    "source_bytes_match": false,
+    "derivation": "Built-in image generation: isolated emblem and banner on transparency; generated derivative, not a pixel-exact crop. Prompt in docs/CAPSULE-CORP.md."
+  },
+  {
+    "file": "media/theme-logos/sparrows-source.jpg",
+    "supplied_name": "sparrows logo.jpg",
+    "sha256": "d2ff56c484fdc47b70adcd086ab84e34057a8cea82323e0b9dec4a29a19445c7",
+    "source_bytes_match": true,
+    "derivation": "Unchanged supplied original; encoded directly for black firmware surfaces."
   }
 ]

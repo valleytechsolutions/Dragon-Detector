@@ -197,3 +197,11 @@ The bone sweep, pixel T-rex, cacti, jump animation and neon circuit ornaments ar
 ## Dragon Detector identity · 0.13.13
 
 The owner supplied the orange Dragon Ball illustration and BWM1 emblem, retained unchanged in `media/branding/`. The new [Dragon Ball / BWM mark](media/branding/dragon-detector.png) is an AI-generated derivative prepared with the built-in image tool, replacing the original star with the BWM emblem. It is not a pixel-exact composite. [Generation prompt and asset details](docs/DRAGON-BRAND.md); original and derivative hashes are in the artwork ledger. It replaces the VTS startup and the first three themes' radar header artwork. The earlier startup sources remain archived. Artwork and trademark rights stay with their respective owners; inclusion grants no endorsement or trademark rights.
+
+## Capsule Corp · 0.13.15
+
+Capsule Corp and Dragon Ball belong to their respective rights holders, including BIRD STUDIO/SHUEISHA and TOEI ANIMATION. The user supplied the Capsule Corp emblem; its original is preserved at `media/theme-logos/capsule-corp-source.webp`. A transparent derivative was prepared with built-in image generation. The firmware bezel, grid and watch are code-drawn. This community theme is not an official or endorsed product. [Artwork provenance and prompt](docs/CAPSULE-CORP.md).
+
+## Sparrows · 0.13.15
+
+SPARROWS and its keyhole/wordmark artwork belong to Sparrows Lock Picks. The supplied `sparrows logo.jpg` is preserved unchanged as `media/theme-logos/sparrows-source.jpg` and encoded directly for black display surfaces. The segmented dial and stylized picks are code-drawn interpretations informed by Sparrows’ official product designs; they are not exact tool reproductions. This community theme is not affiliated with or endorsed by Sparrows. [References and theme guide](docs/SPARROWS.md).

@@ -19,6 +19,8 @@ static void disc(lv_draw_ctx_t* ctx,int x,int y,int r,uint32_t c,int opa=255){
 #include "lpl_radar.inc"
 #include "containment_radar.inc"
 #include "cyber_runner.inc"
+#include "capsule_theme.inc"
+#include "sparrows_theme.inc"
 static const char* radarFamilyName(Family f){
 #if SCREEN_RES<=240
   // Keep the family on one line, leaving the second line for signal/age.
@@ -60,10 +62,12 @@ static void radarDraw(lv_event_t* e){
   // positions just once so leader lines and dots cannot disagree across tiles.
   const uint32_t now=radarFrameAt;
   static uint32_t plotFrame=UINT32_MAX;const bool advancePlot=plotFrame!=now;plotFrame=now;
+  lv_draw_arc_dsc_t arc;lv_draw_arc_dsc_init(&arc);arc.color=color(theme.ring);arc.width=std::max(1,S(1));arc.opa=160;
+  if(radarTheme==31)capsuleRadarField(ctx,now);else if(radarTheme==32)sparrowsRadarField(ctx);else{
 #ifdef BOARD_RADAR_LITE
   if(liteBackdrop.data){lv_draw_img_dsc_t d;lv_draw_img_dsc_init(&d);lv_area_t a{0,0,SCREEN_RES-1,SCREEN_RES-1};lv_draw_img(ctx,&d,&a,&liteBackdrop);}
   else disc(ctx,CENTER,CENTER,S(178),theme.bottom);
-  lv_draw_arc_dsc_t arc;lv_draw_arc_dsc_init(&arc);arc.color=color(theme.ring);arc.width=1;arc.opa=160;
+
 #else
   disc(ctx,CENTER,CENTER,S(178),theme.grid);disc(ctx,CENTER,CENTER,S(176),theme.ring);
   lv_draw_rect_dsc_t glass;lv_draw_rect_dsc_init(&glass);glass.radius=LV_RADIUS_CIRCLE;
@@ -102,10 +106,11 @@ static void radarDraw(lv_event_t* e){
       line(ctx,S(x),S(y),S(elbow),S(y),0x505050,S(2));line(ctx,S(elbow),S(y),S(elbow-side*18),S(y+18),0x505050,S(2));line(ctx,S(elbow-side*18),S(y+18),S(180+side*32),S(y+18),0x505050,S(2));
     }
   }
-  lv_draw_arc_dsc_t arc;lv_draw_arc_dsc_init(&arc);arc.color=color(theme.ring);arc.width=S(1);arc.opa=160;lv_point_t center{(lv_coord_t)CENTER,(lv_coord_t)CENTER};
+  lv_point_t center{(lv_coord_t)CENTER,(lv_coord_t)CENTER};
   if(radarTheme&&radarTheme!=24)for(int radius=42;radius<169;radius+=42)lv_draw_arc(ctx,&arc,&center,S(radius),0,359);
   if(radarTheme!=24){arc.width=S(2);lv_draw_arc(ctx,&arc,&center,S(170),0,359);}
 #endif
+  }
   if(radarTheme==9){
     const auto& logo=radar_logo_mcnally;int x=(SCREEN_RES-logo.header.w)/2,y=(SCREEN_RES-logo.header.h)/2;
     lv_area_t area{(lv_coord_t)x,(lv_coord_t)y,(lv_coord_t)(x+logo.header.w-1),(lv_coord_t)(y+logo.header.h-1)};
@@ -116,7 +121,9 @@ static void radarDraw(lv_event_t* e){
   static uint32_t sweepAt=0;if(radioEnabled)sweepAt=now;
   float angle=(sweepAt%6000)*.00104719755f,dx=cosf(angle),dy=sinf(angle);
   if(radarTheme==28){locksportPinRim(ctx,uint64_t(sweepAt%6000)*10000);lpuEmblem(ctx,150);}
-  if(radarTheme==29)boneSweep(ctx,angle);
+  if(radarTheme==31){}
+  else if(radarTheme==32)sparrowsPick(ctx,angle/6.28318530718f+.25f,146,true);
+  else if(radarTheme==29)boneSweep(ctx,angle);
   else if(radarTheme==30)cyberSweep(ctx,angle);
   else if(radarTheme==27)ghostProtonSweep(ctx,angle,sweepAt);
   else if(radarTheme==26)radarLplScales(ctx,(sweepAt%12000)*.000523598776f);
@@ -145,7 +152,7 @@ static void radarDraw(lv_event_t* e){
     auto plot=dragon::radarPlotPoint(c.plotRadius,c.radarX,c.radarY);dots[dotCount++]={S(plot.x),S(plot.y),i,contactKey(c)};
   }
   // Paint low-priority dots first so a coincident tracker cannot cover Axon.
-  for(int i=dotCount-1;i>=0;--i){auto& dot=dots[i];auto& c=contacts[dot.index];int x=dot.x,y=dot.y;uint32_t age=now-c.seen;uint8_t opacity=std::max<uint8_t>(205,dragon::radarOpacity(age));Family family=visibleFamily(c,now,detector.families);uint32_t deviceColor=dragon::familyColor(family);
+  for(int i=dotCount-1;i>=0;--i){auto& dot=dots[i];auto& c=contacts[dot.index];int x=dot.x,y=dot.y;uint32_t age=now-c.seen;uint8_t opacity=std::max<uint8_t>(205,dragon::radarOpacity(age));Family family=visibleFamily(c,now,detector.families);uint32_t deviceColor=radarTheme==31?0xffed48:dragon::familyColor(family);
     #ifndef BOARD_RADAR_LITE
     if(radarTheme==24){asciiMark(ctx,age>=30000?"?":dot.index==trackedContact?"@":"*",x*360/SCREEN_RES,y*360/SCREEN_RES,deviceColor);continue;}
 #endif
@@ -173,7 +180,7 @@ static void radarDraw(lv_event_t* e){
     #ifndef BOARD_RADAR_LITE
     if(radarTheme==24)asciiMark(ctx,"*",dot.x*360/SCREEN_RES,dot.y*360/SCREEN_RES,dragon::familyColor(family));else
 #endif
-    disc(ctx,dot.x,dot.y,S(5),dragon::familyColor(family));
+    disc(ctx,dot.x,dot.y,S(5),radarTheme==31?0xffed48:dragon::familyColor(family));
   }
   // Decorative center cursor, not a compass. Keep it above the sweep/labels.
 #ifdef BOARD_RADAR_LITE

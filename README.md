@@ -24,9 +24,9 @@ Wi-Fi and Bluetooth detection, signal tracking, and logo watch faces for five ES
 | **Seeed XIAO ESP32-S3 + Round Display** | 240 × 240 LCD | Touch, RTC, microSD, 8 MB flash |
 | **Waveshare ESP32-S3-LCD-1.28 Lite** | 240 × 240 LCD | BOOT button, 16 MB flash; no touch |
 
-The four full boards share the radar, 31 themes, 29 logo watch faces, timers, notebook, badge editor, radio tools, and BLE Lab. StopWatch and Waveshare AMOLED support 2 MiB captures and 2 MiB recon sessions. Their total file storage differs.
+The four full boards share the radar, 33 themes, 31 logo watch faces, timers, notebook, badge editor, radio tools, and BLE Lab. StopWatch and Waveshare AMOLED support 2 MiB captures and 2 MiB recon sessions. Their total file storage differs.
 
-Lite provides five button-operated pages: radar, clock, timer, signals, and diagnostics. It shares detection and all 31 themes, with compact clocks. It does not include Badge Studio, audio, or active labs.
+Lite provides five button-operated pages: radar, clock, timer, signals, and diagnostics. It shares detection and all 33 themes, with compact clocks. It does not include Badge Studio, audio, or active labs.
 
 Firmware is board-specific. The Waveshare **1.75C** and non-C models have different wiring. [Hardware guide](docs/HARDWARE.md) · [Feature comparison](docs/FEATURE-MATRIX.md) · [Tested hardware and limitations](docs/VALIDATION.md)
 
@@ -39,6 +39,22 @@ Firmware is board-specific. The Waveshare **1.75C** and non-C models have differ
 Choose a theme in **Settings → Theme & radar labels**. It applies to the radar, matching clock, menus, and dialogs. The Dragon Ball/BWM animation appears at power-on on every board. Swipe the clock to choose another watch face.
 
 The collection includes maker, community, character, and locksport designs. [Browse the theme gallery](docs/THEMES.md) · [Watch controls](docs/STOPWATCH-CLOCK-ORIENTATION.md) · [Artwork credits](CREDITS.md)
+
+## Capsule Corp
+
+A silver Dragon Radar bezel, emerald grid and yellow signal markers, paired with a white-and-blue Capsule Corp chronometer. Included on all five boards, with matching menus on the full profiles. [Theme guide](docs/CAPSULE-CORP.md).
+
+| Radar | Watch |
+|---|---|
+| ![Capsule Corp radar](web/assets/radar-capsule-01315.png) | ![Capsule Corp watch](web/assets/watch-capsule-01315.png) |
+
+## Sparrows
+
+Black, red and steel with the supplied keyhole emblem, a hook sweep and pick-shaped clock hands. The Locksport Timer includes SPLIT, OPEN and a moving rim. [Theme guide](docs/SPARROWS.md).
+
+| Radar | Watch | Locksport Timer |
+|---|---|---|
+| ![Sparrows radar](web/assets/radar-sparrows-01315.png) | ![Sparrows watch](web/assets/watch-sparrows-01315.png) | ![Sparrows timer](web/assets/timer-sparrows-01315.png) |
 
 ## Locksport
 

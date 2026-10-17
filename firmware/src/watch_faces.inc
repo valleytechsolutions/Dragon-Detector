@@ -41,9 +41,11 @@ static const WatchPalette watches[]={
   {"GHOSTBUSTERS",0x000000,0xffffff,0xff4b48,0x82414b,true},
   {"LOCKPICKERS UNITED",0x000000,0xffffff,0xe5e9ec,0x687177,true},
   {"HACKAZILLAREX",0x000000,0xffedcf,0xff7073,0x8e525c,false},
-  {"m33k_t3ch",0x060818,0xfff2fc,0x4ae9ff,0x9677af,false}
+  {"m33k_t3ch",0x060818,0xfff2fc,0x4ae9ff,0x9677af,false},
+  {"CAPSULE CORP",0xeaf0f4,0x12354e,0x2e84b0,0x56788e,true},
+  {"SPARROWS",0x000000,0xf3f2ef,0xff8790,0x686069,false}
 };
-static constexpr uint8_t WatchFaces[]={0,1,2,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33};
+static constexpr uint8_t WatchFaces[]={0,1,2,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35};
 static constexpr unsigned WatchCount=sizeof(WatchFaces)/sizeof(WatchFaces[0]);
 static bool watchFaceAllowed(unsigned face){for(auto id:WatchFaces)if(id==face)return true;return false;}
 static unsigned watchFacePosition(){for(unsigned i=0;i<WatchCount;++i)if(WatchFaces[i]==watchFace)return i;return 0;}
@@ -279,6 +281,8 @@ static void watchDraw(lv_event_t* e){
     if(valid)snprintf(text,sizeof(text),"%04d-%02d-%02d",d.year,d.month,d.day);else strcpy(text,"SYNC IN SETTINGS");
     watchText(ctx,text,70,294,220,F12,p.accent);return;
   }
+  if(watchFace==35){sparrowsWatch(ctx,d,valid);return;}
+  if(watchFace==34){capsuleWatch(ctx,d,valid);return;}
   if(watchFace==32||watchFace==33){watchRunnerCyber(ctx,d,valid);return;}
   if(watchFace==30||watchFace==31){watchContainment(ctx,d,valid);return;}
   if(watchFace==29){watchLpl(ctx,d,valid);return;}
@@ -337,7 +341,7 @@ static void buildWatch(){
   bool compact=watchFace==0||watchFace==10||watchFace==12||watchFace==27||watchFace==28||watchFace>=29;int y=watchFace==0?316:watchFace==27?315:(watchFace==12||watchFace==28||watchFace>=29)?326:watchFace==10?317:279,h=(watchFace==0||watchFace==12||watchFace==28||watchFace>=29)?21:27;
   auto* b=button(watchDial,watchFace==27?"[+]":LV_SYMBOL_SETTINGS,watchFace==27?126:compact?145:108,y,watchFace==27?48:compact?34:44,h,160);auto* home=button(watchDial,watchFace==27?"[=]":LV_SYMBOL_LIST,watchFace==27?186:compact?181:208,y,watchFace==27?48:compact?34:44,h,2);
   for(auto* o:{b,home}){
-    if(watchFace>=29)lv_obj_set_y(o,S(310));
+    if(watchFace>=29)lv_obj_set_y(o,S(watchFace>=34?326:310));
     lv_obj_set_style_pad_all(o,0,0);lv_obj_set_style_bg_opa(o,LV_OPA_TRANSP,0);lv_obj_set_style_border_width(o,0,0);
     auto* icon=lv_obj_get_child(o,0);lv_obj_set_style_text_font(icon,uiFont(F12),0);lv_obj_set_style_text_color(icon,color(p.muted),0);lv_obj_center(icon);
   }
@@ -383,6 +387,7 @@ static void buildChronographFrame(){
       watchText(ctx,"LOCKSPORT TIMER",48,74,264,F20,uiColors().accent);
     }
     if(lpu()&&page==Stopwatch){watchLogo(ctx,radar_logo_lpu,14);watchText(ctx,"LOCKSPORT TIMER",48,74,264,F20,uiColors().accent);}
+    if(sparrows()&&page==Stopwatch){watchLogo(ctx,radar_logo_sparrows,14);watchText(ctx,"LOCKSPORT TIMER",48,74,264,F20,uiColors().accent);}
     if(dmac()&&page==Stopwatch){watchLogo(ctx,radar_logo_dmac,20,0,false,true);watchText(ctx,"LOCKSPORT COUNTER",38,74,284,F20,uiColors().accent);}
     if(locksport())for(float angle:{.125f,.375f,.625f,.875f}){auto at=watchPolar(angle,171);watchScrew(ctx,at.x,at.y,uiColors().accent,locksportBg());}
   },LV_EVENT_DRAW_MAIN,nullptr);

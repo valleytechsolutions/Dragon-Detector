@@ -1,10 +1,10 @@
 # Radar themes
 
-Firmware **0.13.8** offers twenty-seven themes, including Covert Instruments × McNally, TOOOL, TOOOL Dark and Church of Malware, on Waveshare AMOLED, M5Stack StopWatch, Spotpear and Seeed XIAO + Round Display.
+Firmware **0.13.15** offers 33 themes, including Covert Instruments × McNally, TOOOL, TOOOL Dark and Church of Malware, on Waveshare AMOLED, M5Stack StopWatch, Spotpear and Seeed XIAO + Round Display.
 
 The saved theme also controls menus, settings, dialogs, utility screens, BLE Lab and radio tools. Watch designs remain independently swipeable. All five profiles show the Dragon Ball/BWM mark on black at power-on, then open the saved radar theme. Custom badge artwork and detection-family colors retain their meaning.
 
-Open **Tools → System → Settings → Theme & radar labels** and scroll to the theme. It saves immediately; tap Home to return to radar. Or connect through the [web tools](https://valleytechsolutions.github.io/Dragon-Detector/#detector), choose Radar appearance → Theme, and save. Older firmware keeps its original three choices until updated. Waveshare Lite cycles all 29 themes with BOOT and saves the selection. Hold BOOT to cycle radar, compact clock, timer, signals and diagnostics; see [Lite controls](WAVESHARE-LITE.md). Its LPL radar includes the central emblem and rotating scales.
+Open **Tools → System → Settings → Theme & radar labels** and scroll to the theme. It saves immediately; tap Home to return to radar. Or connect through the [web tools](https://valleytechsolutions.github.io/Dragon-Detector/#detector), choose Radar appearance → Theme, and save. Older firmware keeps its original three choices until updated. Waveshare Lite cycles all 33 themes with BOOT and saves the selection. Hold BOOT to cycle radar, compact clock, timer, signals and diagnostics; see [Lite controls](WAVESHARE-LITE.md). Its LPL radar includes the central emblem and rotating scales.
 
 | Valleytech | Biscuit Shop | Marauder |
 |---|---|---|
@@ -13,9 +13,9 @@ Open **Tools → System → Settings → Theme & radar labels** and scroll to th
 
 These are CRC-verified 466×466 logical display captures from the Waveshare, not panel photographs. The small logo is sized natively for each panel. The Valleytech silhouette is isolated on the dark radar, rendered in silver without a white backing; Biscuit's white logo uses transparency; the JCMK source retains its black background. [Unmodified sources and attribution](../CREDITS.md#radar-theme-artwork--0131).
 
-Green radar (default), Dragon Ball and Black / gold / red keep their BWM1 logo. Existing saved selections stay unchanged. All twenty-nine themes share the same [26 device-family colors](RADAR-COLORS.md), labels and leader lines. Radio status, target count, battery indicator, RSSI placement, scan scheduling and badge images are unaffected by a theme change.
+Green radar (default), Dragon Ball and Black / gold / red keep their BWM1 logo. Existing saved selections stay unchanged. Family-colored labels use the same [26 device-family colors](RADAR-COLORS.md) and leader lines; Capsule Corp uses yellow contact dots to match its Dragon Radar display. Radio status, target count, battery indicator, RSSI placement, scan scheduling and badge images are unaffected by a theme change.
 
-USB names: `radar theme dragon`, `green`, `gold`, `valleytech`, `biscuit`, `marauder`, `toool`, `church`, `toool-dark`, `covert`, `awok`, `baph0mau5`, `wdgwars`, `ghoststrats`, `n3rdsec`, `halehound`, `waveshare`, `m5stack`, `lab5`, `sasquach`, `nyan`, `dmac`, `seeed`, `dagnazty`, `octo-pig`, `deflock`, or `lpl` (prefix each with `radar theme`). `radar status` reports saved indices 0–26 in that order. Unknown themes are rejected without changing the current selection.
+USB names: `radar theme dragon`, `green`, `gold`, `valleytech`, `biscuit`, `marauder`, `toool`, `church`, `toool-dark`, `covert`, `awok`, `baph0mau5`, `wdgwars`, `ghoststrats`, `n3rdsec`, `halehound`, `waveshare`, `m5stack`, `lab5`, `sasquach`, `nyan`, `dmac`, `seeed`, `dagnazty`, `octo-pig`, `deflock`, `lpl`, `ghostbusters`, `lpu`, `hackazillarex`, `m33k-t3ch`, `capsule-corp`, or `sparrows` (prefix each with `radar theme`). `radar status` reports saved indices 0–32 in that order. Unknown themes are rejected without changing the current selection.
 
 ## TOOOL · 0.13.6
 
@@ -203,3 +203,11 @@ The catalog now contains 29 GUI themes and 27 selectable logo watches on full bo
 Actual Waveshare framebuffer renders. Ghostbusters uses the supplied original no-ghost logo, a red/white proton stream, containment-trap details and a protected 24-hour window. LPU places the supplied emblem prominently, adds two silver pick hands, and uses sixty moving pin positions to count seconds. Radar pins follow the sweep; timer pins follow elapsed attempt time and stop on PAUSE/OPEN. Both include full GUI palettes. Artwork attribution is in [CREDITS](../CREDITS.md).
 
 Lite receives both radar palettes/logos and compact clock/timer layouts, including the LPU pin rim. It does not load the complete full-board watch scenes. [Lite controls](WAVESHARE-LITE.md).
+
+## Capsule Corp · 0.13.15
+
+Silver instrument bezel, emerald grid and yellow detected-signal markers. The logo chronometer has a white-and-blue analog dial, green 24-hour display, date and amber seconds indicator. The shared design scales to all five boards, including Lite. USB theme `capsule-corp` is index 31; full-board watch index 34. [Design and artwork](CAPSULE-CORP.md).
+
+## Sparrows · 0.13.15
+
+Black, red and steel, the supplied keyhole emblem, segmented rings and two pick-shaped watch hands. The radar uses a rotating hook-shaped sweep. Selecting Sparrows enables Locksport Timer controls and the animated elapsed-time rim. USB theme `sparrows` is index 32; full-board watch index 35. The complete watch also runs on Lite. [Design and attribution](SPARROWS.md).

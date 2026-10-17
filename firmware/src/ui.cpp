@@ -67,8 +67,9 @@ static uint8_t radarTheme=1;
 static bool covert(){return radarTheme==9;}
 static bool lpu(){return radarTheme==28;}
 static bool lpl(){return radarTheme==26;}
+static bool sparrows(){return radarTheme==32;}
 static bool dmac(){return radarTheme==21;}
-static bool locksport(){return radarTheme==6||radarTheme==8||covert()||dmac()||lpl()||lpu();}
+static bool locksport(){return radarTheme==6||radarTheme==8||covert()||dmac()||lpl()||lpu()||sparrows();}
 static bool locksportDark(){return locksport()&&radarTheme!=6;}
 static uint32_t locksportBg(){return uiColors().bg;}
 static uint32_t locksportInk(){return uiColors().ink;}
@@ -225,7 +226,7 @@ static void radarPick(lv_draw_ctx_t* ctx,float radians){
 static void selectRadarTheme(uint8_t selected){
   radarTheme=selected;dismissNotice();uiApplyTheme(radarTheme);settings.putUChar("radar-theme",radarTheme);
   if(radarTheme==0){watchFace=0;settings.putUChar("watch-face",watchFace);}
-  if(locksport()){watchFace=lpu()?31:lpl()?29:dmac()?24:covert()?12:locksportDark()?11:9;settings.putUChar("watch-face",watchFace);}
+  if(locksport()){watchFace=sparrows()?35:lpu()?31:lpl()?29:dmac()?24:covert()?12:locksportDark()?11:9;settings.putUChar("watch-face",watchFace);}
   else if(radarTheme==7){watchFace=10;settings.putUChar("watch-face",watchFace);}
   else if(radarTheme>=10){watchFace=radarTheme+3;settings.putUChar("watch-face",watchFace);}
 }
@@ -276,7 +277,7 @@ static void build(){
     radar=lv_obj_create(root);lv_obj_remove_style_all(radar);lv_obj_set_pos(radar,0,0);lv_obj_set_size(radar,SCREEN_RES,SCREEN_RES);lv_obj_clear_flag(radar,LV_OBJ_FLAG_SCROLLABLE);lv_obj_add_flag(radar,LV_OBJ_FLAG_CLICKABLE);
     lv_obj_add_event_cb(radar,radarDraw,LV_EVENT_DRAW_MAIN,nullptr);lv_obj_add_event_cb(radar,radarTap,LV_EVENT_CLICKED,nullptr);
     if(radarTheme==8||radarTheme==14||dmac()||radarTheme==22||radarTheme==23)circleLogo(root,radarLogos[radarTheme],17);
-    else if(radarTheme!=13&&radarTheme!=24){auto* logo=lv_img_create(root);lv_img_set_src(logo,radarLogos[radarTheme]);lv_obj_align(logo,LV_ALIGN_TOP_MID,0,S(17));lv_obj_clear_flag(logo,LV_OBJ_FLAG_CLICKABLE);if(radarTheme==10||radarTheme==3){lv_obj_set_style_img_recolor(logo,color(radarTheme==3?0xe1e8ec:0xffffff),0);lv_obj_set_style_img_recolor_opa(logo,LV_OPA_COVER,0);}}
+    else if(radarTheme!=13&&radarTheme!=24&&radarTheme!=32){auto* logo=lv_img_create(root);lv_img_set_src(logo,radarLogos[radarTheme]);lv_obj_align(logo,LV_ALIGN_TOP_MID,0,S(17));lv_obj_clear_flag(logo,LV_OBJ_FLAG_CLICKABLE);if(radarTheme==10||radarTheme==3){lv_obj_set_style_img_recolor(logo,color(radarTheme==3?0xe1e8ec:0xffffff),0);lv_obj_set_style_img_recolor_opa(logo,LV_OPA_COVER,0);}}
     const auto& theme=radarPalettes[radarTheme];
     statusLabel=label(root,"LISTENING",56,66,248,F12,theme.text);lv_obj_set_style_text_align(statusLabel,LV_TEXT_ALIGN_CENTER,0);legible(statusLabel);lv_obj_set_style_bg_color(statusLabel,color(theme.panel),0);lv_obj_set_style_bg_opa(statusLabel,LV_OPA_60,0);
     radarActivity=label(root,"",75,84,210,F12,0xffbc76);lv_obj_set_style_text_align(radarActivity,LV_TEXT_ALIGN_CENTER,0);legible(radarActivity);lv_obj_add_flag(radarActivity,LV_OBJ_FLAG_CLICKABLE);lv_obj_add_event_cb(radarActivity,action,LV_EVENT_CLICKED,(void*)116);
@@ -285,7 +286,7 @@ static void build(){
     auto* targets=button(root,"TARGETS",90,301,90,32,96);
     auto* tools=button(root,"TOOLS",187,301,78,32,2);
     auto* quiet=button(root,detector.quiet?LV_SYMBOL_MUTE:LV_SYMBOL_VOLUME_MAX,270,257,38,34,97);
-    for(auto* b:{targets,tools,quiet}){lv_obj_set_style_bg_color(b,color(theme.panel),0);lv_obj_set_style_bg_opa(b,LV_OPA_80,0);lv_obj_set_style_border_color(b,color(theme.ring),0);lv_obj_set_style_border_opa(b,LV_OPA_60,0);if(locksport())lv_obj_set_style_text_color(lv_obj_get_child(b,0),color(theme.text),0);}
+    for(auto* b:{targets,tools,quiet}){lv_obj_set_style_bg_color(b,color(theme.panel),0);lv_obj_set_style_bg_opa(b,LV_OPA_80,0);lv_obj_set_style_border_color(b,color(theme.ring),0);lv_obj_set_style_border_opa(b,LV_OPA_60,0);if(locksport()||radarTheme==31)lv_obj_set_style_text_color(lv_obj_get_child(b,0),color(theme.text),0);}
   }else if(page==Menu){
     title("DRAGON TOOLS");const char* tabs[]={"RECON","UTILITIES","SYSTEM"};
     for(int i=0;i<3;++i){auto* b=button(root,tabs[i],47+i*89,76,86,32,10+i);if(menuTab==i)lv_obj_set_style_bg_color(b,color(uiColors().raised),0);}
@@ -464,7 +465,7 @@ static void build(){
   }else if(page==Stopwatch){
     dismissNotice();lv_obj_set_style_bg_color(root,color(locksport()?locksportBg():uiColors().bg),0);buildChronographFrame();
     if(locksport()){
-      if(!covert()&&!dmac()&&!lpl()&&!lpu()){circleLogo(root,&radar_logo_toool,20);centered(label(root,"LOCKSPORT TIMER",48,74,264,F20,locksportAccent()));}
+      if(!covert()&&!dmac()&&!lpl()&&!lpu()&&!sparrows()){circleLogo(root,&radar_logo_toool,20);centered(label(root,"LOCKSPORT TIMER",48,74,264,F20,locksportAccent()));}
       button(root,LV_SYMBOL_HOME,149,307,62,33,1);
     }else title("CHRONOGRAPH","Precision stopwatch");
     timerState=label(root,"",50,locksport()?106:98,260,F12,locksport()?locksportAccent():uiColors().accent);centered(timerState);
