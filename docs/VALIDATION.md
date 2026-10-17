@@ -290,3 +290,7 @@ A complete 434,320-byte RGB565 badge upload matched the LVGL screenshot pixel-fo
 Spotpear still requires physical testing. StopWatch has the 0.8 controls and 0.9 USB checks above; its haptics remain unverified. Waveshare's new RTC writes, PWR lap button and manual touch rotation require a physical 0.9 check. Full touch-edge calibration, maximum-volume acoustic quality, battery runtime and long-duration stability remain unverified on all profiles. No controlled field trial against every named product has been performed. Axon vendor evidence can include other Axon/TASER equipment; glasses and tracker models cannot always be distinguished. Radar angle is decorative and RSSI is not a measured distance or bearing.
 
 Historical 0.1/0.2 reports apply to their archived board projects only.
+
+## 0.13.7 refinement checks
+
+69 web tests cover the new post-install clock handoff and reduced-motion/visibility behavior alongside existing tooling. Native BOOT tests cover debounce, startup holds, long presses, rearming and timer rollover; the native detector/fuzz suite remains required. All five firmware/package builds must pass before Pages deploys. The release verification asset records exact source/build hashes, public firmware comparisons and completed physical checks. Waveshare AMOLED has passed all 26 theme selections, clock write/readback, self-tests and continued Wi-Fi/BLE reception. XIAO Round and Lite have not been physically connected for this release. The Lite theme cache reuses its existing PSRAM allocation.

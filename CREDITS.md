@@ -165,3 +165,7 @@ Pixel lettering is generated from the bundled **Unscii-8** ASCII glyphs by viznu
 ## DeFlock artwork · 0.13.6
 
 The owner supplied the unchanged [camera-raven illustration](media/theme-logos/deflock.png), originally `unnamed.png`. Native palette-indexed display copies omit only blank outer margins. The navy/steel-blue interface, viewfinder ornaments and optical clock layout are original project code. The supplied artwork remains its owner’s work and is not covered by the software license; this optional appearance theme does not imply affiliation or endorsement.
+
+### 0.13.7 installer and Lite refinements
+
+The installer continues to use [ESP Web Tools 10.4.0](https://github.com/esphome/esp-web-tools/tree/10.4.0), with its published dialog port/manifest properties and close event for local clock setup. The dependency is pinned independently of firmware versions. The animated flasher radar is original code-drawn decoration. Lite reuses the already credited supplied theme artwork and native GhostStrats/ASCII marks; no new third-party art was added.

@@ -1,6 +1,6 @@
 # Exact board profiles
 
-Current firmware: **0.13.2**. Another display on the same ESP32-S3 needs different firmware.
+Current firmware: **0.13.7**. Another display on the same ESP32-S3 needs different firmware.
 
 | Feature | Waveshare AMOLED 1.75C | M5Stack StopWatch C152 | Spotpear JC3636W518 | XIAO ESP32-S3 + Round Display | Waveshare LCD 1.28 Lite |
 |---|---|---|---|---|---|
@@ -8,7 +8,7 @@ Current firmware: **0.13.2**. Another display on the same ESP32-S3 needs differe
 | Flash / PSRAM | 32 / 8 MB | 16 / 8 MB | 16 / 8 MB | 8 / 8 MB | 16 / 2 MB |
 | Physical timing controls | BOOT + short PWR | Yellow Start/Pause + blue Lap | On-screen | BOOT Start/Pause + on-screen Lap | None |
 | Radar / same detection families | Yes | Yes | Yes | Yes | Yes |
-| Six themes / badge / touch menus | Yes | Yes | Yes | Yes | No; fixed green radar |
+| 26 themes / badge / touch menus | Yes | Yes | Yes | Yes | No; BOOT-selectable radar palettes |
 | RSSI Hunt / watch lists / history | Yes | Yes | Yes | Yes | Radar RSSI only; no saved history |
 | Notebook / eight modes / 29 radio tools | Yes | Yes | Yes | Yes | No |
 | BLE Lab / GATT / recon sessions / recipes | Yes | Yes | Yes | Yes | No |
@@ -17,7 +17,7 @@ Current firmware: **0.13.2**. Another display on the same ESP32-S3 needs differe
 | Stopwatch / clock settings | Yes; RTC when detected | Yes; RTC when detected | Yes; software clock | Yes; RTC when detected | No |
 | Fixed orientation setting | Yes | Yes | Yes | Yes | Fixed radar orientation |
 | SD card support | **No slot / no SD controls** | **No slot / no SD controls** | Optional SD CSV/PCAP + browser | Optional SD CSV/PCAP + browser | No |
-| Internal user storage | 3.94 MiB badge/history + **16 MiB recon** | 7.94 MiB shared | 3.94 MiB shared | 1.94 MiB shared | No persistent user features |
+| Internal user storage | 3.94 MiB badge/history + **16 MiB recon** | 7.94 MiB shared | 3.94 MiB shared | 1.94 MiB shared | Theme selection only; no file features |
 | Capture buffer in PSRAM | 2 MiB | 1 MiB | 1 MiB | 512 KiB | No recorder |
 | Capture files / profiles download | USB web tools | USB web tools | USB web tools; separate SD logs | USB web tools; separate SD logs | None |
 

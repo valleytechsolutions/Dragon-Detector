@@ -1,5 +1,7 @@
 ![Dragon Detector promotional artwork](media/cover.png)
 
+**0.13.7:** [Animated web flasher](https://valleytechsolutions.github.io/Dragon-Detector/), automatic local-time setup after closing the installer, 26 BOOT-button radar themes on [Waveshare Lite](docs/WAVESHARE-LITE.md), and a cleaner Covert Instruments radar. Full boards retain all 26 themes and 24 logo watches. [Release notes](docs/RELEASE-0.13.7.md).
+
 # Dragon Detector · Detection & Hunt Edition
 
 **A Dragon Radar-inspired detector for five ESP32-S3 board profiles, including a radar-only Lite edition.** Observe device signatures, hunt a selected signal, and keep the evidence in local history. Create a custom image badge in the browser, sized for your exact board.

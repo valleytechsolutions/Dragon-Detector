@@ -463,7 +463,6 @@ static const uint8_t radar_logo_pixels[]={
 };
 extern const lv_img_dsc_t radar_logo = {{LV_IMG_CF_TRUE_COLOR_ALPHA,0,0,26,29},sizeof(radar_logo_pixels),radar_logo_pixels};
 #endif
-#ifndef BOARD_RADAR_LITE
 #if SCREEN_RES >= 466
 static const uint8_t radar_logo_valleytech_pixels[]={
 0,0,0,0,1,1,1,254,255,255,255,5,118,118,117,254,199,199,199,253,24,24,24,254,105,105,105,252,247,247,247,235,252,252,252,208,
@@ -709,8 +708,6 @@ static const uint8_t radar_logo_valleytech_pixels[]={
 };
 extern const lv_img_dsc_t radar_logo_valleytech = {{LV_IMG_CF_INDEXED_8BIT,0,0,25,29},sizeof(radar_logo_valleytech_pixels),radar_logo_valleytech_pixels};
 #endif
-#endif
-#ifndef BOARD_RADAR_LITE
 #if SCREEN_RES >= 466
 static const uint8_t radar_logo_biscuit_pixels[]={
 0,0,0,0,255,255,255,5,255,255,255,248,255,255,255,46,255,255,255,79,255,255,255,210,255,255,255,144,255,255,255,177,255,255,255,110,
@@ -978,8 +975,6 @@ static const uint8_t radar_logo_biscuit_pixels[]={
 };
 extern const lv_img_dsc_t radar_logo_biscuit = {{LV_IMG_CF_INDEXED_8BIT,0,0,29,29},sizeof(radar_logo_biscuit_pixels),radar_logo_biscuit_pixels};
 #endif
-#endif
-#ifndef BOARD_RADAR_LITE
 #if SCREEN_RES >= 466
 static const uint8_t radar_logo_marauder_pixels[]={
 0,0,0,255,252,252,252,255,183,183,183,255,196,196,196,255,74,74,74,255,150,150,150,255,86,86,86,255,99,99,99,255,170,170,170,255,
@@ -1247,8 +1242,6 @@ static const uint8_t radar_logo_marauder_pixels[]={
 };
 extern const lv_img_dsc_t radar_logo_marauder = {{LV_IMG_CF_INDEXED_8BIT,0,0,29,29},sizeof(radar_logo_marauder_pixels),radar_logo_marauder_pixels};
 #endif
-#endif
-#ifndef BOARD_RADAR_LITE
 #if SCREEN_RES >= 466
 static const uint8_t radar_logo_toool_pixels[]={
 106,92,220,255,171,163,235,255,69,52,212,255,220,217,246,255,195,189,241,255,254,253,254,255,39,18,206,255,24,3,202,255,34,12,204,255,
@@ -1353,8 +1346,6 @@ static const uint8_t radar_logo_toool_pixels[]={
 };
 extern const lv_img_dsc_t radar_logo_toool = {{LV_IMG_CF_INDEXED_4BIT,0,0,29,29},sizeof(radar_logo_toool_pixels),radar_logo_toool_pixels};
 #endif
-#endif
-#ifndef BOARD_RADAR_LITE
 #if SCREEN_RES >= 466
 static const uint8_t radar_logo_church_pixels[]={
 252,252,252,253,0,0,0,0,3,3,3,250,136,136,136,254,119,119,119,254,150,150,150,253,182,182,182,253,167,167,167,253,104,104,104,254,
@@ -1630,7 +1621,6 @@ static const uint8_t radar_logo_church_pixels[]={
 8,26,30,14,12,0,0,0,0,0,0,0,0,0,0,
 };
 extern const lv_img_dsc_t radar_logo_church = {{LV_IMG_CF_INDEXED_8BIT,0,0,31,29},sizeof(radar_logo_church_pixels),radar_logo_church_pixels};
-#endif
 #endif
 #ifndef BOARD_RADAR_LITE
 #if SCREEN_RES >= 466
@@ -4558,7 +4548,6 @@ static const uint8_t watch_logo_church_pixels[]={
 extern const lv_img_dsc_t watch_logo_church = {{LV_IMG_CF_INDEXED_4BIT,0,0,177,168},sizeof(watch_logo_church_pixels),watch_logo_church_pixels};
 #endif
 #endif
-#ifndef BOARD_RADAR_LITE
 #if SCREEN_RES >= 466
 static const uint8_t radar_logo_ci_pixels[]={
 197,197,197,255,128,128,128,255,71,71,71,255,53,53,53,255,252,252,252,255,0,0,0,255,235,235,235,255,34,34,34,255,28,28,28,255,
@@ -4616,7 +4605,6 @@ static const uint8_t radar_logo_ci_pixels[]={
 16,49,17,17,17,64,33,48,147,17,17,17,96,35,144,
 };
 extern const lv_img_dsc_t radar_logo_ci = {{LV_IMG_CF_INDEXED_4BIT,0,0,13,29},sizeof(radar_logo_ci_pixels),radar_logo_ci_pixels};
-#endif
 #endif
 #ifndef BOARD_RADAR_LITE
 #if SCREEN_RES >= 466
@@ -4925,7 +4913,6 @@ static const uint8_t watch_logo_mcnally_pixels[]={
 extern const lv_img_dsc_t watch_logo_mcnally = {{LV_IMG_CF_INDEXED_4BIT,0,0,43,43},sizeof(watch_logo_mcnally_pixels),watch_logo_mcnally_pixels};
 #endif
 #endif
-#ifndef BOARD_RADAR_LITE
 #if SCREEN_RES >= 466
 static const uint8_t radar_logo_awok_pixels[]={
 0,0,0,1,0,0,0,251,0,0,0,45,0,0,0,207,0,0,0,79,0,0,0,143,0,0,0,113,0,0,0,175,0,0,0,0,
@@ -5298,7 +5285,6 @@ static const uint8_t radar_logo_awok_pixels[]={
 0,0,2,2,0,2,0,0,0,0,0,
 };
 extern const lv_img_dsc_t radar_logo_awok = {{LV_IMG_CF_INDEXED_8BIT,0,0,47,29},sizeof(radar_logo_awok_pixels),radar_logo_awok_pixels};
-#endif
 #endif
 #ifndef BOARD_RADAR_LITE
 #if SCREEN_RES >= 466
@@ -6151,7 +6137,6 @@ static const uint8_t watch_logo_awok_pixels[]={
 extern const lv_img_dsc_t watch_logo_awok = {{LV_IMG_CF_INDEXED_8BIT,0,0,80,49},sizeof(watch_logo_awok_pixels),watch_logo_awok_pixels};
 #endif
 #endif
-#ifndef BOARD_RADAR_LITE
 #if SCREEN_RES >= 466
 static const uint8_t radar_logo_baph_pixels[]={
 26,22,20,255,12,9,10,255,44,26,41,255,47,37,48,255,35,25,24,255,49,71,71,255,37,71,115,255,42,56,52,255,83,150,199,255,
@@ -6418,7 +6403,6 @@ static const uint8_t radar_logo_baph_pixels[]={
 27,10,10,12,12,23,17,5,0,3,16,6,20,10,12,16,6,6,5,31,9,26,19,38,22,0,73,107,91,
 };
 extern const lv_img_dsc_t radar_logo_baph = {{LV_IMG_CF_INDEXED_8BIT,0,0,29,29},sizeof(radar_logo_baph_pixels),radar_logo_baph_pixels};
-#endif
 #endif
 #ifndef BOARD_RADAR_LITE
 #if SCREEN_RES >= 466
@@ -7319,7 +7303,6 @@ static const uint8_t watch_logo_baph_pixels[]={
 extern const lv_img_dsc_t watch_logo_baph = {{LV_IMG_CF_INDEXED_8BIT,0,0,64,64},sizeof(watch_logo_baph_pixels),watch_logo_baph_pixels};
 #endif
 #endif
-#ifndef BOARD_RADAR_LITE
 #if SCREEN_RES >= 466
 static const uint8_t radar_logo_wdgwars_pixels[]={
 1,1,1,255,23,21,14,255,43,19,47,255,41,38,18,255,55,52,20,255,76,72,24,255,34,27,22,255,144,135,40,255,38,13,45,255,
@@ -7586,7 +7569,6 @@ static const uint8_t radar_logo_wdgwars_pixels[]={
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 };
 extern const lv_img_dsc_t radar_logo_wdgwars = {{LV_IMG_CF_INDEXED_8BIT,0,0,29,29},sizeof(radar_logo_wdgwars_pixels),radar_logo_wdgwars_pixels};
-#endif
 #endif
 #ifndef BOARD_RADAR_LITE
 #if SCREEN_RES >= 466
@@ -8341,7 +8323,6 @@ static const uint8_t watch_logo_wdgwars_pixels[]={
 extern const lv_img_dsc_t watch_logo_wdgwars = {{LV_IMG_CF_INDEXED_8BIT,0,0,58,58},sizeof(watch_logo_wdgwars_pixels),watch_logo_wdgwars_pixels};
 #endif
 #endif
-#ifndef BOARD_RADAR_LITE
 #if SCREEN_RES >= 466
 static const uint8_t radar_logo_n3rdsec_pixels[]={
 137,137,137,255,254,254,254,255,2,2,2,255,231,232,232,255,23,23,23,255,119,119,119,255,38,38,38,255,103,103,103,255,56,56,56,255,
@@ -8441,7 +8422,6 @@ static const uint8_t radar_logo_n3rdsec_pixels[]={
 51,51,
 };
 extern const lv_img_dsc_t radar_logo_n3rdsec = {{LV_IMG_CF_INDEXED_4BIT,0,0,28,29},sizeof(radar_logo_n3rdsec_pixels),radar_logo_n3rdsec_pixels};
-#endif
 #endif
 #ifndef BOARD_RADAR_LITE
 #if SCREEN_RES >= 466
@@ -8845,7 +8825,6 @@ static const uint8_t watch_logo_n3rdsec_pixels[]={
 extern const lv_img_dsc_t watch_logo_n3rdsec = {{LV_IMG_CF_INDEXED_4BIT,0,0,61,64},sizeof(watch_logo_n3rdsec_pixels),watch_logo_n3rdsec_pixels};
 #endif
 #endif
-#ifndef BOARD_RADAR_LITE
 #if SCREEN_RES >= 466
 static const uint8_t radar_logo_halehound_pixels[]={
 3,0,6,255,19,8,45,255,47,10,44,255,37,7,25,255,51,22,110,255,47,18,81,255,41,13,74,255,78,20,80,255,80,25,109,255,
@@ -9279,7 +9258,6 @@ static const uint8_t radar_logo_halehound_pixels[]={
 0,0,0,0,0,0,
 };
 extern const lv_img_dsc_t radar_logo_halehound = {{LV_IMG_CF_INDEXED_8BIT,0,0,58,29},sizeof(radar_logo_halehound_pixels),radar_logo_halehound_pixels};
-#endif
 #endif
 #ifndef BOARD_RADAR_LITE
 #if SCREEN_RES >= 466
@@ -10668,7 +10646,6 @@ static const uint8_t watch_logo_halehound_splash_pixels[]={
 extern const lv_img_dsc_t watch_logo_halehound_splash = {{LV_IMG_CF_INDEXED_8BIT,0,0,43,62},sizeof(watch_logo_halehound_splash_pixels),watch_logo_halehound_splash_pixels};
 #endif
 #endif
-#ifndef BOARD_RADAR_LITE
 #if SCREEN_RES >= 466
 static const uint8_t radar_logo_waveshare_pixels[]={
 0,178,109,22,0,173,100,161,0,174,100,96,0,173,100,206,0,127,127,2,0,253,1,1,0,251,123,2,0,255,255,1,0,127,63,4,
@@ -10772,7 +10749,6 @@ static const uint8_t radar_logo_waveshare_pixels[]={
 176,204,204,76,192,45,221,219,187,187,187,187,187,187,187,176,204,204,204,12,192,50,27,187,187,187,187,187,187,187,176,
 };
 extern const lv_img_dsc_t radar_logo_waveshare = {{LV_IMG_CF_INDEXED_4BIT,0,0,29,29},sizeof(radar_logo_waveshare_pixels),radar_logo_waveshare_pixels};
-#endif
 #endif
 #ifndef BOARD_RADAR_LITE
 #if SCREEN_RES >= 466
@@ -11145,7 +11121,6 @@ static const uint8_t watch_logo_waveshare_pixels[]={
 extern const lv_img_dsc_t watch_logo_waveshare = {{LV_IMG_CF_INDEXED_4BIT,0,0,60,60},sizeof(watch_logo_waveshare_pixels),watch_logo_waveshare_pixels};
 #endif
 #endif
-#ifndef BOARD_RADAR_LITE
 #if SCREEN_RES >= 466
 static const uint8_t radar_logo_m5stack_pixels[]={
 253,253,253,255,0,0,0,255,101,103,105,255,149,150,152,255,212,213,214,255,232,233,232,255,182,183,184,255,201,153,78,255,134,137,139,255,
@@ -11412,7 +11387,6 @@ static const uint8_t radar_logo_m5stack_pixels[]={
 1,1,1,1,1,1,1,1,1,8,13,3,2,0,0,0,2,3,13,8,1,1,1,1,1,1,1,1,1,
 };
 extern const lv_img_dsc_t radar_logo_m5stack = {{LV_IMG_CF_INDEXED_8BIT,0,0,29,29},sizeof(radar_logo_m5stack_pixels),radar_logo_m5stack_pixels};
-#endif
 #endif
 #ifndef BOARD_RADAR_LITE
 #if SCREEN_RES >= 466
@@ -11991,7 +11965,6 @@ static const uint8_t watch_logo_m5stack_pixels[]={
 extern const lv_img_dsc_t watch_logo_m5stack = {{LV_IMG_CF_INDEXED_8BIT,0,0,49,49},sizeof(watch_logo_m5stack_pixels),watch_logo_m5stack_pixels};
 #endif
 #endif
-#ifndef BOARD_RADAR_LITE
 #if SCREEN_RES >= 466
 static const uint8_t radar_logo_lab5_pixels[]={
 156,81,95,255,158,155,223,255,106,93,91,255,247,227,88,255,153,90,169,255,167,99,214,255,92,85,139,255,159,41,161,255,27,24,93,255,
@@ -12282,7 +12255,6 @@ static const uint8_t radar_logo_lab5_pixels[]={
 0,
 };
 extern const lv_img_dsc_t radar_logo_lab5 = {{LV_IMG_CF_INDEXED_8BIT,0,0,33,29},sizeof(radar_logo_lab5_pixels),radar_logo_lab5_pixels};
-#endif
 #endif
 #ifndef BOARD_RADAR_LITE
 #if SCREEN_RES >= 466
@@ -13176,7 +13148,6 @@ static const uint8_t watch_logo_lab5_pixels[]={
 extern const lv_img_dsc_t watch_logo_lab5 = {{LV_IMG_CF_INDEXED_8BIT,0,0,68,60},sizeof(watch_logo_lab5_pixels),watch_logo_lab5_pixels};
 #endif
 #endif
-#ifndef BOARD_RADAR_LITE
 #if SCREEN_RES >= 466
 static const uint8_t radar_logo_sasquach_pixels[]={
 16,11,13,255,45,19,24,255,76,24,41,255,116,54,206,255,50,21,42,255,114,37,77,255,37,13,23,255,23,17,18,255,80,38,42,255,
@@ -13386,7 +13357,6 @@ static const uint8_t radar_logo_sasquach_pixels[]={
 12,70,0,0,0,0,0,0,0,0,0,0,0,0,2,3,25,15,2,0,0,7,0,0,0,0,0,
 };
 extern const lv_img_dsc_t radar_logo_sasquach = {{LV_IMG_CF_INDEXED_8BIT,0,0,19,29},sizeof(radar_logo_sasquach_pixels),radar_logo_sasquach_pixels};
-#endif
 #endif
 #ifndef BOARD_RADAR_LITE
 #if SCREEN_RES >= 466
@@ -14502,7 +14472,6 @@ static const uint8_t watch_logo_sasquach_pixels[]={
 extern const lv_img_dsc_t watch_logo_sasquach = {{LV_IMG_CF_INDEXED_8BIT,0,0,72,72},sizeof(watch_logo_sasquach_pixels),watch_logo_sasquach_pixels};
 #endif
 #endif
-#ifndef BOARD_RADAR_LITE
 #if SCREEN_RES >= 466
 static const uint8_t radar_logo_nyan_pixels[]={
 0,0,0,1,101,101,101,254,1,1,1,251,205,90,251,253,54,54,54,252,7,6,8,79,7,6,8,109,73,73,73,251,87,87,87,251,
@@ -14742,7 +14711,6 @@ static const uint8_t radar_logo_nyan_pixels[]={
 63,51,77,0,0,7,111,23,114,94,28,41,25,78,102,70,54,37,83,34,99,62,26,93,26,56,89,0,
 };
 extern const lv_img_dsc_t radar_logo_nyan = {{LV_IMG_CF_INDEXED_8BIT,0,0,24,29},sizeof(radar_logo_nyan_pixels),radar_logo_nyan_pixels};
-#endif
 #endif
 #ifndef BOARD_RADAR_LITE
 #if SCREEN_RES >= 466
@@ -15428,7 +15396,6 @@ static const uint8_t watch_logo_nyan_pixels[]={
 extern const lv_img_dsc_t watch_logo_nyan = {{LV_IMG_CF_INDEXED_8BIT,0,0,50,60},sizeof(watch_logo_nyan_pixels),watch_logo_nyan_pixels};
 #endif
 #endif
-#ifndef BOARD_RADAR_LITE
 #if SCREEN_RES >= 466
 static const uint8_t radar_logo_dmac_pixels[]={
 254,253,251,255,213,165,2,255,149,118,3,255,109,87,17,255,171,134,1,255,203,155,2,255,134,106,6,255,122,99,6,255,246,233,206,255,
@@ -15695,7 +15662,6 @@ static const uint8_t radar_logo_dmac_pixels[]={
 0,0,0,0,0,0,0,0,0,13,12,40,30,2,2,2,30,40,12,13,0,0,0,0,0,0,0,0,0,
 };
 extern const lv_img_dsc_t radar_logo_dmac = {{LV_IMG_CF_INDEXED_8BIT,0,0,29,29},sizeof(radar_logo_dmac_pixels),radar_logo_dmac_pixels};
-#endif
 #endif
 #ifndef BOARD_RADAR_LITE
 #if SCREEN_RES >= 466
@@ -16498,7 +16464,6 @@ static const uint8_t watch_logo_dmac_pixels[]={
 extern const lv_img_dsc_t watch_logo_dmac = {{LV_IMG_CF_INDEXED_8BIT,0,0,60,60},sizeof(watch_logo_dmac_pixels),watch_logo_dmac_pixels};
 #endif
 #endif
-#ifndef BOARD_RADAR_LITE
 #if SCREEN_RES >= 466
 static const uint8_t radar_logo_seeed_pixels[]={
 73,57,0,253,31,195,142,253,1,1,0,0,241,247,244,255,95,81,31,255,18,190,134,255,94,210,172,255,160,229,206,255,53,126,71,255,
@@ -16602,7 +16567,6 @@ static const uint8_t radar_logo_seeed_pixels[]={
 32,34,34,130,40,208,0,0,0,0,0,216,34,130,34,32,34,34,34,242,40,13,0,0,13,8,34,242,34,34,32,
 };
 extern const lv_img_dsc_t radar_logo_seeed = {{LV_IMG_CF_INDEXED_4BIT,0,0,29,29},sizeof(radar_logo_seeed_pixels),radar_logo_seeed_pixels};
-#endif
 #endif
 #ifndef BOARD_RADAR_LITE
 #if SCREEN_RES >= 466
@@ -16975,7 +16939,6 @@ static const uint8_t watch_logo_seeed_pixels[]={
 extern const lv_img_dsc_t watch_logo_seeed = {{LV_IMG_CF_INDEXED_4BIT,0,0,60,60},sizeof(watch_logo_seeed_pixels),watch_logo_seeed_pixels};
 #endif
 #endif
-#ifndef BOARD_RADAR_LITE
 #if SCREEN_RES >= 466
 static const uint8_t radar_logo_dagnazty_pixels[]={
 94,95,95,255,134,134,134,255,223,225,225,255,246,248,248,255,1,1,1,255,231,231,231,255,199,199,199,255,183,183,183,255,119,119,119,255,
@@ -17079,7 +17042,6 @@ static const uint8_t radar_logo_dagnazty_pixels[]={
 48,51,51,51,51,51,51,51,51,51,51,51,51,51,51,48,51,51,51,51,51,51,51,51,51,51,51,51,51,51,48,
 };
 extern const lv_img_dsc_t radar_logo_dagnazty = {{LV_IMG_CF_INDEXED_4BIT,0,0,29,29},sizeof(radar_logo_dagnazty_pixels),radar_logo_dagnazty_pixels};
-#endif
 #endif
 #ifndef BOARD_RADAR_LITE
 #if SCREEN_RES >= 466
@@ -17501,7 +17463,6 @@ static const uint8_t watch_logo_dagnazty_pixels[]={
 extern const lv_img_dsc_t watch_logo_dagnazty = {{LV_IMG_CF_INDEXED_4BIT,0,0,64,64},sizeof(watch_logo_dagnazty_pixels),watch_logo_dagnazty_pixels};
 #endif
 #endif
-#ifndef BOARD_RADAR_LITE
 #if SCREEN_RES >= 466
 static const uint8_t radar_logo_deflock_pixels[]={
 104,78,53,255,142,110,74,255,168,137,100,255,74,54,37,255,203,175,137,255,115,92,70,255,132,98,61,255,58,42,30,255,192,157,113,255,
@@ -17597,7 +17558,6 @@ static const uint8_t radar_logo_deflock_pixels[]={
 187,187,187,187,187,187,187,187,187,
 };
 extern const lv_img_dsc_t radar_logo_deflock = {{LV_IMG_CF_INDEXED_4BIT,0,0,26,29},sizeof(radar_logo_deflock_pixels),radar_logo_deflock_pixels};
-#endif
 #endif
 #ifndef BOARD_RADAR_LITE
 #if SCREEN_RES >= 466

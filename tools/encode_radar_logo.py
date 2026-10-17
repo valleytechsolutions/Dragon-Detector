@@ -63,7 +63,7 @@ for name,path in logos:
     if path.endswith('covert-instruments.png'):
         source=source.crop(source.convert('RGB').getbbox())
     source=source.crop(source.getbbox())
-    if name!='radar_logo':lines.append('#ifndef BOARD_RADAR_LITE')
+    if not name.startswith('radar_logo'):lines.append('#ifndef BOARD_RADAR_LITE')
     sizes=([(466,388),(360,300),(240,200)] if name.startswith('boot_') else
            [(466,207),(360,160),(240,107)] if name=='watch_logo_deflock' else
            [(466,326),(360,252),(240,168)] if name=='watch_logo_church' else
@@ -113,6 +113,6 @@ for name,path in logos:
         lines.extend(','.join(str(v) for v in pixels[i:i+36])+',' for i in range(0,len(pixels),36))
         lines.extend(['};',f'extern const lv_img_dsc_t {name} = {{{{{fmt},0,0,{width},{height}}},sizeof({name}_pixels),{name}_pixels}};'])
     lines.append('#endif')
-    if name!='radar_logo':lines.append('#endif')
+    if not name.startswith('radar_logo'):lines.append('#endif')
 (root/'firmware/src/radar_logo.cpp').write_text('\n'.join(lines)+'\n',encoding='utf8')
 print(f'Encoded {len(logos)} logo assets at 240/360/466 panel sizes; original artwork retained unchanged.')

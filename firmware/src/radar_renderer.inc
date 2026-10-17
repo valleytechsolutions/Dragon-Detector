@@ -68,7 +68,9 @@ static void radarDraw(lv_event_t* e){
   lv_area_t field{(lv_coord_t)S(9),(lv_coord_t)S(9),(lv_coord_t)(SCREEN_RES-S(9)-1),(lv_coord_t)(SCREEN_RES-S(9)-1)};lv_draw_rect(ctx,&glass,&field);
   static const int reaches[]={77,119,143,157,166,169,166,157,143,119,77};
   if(radarTheme<6)for(int n=0;n<11;++n){int axis=CENTER+S(n*30-150),reach=S(reaches[n]);line(ctx,axis,CENTER-reach,axis,CENTER+reach,theme.grid,S(1),180);line(ctx,CENTER-reach,axis,CENTER+reach,axis,theme.grid,S(1),180);}
-  else if(radarTheme==6||radarTheme==8||radarTheme==9||radarTheme==21){
+  else if(radarTheme==9){
+    // Covert: keep the field clear beneath the CI mark and silver pick sweep.
+  }else if(radarTheme==6||radarTheme==8||radarTheme==21){
     // Pin chambers evoke a lock cylinder while leaving signal labels legible.
     for(int i=0;i<5;++i){int x=S(140+i*20);line(ctx,x-S(6),S(112),x-S(6),S(160),theme.grid,S(1));line(ctx,x+S(6),S(112),x+S(6),S(160),theme.grid,S(1));
       for(int n=0;n<5;++n)line(ctx,x-S(4),S(114+n*4),x+S(4),S(117+n*4),theme.grid,S(1));
@@ -162,8 +164,8 @@ static void radarDraw(lv_event_t* e){
   }
   // Decorative center cursor, not a compass. Keep it above the sweep/labels.
 #ifdef BOARD_RADAR_LITE
-  for(int sign:{-1,1}){line(ctx,CENTER+sign*3,CENTER,CENTER+sign*8,CENTER,0x86bda5,1);line(ctx,CENTER,CENTER+sign*3,CENTER,CENTER+sign*8,0x86bda5,1);}
-  disc(ctx,CENTER,CENTER,1,0xd4f9e7);
+  for(int sign:{-1,1}){line(ctx,CENTER+sign*3,CENTER,CENTER+sign*8,CENTER,theme.ring,1);line(ctx,CENTER,CENTER+sign*3,CENTER,CENTER+sign*8,theme.ring,1);}
+  disc(ctx,CENTER,CENTER,1,theme.text);
 #else
   if(radarTheme==24)asciiMark(ctx,"+",180,180,theme.sweep);
   else if(radarTheme==9){disc(ctx,CENTER,CENTER,S(7),0x000000);disc(ctx,CENTER,CENTER,S(5),0xc5cdd3);disc(ctx,CENTER,CENTER,S(3),0x30383e);line(ctx,CENTER-S(2),CENTER+S(1),CENTER+S(2),CENTER-S(1),0xe7ecef,std::max(1,S(1)));}

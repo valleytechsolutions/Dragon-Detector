@@ -1,0 +1,42 @@
+import {BadgeSerial} from './serial.js?v=0.13.3';
+import {deviceQuery} from './device-query.js';
+import {parseBadgeInfo,hasWearableTools} from './firmware-compat.js?v=0.13.6';
+import {connectedProfile,boardProfiles} from './board-profiles.js?v=0.13.7';
+import {syncComputerClock,readWearable} from './wearable-transfer.js?v=0.13.3';
+
+// Called only after the installer has relinquished this exact granted port.
+// Never guess among getPorts(): another attached detector could be changed.
+export async function syncInstalledClock(port,board,{
+  makeLink=p=>new BadgeSerial(p),delay=ms=>new Promise(r=>setTimeout(r,ms)),now=()=>new Date()
+}={}){
+  if(!boardProfiles[board])throw new Error('Choose the exact board first.');
+  if(boardProfiles[board].lite)return {skipped:true};
+  let failure;
+  for(let attempt=0;attempt<3;attempt++){
+    await delay(attempt?1500:800);
+    const link=makeLink(port);
+    try{
+      await link.open();
+      const info=parseBadgeInfo(await deviceQuery(link,'badge info',s=>s.startsWith('BADGE_INFO ')));
+      if(connectedProfile(info)!==board||!hasWearableTools(info?.version)){
+        const error=new Error('Board identity does not match, or its clock protocol is too old. No clock settings were changed.');
+        error.identity=true;throw error;
+      }
+      await syncComputerClock(link,now());
+      const clock=await readWearable(link),current=now();
+      if(!clock.valid||clock.offset!==-current.getTimezoneOffset()||Math.abs(clock.epoch-current.getTime()/1000)>10)
+        throw new Error('Clock readback did not match this computer.');
+      return {...clock,board,version:info.version};
+    }catch(error){failure=error;if(error.identity)throw error;}
+    finally{await link.close();}
+  }
+  throw failure;
+}
+
+// Keep the lifecycle separate from UI rendering so close/handoff failures can
+// be tested without flashing a board. A declined checkbox still closes USB.
+export async function finishInstallSession(port,board,autoClock,options){
+  await port.close();
+  if(!autoClock)return {skipped:true};
+  return syncInstalledClock(port,board,options);
+}

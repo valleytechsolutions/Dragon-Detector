@@ -49,3 +49,7 @@ Replace the port and board folder with the exact device. This is a factory write
 GitHub Settings → Pages → Source must be **GitHub Actions**. The firmware workflow tests and builds all five profiles. The Pages workflow publishes only a successful `main` push, taking source and all five build artifacts from that same completed run. Failed builds are never substituted with older binaries. The public website contains release binaries; device dumps and local scan data are excluded.
 
 The web page validates the exact board name, ESP32-S3 family, image filenames, partition offsets and factory/update erase policy before enabling installation. This does not automatically identify connected display wiring; select the printed model carefully.
+
+## Automatic local time (0.13.7)
+
+Leave **Set my local date & time after installation** enabled. After installation finishes, close the installer window and wait for the verified-time status. The browser sets the computer’s current time and local UTC offset on the exact detected board, then closes USB. If the device returns as a different USB port, choose **Finish clock setup** and select the running board. A failed clock sync does not mean the firmware flash failed. Lite skips this step because it has no clock UI. A board without a working RTC needs time synced again after power loss; Studio also syncs on connection.

@@ -70,43 +70,7 @@ static bool locksportDark(){return locksport()&&radarTheme!=6;}
 static uint32_t locksportBg(){return uiColors().bg;}
 static uint32_t locksportInk(){return uiColors().ink;}
 static uint32_t locksportAccent(){return uiColors().accent;}
-struct RadarPalette {uint32_t top,bottom,grid,ring,dot,sweep,text,panel;};
-static const RadarPalette radarPalettes[]={
-  {0x20b970,0x0c9553,0x095134,0xe0e5cd,0xffec50,0xb9ff72,0xfffae2,0x064a2e},
-  {0x09291c,0x020c08,0x153d28,0x286c42,0xc0ff65,0x52dc84,0xdbf9c3,0x0b2419},
-  {0x19130b,0x070707,0x3e301b,0xa88742,0xffd166,0xe54138,0xffe4a3,0x21190f},
-  {0x091820,0x03090e,0x183440,0x71919d,0xdcebf0,0x63d5ef,0xe5f3f9,0x10242e},
-  {0x22180e,0x0c0805,0x49331e,0xaf7c40,0xffdf9e,0xffc56b,0xffecd0,0x2e2014},
-  {0x000000,0x100405,0x36161b,0xa34550,0xf0eeee,0xff354e,0xffe9ec,0x240c11},
-  {0xffffff,0xfaf3f4,0xead8dc,0xc8102e,0xc8102e,0xdb1737,0x601323,0xffffff},
-  {0x111111,0x000000,0x282828,0x9b9b9b,0xffffff,0xededed,0xf5f5f5,0x111111},
-  {0x160d12,0x050507,0x41202b,0xb52a48,0xffe8ee,0xf33c60,0xf4e9ed,0x180e14},
-  {0x090b0d,0x000000,0x252b30,0x858e95,0xf6f6f6,0xd6dde2,0xf2f4f6,0x111315},
-  {0x0f1736,0x05091b,0x30265b,0xab74d9,0xffff79,0xeb5df4,0xfff7fd,0x111731},
-  {0x170c24,0x040207,0x392347,0x965ad9,0xffd568,0xca88f9,0xfff1da,0x1b1025},
-  {0x03151e,0x000308,0x123844,0x33a6bb,0xf8dbff,0x43e9f4,0xe5fbff,0x071b25},
-  {0x17101f,0x030205,0x30243d,0x86629b,0xf4eaff,0xcf91ff,0xf3eef8,0x17141e},
-  {0x17140c,0x020202,0x322b1a,0xb49451,0xffffff,0xe7c775,0xf7f4ec,0x191714},
-  {0x24091e,0x050207,0x482040,0xae489e,0xffdec8,0xff76c5,0xffeff8,0x210d20},
-  {0x10210a,0x030802,0x293d16,0x6ea72e,0xf6ffe5,0xafe653,0xf1f8ed,0x132017},
-  {0x081d2a,0x02070c,0x183748,0x4594bd,0xe9f8ff,0x61caff,0xf1f8ff,0x10212e},
-  {0x0e112e,0x040616,0x292754,0x9b60d6,0xffb55a,0x3fe5ff,0xf6f6ff,0x141a35},
-  {0x11261e,0x020907,0x244638,0x4f9d85,0xffd692,0x78d5c1,0xf9ead3,0x102621},
-  {0x19112e,0x04040e,0x36234f,0xaf66c6,0xffe58f,0xff75cf,0xfff4fc,0x1a1530},
-  {0x073346,0x030a12,0x164759,0x328ca3,0xffe6f4,0xf16ab8,0xf5f8fc,0x102531},
-  {0x07343f,0x021116,0x1b4e51,0x6b9b51,0xf7fbef,0xa7d52c,0xf7fbef,0x07303a},
-  {0xffffff,0xf7f7f5,0xe1e1dd,0x767671,0x101010,0x181818,0x161616,0xffffff},
-  {0x080808,0x080808,0x301723,0x6b304c,0xffdbe9,0xff89b6,0xffdbe9,0x1d1017},
-  {0x152131,0x152131,0x29445b,0x678ba5,0xe5f4ff,0xabcde2,0xf0f6fb,0x1c2d40}
-};
-// Persistent indices 0..2 remain unchanged for existing settings.
-static const char* radarThemeNames[]={"Dragon Ball","Green radar","Black / gold / red","Valleytech","Biscuit Shop","Marauder","TOOOL","Church of Malware","TOOOL Dark","Covert Instruments / McNally","AWOK","Baph0Mau5","WDGWARS","GhostStrats","N3rdsec","HaleHound","Waveshare","M5Stack","LAB5","Talking Sasquach","Nyan Devices","DMAC","Seeed Studio","DagNazty","0ct0's Pig","DeFlock"};
-static const char* radarThemeCommands[]={"dragon","green","gold","valleytech","biscuit","marauder","toool","church","toool-dark","covert","awok","baph0mau5","wdgwars","ghoststrats","n3rdsec","halehound","waveshare","m5stack","lab5","sasquach","nyan","dmac","seeed","dagnazty","octo-pig","deflock"};
-static const char* radarThemeDescriptions[]={"Emerald grid / colored device families","Green phosphor / rings and live sweep","Dark field / gold rings / red sweep","Silver rings / cyan sweep / VTS logo","Warm amber / cream / Biscuit Shop logo","Black field / red sweep / JCMK logo","White / red / locksport timer + watch","Monochrome circuits / binary watch","Near-black / red / locksport timer + watch","Black / silver / pick hands + locksport timer","Midnight ink / neon paint / mushroom dial","Violet ritual dial / sigils / ember gold","Cyan / magenta / world map / signal dial","Black / grey / purple / glowing slit eyes","Black / white / gold / original skull","Black / hot pink / violet / living hellfire","Green / silver / precision waveform dial","Blue / white / modular hybrid dial","Neon laboratory / large 12-hour digital","Forest / teal / character-arm watch","Pink / rainbow / flying Nyan Cat","Teal / pink / acrylic picks / locksport counter","Lime / deep teal / leaf-circuit maker dial","White / black / skull and talon dial","Pink ASCII octopus / interactive wandering pig","Navy / steel blue / camera-raven viewfinder"};
-static const lv_img_dsc_t* radarLogos[]={&radar_logo,&radar_logo,&radar_logo,&radar_logo_valleytech,&radar_logo_biscuit,&radar_logo_marauder,&radar_logo_toool,&radar_logo_church,&radar_logo_toool,&radar_logo_ci,&radar_logo_awok,&radar_logo_baph,&radar_logo_wdgwars,nullptr,&radar_logo_n3rdsec,&radar_logo_halehound,&radar_logo_waveshare,&radar_logo_m5stack,&radar_logo_lab5,&radar_logo_sasquach,&radar_logo_nyan,&radar_logo_dmac,&radar_logo_seeed,&radar_logo_dagnazty,nullptr,&radar_logo_deflock};
-static constexpr unsigned RadarThemeCount=sizeof(radarThemeNames)/sizeof(radarThemeNames[0]);
-static_assert(dragon::UiPaletteCount==RadarThemeCount,"All themes need UI palettes");
-static_assert(sizeof(radarPalettes)/sizeof(radarPalettes[0])==RadarThemeCount && sizeof(radarLogos)/sizeof(radarLogos[0])==RadarThemeCount && sizeof(radarThemeCommands)/sizeof(radarThemeCommands[0])==RadarThemeCount && sizeof(radarThemeDescriptions)/sizeof(radarThemeDescriptions[0])==RadarThemeCount,"Every radar theme needs a palette, logo and menu/USB name");
+#include "radar_theme_catalog.h"
 static HistoryRecord historySelection;
 static int devicePage=0,deviceRows=0,deviceTotal=0;
 static dragon::DeviceKey deviceKeys[10];

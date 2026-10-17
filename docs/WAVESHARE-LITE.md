@@ -8,14 +8,15 @@ Actual 240×240 framebuffer capture from the connected board, not a panel photog
 
 ## A dedicated radar
 
-- Boots straight to the green radar, with BWM logo, live sweep and Wi-Fi/BLE reception status. Fine range rings, segmented arcs and edge ticks replace the dense grid; every device keeps its unique family color.
+- Boots straight to the saved radar theme (green with BWM logo on first use), with live sweep and Wi-Fi/BLE reception status. Fine range rings, segmented arcs and edge ticks replace the dense grid; every device keeps its unique family color.
 - Always 100% backlight; no dimming or timeout. The displayed **100% is brightness, not battery charge**.
 - All contacts appear together as family-colored dots. Up to four priority devices receive readable tags and leaders; Axon is first. Trackers remain small dots. There are no automatic pages. Lite has no touch hardware, so tap-to-reveal is available only on the full touch boards.
 - Signal radius uses the same median-filtered, smoothed RSSI as the full firmware. Stronger signals move inward. Neither the angle nor radius is a measured direction or distance.
 - All 26 detector families remain enabled, including the 0.9.3 Axon priority/receive fixes, ALPR, Find My accessories, Ring, Flipper and Wi-Fi/BLE activity detection. [Signature coverage and limitations](DETECTION.md) apply equally to Lite.
 - Passive BLE scanning and passive Wi-Fi reception alternate on the one shared radio, with Wi-Fi channels 1–11. Reception continues while drawing, but alternating modes/channel hopping still create listening gaps. No active probing, wireless attacks or fox transmitter.
 - No touch interface, menus, badge mode, stopwatch, RTC interface, motion rotation, speaker code, SD capture, or persistent history. Volatile contacts/alerts reset at reboot. Old full-UI preferences cannot disable families, dim the screen or start a badge.
-- BOOT is reserved for recovery; RESET restarts the board. Neither opens a menu or pauses the radar.
+- **Press BOOT to cycle all 26 radar palettes and logos** (0.13.7+). Each press advances once; holding it does not repeat. The theme name appears briefly, and the selection is saved one second after the last change. RESET restarts the board. Hold BOOT while tapping RESET for ROM download/recovery as before; release BOOT before normal theme controls arm.
+- Lite uses a compact shared instrument layout, including native GhostStrats slit eyes and an ASCII octopus. It does not load the full boards’ watch faces, locksport timers or elaborate animated scenes.
 
 ## Hardware configuration
 
@@ -27,9 +28,9 @@ Actual 240×240 framebuffer capture from the connected board, not a panel photog
 | LCD CS / DC / RESET | GPIO 9 / 8 / 12 |
 | Backlight | GPIO 40, continuously on |
 | USB | CH343P UART bridge, 115200 diagnostics; native USB CDC disabled |
-| Input / sound | No touch, no onboard speaker/buzzer |
+| Input / sound | BOOT / GPIO 0, active low with pull-up; no touch or onboard speaker/buzzer |
 
-An 11,520-byte display tile uses internal RAM; the 384-contact store and receive queues use PSRAM. Animation time and RSSI positions stay fixed while the tiles of one frame are drawn. The fixed radar artwork is rendered once into a 115,200-byte PSRAM cache. Animation is capped at twelve updates per second; the connected board measured about 66 ms per draw, down from 101 ms before this refinement. This leaves time between frames for reception; no menu objects, audio tasks or flash history journal run in Lite. The QMI8658 is intentionally unused. Battery percentage is not inferred from an uncalibrated ADC.
+An 11,520-byte display tile uses internal RAM; the 384-contact store and receive queues use PSRAM. Animation time and RSSI positions stay fixed while the tiles of one frame are drawn. Radar artwork is rendered at startup and on a theme change into the same reusable 115,200-byte PSRAM cache. Animation is capped at twelve updates per second; the earlier green-radar hardware check measured about 66 ms per draw, down from 101 ms before this refinement. This leaves time between frames for reception; no menu objects, audio tasks or flash history journal run in Lite. The QMI8658 is intentionally unused. Battery percentage is not inferred from an uncalibrated ADC.
 
 ## Install and recover
 

@@ -4,11 +4,13 @@
 #include <TFT_eSPI.h>
 #include <lvgl.h>
 #include <esp_heap_caps.h>
+#include "theme_button.h"
 static TFT_eSPI lcd;
 static lv_disp_draw_buf_t drawBuffer;
 static lv_disp_drv_t displayDriver;
-void boardBegin(){}
-void boardLoop(){}
+static dragon::ThemeButton themeButton;
+void boardBegin(){pinMode(BTN_PIN,INPUT_PULLUP);}
+void boardLoop(){if(themeButton.update(digitalRead(BTN_PIN)==LOW,millis()))uiKey(false);}
 void set_brightness(uint8_t){digitalWrite(LITE_BACKLIGHT,HIGH);}
 void scr_lvgl_init(){
   Serial.println("LITE_DISPLAY begin");Serial.flush();

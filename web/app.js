@@ -1,3 +1,5 @@
+import {startRadarBackground} from './radar-background.js?v=0.13.7';
+import {finishInstallSession,syncInstalledClock} from './install-clock.js?v=0.13.7';
 import {updateVisitCounter} from './visit-counter.js?v=0.13.6';
 import {hasFullLab,hasFullRecon,hasSessionTools} from './lab-capabilities.js?v=0.13.3';
 import {sessionName,downloadMission,recipePutCommand,sourceMacCommand} from './mission-tools.js?v=0.13.3';
@@ -13,25 +15,30 @@ import {uploadBadge} from './badge-transfer.js?v=0.13.3';
 import {readHistory} from './detector-transfer.js';
 import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasBrandedThemes,hasCommunityThemes,hasWearableTools} from './firmware-compat.js?v=0.13.6';
 import {readRadarSettings,saveRadarSettings} from './radar-transfer.js?v=0.13.6';
-import {boardProfiles,connectedProfile,validateManifest,supportsBadge} from './board-profiles.js?v=0.13.3';
+import {boardProfiles,connectedProfile,validateManifest,supportsBadge} from './board-profiles.js?v=0.13.7';
 import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan,drawBadgeText} from './badge-editor.js?v=0.13.3';
 import {hasNotebook,readNotebook,customAdvertCommand} from './notebook.js?v=0.13.3';
 const $ = id => document.getElementById(id);
 void updateVisitCounter($('visit-count'));
+startRadarBackground($('radar-background'),$('radar-motion'));
 const models = Object.fromEntries(Object.entries(boardProfiles).map(([id,p])=>[id,p.name]));
+let serial=null;
 let board = '', releaseReady = false, request = 0;
-let installerReady=false,installerFailed=false;
+let installerReady=false,installerFailed=false,installActive=false;
 function installEnabled(){
   const supported=!!navigator.serial && window.isSecureContext;
-  $('install-button').disabled = !board || !releaseReady || !$('hardware-confirm').checked || !installerReady || !supported;
+  $('install-button').disabled = installActive || !!serial || !board || !releaseReady || !$('hardware-confirm').checked || !installerReady || !supported;
   if(!supported)$('install-message').textContent='Use desktop Chrome or Edge over HTTPS or localhost for USB installation.';
   else if(!installerReady)$('install-message').textContent=installerFailed?'The USB installer could not load. Check your connection and reload this page.':'Loading the USB installer…';
+  else if(serial)$('install-message').textContent='Disconnect Detector tools / Badge Studio before opening the installer.';
+  else if(installActive)$('install-message').textContent='USB is in use by the installer or clock setup.';
   else if(releaseReady)$('install-message').textContent='Confirm your board, then connect its USB port.';
 }
 const installerTimer=setTimeout(()=>{installerFailed=true;installEnabled();},10000);
-customElements.whenDefined('esp-web-install-button').then(()=>{clearTimeout(installerTimer);installerReady=true;installEnabled();});
+customElements.whenDefined('ewt-install-dialog').then(()=>{clearTimeout(installerTimer);installerReady=true;installEnabled();});
 installEnabled();
 async function chooseBoard(next) {
+  if(installActive)return;
   board = next; releaseReady = false; const revision = ++request;
   if(!serial)setBadgeProfile(next);
   $('hardware-confirm').checked = false; $('download').hidden = true; installEnabled();
@@ -39,6 +46,9 @@ async function chooseBoard(next) {
   $('selected-board').textContent = models[board];
   $('board-storage').textContent = boardProfiles[board].storage;
   $('board-features').textContent = boardProfiles[board].features;
+  $('auto-clock-label').hidden=boardProfiles[board].lite;
+  $('finish-clock').hidden=true;
+  $('clock-setup-status').textContent=boardProfiles[board].lite?'Lite has no clock screen. Press BOOT to cycle radar themes.':'Local date, time and current time-zone offset will be set after you close the installer.';
   $('board-status').textContent = 'Checking the matching firmware release…';
   const mode = $('install-mode').value, manifest = `firmware/${board}/${mode}.json`;
   try {
@@ -63,7 +73,55 @@ $('install-mode').onchange=()=>{if(board)chooseBoard(board);};
 
 const canvas=$('preview'), ctx=canvas.getContext('2d',{willReadFrequently:true});
 const guideCanvas=$('preview-guides'),guideCtx=guideCanvas.getContext('2d');
-let photo=null,size=466,zoom=1,offsetX=0,offsetY=0,turns=0,mirror=false,serial=null,busy=false,firmwareVersion='',deviceProfile='',badgeProfile='stopwatch',photoName='',imageRequest=0;
+let photo=null,size=466,zoom=1,offsetX=0,offsetY=0,turns=0,mirror=false,busy=false,firmwareVersion='',deviceProfile='',badgeProfile='stopwatch',photoName='',imageRequest=0;
+
+let lastInstallBoard='';
+function installLock(active){
+  installActive=active;busy=active;controls();installEnabled();
+  for(const element of document.querySelectorAll('[data-board],#install-mode,#hardware-confirm,#auto-clock'))element.disabled=active;
+}
+function clockSetupResult(result){
+  $('clock-setup-status').textContent=result.skipped?'Installer closed. Automatic clock setup was not requested.':
+    `Local date and time verified on ${boardProfiles[result.board].name}. ${result.rtc?'Saved to the device RTC.':'This board currently has no usable RTC; reconnect and sync after power loss.'}`;
+  $('finish-clock').hidden=true;
+}
+function clockSetupFailure(error){
+  $('clock-setup-status').textContent=`Local time was not confirmed: ${error.message} If USB changed after flashing, use Finish clock setup to select the running board.`;
+  $('finish-clock').hidden=false;
+}
+$('install-button').onclick=async()=>{
+  if($('install-button').disabled||busy||serial)return;
+  const selected=board,autoClock=$('auto-clock').checked&&!boardProfiles[selected].lite;
+  lastInstallBoard=selected;installLock(true);$('finish-clock').hidden=true;
+  let port;
+  try{
+    port=await navigator.serial.requestPort();await port.open({baudRate:115200,bufferSize:8192});
+    const dialog=document.createElement('ewt-install-dialog');
+    dialog.port=port;dialog.manifestPath=$('installer').getAttribute('manifest');
+    dialog.addEventListener('closed',async()=>{
+      $('clock-setup-status').textContent=autoClock?'Checking the running board and setting local time…':'Closing installer USB connection…';
+      try{const result=await finishInstallSession(port,selected,autoClock);clockSetupResult(result);}
+      catch(error){if(autoClock)clockSetupFailure(error);else $('clock-setup-status').textContent='Installer closed. USB may need reconnecting.';}
+      finally{installLock(false);$('install-button').focus();}
+    },{once:true});
+    document.body.appendChild(dialog);
+    $('clock-setup-status').textContent=autoClock?'After installation, close the installer window. Local time setup will then run automatically.':'Close the installer window when finished.';
+  }catch(error){
+    if(port)try{await port.close();}catch{}
+    $('clock-setup-status').textContent=error.name==='NotFoundError'?'No USB port selected.':`Unable to open installer: ${error.message}`;
+    installLock(false);
+  }
+};
+$('finish-clock').onclick=async()=>{
+  if(busy||serial||!lastInstallBoard)return;installLock(true);$('finish-clock').disabled=true;
+  try{
+    const port=await navigator.serial.requestPort();
+    $('clock-setup-status').textContent='Reading board identity and synchronizing local time…';
+    clockSetupResult(await syncInstalledClock(port,lastInstallBoard));
+  }catch(error){clockSetupFailure(error);}
+  finally{installLock(false);$('finish-clock').disabled=false;}
+};
+
 function setBadgeProfile(id){
   if(!supportsBadge(id))return;
   const previous=size;badgeProfile=id;size=boardProfiles[id].size;
@@ -163,7 +221,7 @@ $('badge-drop').ondragleave=()=>$('badge-drop').classList.remove('drag-over');
 $('badge-drop').ondrop=e=>{e.preventDefault();$('badge-drop').classList.remove('drag-over');loadImage(e.dataTransfer.files[0]);};
 $('download-badge').onclick=()=>{if(!photo)return;const output=document.createElement('canvas');output.width=output.height=size;const c=output.getContext('2d');c.beginPath();c.arc(size/2,size/2,size/2,0,Math.PI*2);c.clip();c.drawImage(canvas,0,0);output.toBlob(blob=>{const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`dragon-badge-${badgeProfile}-${size}.png`;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);},'image/png');};
 
-async function disconnect(){const old=serial;serial=null;firmwareVersion='';deviceProfile='';if(old)await old.close();$('disconnect').hidden=true;$('device-label').textContent='USB NOT CONNECTED';$('detector-status').textContent='USB disconnected.';draw();}
+async function disconnect(){const old=serial;serial=null;firmwareVersion='';deviceProfile='';if(old)await old.close();$('disconnect').hidden=true;$('device-label').textContent='USB NOT CONNECTED';$('detector-status').textContent='USB disconnected.';draw();installEnabled();}
 $('connect').onclick=async()=>{
   if(!navigator.serial){$('detector-status').textContent=$('studio-status').textContent='Web Serial needs desktop Chrome or Edge on HTTPS or localhost.';return;}
   if(busy||serial)return;busy=true;controls();$('studio-status').textContent=$('detector-status').textContent='Choose your detector’s USB port in the browser prompt. Cancel the prompt to keep editing.';
@@ -177,7 +235,7 @@ $('connect').onclick=async()=>{
     serial=link;firmwareVersion=match.version;deviceProfile=profile;setBadgeProfile(profile);
     $('device-label').textContent=`${match.size} × ${match.size} · ${boardProfiles[profile].lite?'LITE RADAR':'CONNECTED'}`;$('disconnect').hidden=false;
     if(boardProfiles[profile].lite){
-      $('studio-status').textContent=$('detector-status').textContent='Waveshare Lite connected. Always-on passive radar at full brightness, all contacts on one radar screen, no touch menus, badge mode, audio or settings. Use the installer above for firmware updates.';
+      $('studio-status').textContent=$('detector-status').textContent='Waveshare Lite connected. Always-on passive radar at full brightness, all contacts on one radar screen, press BOOT to cycle 26 saved radar themes; no touch menus, badge mode or audio. Use the installer above for firmware updates.';
       return;
     }
     $('studio-status').textContent=`${match.board} is ready. Choose and position your image.`;draw();
@@ -194,7 +252,7 @@ $('connect').onclick=async()=>{
       $('detector-status').textContent=`${match.board} connected. ${clockSynced?'Local date and time synchronized.':'Clock sync unavailable; badge upload is ready.'} History stays on your device until you download it.`;
     }else $('detector-status').textContent='Connected to 0.3.x. Update to the current firmware for history and detector controls.';
   }catch(error){if(link)await link.close();serial=null;firmwareVersion='';deviceProfile='';$('studio-status').textContent=error.message;$('detector-status').textContent=error.message;}
-  finally{busy=false;draw();}
+  finally{busy=false;draw();installEnabled();}
 };
 $('detector-connect').onclick=()=>$('connect').onclick();
 $('disconnect').onclick=$('detector-disconnect').onclick=disconnect;

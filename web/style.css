@@ -29,3 +29,9 @@ textarea{width:100%;box-sizing:border-box;resize:vertical;background:#081b15;col
 nav{flex-wrap:wrap;justify-content:flex-end;gap:14px 20px}#locksport{padding-top:65px;scroll-margin-top:30px}@media(min-width:1000px){#locksport .theme-gallery{grid-template-columns:repeat(4,minmax(0,1fr))}}
 
 header{position:relative;padding-right:128px}.visit-counter{position:absolute;right:0;top:24px;display:grid;gap:4px;text-align:right;min-width:86px}.visit-counter span{font:10px/1.2 monospace;letter-spacing:.16em;color:var(--muted)}.visit-counter strong{font:600 18px/1.2 monospace;color:var(--lime);font-variant-numeric:tabular-nums}@media(max-width:700px){header{padding-right:0;padding-top:18px}.brand{padding-right:100px}.visit-counter{top:19px;right:0}header nav{width:100%}}
+
+/* A decorative field behind content. Fixed dimensions override badge canvases. */
+body{isolation:isolate}#radar-background{position:fixed;inset:0;z-index:-1;width:100vw;height:100vh;max-width:none;aspect-ratio:auto;border-radius:0;outline:0;box-shadow:none;pointer-events:none;touch-action:auto;opacity:.64;cursor:default}
+#radar-motion{color:var(--muted);border:1px solid var(--line);border-radius:20px;padding:7px 11px;background:#081b15;font:inherit;font-size:10px;cursor:pointer}#radar-motion:hover:enabled{border-color:var(--lime);color:var(--text)}#radar-motion:disabled{cursor:default}
+#auto-clock-label{max-width:290px;text-align:left}#auto-clock{flex:none}#clock-setup-status{max-width:340px;line-height:1.7}#finish-clock{font-size:12px;margin-top:8px}.install-action [hidden]{display:none}
+@media(max-width:600px){#radar-background{opacity:.4}}
