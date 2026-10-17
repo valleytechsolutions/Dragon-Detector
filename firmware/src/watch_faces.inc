@@ -65,9 +65,10 @@ static const WatchPalette watches[]={
   {"SEEED STUDIO",0x021116,0xf7fbef,0xa7d52c,0x46766c,true},
   {"DAGNAZTY",0xf7f7f5,0x101010,0x161616,0x73736d,true},
   {"0ct0's Pig",0x080808,0xffdbe9,0xff89b6,0x9b5c78,false},
-  {"DEFLOCK",0x152131,0xf0f6fb,0xb1d8ec,0x56788f,false}
+  {"DEFLOCK",0x152131,0xf0f6fb,0xb1d8ec,0x56788f,false},
+  {"CI / LOCKPICKINGLAWYER",0x030914,0xfff3d4,0xecc75b,0x8b7137,true}
 };
-static constexpr uint8_t WatchFaces[]={0,1,2,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28};
+static constexpr uint8_t WatchFaces[]={0,1,2,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29};
 static constexpr unsigned WatchCount=sizeof(WatchFaces)/sizeof(WatchFaces[0]);
 static bool watchFaceAllowed(unsigned face){for(auto id:WatchFaces)if(id==face)return true;return false;}
 static unsigned watchFacePosition(){for(unsigned i=0;i<WatchCount;++i)if(WatchFaces[i]==watchFace)return i;return 0;}
@@ -294,8 +295,10 @@ static void watchCovert(lv_draw_ctx_t* ctx,const dragon::Calendar& d,bool valid)
 }
 #include "community_dials.inc"
 #include "octopig.inc"
+#include "lpl_watch.inc"
 static void watchDraw(lv_event_t* e){
   auto* ctx=lv_event_get_draw_ctx(e);const auto& p=watches[watchFace];dragon::Calendar d;clockLocal(d);bool valid=wallTime()!=0;char text[64];
+  if(watchFace==29){watchLpl(ctx,d,valid);return;}
   if(watchFace==28){watchDeflock(ctx,d,valid);return;}
   if(watchFace==27){watchPig(ctx,d,valid);return;}
   if(watchFace==10){watchBinary(ctx,d,valid);return;}
@@ -348,7 +351,7 @@ static void buildWatch(){
   watchDial=lv_obj_create(root);lv_obj_remove_style_all(watchDial);lv_obj_set_size(watchDial,SCREEN_RES,SCREEN_RES);lv_obj_clear_flag(watchDial,LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_GESTURE_BUBBLE);
   lv_obj_add_event_cb(watchDial,watchDraw,LV_EVENT_DRAW_MAIN,nullptr);lv_obj_add_event_cb(watchDial,watchGesture,LV_EVENT_GESTURE,nullptr);
   if(watchFace==27){pigFrameAt=millis();pigNextAt=millis();lv_obj_add_event_cb(watchDial,pigTap,LV_EVENT_CLICKED,nullptr);}
-  bool compact=watchFace==10||watchFace==12||watchFace==27||watchFace==28;int y=watchFace==27?315:(watchFace==12||watchFace==28)?326:watchFace==10?317:279,h=(watchFace==12||watchFace==28)?21:27;
+  bool compact=watchFace==10||watchFace==12||watchFace==27||watchFace==28||watchFace==29;int y=watchFace==27?315:(watchFace==12||watchFace==28||watchFace==29)?326:watchFace==10?317:279,h=(watchFace==12||watchFace==28||watchFace==29)?21:27;
   auto* b=button(watchDial,watchFace==27?"[+]":LV_SYMBOL_SETTINGS,watchFace==27?126:compact?145:108,y,watchFace==27?48:compact?34:44,h,160);auto* home=button(watchDial,watchFace==27?"[=]":LV_SYMBOL_LIST,watchFace==27?186:compact?181:208,y,watchFace==27?48:compact?34:44,h,2);
   for(auto* o:{b,home}){lv_obj_set_style_bg_opa(o,LV_OPA_TRANSP,0);lv_obj_set_style_border_width(o,0,0);lv_obj_set_style_text_color(lv_obj_get_child(o,0),color(p.muted),0);}
 }
@@ -383,6 +386,10 @@ static void buildChronographFrame(){
     if(covert()&&page==Stopwatch){
       // Keep the static dual-brand header in the dial's own drawing pass.
       watchLogo(ctx,radar_logo_ci,20,0,false,false,-26);watchLogo(ctx,watch_logo_mcnally,14,0,false,false,25);
+      watchText(ctx,"LOCKSPORT TIMER",48,74,264,F20,uiColors().accent);
+    }
+    if(lpl()&&page==Stopwatch){
+      watchLogo(ctx,radar_logo_ci,20,0,false,false,-28);watchLogo(ctx,watch_logo_lpl,14,0,false,true,25);
       watchText(ctx,"LOCKSPORT TIMER",48,74,264,F20,uiColors().accent);
     }
     if(dmac()&&page==Stopwatch){watchLogo(ctx,radar_logo_dmac,20,0,false,true);watchText(ctx,"LOCKSPORT COUNTER",38,74,284,F20,uiColors().accent);}

@@ -19,7 +19,7 @@ extern void scr_lvgl_init();
 extern void set_brightness(uint8_t);
 extern const lv_img_dsc_t vts_logo;
 extern const lv_img_dsc_t radar_logo,radar_logo_valleytech,radar_logo_biscuit,radar_logo_marauder,radar_logo_toool,radar_logo_church,watch_logo_church,radar_logo_ci,watch_logo_ci,watch_logo_mcnally;
-extern const lv_img_dsc_t boot_bwm_logo;
+extern const lv_img_dsc_t boot_bwm_logo,watch_logo_lpl;
 extern const lv_img_dsc_t radar_logo_awok,watch_logo_awok,radar_logo_baph,watch_logo_baph,radar_logo_wdgwars,watch_logo_wdgwars,radar_logo_n3rdsec,watch_logo_n3rdsec,radar_logo_halehound,watch_logo_halehound,watch_logo_halehound_splash,radar_logo_waveshare,watch_logo_waveshare,radar_logo_m5stack,watch_logo_m5stack,radar_logo_lab5,watch_logo_lab5,radar_logo_sasquach,watch_logo_sasquach,radar_logo_nyan,watch_logo_nyan,radar_logo_dmac,watch_logo_dmac,radar_logo_seeed,watch_logo_seeed,radar_logo_dagnazty,watch_logo_dagnazty,radar_logo_deflock,watch_logo_deflock;
 // The layout is authored for the 360 px round panel. S() maps it onto the
 // board's panel; label/button/row helpers apply it, so callers pass 360 px units.
@@ -64,8 +64,9 @@ static int menuTab=0,filter=0,selected=-1,filePage=0,brightness=100,historyPage=
 static bool radarLabels=true;
 static uint8_t radarTheme=1;
 static bool covert(){return radarTheme==9;}
+static bool lpl(){return radarTheme==26;}
 static bool dmac(){return radarTheme==21;}
-static bool locksport(){return radarTheme==6||radarTheme==8||covert()||dmac();}
+static bool locksport(){return radarTheme==6||radarTheme==8||covert()||dmac()||lpl();}
 static bool locksportDark(){return locksport()&&radarTheme!=6;}
 static uint32_t locksportBg(){return uiColors().bg;}
 static uint32_t locksportInk(){return uiColors().ink;}
@@ -228,7 +229,7 @@ static void radarPick(lv_draw_ctx_t* ctx,float radians){
 }
 static void selectRadarTheme(uint8_t selected){
   radarTheme=selected;dismissNotice();uiApplyTheme(radarTheme);settings.putUChar("radar-theme",radarTheme);
-  if(locksport()){watchFace=dmac()?24:covert()?12:locksportDark()?11:9;settings.putUChar("watch-face",watchFace);}
+  if(locksport()){watchFace=lpl()?29:dmac()?24:covert()?12:locksportDark()?11:9;settings.putUChar("watch-face",watchFace);}
   else if(radarTheme==7){watchFace=10;settings.putUChar("watch-face",watchFace);}
   else if(radarTheme>=10){watchFace=radarTheme+3;settings.putUChar("watch-face",watchFace);}
 }
@@ -470,7 +471,7 @@ static void build(){
   }else if(page==Stopwatch){
     dismissNotice();lv_obj_set_style_bg_color(root,color(locksport()?locksportBg():uiColors().bg),0);buildChronographFrame();
     if(locksport()){
-      if(!covert()&&!dmac()){circleLogo(root,&radar_logo_toool,20);centered(label(root,"LOCKSPORT TIMER",48,74,264,F20,locksportAccent()));}
+      if(!covert()&&!dmac()&&!lpl()){circleLogo(root,&radar_logo_toool,20);centered(label(root,"LOCKSPORT TIMER",48,74,264,F20,locksportAccent()));}
       button(root,LV_SYMBOL_HOME,149,307,62,33,1);
     }else title("CHRONOGRAPH","Precision stopwatch");
     timerState=label(root,"",50,locksport()?106:98,260,F12,locksport()?locksportAccent():uiColors().accent);centered(timerState);

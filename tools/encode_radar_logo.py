@@ -17,6 +17,8 @@ logos=[('radar_logo','media/BWM1-official.png'),
        ('radar_logo_ci','media/theme-logos/covert-instruments.png'),
        ('watch_logo_ci','media/theme-logos/covert-instruments.png'),
        ('watch_logo_mcnally','media/theme-logos/mcnally-source.webp'),
+       ('radar_logo_lpl','media/theme-logos/lockpickinglawyer.jpg'),
+       ('watch_logo_lpl','media/theme-logos/lockpickinglawyer.jpg'),
        ('radar_logo_awok','media/theme-logos/awok.png'),
        ('watch_logo_awok','media/theme-logos/awok.png'),
        ('radar_logo_baph','media/theme-logos/baph0mau5.jpg'),
@@ -65,6 +67,8 @@ for name,path in logos:
     source=source.crop(source.getbbox())
     if not name.startswith('radar_logo'):lines.append('#ifndef BOARD_RADAR_LITE')
     sizes=([(466,388),(360,300),(240,200)] if name.startswith('boot_') else
+           [(466,186),(360,144),(240,96)] if name=='radar_logo_lpl' else
+           [(466,70),(360,54),(240,36)] if name=='watch_logo_lpl' else
            [(466,207),(360,160),(240,107)] if name=='watch_logo_deflock' else
            [(466,326),(360,252),(240,168)] if name=='watch_logo_church' else
            [(466,80),(360,62),(240,41)] if name=='watch_logo_ci' else
@@ -92,6 +96,9 @@ for name,path in logos:
             # Indexed artwork retains antialiasing and alpha while leaving
             # ample application space for native boot logos on 8 MB boards.
             compact=name in ('boot_bwm_logo','watch_logo_church','radar_logo_seeed','watch_logo_seeed','radar_logo_dagnazty','watch_logo_dagnazty','radar_logo_n3rdsec','watch_logo_n3rdsec','radar_logo_toool','radar_logo_ci','watch_logo_ci','watch_logo_mcnally','radar_logo_waveshare','watch_logo_waveshare','radar_logo_deflock','watch_logo_deflock')
+            # The 240px LPL seals use sixteen colors to preserve the XIAO's
+            # guarded OTA reserve; larger panels retain the 256-color artwork.
+            compact=compact or (resolution==240 and name in ('radar_logo_lpl','watch_logo_lpl'))
             count=16 if compact else 256
             indexed=icon.quantize(colors=count,method=Image.Quantize.FASTOCTREE,dither=Image.Dither.NONE)
             palette=indexed.getpalette('RGBA');pixels=[]

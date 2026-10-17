@@ -18,7 +18,7 @@ These are CRC-verified logical display captures from the firmware on the connect
 
 The four full boards provide **Tools → Recon → Attacks**, BLE Lab, notebook, modes and target hunting. Normal menus and badge mode keep background detection running. Explicit lab operations can take ownership of the shared radio; Stop/Home restores listening. RSSI indicates signal strength; radar angle is decorative.
 
-**[Flash your board](FLASHING.md)** · [Hardware feature comparison](HARDWARE.md) · [Twenty-six theme previews](THEMES.md) · [Controls](USER-GUIDE.md) · [Validation](VALIDATION.md)
+**[Flash your board](FLASHING.md)** · [Hardware feature comparison](HARDWARE.md) · [Twenty-seven theme previews](THEMES.md) · [Controls](USER-GUIDE.md) · [Validation](VALIDATION.md)
 
 ## Pocket-watch collection · 0.13.6
 

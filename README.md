@@ -1,6 +1,6 @@
 ![Dragon Detector promotional artwork](media/cover.png)
 
-**0.13.7:** [Animated web flasher](https://valleytechsolutions.github.io/Dragon-Detector/), automatic local-time setup after closing the installer, 26 BOOT-button radar themes on [Waveshare Lite](docs/WAVESHARE-LITE.md), and a cleaner Covert Instruments radar. Full boards retain all 26 themes and 24 logo watches. [Release notes](docs/RELEASE-0.13.7.md).
+**0.13.8:** [Animated web flasher](https://valleytechsolutions.github.io/Dragon-Detector/), automatic local-time setup after closing the installer, 27 BOOT-button radar themes on [Waveshare Lite](docs/WAVESHARE-LITE.md), a cleaner Covert Instruments radar, and the new [Covert Instruments × LockPickingLawyer locksport collection](docs/THEMES.md#covert-instruments--lockpickinglawyer--0138). Full boards retain all 27 themes and 25 logo watches. [Release notes](docs/RELEASE-0.13.8.md).
 
 # Dragon Detector · Detection & Hunt Edition
 
@@ -12,7 +12,7 @@ Version **0.13.6** adds DMAC with acrylic pick hands and a Locksport Counter, Ny
 
 Storage controls match the hardware. **Waveshare AMOLED and M5Stack have no SD controls:** Utilities → Saved files opens captures in internal flash, and Settings provides Capture studio and Saved captures. Spotpear and XIAO retain their optional SD tools. [Hardware feature comparison](docs/HARDWARE.md) · [GUI tour](docs/GUI.md).
 
-**Twenty-six complete themes** include Covert Instruments × McNally, TOOOL, TOOOL Dark, Church of Malware, Valleytech, Biscuit Shop and Marauder with their supplied logos. Select one in **Settings → Theme & radar labels** or the USB web tools. [Theme previews](docs/THEMES.md).
+**Twenty-seven complete themes** include Covert Instruments × LockPickingLawyer, Covert Instruments × McNally, TOOOL, TOOOL Dark, Church of Malware, Valleytech, Biscuit Shop and Marauder with their supplied logos. Select one in **Settings → Theme & radar labels** or the USB web tools. [Theme previews](docs/THEMES.md).
 
 The 0.13 series brings the **29 timed Wi-Fi/BLE tools, eight modes and BLE Lab to all four full boards**. New workflows include saved recon sessions, historical AP archives, bounded recipes, HID report decoding and a GATT bridge with cached reads. **Tools → Recon → Attacks** opens the attack lists directly; **Utilities** replaces Daily. Normal screens retain background detection. All five profiles share the 158-fact SquachWatch audit and AXEOFF priority handling. [New workflows and limits](docs/RECON-013.md) · [Memory reserve](docs/FLASH-BUDGET.md) · [Feature comparison](docs/FEATURE-MATRIX.md).
 
@@ -86,7 +86,7 @@ Logical 240×240 captures from the connected XIAO, not panel photographs.
 
 *Green radar theme with animated sweep, labeled signals and owner-supplied BWM1 logo. Inward means stronger filtered RSSI, with no numerical distance scale. Actual 466×466 LVGL render from M5Stack StopWatch C152, not a panel photograph. Targets opens the paged list; the speaker button toggles quiet mode.*
 
-- **Twenty-six complete themes:** classic radar palettes, branded maker and community watches, the locksport collection, 0ct0’s Pig and DeFlock. [Browse every theme and its controls](docs/THEMES.md). Each of the 26 device families has its own fixed color for dots, labels and leaders, with a [color legend](docs/RADAR-COLORS.md). Animated sweep, pulsing signals, automatic priority tags and tap-to-reveal tracker tags. All contacts share one radar; tap a selected dot again for evidence and Hunt; choose your theme in Settings or the USB web tools.
+- **Twenty-seven complete themes:** classic radar palettes, branded maker and community watches, the locksport collection, 0ct0’s Pig and DeFlock. [Browse every theme and its controls](docs/THEMES.md). Each of the 26 device families has its own fixed color for dots, labels and leaders, with a [color legend](docs/RADAR-COLORS.md). Animated sweep, pulsing signals, automatic priority tags and tap-to-reveal tracker tags. All contacts share one radar; tap a selected dot again for evidence and Hunt; choose your theme in Settings or the USB web tools.
 - **Audited signature coverage:** all 158 table entries in the pinned SquachWatch reference have recognition and radar tests. Includes Flipper, Wi-Fi Pineapple, Pwnagotchi, nyanBOX, Biscuit, Flock, Axon/TASER, Raven, camera glasses, Find My/DULT, SmartTag, Google Find Hub, Tile, Ring/camera/ALPR vendors, decoded drone Remote ID, iBeacon, pentest devices, disconnect bursts and SSID security conflicts. [Coverage and comparison](docs/DETECTION-PARITY.md).
 - **All recognized candidates on radar:** first sightings appear immediately; device types use fixed colors and trackers use smaller dots. Intermittent signals remain for up to two minutes with a segmented marker and explicit last-seen age. A paged Targets list, quick quiet toggle and live radio-health screen make crowded areas easier to navigate.
 - **Traffic awareness:** Wi-Fi deauthentication/disassociation bursts and BLE pairing/tag spam candidates, with a radar activity banner, counts, protocol/channel evidence and a dedicated Activity screen. See [how traffic detection works](docs/RADAR-AND-ACTIVITY.md).

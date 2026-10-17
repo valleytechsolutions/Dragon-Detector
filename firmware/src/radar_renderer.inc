@@ -16,6 +16,7 @@ static void line(lv_draw_ctx_t* ctx,int x1,int y1,int x2,int y2,uint32_t c,int w
 static void disc(lv_draw_ctx_t* ctx,int x,int y,int r,uint32_t c,int opa=255){
   lv_draw_rect_dsc_t d;lv_draw_rect_dsc_init(&d);d.radius=LV_RADIUS_CIRCLE;d.bg_color=color(c);d.bg_opa=opa;lv_area_t a{(lv_coord_t)(x-r),(lv_coord_t)(y-r),(lv_coord_t)(x+r),(lv_coord_t)(y+r)};lv_draw_rect(ctx,&d,&a);
 }
+#include "lpl_radar.inc"
 static const char* radarFamilyName(Family f){
 #if SCREEN_RES<=240
   // Keep the family on one line, leaving the second line for signal/age.
@@ -92,6 +93,7 @@ static void radarDraw(lv_event_t* e){
   else if(radarTheme==23)radarDagArt(ctx);
   else if(radarTheme==24)radarPigArt(ctx);
   else if(radarTheme==25)radarDeflockArt(ctx);
+  else if(radarTheme==26){} // Emblem is drawn once below the rings.
   else{
     for(int side:{-1,1})for(int n=0;n<4;++n){int y=115+n*30,x=180+side*(102+n%2*12),elbow=x-side*32;
       disc(ctx,S(x),S(y),S(4),0x686868);disc(ctx,S(x),S(y),S(2),0x080808);
@@ -102,23 +104,23 @@ static void radarDraw(lv_event_t* e){
   if(radarTheme&&radarTheme!=24)for(int radius=42;radius<169;radius+=42)lv_draw_arc(ctx,&arc,&center,S(radius),0,359);
   if(radarTheme!=24){arc.width=S(2);lv_draw_arc(ctx,&arc,&center,S(170),0,359);}
 #endif
+  if(radarTheme==26)radarLplEmblem(ctx);
   // Sweep and pulse are animation, not measurements of bearing or RF activity.
   static uint32_t sweepAt=0;if(radioEnabled)sweepAt=now;
   float angle=(sweepAt%6000)*.00104719755f,dx=cosf(angle),dy=sinf(angle);
+  if(radarTheme==26)radarLplScales(ctx,(sweepAt%12000)*.000523598776f);
 #ifndef BOARD_RADAR_LITE
-  if(radarTheme==9)radarPick(ctx,angle);
+  else if(radarTheme==9)radarPick(ctx,angle);
   else if(radarTheme==24)radarPigSweep(ctx,angle);
-  else {
 #endif
+  else {
   lv_draw_rect_dsc_t trail;lv_draw_rect_dsc_init(&trail);trail.bg_color=color(theme.sweep);
   for(int n=0;n<18;++n){float nextX=dx*.998629535f+dy*.052335956f,nextY=dy*.998629535f-dx*.052335956f;
     lv_point_t wedge[]={{(lv_coord_t)CENTER,(lv_coord_t)CENTER},{(lv_coord_t)(CENTER+int(dx*S(166))),(lv_coord_t)(CENTER+int(dy*S(166)))},{(lv_coord_t)(CENTER+int(nextX*S(166))),(lv_coord_t)(CENTER+int(nextY*S(166)))}};
     trail.bg_opa=58-n*3;lv_draw_triangle(ctx,&trail,wedge);dx=nextX;dy=nextY;
   }
   line(ctx,CENTER,CENTER,CENTER+int(cosf(angle)*S(166)),CENTER+int(sinf(angle)*S(166)),theme.sweep,S(2),200);
-#ifndef BOARD_RADAR_LITE
   }
-#endif
   if(!radarPrepared || uint32_t(now-radarPrepared)>=250){
     radarPrepared=now;radarCount=0;
     for(size_t i=0;i<MAX_CONTACTS;++i)if(radarVisible(contacts[i],now))radarOrder[radarCount++]=i;
@@ -167,7 +169,8 @@ static void radarDraw(lv_event_t* e){
   for(int sign:{-1,1}){line(ctx,CENTER+sign*3,CENTER,CENTER+sign*8,CENTER,theme.ring,1);line(ctx,CENTER,CENTER+sign*3,CENTER,CENTER+sign*8,theme.ring,1);}
   disc(ctx,CENTER,CENTER,1,theme.text);
 #else
-  if(radarTheme==24)asciiMark(ctx,"+",180,180,theme.sweep);
+  if(radarTheme==26){} // The balance already has its own jeweled pivot.
+  else if(radarTheme==24)asciiMark(ctx,"+",180,180,theme.sweep);
   else if(radarTheme==9){disc(ctx,CENTER,CENTER,S(7),0x000000);disc(ctx,CENTER,CENTER,S(5),0xc5cdd3);disc(ctx,CENTER,CENTER,S(3),0x30383e);line(ctx,CENTER-S(2),CENTER+S(1),CENTER+S(2),CENTER-S(1),0xe7ecef,std::max(1,S(1)));}
   else for(int y=-7;y<=6;++y){int half=(y+7)/2;line(ctx,CENTER-S(half),CENTER+S(y),CENTER+S(half),CENTER+S(y),theme.sweep,S(1)+1);}
 #endif

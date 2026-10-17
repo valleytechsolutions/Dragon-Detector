@@ -4,7 +4,7 @@ import {crc32,encodeBadge,cropGeometry,fitCircleZoom} from '../web/badge-codec.j
 import {BadgeSerial} from '../web/serial.js';
 import {uploadBadge,BADGE_CHUNK_SIZE} from '../web/badge-transfer.js';
 import {readHistory} from '../web/detector-transfer.js';
-import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasBrandedThemes,hasCommunityThemes} from '../web/firmware-compat.js';
+import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasBrandedThemes,hasCommunityThemes,hasLplTheme} from '../web/firmware-compat.js';
 import {readRadarSettings,saveRadarSettings} from '../web/radar-transfer.js';
 import {readFileSync} from 'node:fs';
 import {boardProfiles,connectedProfile,validateManifest,supportsBadge} from '../web/board-profiles.js';
@@ -32,7 +32,7 @@ test('studio reads both legacy paged and 0.9.6+ single-screen radar settings',as
     const link={async write(command){assert.equal(command,'radar status');},async wait(match){const response=`RADAR_SETTINGS theme=2 labels=1 recent=1 ${tail}`;assert.ok(match(response));return response;}};
     assert.deepEqual(await readRadarSettings(link),{theme:'gold',labels:true,recent:true});
   }
-  const invalid={async write(){},async wait(){return 'RADAR_SETTINGS theme=26 labels=1 recent=1 pages=1 plotted=0 primary=-1';}};
+  const invalid={async write(){},async wait(){return 'RADAR_SETTINGS theme=27 labels=1 recent=1 pages=1 plotted=0 primary=-1';}};
   await assert.rejects(readRadarSettings(invalid),/Invalid radar settings/);
 });
 
@@ -91,7 +91,7 @@ test('Community themes require firmware 0.13.6 while preserving older branded th
 });
 
 test('radar settings read back every write, including when USB acknowledgment is held',async()=>{
-  const themes=['dragon','green','gold','valleytech','biscuit','marauder','toool','church','toool-dark','covert','awok','baph0mau5','wdgwars','ghoststrats','n3rdsec','halehound','waveshare','m5stack','lab5','sasquach','nyan','dmac','seeed','dagnazty','octo-pig','deflock'];
+  const themes=['dragon','green','gold','valleytech','biscuit','marauder','toool','church','toool-dark','covert','awok','baph0mau5','wdgwars','ghoststrats','n3rdsec','halehound','waveshare','m5stack','lab5','sasquach','nyan','dmac','seeed','dagnazty','octo-pig','deflock','lpl'];
   for(const [index,theme] of themes.entries()){
     const writes=[];let current={theme:index,labels:0,recent:1};
     const link={write:async s=>{writes.push(s);if(s.startsWith('radar labels '))current.labels=Number(s.endsWith('on'));if(s.startsWith('radar recent '))current.recent=Number(s.endsWith('on'));},wait:async match=>{const line=`RADAR_SETTINGS theme=${current.theme} labels=${current.labels} recent=${current.recent} pages=1 plotted=6 primary=-1`;assert.ok(match(line));return line;}};
@@ -103,7 +103,7 @@ test('radar settings read back every write, including when USB acknowledgment is
   let writes=[];const link={write:async s=>writes.push(s),wait:async()=> 'RADAR_SETTINGS theme=0 labels=1 recent=0 pages=1 plotted=6 primary=-1'};
   await assert.rejects(saveRadarSettings(link,{theme:'unknown',labels:true,recent:true}),/Invalid/);assert.equal(writes.length,0);
   await assert.rejects(saveRadarSettings(link,{theme:'green',labels:true,recent:true}),/not saved/);assert.deepEqual(writes,['radar theme green','radar status','radar status']);
-  for(const theme of ['26','99','100','00','-1']){link.wait=async()=> 'RADAR_SETTINGS theme='+theme+' labels=1 recent=0 pages=1 plotted=6 primary=-1';await assert.rejects(readRadarSettings(link),/Invalid radar settings/);}
+  for(const theme of ['27','99','100','00','-1']){link.wait=async()=> 'RADAR_SETTINGS theme='+theme+' labels=1 recent=0 pages=1 plotted=6 primary=-1';await assert.rejects(readRadarSettings(link),/Invalid radar settings/);}
 });
 test('CRC matches firmware IEEE CRC-32 wire contract',()=>assert.equal(crc32(new TextEncoder().encode('123456789')),0xcbf43926));
 for(const size of [240,360,466])test(`DDB1 ${size}: header, exact size and RGB565 byte order`,()=>{
@@ -250,4 +250,9 @@ test('Lite identifies itself without advertising badge or full-UI capabilities',
  assert.equal(parseBadgeInfo(`BADGE_INFO 0.9.4 240 READY ${name}`),null);
  assert.equal(parseBadgeInfo(`BADGE_INFO 0.9.4 466 RADAR_ONLY ${name}`),null);
  assert.equal(parseBadgeInfo('BADGE_INFO 0.9.4 240 RADAR_ONLY Seeed XIAO ESP32-S3 + Round Display'),null);
+});
+
+test('LockPickingLawyer requires 0.13.8 without enabling it on older firmware',()=>{
+  for(const v of ['0.13.6','0.13.7','0.13.06','0.13.08','invalid'])assert.equal(hasLplTheme(v),false);
+  for(const v of ['0.13.8','0.13.9','0.13.10'])assert.equal(hasLplTheme(v),true);
 });

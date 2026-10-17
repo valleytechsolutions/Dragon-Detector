@@ -31,9 +31,9 @@ The fastest setup is **Connect detector** in the local or hosted Studio: connect
 
 On the device, open **Settings → Clock & date → Set manually**. Scroll the year/month/day, 1–12 hour/minute and AM/PM wheels, then tap **Save**. Seconds start at zero. Short months and leap years clamp the selected day. **Zone** opens the advanced field editor, including UTC offset and seconds. Cancel/Home discards the unsaved draft. The offset remains fixed until changed or resynced; it does not contain geographic daylight-saving rules.
 
-## Twenty-four clock faces
+## Twenty-five clock faces
 
-Open **Tools → Utilities → Clock**, then swipe left or right. The chosen face is remembered across restarts. All analog faces use a 12-hour dial. Date labels never include AM/PM. LAB5 and the M5Stack digital window use 12-hour time. **JCMK military uses 24-hour digital time; the Covert hybrid also has a separate 24-hour window.** Original logos and drawn emblems replace decorative face-name captions.
+Open **Tools → Utilities → Clock**, then swipe left or right. The chosen face is remembered across restarts. All analog faces use a 12-hour dial. Date labels never include AM/PM. LAB5 and the M5Stack digital window use 12-hour time. **JCMK military uses 24-hour digital time; both Covert hybrids also have a separate 24-hour window.** Original logos and drawn emblems replace decorative face-name captions.
 
 | Index | Face | Design |
 |---|---|---|
@@ -61,6 +61,7 @@ Open **Tools → Utilities → Clock**, then swipe left or right. The chosen fac
 | 26 | DagNazty | White field, supplied skull silhouette, black tapered hands, fang details and restrained talon outlines. |
 | 27 | 0ct0’s Pig | ASCII octopus and wandering pig; live 24-hour time, blinking eyes and tap reactions. |
 | 28 | DeFlock | Supplied camera-raven, navy and steel blue, viewfinder framing, large 24-hour time and an optical seconds rim. |
+| 29 | Covert Instruments × LockPickingLawyer | Original CI and LPL seal, navy/gold rope bezel, Roman numerals, two silver lockpicks, date and 24-hour window. |
 
 The Church of Malware watch keeps the complete emblem clear. Add the white bits in each bank: H uses 8, 4, 2, 1; M/S each use 32, 16, 8, 4, 2, 1. Dark bits are off. Midnight/noon both show H = 8 + 4, with AM/PM beside the hour. An unset clock shows SET and inactive bits; tap its gear to synchronize. Selecting the Church of Malware radar theme selects this watch.
 

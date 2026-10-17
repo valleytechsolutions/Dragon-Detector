@@ -35,3 +35,5 @@ body{isolation:isolate}#radar-background{position:fixed;inset:0;z-index:-1;width
 #radar-motion{color:var(--muted);border:1px solid var(--line);border-radius:20px;padding:7px 11px;background:#081b15;font:inherit;font-size:10px;cursor:pointer}#radar-motion:hover:enabled{border-color:var(--lime);color:var(--text)}#radar-motion:disabled{cursor:default}
 #auto-clock-label{max-width:290px;text-align:left}#auto-clock{flex:none}#clock-setup-status{max-width:340px;line-height:1.7}#finish-clock{font-size:12px;margin-top:8px}.install-action [hidden]{display:none}
 @media(max-width:600px){#radar-background{opacity:.4}}
+
+#lpl{--lime:#ecc75b;--muted:#c5bda4;--text:#fff3d4;margin-top:64px;padding:48px 24px;border:1px solid #8b7137;border-radius:20px;background:linear-gradient(145deg,#0b1a30,#030914);color:var(--text);scroll-margin-top:30px}#lpl .theme-gallery figcaption{color:#ecc75b}#lpl .button{border-color:#8b7137;background:#182e48;color:#fff3d4}@media(min-width:1000px){#lpl .theme-gallery{grid-template-columns:repeat(4,minmax(0,1fr))}#locksport .theme-gallery{grid-template-columns:repeat(5,minmax(0,1fr))}}

@@ -15,8 +15,8 @@ Actual 240×240 framebuffer capture from the connected board, not a panel photog
 - All 26 detector families remain enabled, including the 0.9.3 Axon priority/receive fixes, ALPR, Find My accessories, Ring, Flipper and Wi-Fi/BLE activity detection. [Signature coverage and limitations](DETECTION.md) apply equally to Lite.
 - Passive BLE scanning and passive Wi-Fi reception alternate on the one shared radio, with Wi-Fi channels 1–11. Reception continues while drawing, but alternating modes/channel hopping still create listening gaps. No active probing, wireless attacks or fox transmitter.
 - No touch interface, menus, badge mode, stopwatch, RTC interface, motion rotation, speaker code, SD capture, or persistent history. Volatile contacts/alerts reset at reboot. Old full-UI preferences cannot disable families, dim the screen or start a badge.
-- **Press BOOT to cycle all 26 radar palettes and logos** (0.13.7+). Each press advances once; holding it does not repeat. The theme name appears briefly, and the selection is saved one second after the last change. RESET restarts the board. Hold BOOT while tapping RESET for ROM download/recovery as before; release BOOT before normal theme controls arm.
-- Lite uses a compact shared instrument layout, including native GhostStrats slit eyes and an ASCII octopus. It does not load the full boards’ watch faces, locksport timers or elaborate animated scenes.
+- **Press BOOT to cycle all 27 radar palettes and logos** (0.13.8; 26 themes in 0.13.7). Each press advances once; holding it does not repeat. The theme name appears briefly, and the selection is saved one second after the last change. RESET restarts the board. Hold BOOT while tapping RESET for ROM download/recovery as before; release BOOT before normal theme controls arm.
+- Lite uses a compact shared instrument layout, including native GhostStrats slit eyes, an ASCII octopus, and the dual-logo LPL radar with rotating scales. It does not load the full boards’ watch faces, locksport timers or elaborate animated scenes.
 
 ## Hardware configuration
 

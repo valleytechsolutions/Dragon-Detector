@@ -169,3 +169,9 @@ The owner supplied the unchanged [camera-raven illustration](media/theme-logos/d
 ### 0.13.7 installer and Lite refinements
 
 The installer continues to use [ESP Web Tools 10.4.0](https://github.com/esphome/esp-web-tools/tree/10.4.0), with its published dialog port/manifest properties and close event for local clock setup. The dependency is pinned independently of firmware versions. The animated flasher radar is original code-drawn decoration. Lite reuses the already credited supplied theme artwork and native GhostStrats/ASCII marks; no new third-party art was added.
+
+## Covert Instruments and LockPickingLawyer · 0.13.8
+
+- The user supplied the LockPickingLawyer seal, retained unchanged as `media/theme-logos/lockpickinglawyer.jpg`, and the CI door mark (identical to the existing `media/theme-logos/covert-instruments.png`). These marks belong to their respective owners; their inclusion does not imply affiliation, endorsement or a grant of trademark rights.
+- Native-size indexed conversion preserves the original artwork. The LPL seal uses a circular display mask; the navy/gold UI, rope-like watch bezel and rotating two-pan balance are code-drawn ornament. The silver hands reuse the Reaper short-hook and McTickler profiles credited above.
+- Included on Waveshare AMOLED, Spotpear, Seeed XIAO Round and M5Stack StopWatch. Waveshare Lite includes the radar palette, CI header, LPL emblem and rotating scales; watches and timers remain full-board features.

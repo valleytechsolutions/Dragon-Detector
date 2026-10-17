@@ -8,7 +8,7 @@ Current firmware: **0.13.7**. Another display on the same ESP32-S3 needs differe
 | Flash / PSRAM | 32 / 8 MB | 16 / 8 MB | 16 / 8 MB | 8 / 8 MB | 16 / 2 MB |
 | Physical timing controls | BOOT + short PWR | Yellow Start/Pause + blue Lap | On-screen | BOOT Start/Pause + on-screen Lap | None |
 | Radar / same detection families | Yes | Yes | Yes | Yes | Yes |
-| 26 themes / badge / touch menus | Yes | Yes | Yes | Yes | No; BOOT-selectable radar palettes |
+| 27 themes / badge / touch menus | Yes | Yes | Yes | Yes | No; BOOT-selectable radar palettes |
 | RSSI Hunt / watch lists / history | Yes | Yes | Yes | Yes | Radar RSSI only; no saved history |
 | Notebook / eight modes / 29 radio tools | Yes | Yes | Yes | Yes | No |
 | BLE Lab / GATT / recon sessions / recipes | Yes | Yes | Yes | Yes | No |
