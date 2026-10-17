@@ -1,3 +1,17 @@
+# Published 0.13.12 verification
+
+[Release](https://github.com/valleytechsolutions/Dragon-Detector/releases/tag/v0.13.12), [CI](https://github.com/valleytechsolutions/Dragon-Detector/actions/runs/39056395732) and [Pages](https://github.com/valleytechsolutions/Dragon-Detector/actions/runs/39056631518) passed for source `aca3563c73d430a17adf6c322ce6212bdf98a779`. All five clean builds retain the unchanged 21% application reserve. All 80 web tests, native and sanitizer tests (150,000 parser fuzz inputs), and 147 native compressed-logo CRC checks pass. The runner test checks cactus clearance at every millisecond of its cycle and bounds at timer rollover. All public firmware segments, manifests and changed web assets match the source/CI artifacts. All eight release assets were downloaded and SHA-256 verified.
+
+**Waveshare AMOLED 1.75C:** app-only flash verified against its unchanged partition map and a fresh private backup. SHA-256 `825565a628edba75685609f8df1e4b6621bb33729d678d518e6934c3f65c6f40`. All 23 device self-tests pass; current date/time/UTC offset and powered restart retention verified. No external RTC detected; full power-loss time retention is not claimed.
+
+**M5Stack StopWatch:** app-only flash verified against its unchanged partition map and a fresh private backup. SHA-256 `860c042605cd226805bb2d8dd5a995b29ee8dce0c3920306a6c5920ec261d4d0`. All 23 device self-tests pass; current date/time/UTC offset and powered restart retention verified. Hardware RTC readback and ticking pass.
+
+**Spotpear JC3636W518:** app-only flash verified against its unchanged partition map and a fresh private backup. SHA-256 `895d687e24df3ce441ba37b27cc1c5fb61b1b6e103bacd4857fd4fbe0a63cb6a`. All 23 device self-tests pass; current date/time/UTC offset and powered restart retention verified. No external RTC detected; full power-loss time retention is not claimed.
+
+Hackazillarex and m33k_t3ch radar, watch, moving frames and themed settings were inspected on the connected AMOLED; new watches were also checked on StopWatch and Spotpear. The flasher gallery uses actual firmware captures and both new theme commands round-trip in automated tests. The original logo sources and AI-prepared m33k circular derivative have explicit provenance.
+
+XIAO and Lite have build/package checks only in this release. Lite hardware testing remains paused. USB clock verification uses the real web modules over a local serial-stream adapter; the browser USB chooser/full flashing is not claimed as end-to-end hardware-tested. Wi-Fi clock setup remains deferred. No private backups or scan identifiers are published.
+
 # Published 0.13.11 verification
 
 [Release](https://github.com/valleytechsolutions/Dragon-Detector/releases/tag/v0.13.11), [CI](https://github.com/valleytechsolutions/Dragon-Detector/actions/runs/39009103885) and [Pages](https://github.com/valleytechsolutions/Dragon-Detector/actions/runs/39009320848) passed. All five clean builds preserve the 21% reserve. The 79 web tests, native/fuzz and sanitizer checks, and 135 native asset decoder checks pass. Every live firmware segment/manifest and changed web module matches its release source/CI output. All eight uploaded release assets were downloaded and SHA-256 checked.

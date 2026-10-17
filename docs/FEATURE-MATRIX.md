@@ -1,20 +1,20 @@
-# Reference feature comparison · 0.13.9
+# Reference feature comparison · 0.13.12
 
 This is a feature audit, not a claim that Dragon Detector is an official port or has identical behavior. The original application remains MIT. Reference firmware is not silently linked into it. [Credits and exact source revisions](../CREDITS.md) · [Measured hardware checks](VALIDATION.md).
 
 ## AMOLED feature parity across boards
 
-The v0.13.9 source audit confirms that Waveshare AMOLED, M5Stack StopWatch, Spotpear and Seeed XIAO Round already share the full UI, 29 themes, 27 selectable logo watch faces, stopwatch/locksport timers, notebook, Hunt, mode launcher and lab workflows below. No additional port is needed to expose those existing features on these four profiles. The physical controls, audio, RTC and SD support follow each board's hardware; capture and session limits are intentionally smaller where memory or storage is smaller.
+The v0.13.12 source audit confirms that Waveshare AMOLED, M5Stack StopWatch, Spotpear and Seeed XIAO Round already share the full UI, 31 themes, 29 selectable logo watch faces, stopwatch/locksport timers, notebook, Hunt, mode launcher and lab workflows below. No additional port is needed to expose those existing features on these four profiles. The physical controls, audio, RTC and SD support follow each board's hardware; capture and session limits are intentionally smaller where memory or storage is smaller.
 
 | Profile | Capture buffer | Recon session limit | Application slot free |
 |---|---:|---:|---:|
-| Waveshare AMOLED | 2 MiB | 2 MiB | 56.57% |
-| M5Stack StopWatch | 1 MiB | 256 KiB | 30.84% |
-| Spotpear | 1 MiB | 256 KiB | 58.33% |
-| Seeed XIAO Round | 512 KiB | 256 KiB | 22.44% |
-| Waveshare Lite | No recorder | No session UI | 71.87% |
+| Waveshare AMOLED | 2 MiB | 2 MiB | 55.70% |
+| M5Stack StopWatch | 1 MiB | 256 KiB | 29.53% |
+| Spotpear | 1 MiB | 256 KiB | 57.73% |
+| Seeed XIAO Round | 512 KiB | 256 KiB | 21.72% |
+| Waveshare Lite | No recorder | No session UI | 71.54% |
 
-Lite shares detection and all 29 BOOT-selectable themes. It adds compact clock, timing, signal and diagnostic pages. Its 2 MiB PSRAM and single BOOT control still exclude the full touch UI, badge, recorder and active labs. All profiles retain the 21% application-slot reserve and managed-storage reserve. [Exact budgets](FLASH-BUDGET.md) · [Hardware capabilities](HARDWARE.md).
+Lite shares detection and all 31 BOOT-selectable themes. It adds compact clock, timing, signal and diagnostic pages. Its 2 MiB PSRAM and single BOOT control still exclude the full touch UI, badge, recorder and active labs. All profiles retain the 21% application-slot reserve and managed-storage reserve. [Exact budgets](FLASH-BUDGET.md) · [Hardware capabilities](HARDWARE.md).
 
 ## Marauder: all four full boards
 
