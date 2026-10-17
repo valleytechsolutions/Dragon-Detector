@@ -71,7 +71,7 @@ On classic dials, a dot strip indicates the current face. The gear opens time se
 
 Clock and stopwatch suppress detection popups without stopping background listening. An unset clock displays a setup prompt rather than invented time. These features apply to all four full boards; Lite has no clock UI.
 
-M5Stack and Waveshare read a valid hardware RTC at boot, and time settings write/read back the RTC. If it is uninitialized, stopped, reports lost clock integrity or cannot be read, the clock stays unset. An RTC requires its board's battery/power supply to maintain time when USB is removed. Spotpear can display a synchronized software clock, but it needs setting again after restart. Dates are limited to 2000–2099, matching the hardware year registers.
+M5Stack and XIAO read their hardware RTC at boot; time settings write and read back that RTC. An RTC requires its backup supply to keep time when the main device is off. The tested Waveshare **1.75C**, Spotpear and Lite use the ESP32 system clock; 0.13.9+ retains time through powered software resets, but full shutdown needs USB or configured Wi-Fi synchronization (full boards only). Dates are limited to 2000–2099. See [clock setup](CLOCK-SETUP.md) for the verified hardware distinction and diagnostics.
 
 ## Saved display orientation
 

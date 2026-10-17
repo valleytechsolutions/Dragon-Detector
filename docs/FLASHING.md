@@ -8,7 +8,7 @@
 2. Select that board. The ESP32-S3 chip check does not distinguish these boards.
 3. Choose **Update matching Dragon Detector** if the exact board already has a compatible Dragon Detector layout (table below). Leave erase unchecked. Choose **Fresh install** for a new board or migration from unrelated firmware; this replaces saved files. Back up existing firmware, files and settings first.
 4. Confirm the board/type checkbox, Connect & install, choose its serial port, and wait for verification. Reset if it stays in the bootloader.
-5. Close the installer before connecting from Badge Studio.
+5. Keep USB connected until automatic clock setup and verification finish, then connect from Badge Studio.
 
 | Exact board | Existing Dragon Detector layout accepted for Update |
 |---|---|
@@ -52,4 +52,4 @@ The web page validates the exact board name, ESP32-S3 family, image filenames, p
 
 ## Automatic local time (0.13.7)
 
-Leave **Set my local date & time after installation** enabled. After installation finishes, close the installer window and wait for the verified-time status. The browser sets the computer’s current time and local UTC offset on the exact detected board, then closes USB. If the device returns as a different USB port, choose **Finish clock setup** and select the running board. A failed clock sync does not mean the firmware flash failed. Lite skips this step because it has no clock UI. A board without a working RTC needs time synced again after power loss; Studio also syncs on connection.
+Leave **Automatically set and verify my local date, time & timezone** enabled. In 0.13.10+, the installer closes automatically after flashing, then copies the computer's current time and UTC offset to that exact detected board. Keep USB connected until verification finishes. Detected hardware RTCs are read directly and checked for ticking; missing expected RTCs or invalid readback fail explicitly. If USB changes ports, choose **Finish clock setup** and select the running board. A failed clock sync does not mean flashing failed. Lite supports USB clock setup in 0.13.9+. Without a working external RTC, full shutdown requires USB sync or configured saved-Wi-Fi recovery (full boards). The Waveshare **1.75C** is in that category on tested hardware; do not confuse it with the non-C model. [Clock setup and retention guide](CLOCK-SETUP.md).

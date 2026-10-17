@@ -43,7 +43,7 @@ Choose **TOOOL**, **TOOOL Dark**, **Covert Instruments / McNally**, or **DMAC** 
 2. Choose the **exact board**, then **Update matching Dragon Detector** to keep files/settings on a compatible installation, or **Fresh install** for a new board (replaces saved files).
 3. Confirm the hardware checkbox, select **Connect & install**, choose the board's USB port, and wait for verification. Reset if it remains in the bootloader.
 
-[Full installation, update compatibility and recovery instructions](docs/FLASHING.md). Close the installer before connecting Badge Studio or detector tools.
+[Full installation, update compatibility and recovery instructions](docs/FLASHING.md). Wait for automatic clock verification before connecting Badge Studio or detector tools.
 
 ## Choose the exact board
 
