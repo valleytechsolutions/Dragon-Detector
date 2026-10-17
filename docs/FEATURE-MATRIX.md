@@ -6,13 +6,13 @@ This is a feature audit, not a claim that Dragon Detector is an official port or
 
 The v0.13.14 source audit confirms that Waveshare AMOLED, M5Stack StopWatch, Spotpear and Seeed XIAO Round already share the full UI, 31 themes, 29 selectable logo watch faces, stopwatch/locksport timers, notebook, Hunt, mode launcher and lab workflows below. StopWatch now also matches the AMOLED’s 2 MiB capture buffer and 2 MiB recon session limit. The physical controls, audio, RTC and SD support follow each board's hardware; capture and session limits are intentionally smaller where memory or storage is smaller.
 
-| Profile | Capture buffer | Recon session limit | Application slot free |
-|---|---:|---:|---:|
-| Waveshare AMOLED | 2 MiB | 2 MiB | 55.70% |
-| M5Stack StopWatch | 2 MiB | 2 MiB | See current build report |
-| Spotpear | 1 MiB | 256 KiB | 57.73% |
-| Seeed XIAO Round | 512 KiB | 256 KiB | 21.72% |
-| Waveshare Lite | No recorder | No session UI | 71.54% |
+| Profile | Capture buffer | Recon session limit |
+|---|---:|---:|
+| Waveshare AMOLED | 2 MiB | 2 MiB |
+| M5Stack StopWatch | 2 MiB | 2 MiB |
+| Spotpear | 1 MiB | 256 KiB |
+| Seeed XIAO Round | 512 KiB | 256 KiB |
+| Waveshare Lite | No recorder | No session UI |
 
 Lite shares detection and all 31 BOOT-selectable themes. It adds compact clock, timing, signal and diagnostic pages. Its 2 MiB PSRAM and single BOOT control still exclude the full touch UI, badge, recorder and active labs. All profiles enforce the current application and storage limits. [Exact budgets](FLASH-BUDGET.md) · [Hardware capabilities](HARDWARE.md).
 

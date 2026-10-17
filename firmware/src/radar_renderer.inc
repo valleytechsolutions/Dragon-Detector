@@ -106,6 +106,11 @@ static void radarDraw(lv_event_t* e){
   if(radarTheme&&radarTheme!=24)for(int radius=42;radius<169;radius+=42)lv_draw_arc(ctx,&arc,&center,S(radius),0,359);
   if(radarTheme!=24){arc.width=S(2);lv_draw_arc(ctx,&arc,&center,S(170),0,359);}
 #endif
+  if(radarTheme==9){
+    const auto& logo=radar_logo_mcnally;int x=(SCREEN_RES-logo.header.w)/2,y=(SCREEN_RES-logo.header.h)/2;
+    lv_area_t area{(lv_coord_t)x,(lv_coord_t)y,(lv_coord_t)(x+logo.header.w-1),(lv_coord_t)(y+logo.header.h-1)};
+    lv_draw_img_dsc_t d;lv_draw_img_dsc_init(&d);d.opa=180;lv_draw_img(ctx,&d,&area,&logo);
+  }
   if(radarTheme==26)radarLplEmblem(ctx);
   // Sweep and pulse are animation, not measurements of bearing or RF activity.
   static uint32_t sweepAt=0;if(radioEnabled)sweepAt=now;

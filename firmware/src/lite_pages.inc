@@ -63,15 +63,13 @@ static void setLitePage(LitePage next){
   lv_obj_set_y(pageSub,next==LitePage::Clock?187:next==LitePage::Timer?138:171);
   bool special=next==LitePage::Clock&&(radarTheme==0||radarTheme>=29);
   if(radarLogos[radarTheme]&&!special)lv_obj_clear_flag(logo,LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(logo,LV_OBJ_FLAG_HIDDEN);
-  lv_obj_align(logo,LV_ALIGN_TOP_MID,radarTheme==9?-20:0,9);
-  lv_obj_align(mcnallyLogo,LV_ALIGN_TOP_MID,14,9);
-  if(radarTheme==9&&!special)lv_obj_clear_flag(mcnallyLogo,LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(mcnallyLogo,LV_OBJ_FLAG_HIDDEN);
+  lv_obj_align(logo,LV_ALIGN_TOP_MID,0,9);
   if(special){lv_obj_add_flag(pageTitle,LV_OBJ_FLAG_HIDDEN);lv_obj_set_y(pageValue,radarTheme==29?24:157);lv_obj_set_y(pageSub,radarTheme==29?48:188);}
   lv_obj_invalidate(root);
 }
 static void createLitePages(){
   pageCanvas=lv_obj_create(root);lv_obj_remove_style_all(pageCanvas);lv_obj_set_size(pageCanvas,240,240);lv_obj_clear_flag(pageCanvas,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);lv_obj_add_event_cb(pageCanvas,litePageDraw,LV_EVENT_DRAW_MAIN,nullptr);
-  lv_obj_move_foreground(logo);lv_obj_move_foreground(mcnallyLogo);
+  lv_obj_move_foreground(logo);
   pageTitle=text("",45,178,&lv_font_montserrat_10,0xffffff);
   pageValue=text("",95,190,&lv_font_montserrat_22,0xffffff);
   lv_label_set_long_mode(pageValue,LV_LABEL_LONG_WRAP);

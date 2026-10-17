@@ -246,13 +246,7 @@ template<size_t N,size_t T> static void watchPick(lv_draw_ctx_t* ctx,float turns
 static void watchCovert(lv_draw_ctx_t* ctx,const dragon::Calendar& d,bool valid){
   const auto& p=watches[12];watchRing(ctx,176,0x444d55);watchRing(ctx,173,0xc4cbd0);watchRing(ctx,169,0x22292e);watchRing(ctx,119,0x1b2228);
   for(int i=0;i<120;++i)watchRay(ctx,i/120.f,171,172,0x434e56);
-  // Pin chambers sit below the paired logos.
-  for(int i=0;i<6;++i){int x=130+i*20;watchLine(ctx,x-5,133,x-5,166,0x293139);watchLine(ctx,x+5,133,x+5,166,0x293139);
-    for(int j=0;j<4;++j)watchLine(ctx,x-3,134+j*3,x+3,136+j*3,0x3a444d);
-    watchLine(ctx,x,151+i%3*3,x,164,0x58656f,3);
-  }
-  watchLine(ctx,115,168,245,168,0x59636b);watchLine(ctx,115,171,245,171,0x1d252c);
-  watchLogo(ctx,watch_logo_ci,65,0,false,false,-43);watchLogo(ctx,watch_logo_mcnally,65,0,false,false,25);
+  watchLogo(ctx,watch_logo_ci,62);watchLogo(ctx,watch_logo_mcnally,207);
   for(int i=0;i<60;++i)watchRay(ctx,i/60.f,i%5?156:149,161,i%5?0x69747d:0xe7ecef,i%5?1:2);
   for(int i=0;i<12;++i){auto at=watchPolar(i/12.f,137);char value[3];snprintf(value,sizeof(value),"%02d",i?i:12);watchText(ctx,value,at.x-20,at.y-8,40,F16,i%3?0xaeb8c0:0xffffff);}
   for(float angle:{.125f,.375f,.625f,.875f}){auto at=watchPolar(angle,166);watchScrew(ctx,at.x,at.y,0xb9c2c9,0x000000);}

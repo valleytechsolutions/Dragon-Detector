@@ -45,9 +45,9 @@ Black/white circuit traces, silver rings and the supplied emblem. Selecting this
 
 The original supplied PNG remains unchanged. The full theme is available on all four full boards; Lite includes the radar palette/logo.
 
-## Covert Instruments × McNally · 0.13.6
+## Covert Instruments × McNally
 
-Black surfaces, white text and silver accents. The original CI door mark appears on the radar, watch and Locksport Timer; the supplied McNally artwork appears on the watch and timer. The Reaper short hook is the hour hand; the longer McTickler is the minute hand. The silver profiles are drawn from the supplied references, with wider strokes for small-panel legibility. A separate digital window always uses 24-hour local time; the analog dial uses 12 hours. A small outer marker shows seconds. On the radar, the silver McTickler rotates around the center in place of the usual line and wedge; signals and their labels are drawn above it. The sweep is decorative, not a bearing measurement.
+Black surfaces, white text and silver accents. The radar places the original CI door mark at the top and McNally in the center. The watch has CI at the top and McNally centered just above the digital time, with no pin tumbler background. Both marks also appear on the Locksport Timer. The Reaper short hook is the hour hand; the longer McTickler is the minute hand. The silver profiles are drawn from the supplied references, with wider strokes for small-panel legibility. A separate digital window always uses 24-hour local time; the analog dial uses 12 hours. A small outer marker shows seconds. On the radar, the silver McTickler rotates around the center in place of the usual line and wedge; signals and their labels are drawn above it. The sweep is decorative, not a bearing measurement.
 
 | Hybrid watch | Locksport Timer | Themed menu |
 |---|---|---|

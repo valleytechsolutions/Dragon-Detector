@@ -54,7 +54,7 @@ static void prepareLiteBackdrop(lv_obj_t* root){
   liteBackdrop=*lv_canvas_get_img(canvas);lv_obj_del(canvas);lv_img_cache_invalidate_src(&liteBackdrop);
 }
 #include "radar_renderer.inc"
-static lv_obj_t *root,*radar,*status,*activity,*pageLabel,*notice,*logo,*mcnallyLogo;
+static lv_obj_t *root,*radar,*status,*activity,*pageLabel,*notice,*logo;
 static lv_obj_t* liteStartup=nullptr;
 static uint32_t liteStartupAt=0;
 #include "startup_logo.inc"
@@ -80,7 +80,6 @@ void uiBegin(){
   radar=lv_obj_create(root);lv_obj_remove_style_all(radar);lv_obj_set_pos(radar,0,0);lv_obj_set_size(radar,SCREEN_RES,SCREEN_RES);lv_obj_clear_flag(radar,LV_OBJ_FLAG_SCROLLABLE);lv_obj_clear_flag(radar,LV_OBJ_FLAG_CLICKABLE);
   lv_obj_add_event_cb(radar,radarDraw,LV_EVENT_DRAW_MAIN,nullptr);
   logo=lv_img_create(root);if(radarLogos[radarTheme])lv_img_set_src(logo,radarLogos[radarTheme]);else lv_obj_add_flag(logo,LV_OBJ_FLAG_HIDDEN);lv_obj_align(logo,LV_ALIGN_TOP_MID,0,9);
-  mcnallyLogo=lv_img_create(root);lv_img_set_src(mcnallyLogo,&radar_logo_mcnally);lv_obj_clear_flag(mcnallyLogo,LV_OBJ_FLAG_CLICKABLE);lv_obj_add_flag(mcnallyLogo,LV_OBJ_FLAG_HIDDEN);
   status=text("STARTING RADIO",44,184,&lv_font_montserrat_10,radarPalettes[radarTheme].text);
   activity=text("",57,172,&lv_font_montserrat_10,dragon::UiPalettes[radarTheme].accent);
   pageLabel=text("",193,150,&lv_font_montserrat_10,radarPalettes[radarTheme].text);

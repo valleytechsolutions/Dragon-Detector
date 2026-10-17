@@ -75,7 +75,7 @@ for name,path in logos:
     sizes=([(466,264),(360,204),(240,136)] if name=='watch_logo_hackazillarex' else
            [(466,207),(360,160),(240,107)] if name=='watch_logo_m33k' else
            [(466,280),(360,216),(240,144)] if name.startswith('boot_') else
-           [(466,186),(360,144),(240,96)] if name in ('radar_logo_lpl','watch_logo_lpu') else
+           [(466,186),(360,144),(240,96)] if name in ('radar_logo_lpl','radar_logo_mcnally','watch_logo_lpu') else
            [(466,132),(360,102),(240,68)] if name=='watch_logo_ghostbusters' else
            [(466,70),(360,54),(240,36)] if name=='watch_logo_lpl' else
            [(466,207),(360,160),(240,107)] if name=='watch_logo_deflock' else

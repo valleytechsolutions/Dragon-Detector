@@ -6,6 +6,7 @@
 #include "ble_lab.h"
 #include "recon.h"
 #include "board_pins.h"
+#include "flash_budget.h"
 #include <lvgl.h>
 #include <esp_timer.h>
 #include <esp_ota_ops.h>
@@ -94,7 +95,7 @@ static void command(const String& c){
     Serial.println("SYSTEM_RESTARTING");Serial.flush();delay(50);ESP.restart();return;
   }
   if(c=="scan status"){Serial.printf("SCAN_STATUS enabled=%u ble_ms=%lu wifi_ms=%lu mode=%u lab=%u hunt=%d priority_channel=%u",radioEnabled,bleListenMs,wifiListenMs,unsigned(reconMode()),bleLabOwnsRadio()||reconOwnsRadio(),trackedContact,channelLock);for(unsigned i=1;i<=11;++i)Serial.printf(" ch%u=%lu",i,channelDwellMs[i]);Serial.println();return;}
-  if(c=="memory status"){auto* app=esp_ota_get_running_partition();size_t size=ESP.getSketchSize(),slot=app?app->size:0;Serial.printf("MEMORY flash=%u app=%u slot=%u app_free=%u reserve_percent=21 legacy_used=%u legacy_total=%u heap=%u psram=%u\n",ESP.getFlashChipSize(),unsigned(size),unsigned(slot),unsigned(slot>=size?slot-size:0),LittleFS.usedBytes(),LittleFS.totalBytes(),ESP.getFreeHeap(),ESP.getFreePsram());return;}
+  if(c=="memory status"){auto* app=esp_ota_get_running_partition();size_t size=ESP.getSketchSize(),slot=app?app->size:0;Serial.printf("MEMORY flash=%u app=%u slot=%u app_free=%u reserve_percent=%u legacy_used=%u legacy_total=%u heap=%u psram=%u\n",ESP.getFlashChipSize(),unsigned(size),unsigned(slot),unsigned(slot>=size?slot-size:0),dragon::FlashReservePercent,LittleFS.usedBytes(),LittleFS.totalBytes(),ESP.getFreeHeap(),ESP.getFreePsram());return;}
   if(c=="loop diagnostics"){const char* names[]={"board","radio","history","audio","ui","badge"};for(int i=0;i<6;++i)Serial.printf("LOOP_TIMING %s last_us=%lu max_us=%lu\n",names[i],loopLastUs[i],loopMaxUs[i]);Serial.println("LOOP_END");return;}
 #ifdef BOARD_RADAR_LITE
   // Only locally operable Lite pages and timing controls are added here. Radio
