@@ -83,7 +83,7 @@ Rotation preserves AMOLED even-coordinate update windows, RGB565 byte order and 
 
 ## USB commands
 
-`screen startup` replays the VTS logo-only boot animation on black, then returns to radar. It does not reset the device.
+`screen startup` replays the Dragon Ball/BWM boot animation on black, then returns to radar. It does not reset the device.
 
 `screen stopwatch`, `screen laps`, `screen clock`, `screen clock-settings`, `screen clock-edit`, `screen orientation`, `screen time-settings`, `screen date-settings`, `screen clock-sync`
 

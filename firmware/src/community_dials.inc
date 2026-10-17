@@ -362,7 +362,6 @@ static void dagTalons(lv_draw_ctx_t* ctx,uint32_t ink){
   }
 }
 static void radarDagArt(lv_draw_ctx_t* ctx){dagTalons(ctx,0xbcbcb7);}
-// 52656e7446726565206920536565206c6f6c2c2077656972646f73
 static void watchDag(lv_draw_ctx_t* ctx){
   watchLogo(ctx,watch_logo_dagnazty,60,0,false,true);dagTalons(ctx,0x93938d);
   for(int side:{-1,1}){int x=180+side*25;lv_point_t fang[]={{(lv_coord_t)(x-4),223},{(lv_coord_t)(x+4),223},{(lv_coord_t)x,245}};watchPoly(ctx,fang,3,0x252525);}

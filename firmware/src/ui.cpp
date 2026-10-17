@@ -275,8 +275,10 @@ static void build(){
   }else if(page==Radar){
     radar=lv_obj_create(root);lv_obj_remove_style_all(radar);lv_obj_set_pos(radar,0,0);lv_obj_set_size(radar,SCREEN_RES,SCREEN_RES);lv_obj_clear_flag(radar,LV_OBJ_FLAG_SCROLLABLE);lv_obj_add_flag(radar,LV_OBJ_FLAG_CLICKABLE);
     lv_obj_add_event_cb(radar,radarDraw,LV_EVENT_DRAW_MAIN,nullptr);lv_obj_add_event_cb(radar,radarTap,LV_EVENT_CLICKED,nullptr);
-    // Preserve the transparent VTS silhouette, using silver ink on the dark radar.
-    if(radarTheme==8||radarTheme==14||dmac()||radarTheme==22||radarTheme==23)circleLogo(root,radarLogos[radarTheme],17);
+    if(covert()){
+      for(int i=0;i<2;++i){auto* logo=lv_img_create(root);lv_img_set_src(logo,i?&radar_logo_mcnally:&radar_logo_ci);lv_obj_align(logo,LV_ALIGN_TOP_MID,S(i?21:-30),S(17));lv_obj_clear_flag(logo,LV_OBJ_FLAG_CLICKABLE);}
+    }
+    else if(radarTheme==8||radarTheme==14||dmac()||radarTheme==22||radarTheme==23)circleLogo(root,radarLogos[radarTheme],17);
     else if(radarTheme!=13&&radarTheme!=24){auto* logo=lv_img_create(root);lv_img_set_src(logo,radarLogos[radarTheme]);lv_obj_align(logo,LV_ALIGN_TOP_MID,0,S(17));lv_obj_clear_flag(logo,LV_OBJ_FLAG_CLICKABLE);if(radarTheme==10||radarTheme==3){lv_obj_set_style_img_recolor(logo,color(radarTheme==3?0xe1e8ec:0xffffff),0);lv_obj_set_style_img_recolor_opa(logo,LV_OPA_COVER,0);}}
     const auto& theme=radarPalettes[radarTheme];
     statusLabel=label(root,"LISTENING",56,66,248,F12,theme.text);lv_obj_set_style_text_align(statusLabel,LV_TEXT_ALIGN_CENTER,0);legible(statusLabel);lv_obj_set_style_bg_color(statusLabel,color(theme.panel),0);lv_obj_set_style_bg_opa(statusLabel,LV_OPA_60,0);

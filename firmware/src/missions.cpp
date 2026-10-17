@@ -11,7 +11,7 @@
 namespace {
 using namespace dragon;using namespace dragon::mission;
 constexpr unsigned MaxSeen=512,MaxRelations=128,MaxSessions=32;
-#ifdef BOARD_AMOLED_175C
+#if defined(BOARD_AMOLED_175C) || defined(BOARD_STOPWATCH)
 constexpr size_t SessionLimit=2*1024*1024;
 #else
 constexpr size_t SessionLimit=256*1024;
@@ -65,7 +65,7 @@ bool surveyCommand(const String& c){if(!c.startsWith("survey "))return false;aut
  }else Serial.println("RECON_ERROR survey command");return true;
 }
 bool missionCommand(const String& c){if(surveyCommand(c))return true;if(!c.startsWith("mission "))return false;auto* fs=bleLabStorage();
- if(c=="mission status"){Serial.printf("MISSION_STATUS active=%u name=%s protocol=%s bytes=%u dropped=%lu reason=%s\nRECON_OK\n",missionActive(),session?session->name:"none",session&&session->ble?"ble":"wifi",session?unsigned(session->bytes):0,session?session->dropped:0,session?session->reason:"Idle");}
+ if(c=="mission status"){Serial.printf("MISSION_STATUS active=%u name=%s protocol=%s bytes=%u limit=%u dropped=%lu reason=%s\nRECON_OK\n",missionActive(),session?session->name:"none",session&&session->ble?"ble":"wifi",session?unsigned(session->bytes):0,unsigned(SessionLimit),session?session->dropped:0,session?session->reason:"Idle");}
  else if(c=="mission stop"){missionStop();Serial.println("RECON_OK");}
  else if(c.startsWith("mission start ")){char mode[5],name[33],extra;bool ok=sscanf(c.c_str(),"mission start %4s %32s %c",mode,name,&extra)==2&&(!strcmp(mode,"wifi")||!strcmp(mode,"ble"))&&missionStart(!strcmp(mode,"ble"),name);Serial.println(ok?"RECON_OK mission recording; background scanning continues":"RECON_ERROR name exists, storage, or busy");}
  else if(c=="mission list"){if(fs){File d=fs->open("/missions");for(File f=d.openNextFile();f;f=d.openNextFile()){if(f.isDirectory()){String name=f.name();name=name.substring(name.lastIndexOf('/')+1);if(safe(name.c_str()))Serial.printf("MISSION_SAVED %s\n",name.c_str());}f.close();}d.close();}Serial.println("RECON_OK");}

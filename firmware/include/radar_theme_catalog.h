@@ -7,6 +7,7 @@ extern lv_img_dsc_t radar_logo_baph;
 extern lv_img_dsc_t radar_logo_biscuit;
 extern lv_img_dsc_t radar_logo_church;
 extern lv_img_dsc_t radar_logo_ci;
+extern lv_img_dsc_t radar_logo_mcnally;
 extern lv_img_dsc_t radar_logo_lpl;
 extern lv_img_dsc_t radar_logo_dagnazty;
 extern lv_img_dsc_t radar_logo_deflock;

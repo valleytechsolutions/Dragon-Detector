@@ -8,9 +8,9 @@ Normal screens, badges, utilities, passive recording and USB downloads keep both
 
 ## Storage and reserve
 
-Existing partition layouts stay unchanged. Waveshare uses its separate upper 16 MiB recon filesystem. The other full boards use their existing mounted filesystem alongside badges and history. Updates do not format either filesystem or NVS. New writes preserve at least 21% filesystem space; builds preserve at least 21% of an application slot. This is a minimum reserve, not a reason to fill flash with padding.
+Existing partition layouts stay unchanged. Waveshare uses its separate upper 16 MiB recon filesystem. The other full boards use their existing mounted filesystem alongside badges and history. Updates do not format either filesystem or NVS. New writes check available space before saving.
 
-Capture RAM is 2 MiB on Waveshare, 1 MiB on M5Stack/Spotpear and 512 KiB on XIAO. Full boards retain all 40,333 IEEE prefixes using an independent bounded block decoder: 462,273 compressed flash bytes expand to 709,215 PSRAM bytes after a CRC check. No SD card is required. See [measured budgets](FLASH-BUDGET.md).
+Capture RAM is 2 MiB on Waveshare and M5Stack, 1 MiB on Spotpear and 512 KiB on XIAO. Full boards retain all 40,333 IEEE prefixes using an independent bounded block decoder: 462,273 compressed flash bytes expand to 709,215 PSRAM bytes after a CRC check. No SD card is required. See [measured budgets](FLASH-BUDGET.md).
 
 ## Recon sessions and AP archives
 
@@ -18,7 +18,7 @@ Open Radio tools → Recon sessions, or use the web controls. A session records 
 
 Each `/missions/<name>/` directory contains `session.json`, `obs.rlog`, `probes.rlog` and `relations.rlog`. The independent encoders follow Marauder's RCN1 (21-byte observations), PRB1 (45-byte probe records, at most 24 SSID bytes) and REL1 (12-byte station/AP pairs) formats. GPS fields are zero and the manifest declares `gps_fix: false`. This is file-format compatibility, not verified integration with every desktop consumer. Notebook CSV preserves complete 32-byte probe SSIDs when needed.
 
-First observations and updates have separate record types. Updates require 30 seconds or a 12 dB change. Identity and relation tables are bounded at 512 and 128; drops are counted. Sessions stop after one hour or their size limit: 2 MiB on Waveshare, 256 KiB on the other full boards. Up to 32 named directories are retained. Unexpected power loss can leave a manifest marked active; already-flushed records remain available, while buffered records can be lost.
+First observations and updates have separate record types. Updates require 30 seconds or a 12 dB change. Identity and relation tables are bounded at 512 and 128; drops are counted. Sessions stop after one hour or their size limit: 2 MiB on Waveshare and M5Stack, 256 KiB on Spotpear and XIAO. Up to 32 named directories are retained. Unexpected power loss can leave a manifest marked active; already-flushed records remain available, while buffered records can be lost.
 
 AP archives save current observations as CSV, including raw SSID hex, RSSI, channel, security and age. Loading an archive displays historical records; it never makes an old AP eligible as a fresh attack target. Up to 32 archives are retained. Downloads have length and CRC checks.
 

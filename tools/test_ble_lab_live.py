@@ -1,8 +1,8 @@
 """Opt-in hardware checks using only our synthetic peripheral. Never scans/connects to arbitrary devices.
 
 Windows: pip install bleak pyserial (Bleak installs the WinRT bindings).
-python tools/test_ble_lab_live.py --port COM51 --mode clone
-python tools/test_ble_lab_live.py --port COM51 --mode discover
+python tools/test_ble_lab_live.py --port PORT --mode clone
+python tools/test_ble_lab_live.py --port PORT --mode discover
 """
 import argparse, asyncio, json, struct, time, uuid, zlib
 from pathlib import Path

@@ -17,6 +17,7 @@ logos=[('radar_logo','media/branding/dragon-detector.png'),
        ('radar_logo_church','media/theme-logos/church-of-malware.png'),
        ('watch_logo_church','media/theme-logos/church-of-malware.png'),
        ('radar_logo_ci','media/theme-logos/covert-instruments.png'),
+       ('radar_logo_mcnally','media/theme-logos/mcnally-source.webp'),
        ('watch_logo_ci','media/theme-logos/covert-instruments.png'),
        ('watch_logo_mcnally','media/theme-logos/mcnally-source.webp'),
        ('radar_logo_lpl','media/theme-logos/lockpickinglawyer.jpg'),
@@ -103,12 +104,11 @@ for name,path in logos:
                 pixels.extend([value>>8,value&255,a])
             fmt='LV_IMG_CF_TRUE_COLOR_ALPHA'
         else:
-            # Indexed artwork retains antialiasing and alpha while leaving
-            # ample application space for native boot logos on 8 MB boards.
+            # Indexed artwork retains alpha and antialiasing.
             compact=name in ('boot_dragon_logo','watch_logo_church','radar_logo_seeed','watch_logo_seeed','radar_logo_dagnazty','watch_logo_dagnazty','radar_logo_n3rdsec','watch_logo_n3rdsec','radar_logo_toool','radar_logo_ci','watch_logo_ci','watch_logo_mcnally','radar_logo_waveshare','watch_logo_waveshare','radar_logo_deflock','watch_logo_deflock')
-            # The 240px LPL seals use sixteen colors to preserve the XIAO's
-            # guarded OTA reserve; larger panels retain the 256-color artwork.
+            # Sixteen colors keep the 240px seals compact.
             compact=compact or 'ghostbusters' in name or name.endswith('_lpu') or (resolution==240 and name in ('radar_logo_lpl','watch_logo_lpl'))
+            compact=compact or name=='radar_logo_mcnally'
             count=16 if compact else 256
             indexed=icon.quantize(colors=count,method=Image.Quantize.FASTOCTREE,dither=Image.Dither.NONE)
             palette=indexed.getpalette('RGBA');pixels=[]

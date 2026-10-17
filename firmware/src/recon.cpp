@@ -39,7 +39,7 @@ static uint8_t* packet=nullptr;static uint8_t* beacon=nullptr;static size_t beac
 static std::atomic<int> crypto{0};
 #ifdef BOARD_XIAO_ROUND
 constexpr size_t CaptureCapacity=512*1024;
-#elif defined(BOARD_AMOLED_175C)
+#elif defined(BOARD_AMOLED_175C) || defined(BOARD_STOPWATCH)
 constexpr size_t CaptureCapacity=2*1024*1024;
 #else
 constexpr size_t CaptureCapacity=1024*1024;
@@ -199,7 +199,7 @@ bool reconCommand(const String& c){
  if(recipeCommand(c)||missionCommand(c)||networkCommand(c)||portalCommand(c)||csiCommand(c))return true;
  if(!c.startsWith("mode ")&&!c.startsWith("tool ")&&!c.startsWith("recon "))return false;unsigned n=0;
  if(c=="mode list"){for(unsigned i=0;i<unsigned(ReconMode::Count);++i)Serial.printf("MODE %u %s / %s\n",i,reconModes[i].name,reconModes[i].detail);Serial.println("RECON_OK");}
- else if(c=="mode status"||c=="tool status")Serial.printf("MODE_STATUS mode=%u radio=%u active=%u tool=%u accepted=%lu errors=%lu error=%d responses=%lu eapol=%lu recording=%u records=%lu bytes=%u saving=%u ssids=%u message=%s\n",unsigned(mode),reconRadio(),status.active,unsigned(status.attack),status.accepted,status.errors,status.error,status.responses,status.eapol,status.recording,status.records,unsigned(status.bytes),status.saving,ssidCount,status.message);
+ else if(c=="mode status"||c=="tool status")Serial.printf("MODE_STATUS mode=%u radio=%u active=%u tool=%u accepted=%lu errors=%lu error=%d responses=%lu eapol=%lu recording=%u records=%lu bytes=%u capture_capacity=%u unsaved=%u saving=%u ssids=%u message=%s\n",unsigned(mode),reconRadio(),status.active,unsigned(status.attack),status.accepted,status.errors,status.error,status.responses,status.eapol,status.recording,status.records,unsigned(status.bytes),unsigned(CaptureCapacity),captureDirty,status.saving,ssidCount,status.message);
  else if(c.startsWith("mode set ")&&number(c.substring(9),n)&&validMode(n))Serial.println(reconSetMode(ReconMode(n))?"RECON_OK":"RECON_ERROR busy");
  else if(c=="recon stats"){Serial.printf("RECON_STATS frames=%lu beacons=%lu probes=%lu disconnect=%lu eapol=%lu pwnagotchi=%lu detections=%lu protected=%lu retries=%lu m1=%lu m2=%lu m3=%lu m4=%lu other_eapol=%lu pmkid=%lu sae=%lu\n",counters.frames,counters.beacons,counters.probes,counters.disconnect,counters.eapol,counters.peers,counters.detections,counters.protectedFrames,counters.retries,counters.keyMessages[1],counters.keyMessages[2],counters.keyMessages[3],counters.keyMessages[4],counters.keyMessages[0],counters.pmkid,counters.sae);Serial.println("RECON_OK");}
  else if(c=="recon stats clear"&&!busy()&&!status.recording){counters={};if(probes)memset(probes,0,96*sizeof(*probes));Serial.println("RECON_OK");}

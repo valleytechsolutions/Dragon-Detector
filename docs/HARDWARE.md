@@ -18,10 +18,10 @@ Current firmware: **0.13.10**. Another display on the same ESP32-S3 needs differ
 | Fixed orientation setting | Yes | Yes | Yes | Yes | Fixed radar orientation |
 | SD card support | **No slot / no SD controls** | **No slot / no SD controls** | Optional SD CSV/PCAP + browser | Optional SD CSV/PCAP + browser | No |
 | Internal user storage | 3.94 MiB badge/history + **16 MiB recon** | 7.94 MiB shared | 3.94 MiB shared | 1.94 MiB shared | Theme + UTC offset settings; no file features |
-| Capture buffer in PSRAM | 2 MiB | 1 MiB | 1 MiB | 512 KiB | No recorder |
+| Capture buffer in PSRAM | 2 MiB | 2 MiB | 1 MiB | 512 KiB | No recorder |
 | Capture files / profiles download | USB web tools | USB web tools | USB web tools; separate SD logs | USB web tools; separate SD logs | None |
 
-All four full boards use the same classifiers and lab workflows; Waveshare's advantage is dedicated recon storage, not different radio bands or extra processing power. Builds and new file writes enforce a 21% reserve; existing files are never deleted to meet it. [Exact budgets](FLASH-BUDGET.md) · [Feature limits](FEATURE-MATRIX.md) · [GUI tour](GUI.md).
+All four full boards use the same classifiers and lab workflows; Waveshare's advantage is dedicated recon storage, not different radio bands or extra processing power. Builds and new writes check available space; existing files are never deleted automatically. [Exact budgets](FLASH-BUDGET.md) · [Feature limits](FEATURE-MATRIX.md) · [GUI tour](GUI.md).
 
 ## Storage follows the hardware
 
@@ -31,7 +31,7 @@ All four full boards use the same classifiers and lab workflows; Waveshare's adv
 
 **Lite:** radar, compact clock, stopwatch/locksport timer, signal details and diagnostics, operated with BOOT. It has no storage menu, badge, interactive lab or persistent detection history.
 
-Shared storage sizes are partition allocations, not free-space promises. They include badge/history and lab data; the reserve policy prevents new writes from consuming the final 21%. Updates never reformat these volumes automatically.
+Shared storage sizes are partition allocations, not free-space promises. They include badge/history and lab data; new writes stop before storage is full. Updates never reformat these volumes automatically.
 
 [Pin definitions](../firmware/include/board_pins.h) are authoritative for these builds. Waveshare C uses display reset GPIO 1 and touch reset GPIO 2; these are not the non-C board's wiring. It has no SD slot in this profile. M5Unified identifies the StopWatch and rejects an unexpected display.
 

@@ -1,6 +1,7 @@
 """Validate current Markdown links and all generated flasher files before publication."""
 from pathlib import Path
 import hashlib,json,re
+from flash_budget import RESERVE_PERCENT
 from urllib.parse import unquote
 ROOT=Path(__file__).resolve().parents[1]
 VERSION=re.search(r'#define DRAGON_VERSION "([0-9.]+)"',(ROOT/'firmware/include/version.h').read_text()).group(1)
@@ -15,9 +16,9 @@ for board in ('spotpear','waveshare','stopwatch','xiao_round','waveshare_lite'):
     info=json.loads((folder/'build-info.json').read_text(encoding='utf-8'))
     assert info['version']==VERSION and info['board']==board and info['memory']==budget
     assert budget['app_bytes']==(folder/'firmware.bin').stat().st_size
-    assert budget['reserve_percent']==21
+    assert budget['reserve_percent']==RESERVE_PERCENT
     assert budget['app_slot_free_bytes']==budget['app_slot_bytes']-budget['app_bytes']
-    assert budget['app_slot_free_bytes']>=(budget['app_slot_bytes']*21+99)//100
+    assert budget['app_slot_free_bytes']>=(budget['app_slot_bytes']*RESERVE_PERCENT+99)//100
     assert budget['physical_flash_bytes']==info['flash_size']
     for mode in ('factory','update'):
         manifest=json.loads((folder/f'{mode}.json').read_text(encoding='utf-8'))

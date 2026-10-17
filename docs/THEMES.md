@@ -2,7 +2,7 @@
 
 Firmware **0.13.8** offers twenty-seven themes, including Covert Instruments × McNally, TOOOL, TOOOL Dark and Church of Malware, on Waveshare AMOLED, M5Stack StopWatch, Spotpear and Seeed XIAO + Round Display.
 
-The saved theme also controls menus, settings, dialogs, utility screens, BLE Lab and radio tools. Watch designs remain independently swipeable. The boot animation on all five profiles now fades in the supplied VTS logo alone on a white field, preserving its black and gray artwork. Custom badge artwork and detection-family colors retain their meaning.
+The saved theme also controls menus, settings, dialogs, utility screens, BLE Lab and radio tools. Watch designs remain independently swipeable. All five profiles show the Dragon Ball/BWM mark on black at power-on, then open the saved radar theme. Custom badge artwork and detection-family colors retain their meaning.
 
 Open **Tools → System → Settings → Theme & radar labels** and scroll to the theme. It saves immediately; tap Home to return to radar. Or connect through the [web tools](https://valleytechsolutions.github.io/Dragon-Detector/#detector), choose Radar appearance → Theme, and save. Older firmware keeps its original three choices until updated. Waveshare Lite cycles all 29 themes with BOOT and saves the selection. Hold BOOT to cycle radar, compact clock, timer, signals and diagnostics; see [Lite controls](WAVESHARE-LITE.md). Its LPL radar includes the central emblem and rotating scales.
 
@@ -51,13 +51,13 @@ Black surfaces, white text and silver accents. The original CI door mark appears
 
 | Hybrid watch | Locksport Timer | Themed menu |
 |---|---|---|
-| ![Covert watch](../web/assets/watch-covert-0136.png) | ![Covert timer](../web/assets/timer-covert-0136.png) | ![Covert menu](../web/assets/menu-covert-0136.png) |
+| ![Covert watch](../web/assets/watch-covert-01314.png) | ![Covert timer](../web/assets/timer-covert-01314.png) | ![Covert menu](../web/assets/menu-covert-0136.png) |
 
 Select **Covert Instruments / McNally** or send `radar theme covert`. It selects watch 12 and enables the same START/PAUSE, SPLIT, OPEN and confirmed RESET behavior as TOOOL. Dark controls continue through the split log, settings, BLE Lab and radio tools. All four full boards include it; Lite includes the radar palette/logo.
 
 ## AWOK, Baph0Mau5 and WDGWARS · 0.13.6
 
-Each theme colors every menu, setting, dialog and the standard stopwatch. Choosing it selects its matching analog watch; the watch remains independently swipeable. All use 12-hour hands and date-only labels. The shared VTS logo-only startup is independent of theme.
+Each theme colors every menu, setting, dialog and the standard stopwatch. Choosing it selects its matching analog watch; the watch remains independently swipeable. All use 12-hour hands and date-only labels. The shared Dragon Ball/BWM startup is independent of theme.
 
 | Theme / USB name | Design | Watch index |
 |---|---|---|
@@ -74,7 +74,7 @@ Map and signal motifs do not indicate a measured location or bearing. Moon ornam
 
 ## GhostStrats and N3rdsec · 0.13.6
 
-GhostStrats uses black, grey and purple throughout the GUI, with glowing slit eyes on its radar and watch. The analog face has silver/purple hands, faceted details and the requested “Safety is an Illusion.” tagline. N3rdsec uses black, white and gold, with the original skull on both radar and watch, an Arabic dial and broad gold/silver hands. Selecting either theme also selects its watch; both retain the ordinary stopwatch. The shared VTS logo-only startup remains independent of theme. USB commands are `radar theme ghoststrats` (13) and `radar theme n3rdsec` (14); watch indices are 16 and 17.
+GhostStrats uses black, grey and purple throughout the GUI, with glowing slit eyes on its radar and watch. The analog face has silver/purple hands, faceted details and the requested “Safety is an Illusion.” tagline. N3rdsec uses black, white and gold, with the original skull on both radar and watch, an Arabic dial and broad gold/silver hands. Selecting either theme also selects its watch; both retain the ordinary stopwatch. The shared Dragon Ball/BWM startup remains independent of theme. USB commands are `radar theme ghoststrats` (13) and `radar theme n3rdsec` (14); watch indices are 16 and 17.
 
 | GhostStrats | N3rdsec |
 |---|---|
@@ -83,7 +83,7 @@ GhostStrats uses black, grey and purple throughout the GUI, with glowing slit ey
 
 ## HaleHound · 0.13.6
 
-Black, hot pink and violet theme the complete GUI. Both original supplied logos appear on the Roman analog watch, with moving layered flames and rising embers on either side. The radar has a matching wordmark and subdued animated hellfire behind signal dots and labels. Flames use monotonic frame time, so setting the clock does not stop their motion. The ordinary stopwatch remains available; the shared VTS boot logo remains independent of theme. USB command: `radar theme halehound` (theme 15, watch 18).
+Black, hot pink and violet theme the complete GUI. Both original supplied logos appear on the Roman analog watch, with moving layered flames and rising embers on either side. The radar has a matching wordmark and subdued animated hellfire behind signal dots and labels. Flames use monotonic frame time, so setting the clock does not stop their motion. The ordinary stopwatch remains available; the shared Dragon Ball/BWM boot logo remains independent of theme. USB command: `radar theme halehound` (theme 15, watch 18).
 
 | Animated-fire analog watch | Hellfire radar |
 |---|---|
@@ -91,7 +91,7 @@ Black, hot pink and violet theme the complete GUI. Both original supplied logos 
 
 ## Maker and character themes · 0.13.6
 
-All nine themes below carry their colors through menus, settings, dialogs and utilities. Selecting one selects its unique watch. The universal VTS startup is shared by all boards.
+All nine themes below carry their colors through menus, settings, dialogs and utilities. Selecting one selects its unique watch. The universal Dragon Ball/BWM startup is shared by all boards.
 
 | Theme / USB name | Theme / watch ID | Design |
 |---|---|---|

@@ -3,7 +3,7 @@
 Requires pyserial, winrt-Windows.Networking.NetworkOperators and
 winrt-Windows.Networking.Connectivity. Uses an empty profile slot only. Stops the
 temporary AP and removes its detector profile on exit; never reads Wi-Fi keys.
-Run: python tools/test_network_live.py --port COM51
+Run: python tools/test_network_live.py --port PORT
 """
 import argparse, asyncio, json, re, time, secrets
 from pathlib import Path

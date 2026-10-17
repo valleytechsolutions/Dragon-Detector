@@ -55,4 +55,4 @@ Read-only USB diagnostics: `status`, `contacts`, `selftest`, `axon status`, `tra
 
 See [validation status](VALIDATION.md) for checks actually completed. A matching signature is evidence of a radio pattern, not proof of malicious intent or recording state.
 
-All five profiles share the supplied VTS logo-only fade-in at startup. Lite switches to radar automatically after the brief splash; BOOT recovery remains unchanged.
+All five profiles share the Dragon Ball/BWM fade-in at startup. Lite switches to radar automatically after the brief splash; BOOT recovery remains unchanged.

@@ -4,7 +4,9 @@
 #include "lz_block.h"
 static void notebookTests(){
  using namespace dragon;using namespace notebook;
- assert(flashReserve(100)==21&&flashReserve(101)==22&&storageFits(100,78,1)&&!storageFits(100,79,1)&&!storageFits(100,101,0)&&!storageFits(100,1,size_t(-1)));
+ assert(flashReserve(0)==0&&flashReserve(100)==5&&flashReserve(101)==6);
+ assert(storageFits(100,94,1)&&!storageFits(100,95,1)&&storageFits(101,94,1)&&!storageFits(101,95,1));
+ assert(!storageFits(100,101,0)&&!storageFits(100,1,size_t(-1))&&flashReserve(size_t(-1))<size_t(-1));
  uint8_t packed[]={0x13,'a',1,0,0x50,'b','c','d','e','f'},unpacked[13]{};
  assert(unpackBlock(packed,sizeof(packed),unpacked,sizeof(unpacked))&&!memcmp(unpacked,"aaaaaaaabcdef",13));
  for(size_t i=0;i<sizeof(packed);++i)assert(!unpackBlock(packed,i,unpacked,sizeof(unpacked)));

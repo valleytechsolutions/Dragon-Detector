@@ -18,9 +18,11 @@ import {uploadBadge} from './badge-transfer.js?v=0.13.3';
 import {readHistory} from './detector-transfer.js';
 import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasBrandedThemes,hasCommunityThemes,hasRunnerThemes,hasLplTheme,hasWearableTools,hasClockTools,hasWifiClock,hasRetainedClock} from './firmware-compat.js?v=0.13.12';
 import {readRadarSettings,saveRadarSettings} from './radar-transfer.js?v=0.13.12';
-import {boardProfiles,connectedProfile,validateManifest,supportsBadge} from './board-profiles.js?v=0.13.12';
+import {boardProfiles,connectedProfile,validateManifest,supportsBadge} from './board-profiles.js?v=0.13.14';
 import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan,drawBadgeText} from './badge-editor.js?v=0.13.3';
 import {hasNotebook,readNotebook,customAdvertCommand} from './notebook.js?v=0.13.3';
+import {revealLocation} from './navigation.js?v=0.13.14';
+revealLocation();
 const $ = id => document.getElementById(id);
 void updateVisitCounter($('visit-count'));
 startRadarBackground($('radar-background'),$('radar-motion'));
@@ -445,7 +447,7 @@ for(const kind of ['probes','adverts'])$('notebook-'+kind).onclick=()=>notebookA
  const csv=await readNotebook(l,kind);const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='dragon-notebook-'+kind+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);
  $('detector-status').textContent='Snapshot downloaded. Radar scanning continued during export.';
 });
-$('notebook-memory').onclick=()=>notebookAction(async l=>{await l.write('memory status');$('detector-status').textContent=await l.wait(s=>s.startsWith('MEMORY '));});
+$('notebook-memory').onclick=()=>notebookAction(async l=>{await l.write('memory status');$('detector-status').textContent=(await l.wait(s=>s.startsWith('MEMORY '))).replace(/ reserve_percent=\d+/,'');});
 $('custom-advert-save').onclick=async()=>{await reconAction(l=>reconDo(l,customAdvertCommand($('custom-advert-hex').value)));$('custom-advert-status').textContent=$('recon-output').textContent;};
 
 $('lab-bridge').onclick=()=>labAction(async l=>{if(confirm('Bridge the connected peripheral to a local GATT server for up to 10 minutes? Reads use cached values. Writes acknowledge locally before forwarding; use Bridge status to check failures. Radar resumes on Stop, disconnect or timeout.'))await labCommand(l,'lab bridge');});
