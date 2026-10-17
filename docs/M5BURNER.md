@@ -2,6 +2,8 @@
 
 The M5Burner submission uses the same clean **v0.13.12** StopWatch factory image as the [GitHub release](https://github.com/valleytechsolutions/Dragon-Detector/releases/tag/v0.13.12). It includes 31 themes, 29 logo watch faces, the Hackazillarex and m33k_t3ch animations, locksport timers, the VTS boot animation, and separate Time / Date / Sync settings.
 
+**Submission checked October 17, 2026:** v0.13.12 is Public / Pending review in the existing Dragon Detector project (`2111312268664066049`), version `2111530771929190402`. The old v0.13.8 version remains a private historical entry. The complete 16 MB image downloaded back from M5Burner matches the release byte for byte. Public catalog approval is controlled by M5Stack.
+
 ## Install
 
 1. Select **Dragon Detector** by **ValleytechSolutions**, device **StopWatch**, version **0.13.12** in M5Burner once M5Stack approves the public submission. This image is for **M5Stack StopWatch C152 only**.
