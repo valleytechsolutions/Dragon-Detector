@@ -30,6 +30,8 @@ The factory filesystem is at `0xC10000` on Spotpear/Waveshare, `0x810000` on Sto
 
 ## Manual installation
 
+For the M5Stack StopWatch C152 factory package in M5Burner, follow the [M5Burner guide](M5BURNER.md), including the required post-burn browser clock setup. The factory image resets saved settings and files; use the web flasher's Update option for compatible installations you want to preserve.
+
 Build/package with `python tools/build_release.py --board waveshare` (or `spotpear` / `stopwatch` / `xiao_round` / `waveshare_lite`). Verify the files against `web/firmware/<board>/SHA256SUMS.txt`.
 
 ```
