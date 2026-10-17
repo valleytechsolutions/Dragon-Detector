@@ -124,7 +124,7 @@ void uiKey(bool held){
   lv_obj_set_style_text_color(notice,color(dragon::UiPalettes[radarTheme].ink),0);
   if(radarLogos[radarTheme]){lv_img_set_src(logo,radarLogos[radarTheme]);lv_obj_clear_flag(logo,LV_OBJ_FLAG_HIDDEN);}
   else lv_obj_add_flag(logo,LV_OBJ_FLAG_HIDDEN);
-  lv_obj_align(logo,LV_ALIGN_TOP_MID,0,9);lv_obj_invalidate(root);
+  lv_obj_align(logo,LV_ALIGN_TOP_MID,0,9);setLitePage(litePage);lv_obj_invalidate(root);
   Serial.printf("LITE_THEME theme=%u name=%s\n",radarTheme,radarThemeCommands[radarTheme]);
 }
 bool uiStopwatchKey(bool,uint64_t){return false;}

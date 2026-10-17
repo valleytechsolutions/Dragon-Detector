@@ -1,5 +1,7 @@
 ![Dragon Detector promotional artwork](media/cover.png)
 
+**0.13.12:** Hackazillarex adds a rotating bone sweep and a jumping T-rex logo clock; m33k_t3ch adds cyan/magenta circuits and a neon logo dial. Both themes include animated Lite clocks. **31 themes / 29 full-board logo watches**, with the existing 21% application-slot reserve guard unchanged. [Release notes](docs/RELEASE-0.13.12.md).
+
 **0.13.11:** Separate **Time**, **Date** and **Sync** settings tabs, larger clock wheels, themed pop-ups and an unset-clock reminder. The web flasher can keep the clock aligned with your computer while connected. All five profiles preserve the flash reserve. [Release notes](docs/RELEASE-0.13.11.md) · [Clock setup](docs/CLOCK-SETUP.md).
 
 **0.13.9:** Ghostbusters and Lockpickers United, 29 GUI themes and 27 logo watches, a shared VTS boot animation, five BOOT-operated Lite pages, lossless artwork compression, and optional saved-Wi-Fi clock recovery on all four full boards. [Release notes](docs/RELEASE-0.13.9.md) · [Spotpear time setup wiki](https://github.com/valleytechsolutions/Dragon-Detector/wiki/Spotpear-Clock-Setup).
@@ -62,7 +64,7 @@ The Waveshare **C variant** has different reset wiring from the non-C 1.75. Firm
 | Flash | 32 MB | 16 MB | 16 MB | 8 MB | 16 MB |
 | SD card controls | None | None | Optional CSV/PCAP + browser | Optional CSV/PCAP + browser | None |
 | Internal user storage | 3.94 MiB badge/history + 16 MiB recon | 7.94 MiB shared | 3.94 MiB shared | 1.94 MiB shared | No user file features |
-| 29 themes, badge, stopwatch, radio tools, BLE Lab | Yes | Yes | Yes | Yes | Compact radar/clock/timer; no badge or active labs |
+| 31 themes, badge, stopwatch, radio tools, BLE Lab | Yes | Yes | Yes | Yes | Compact radar/clock/timer; no badge or active labs |
 | Sound / haptics | Speaker connector | Speaker + haptics | Speaker connector | Visual alerts | Visual alerts |
 | Clock | USB / saved Wi-Fi | RTC | Software | RTC | Software + USB sync |
 
@@ -113,7 +115,7 @@ Actual Waveshare firmware framebuffers. Ghostbusters has a proton-stream radar a
 
 ## Stopwatch, clock and orientation
 
-**Tools → Utilities** now includes a real start/pause/lap stopwatch and twenty-seven swipeable logo watch faces, including TOOOL, Church of Malware binary, character, maker and community logo designs. Both TOOOL themes and Covert Instruments × McNally offer Locksport Timer; DMAC offers Locksport Counter with the same OPEN and SPLIT controls. All analog dials use 12 hours. JCMK military, DeFlock, 0ct0’s Pig and the Covert hybrid’s digital window use 24-hour time. Connecting Studio automatically syncs local date, time and timezone. M5Stack yellow/blue and Waveshare BOOT/short PWR operate timing controls; the four full-feature boards also have touch buttons. The latest 50 laps remain available while detection keeps running. Settings provides RTC date/time and local UTC offset, saved 0°/90°/180°/270° orientation on the four full-feature boards (Lite has a fixed orientation). [Controls, behavior and hardware limits](docs/STOPWATCH-CLOCK-ORIENTATION.md).
+**Tools → Utilities** now includes a real start/pause/lap stopwatch and twenty-nine swipeable logo watch faces, including TOOOL, Church of Malware binary, character, maker and community logo designs. Both TOOOL themes and Covert Instruments × McNally offer Locksport Timer; DMAC offers Locksport Counter with the same OPEN and SPLIT controls. All analog dials use 12 hours. JCMK military, DeFlock, 0ct0’s Pig and the Covert hybrid’s digital window use 24-hour time. Connecting Studio automatically syncs local date, time and timezone. M5Stack yellow/blue and Waveshare BOOT/short PWR operate timing controls; the four full-feature boards also have touch buttons. The latest 50 laps remain available while detection keeps running. Settings provides RTC date/time and local UTC offset, saved 0°/90°/180°/270° orientation on the four full-feature boards (Lite has a fixed orientation). [Controls, behavior and hardware limits](docs/STOPWATCH-CLOCK-ORIENTATION.md).
 
 | Chronograph · 0.13.3 | ValleyTech clock · 0.13.6 |
 |---|---|

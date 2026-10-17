@@ -26,3 +26,6 @@ export function hasCommunityThemes(version){return /^0\.13\.(?:[6-9]|[1-9]\d+)$/
 
 // The CI / LockPickingLawyer theme first shipped in 0.13.8.
 export function hasLplTheme(version){return /^0\.13\.(?:[89]|[1-9]\d+)$/.test(version);}
+
+// Appended persistent theme IDs 29 and 30.
+export function hasRunnerThemes(version){const m=/^0\.13\.(0|[1-9]\d*)$/.exec(version);return !!m&&Number(m[1])>=12;}

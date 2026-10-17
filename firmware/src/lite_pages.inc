@@ -23,6 +23,8 @@ static void litePageDraw(lv_event_t* e){
   auto* ctx=lv_event_get_draw_ctx(e);const auto& p=dragon::UiPalettes[radarTheme];
   disc(ctx,120,120,118,p.border);disc(ctx,120,120,116,p.bg);
   if(litePage==LitePage::Clock){
+    if(radarTheme==29){themeArtwork(ctx,watch_logo_hackazillarex,90);dinoRun(ctx,radarFrameAt);return;}
+    if(radarTheme==30){themeArtwork(ctx,watch_logo_m33k,68);cyberRim(ctx,radarFrameAt,clockValid?clockFrame.second:-1);return;}
     for(int i=0;i<60;++i){float a=i*.104719755f;int r=i%5?91:86;line(ctx,120+sinf(a)*r,120-cosf(a)*r,120+sinf(a)*96,120-cosf(a)*96,i%5?p.border:p.accent,i%5?1:2);}
     for(int i:{3,6,9}){float a=i*.523598776f;char n[4];snprintf(n,sizeof(n),"%d",i);pageText(ctx,n,108+sinf(a)*76,115-cosf(a)*76,24,p.muted);}
     if(radarTheme==13){for(int side:{-1,1}){line(ctx,120+side*7,82,120+side*27,72,0x6f289b,8);line(ctx,120+side*7,82,120+side*27,72,0xefceff,3);}}
@@ -53,6 +55,9 @@ static void setLitePage(LitePage next){
   lv_obj_set_style_text_font(pageValue,next==LitePage::Signals||next==LitePage::Status?&lv_font_montserrat_14:&lv_font_montserrat_22,0);
   lv_obj_set_y(pageValue,next==LitePage::Clock?158:next==LitePage::Timer?95:76);
   lv_obj_set_y(pageSub,next==LitePage::Clock?187:next==LitePage::Timer?138:171);
+  bool special=next==LitePage::Clock&&radarTheme>=29;
+  if(radarLogos[radarTheme]&&!special)lv_obj_clear_flag(logo,LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(logo,LV_OBJ_FLAG_HIDDEN);
+  if(special){lv_obj_add_flag(pageTitle,LV_OBJ_FLAG_HIDDEN);lv_obj_set_y(pageValue,radarTheme==29?24:157);lv_obj_set_y(pageSub,radarTheme==29?48:188);}
   lv_obj_invalidate(root);
 }
 static void createLitePages(){

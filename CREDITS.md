@@ -187,3 +187,9 @@ Clock recovery uses the bundled Espressif ESP-IDF system-time and `esp_netif_snt
 ## Universal VTS startup · 0.13.9
 
 The owner supplied [VTS-official.png](media/VTS-official.png), retained byte-for-byte with its source hash in the artwork ledger. Every board, including Lite, fades in this black/gray logo on a matching white field, with no title or additional words. Native panel-size copies fit entirely inside each circular display. This replaces the historical BWM2 startup; the old original remains archived for attribution.
+
+## Hackazillarex and m33k_t3ch · 0.13.12
+
+The owner supplied [Hackazillarex](media/theme-logos/hackazillarex.jpg) and the [m33k_t3ch profile screenshot](media/theme-logos/m33k-t3ch-source.jpg). Both originals are retained unchanged with SHA-256 provenance in the artwork ledger. The [circular m33k_t3ch display artwork](media/theme-logos/m33k-t3ch.png) is an AI-prepared derivative of that screenshot, made with the built-in image-generation tool to isolate the circular logo and omit the phone interface; it is not a pixel-exact crop. The preparation prompt is retained in [the asset note](docs/M33K-ASSET.md).
+
+The bone sweep, pixel T-rex, cacti, jump animation and neon circuit ornaments are original project drawing code. No Chrome Dino sprites or game code are included. These supplied marks and derived brand artwork remain their respective owners' property and are not relicensed as MIT software. Theme inclusion does not imply affiliation or endorsement.

@@ -208,5 +208,26 @@
     "sha256": "704dc0daf32a201379dd2c18c7756b44fc3cf215ebcd9839cb7d6abfb7167748",
     "source_bytes_match": true,
     "direct_copy_before_source_replacement": true
+  },
+  {
+    "file": "media/theme-logos/hackazillarex.jpg",
+    "supplied_name": "channels4_profile.jpg",
+    "sha256": "a558e840b27d10bf04456bb047aefdb01bbcfcff15d820f43d681546905f94dd",
+    "source_bytes_match": true,
+    "derivation": "Unchanged supplied original."
+  },
+  {
+    "file": "media/theme-logos/m33k-t3ch-source.jpg",
+    "supplied_name": "f2b0d312-5e74-4f20-aa5c-1dbbbaebad1f.jpg",
+    "sha256": "51b166a0a3adac2524e55489d7f98c2fc5bfda3616fe467a2044691f8a23f8ae",
+    "source_bytes_match": true,
+    "derivation": "Unchanged supplied original."
+  },
+  {
+    "file": "media/theme-logos/m33k-t3ch.png",
+    "supplied_name": "m33k-t3ch-source.jpg",
+    "sha256": "08c0daba66c0d499900e57a817b86fbf722ceb391cdf7ff500c9cccd48cd6ef2",
+    "source_bytes_match": false,
+    "derivation": "Built-in image generation: isolated circular artwork from supplied phone screenshot; generated derivative, not a pixel-exact crop."
   }
 ]

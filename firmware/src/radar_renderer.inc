@@ -18,6 +18,7 @@ static void disc(lv_draw_ctx_t* ctx,int x,int y,int r,uint32_t c,int opa=255){
 }
 #include "lpl_radar.inc"
 #include "containment_radar.inc"
+#include "cyber_runner.inc"
 static const char* radarFamilyName(Family f){
 #if SCREEN_RES<=240
   // Keep the family on one line, leaving the second line for signal/age.
@@ -110,7 +111,9 @@ static void radarDraw(lv_event_t* e){
   static uint32_t sweepAt=0;if(radioEnabled)sweepAt=now;
   float angle=(sweepAt%6000)*.00104719755f,dx=cosf(angle),dy=sinf(angle);
   if(radarTheme==28){locksportPinRim(ctx,uint64_t(sweepAt%6000)*10000);lpuEmblem(ctx,150);}
-  if(radarTheme==27)ghostProtonSweep(ctx,angle,sweepAt);
+  if(radarTheme==29)boneSweep(ctx,angle);
+  else if(radarTheme==30)cyberSweep(ctx,angle);
+  else if(radarTheme==27)ghostProtonSweep(ctx,angle,sweepAt);
   else if(radarTheme==26)radarLplScales(ctx,(sweepAt%12000)*.000523598776f);
 #ifndef BOARD_RADAR_LITE
   else if(radarTheme==9)radarPick(ctx,angle);
@@ -172,7 +175,9 @@ static void radarDraw(lv_event_t* e){
   for(int sign:{-1,1}){line(ctx,CENTER+sign*3,CENTER,CENTER+sign*8,CENTER,theme.ring,1);line(ctx,CENTER,CENTER+sign*3,CENTER,CENTER+sign*8,theme.ring,1);}
   disc(ctx,CENTER,CENTER,1,theme.text);
 #else
-  if(radarTheme==26){} // The balance already has its own jeweled pivot.
+  if(radarTheme==29){disc(ctx,CENTER,CENTER,S(5),0xffedcf);disc(ctx,CENTER,CENTER,S(2),0xa52c3d);}
+  else if(radarTheme==30){line(ctx,CENTER-S(5),CENTER-S(5),CENTER+S(5),CENTER+S(5),0xff54d8,S(2));line(ctx,CENTER-S(5),CENTER+S(5),CENTER+S(5),CENTER-S(5),0x4ae9ff,S(2));}
+  else if(radarTheme==26){} // The balance already has its own jeweled pivot.
   else if(radarTheme==24)asciiMark(ctx,"+",180,180,theme.sweep);
   else if(radarTheme==9){disc(ctx,CENTER,CENTER,S(7),0x000000);disc(ctx,CENTER,CENTER,S(5),0xc5cdd3);disc(ctx,CENTER,CENTER,S(3),0x30383e);line(ctx,CENTER-S(2),CENTER+S(1),CENTER+S(2),CENTER-S(1),0xe7ecef,std::max(1,S(1)));}
   else for(int y=-7;y<=6;++y){int half=(y+7)/2;line(ctx,CENTER-S(half),CENTER+S(y),CENTER+S(half),CENTER+S(y),theme.sweep,S(1)+1);}

@@ -38,9 +38,11 @@ static const WatchPalette watches[]={
   {"DEFLOCK",0x152131,0xf0f6fb,0xb1d8ec,0x56788f,false},
   {"CI / LOCKPICKINGLAWYER",0x030914,0xfff3d4,0xecc75b,0x8b7137,true},
   {"GHOSTBUSTERS",0x000000,0xffffff,0xff4b48,0x82414b,true},
-  {"LOCKPICKERS UNITED",0x000000,0xffffff,0xe5e9ec,0x687177,true}
+  {"LOCKPICKERS UNITED",0x000000,0xffffff,0xe5e9ec,0x687177,true},
+  {"HACKAZILLAREX",0x000000,0xffedcf,0xff7073,0x8e525c,false},
+  {"m33k_t3ch",0x060818,0xfff2fc,0x4ae9ff,0x9677af,false}
 };
-static constexpr uint8_t WatchFaces[]={0,1,2,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31};
+static constexpr uint8_t WatchFaces[]={0,1,2,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33};
 static constexpr unsigned WatchCount=sizeof(WatchFaces)/sizeof(WatchFaces[0]);
 static bool watchFaceAllowed(unsigned face){for(auto id:WatchFaces)if(id==face)return true;return false;}
 static unsigned watchFacePosition(){for(unsigned i=0;i<WatchCount;++i)if(WatchFaces[i]==watchFace)return i;return 0;}
@@ -269,8 +271,10 @@ static void watchCovert(lv_draw_ctx_t* ctx,const dragon::Calendar& d,bool valid)
 #include "octopig.inc"
 #include "lpl_watch.inc"
 #include "containment_watch.inc"
+#include "cyber_runner_watch.inc"
 static void watchDraw(lv_event_t* e){
   auto* ctx=lv_event_get_draw_ctx(e);const auto& p=watches[watchFace];dragon::Calendar d;clockLocal(d);bool valid=wallTime()!=0;char text[64];
+  if(watchFace==32||watchFace==33){watchRunnerCyber(ctx,d,valid);return;}
   if(watchFace==30||watchFace==31){watchContainment(ctx,d,valid);return;}
   if(watchFace==29){watchLpl(ctx,d,valid);return;}
   if(watchFace==28){watchDeflock(ctx,d,valid);return;}
@@ -338,11 +342,12 @@ static void watchTick(){
   if(watchFace==27)pigTick(millis());
   static uint32_t lastEpoch=0;uint32_t epoch=wallTime(),now=millis();bool mechanism=watchFace==8||watchFace==18||watchFace>=30;
   if(epoch!=lastEpoch){lastEpoch=epoch;watchFrameAt=now;lv_obj_invalidate(watchDial);}
-  else if(mechanism&&now-watchFrameAt>=200){watchFrameAt=now;
+  else if(mechanism&&now-watchFrameAt>=(watchFace==32?100u:200u)){watchFrameAt=now;
     // The clock hands are redrawn over animated ornament in the same clipped pass.
     if(watchFace==18){
       for(int x:{61,247}){lv_area_t flame{(lv_coord_t)S(x),(lv_coord_t)S(132),(lv_coord_t)S(x+52),(lv_coord_t)S(253)};lv_obj_invalidate_area(watchDial,&flame);}return;
     }
+    if(watchFace==32){lv_area_t a{lv_coord_t(S(60)),lv_coord_t(S(205)),lv_coord_t(S(300)),lv_coord_t(S(307))};lv_obj_invalidate_area(watchDial,&a);return;}
     if(watchFace>=30){lv_obj_invalidate(watchDial);return;}
     // Redraw only the mechanism between seconds, with the hands on top.
     lv_area_t area{(lv_coord_t)S(78),(lv_coord_t)S(141),(lv_coord_t)S(282),(lv_coord_t)S(253)};lv_obj_invalidate_area(watchDial,&area);
