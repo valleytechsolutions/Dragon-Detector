@@ -55,6 +55,8 @@ jobs:
           path: web/firmware/waveshare_lite
       - name: Verify published manifests and images
         run: python tools/validate_release.py
+      - name: Verify browser accepts every generated manifest
+        run: node tools/check_web_manifests.mjs
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

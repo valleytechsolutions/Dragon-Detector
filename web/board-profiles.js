@@ -16,8 +16,9 @@ export function validateManifest(data,board,mode){
   if(mode==='factory')expected.push(['littlefs.bin',profile.filesystemOffset]);
   if(mode==='factory'&&board==='waveshare'&&/^0\.(?:9\.(?:[8-9]|\d{2,})|(?:10|11|12|13)\.\d+)$/.test(data?.version))expected.push(['reconfs.bin',profile.reconOffset]);
   const build=data?.builds?.[0];
+  const verifiedClock=/^0\.13\.[1-9]\d+$/.test(data?.version);
   if(board==='waveshare_lite'&&!/^0\.(?:9\.([4-9]|\d{2,})|(?:10|11|12|13)\.\d+)$/.test(data?.version))throw new Error('Waveshare Lite requires a 0.9.4 or newer matching manifest.');
   if(board==='xiao_round'&&!/^0\.(?:9\.([2-9]|\d{2,})|(?:10|11|12|13)\.\d+)$/.test(data?.version))throw new Error('XIAO Round Display requires a 0.9.2 or newer matching manifest.');
-  if(data?.name!==`Dragon Detector — ${profile.firmwareName} (${mode})`||!/^0\.(?:[3-9]|10|11|12|13)\.\d+$/.test(data.version)||data.new_install_prompt_erase!==(mode==='factory')||data.builds?.length!==1||build?.chipFamily!=='ESP32-S3'||build.parts?.length!==expected.length||expected.some(([path,offset],i)=>build.parts[i]?.path!==path||build.parts[i]?.offset!==offset))throw new Error('Firmware manifest does not match this exact board and installation type.');
+  if(data?.name!==`Dragon Detector — ${profile.firmwareName} (${mode})`||!/^0\.(?:[3-9]|10|11|12|13)\.\d+$/.test(data.version)||data.new_install_prompt_erase!==(verifiedClock||mode==='factory')||(verifiedClock&&data.new_install_improv_wait_time!==0)||data.builds?.length!==1||build?.chipFamily!=='ESP32-S3'||build.parts?.length!==expected.length||expected.some(([path,offset],i)=>build.parts[i]?.path!==path||build.parts[i]?.offset!==offset))throw new Error('Firmware manifest does not match this exact board and installation type.');
   return data;
 }

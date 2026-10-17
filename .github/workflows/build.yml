@@ -38,6 +38,7 @@ jobs:
           key: pio-${{ runner.os }}-${{ matrix.board }}-${{ hashFiles('platformio.ini') }}
       - run: pip install platformio==6.2.0 esptool==5.4.0
       - run: python tools/build_release.py --board ${{ matrix.board }}
+      - run: node tools/check_web_manifests.mjs ${{ matrix.board }}
       - uses: actions/upload-artifact@v4
         with:
           name: dragon-detector-${{ matrix.board }}

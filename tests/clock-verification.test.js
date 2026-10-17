@@ -2,6 +2,18 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {verifyClock,clockResultText} from '../web/clock-verification.js';
 import {clockInstallDialogClass} from '../web/clock-install-dialog.js';
+import {boardProfiles,validateManifest} from '../web/board-profiles.js';
+
+test('verified-clock manifests require safe erase prompting and skip unused Improv',()=>{
+  for(const [board,p] of Object.entries(boardProfiles))for(const mode of ['factory','update']){
+    const parts=[['bootloader.bin',0],['partitions.bin',0x8000],['boot_app0.bin',0xe000],['firmware.bin',0x10000]];
+    if(mode==='factory')parts.push(['littlefs.bin',p.filesystemOffset]);
+    if(mode==='factory'&&p.reconOffset)parts.push(['reconfs.bin',p.reconOffset]);
+    const m={name:`Dragon Detector — ${p.firmwareName} (${mode})`,version:'0.13.10',new_install_prompt_erase:true,new_install_improv_wait_time:0,builds:[{chipFamily:'ESP32-S3',parts:parts.map(([path,offset])=>({path,offset}))}]};
+    assert.equal(validateManifest(m,board,mode),m);
+    for(const bad of [{new_install_prompt_erase:false},{new_install_improv_wait_time:10}])assert.throws(()=>validateManifest({...m,...bad},board,mode),/manifest/);
+  }
+});
 
 function rig({detected=1,valid=1,delta=1,rtcDrift=0,softwareDrift=0,offset=-240}={}){
   const epoch=1792213540;let hardwareReads=0;const writes=[];
