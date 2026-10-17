@@ -37,7 +37,7 @@ The firmware uses `time.cloudflare.com` and `pool.ntp.org`. Profiles stay in the
 | Pause, OPEN, or clock correction | Stopwatch/locksport durations use a separate monotonic timer; wall-clock correction does not change elapsed attempt time |
 | Reboot during an attempt | Elapsed attempts and splits are RAM-only and reset |
 
-You can also set local time on the device through **Settings → Clock & date → Set manually**. Configure **Zone** to the correct UTC offset. History timestamps remain UTC.
+In 0.13.11+, open **Settings → Time** for hour/minute/AM-PM wheels, or **Settings → Date** for month/day/year wheels. Date-only edits preserve the ticking time. **Sync → Time zone** changes the UTC offset. With **Keep my clock synchronized while connected** enabled in the flasher, an idle USB connection checks time and timezone once a minute. History timestamps remain UTC.
 
 ## Troubleshooting and USB diagnostics
 

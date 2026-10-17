@@ -1,4 +1,4 @@
-# Stopwatch, clock and orientation · 0.13.10
+# Stopwatch, clock and orientation · 0.13.11
 
 Open **Tools → Utilities → Stopwatch**. Start begins or resumes elapsed time; Pause stops it; Lap records a split while running. Reset is available only while paused and asks before clearing the timer and laps. Home, Tools and the lap list leave a running timer running. Detection continues in the background; detection popups do not cover the timing controls. Audio alerts retain their existing settings.
 
@@ -31,7 +31,7 @@ See [automatic flash-time setup and RTC verification](CLOCK-SETUP.md).
 
 The fastest setup is **Connect detector** in the local or hosted Studio: connection copies the computer's actual date, time and current timezone offset automatically. **Sync my local time** refreshes it in one click. Use this after travel, a daylight-saving change, or complete power loss on a board without a working RTC and without Wi-Fi recovery. History remains UTC; the watch shows local time.
 
-On the device, open **Settings → Clock & date → Set manually**. Scroll the year/month/day, 1–12 hour/minute and AM/PM wheels, then tap **Save**. Seconds start at zero. Short months and leap years clamp the selected day. **Zone** opens the advanced field editor, including UTC offset and seconds. Cancel/Home discards the unsaved draft. The offset remains fixed until changed or resynced; it does not contain geographic daylight-saving rules.
+On the device, open **Settings → Time** or **Settings → Date**. Time has hour/minute/AM-PM wheels; Date has month/day/year wheels. Time-only saves reset seconds and preserve the current date. Date-only saves preserve the live ticking time. Short months and leap years clamp the day. An unset clock requires confirmation of both tabs. **Sync → Time zone** adjusts the UTC offset in 15-minute steps. Cancel/Home discards unsaved changes. The flasher checks time and timezone once a minute while connected, idle and automatic checks are enabled; without USB the offset remains fixed until changed. See [setup screenshots and power-loss limits](CLOCK-SETUP.md).
 
 ## Twenty-seven logo clock faces
 
@@ -69,7 +69,7 @@ The Church of Malware watch keeps the complete emblem clear. Add the white bits 
 
 On classic dials, a dot strip indicates the current face. The gear opens time settings; the list icon or a downward swipe opens Tools. HaleHound flames and Biscuit mechanisms refresh at up to five frames per second, with only the changing region redrawn between clock ticks. Gearwork, moon phases, map outlines, radio halos and celestial details are decorative; they are not mechanical or astronomical measurements.
 
-Clock and stopwatch suppress detection popups without stopping background listening. An unset clock displays a setup prompt rather than invented time. These features apply to all four full boards; Lite has no clock UI.
+Clock and stopwatch suppress detection popups without stopping background listening. An unset clock displays a setup prompt rather than invented time. These features apply to all four full boards; Lite has compact themed clocks and USB time sync, without touch settings tabs.
 
 M5Stack and XIAO read their hardware RTC at boot; time settings write and read back that RTC. An RTC requires its backup supply to keep time when the main device is off. The tested Waveshare **1.75C**, Spotpear and Lite use the ESP32 system clock; 0.13.9+ retains time through powered software resets, but full shutdown needs USB or configured Wi-Fi synchronization (full boards only). Dates are limited to 2000–2099. See [clock setup](CLOCK-SETUP.md) for the verified hardware distinction and diagnostics.
 
@@ -83,9 +83,9 @@ Rotation preserves AMOLED even-coordinate update windows, RGB565 byte order and 
 
 ## USB commands
 
-`screen startup` replays the BWM2 logo-only boot animation on black, then returns to radar. It does not reset the device.
+`screen startup` replays the VTS logo-only boot animation on black, then returns to radar. It does not reset the device.
 
-`screen stopwatch`, `screen laps`, `screen clock`, `screen clock-settings`, `screen clock-edit`, `screen orientation`
+`screen stopwatch`, `screen laps`, `screen clock`, `screen clock-settings`, `screen clock-edit`, `screen orientation`, `screen time-settings`, `screen date-settings`, `screen clock-sync`
 
 `clock face` reads the saved face. `clock face <index>` selects and saves a valid face from the table above (0.13.6). IDs 3–7 are retired and rejected over USB; saved retired selections migrate to BWM. Existing logo IDs remain unchanged.
 

@@ -10,7 +10,7 @@ These are CRC-verified logical display captures from the firmware on the connect
 - **Settings → Capture studio** opens Wi-Fi/BLE recording controls. **Settings → Saved captures** opens the same capture library. Download saved captures through USB at [Radio tools → Capture library](https://valleytechsolutions.github.io/Dragon-Detector/#radio-tools).
 - GATT profiles and BLE event logs remain in BLE Lab; detection history has its own USB CSV export. Saved files is a capture library, not a browser for every private system file.
 - Spotpear and XIAO keep **Utilities → SD files** and optional SD CSV/PCAP settings for their actual card slots. They also have the internal-flash capture controls.
-- Lite stays on its green radar. It has no utilities, settings, badge or interactive lab pages.
+- Lite has themed radar, compact clock, timer, signals and diagnostics pages. It has no touch settings, badge or interactive lab pages.
 
 | Valleytech radar · 0.13.1 | Attacks menu · 0.13.0 |
 |---|---|
@@ -22,7 +22,7 @@ The four full boards provide **Tools → Recon → Attacks**, BLE Lab, notebook,
 
 ## Pocket-watch collection · 0.13.6
 
-Open Utilities → Clock and swipe left/right through twenty-four faces. Original brand marks and theme emblems replace face-name captions. ValleyTech now has a clean black dial, Arabic numerals and broad beveled hands; digital faces have much larger time. TOOOL is shown in the section below. Analog captures now show 0.13.6 with date-only labels; all current watch captures are from 0.13.6. JCMK military, 0ct0’s Pig, DeFlock and the Covert hybrid’s separate digital window use 24-hour time. Analog dials and the remaining digital faces use 12 hours. Tap the gear for time settings. The selection survives restart. Connecting Studio copies local date, time and the current timezone offset automatically. The manual wheels include AM/PM and handle leap years and short months. Lite stays radar-only.
+Open Utilities → Clock and swipe left/right through twenty-four faces. Original brand marks and theme emblems replace face-name captions. ValleyTech now has a clean black dial, Arabic numerals and broad beveled hands; digital faces have much larger time. TOOOL is shown in the section below. Analog captures now show 0.13.6 with date-only labels; all current watch captures are from 0.13.6. JCMK military, 0ct0’s Pig, DeFlock and the Covert hybrid’s separate digital window use 24-hour time. Analog dials and the remaining digital faces use 12 hours. Tap the gear for time settings. The selection survives restart. Connecting Studio copies local date, time and the current timezone offset automatically. The manual wheels include AM/PM and handle leap years and short months. Lite now has five button-operated pages, including a compact clock; time setup uses USB.
 
 | ValleyTech Arabic dial | Biscuit Shop dark gearwork | JCMK military |
 |---|---|---|
@@ -32,7 +32,7 @@ Open Utilities → Clock and swipe left/right through twenty-four faces. Origina
 |---|---|---|
 | ![DMAC](../web/assets/watch-dmac-0136.png) | ![Sasquach](../web/assets/watch-sasquach-0136.png) | ![Nyan Devices](../web/assets/watch-nyan-0136.png) |
 
-![Manual date and 12-hour time wheels](../web/assets/watch-clock-edit-0134.png)
+Current **0.13.11** clock settings have separate Time, Date and Sync tabs. Pop-ups use the selected theme. [Setup instructions and current screenshots](CLOCK-SETUP.md).
 
 ![LAB5 large 12-hour digital clock](../web/assets/watch-lab5-0136.png)
 
