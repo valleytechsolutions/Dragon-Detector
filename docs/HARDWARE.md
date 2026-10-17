@@ -1,6 +1,6 @@
 # Exact board profiles
 
-Current firmware: **0.13.7**. Another display on the same ESP32-S3 needs different firmware.
+Current firmware: **0.13.8**. Another display on the same ESP32-S3 needs different firmware.
 
 | Feature | Waveshare AMOLED 1.75C | M5Stack StopWatch C152 | Spotpear JC3636W518 | XIAO ESP32-S3 + Round Display | Waveshare LCD 1.28 Lite |
 |---|---|---|---|---|---|

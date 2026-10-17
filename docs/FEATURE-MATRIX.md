@@ -1,6 +1,20 @@
-# Reference feature comparison · 0.13.0
+# Reference feature comparison · 0.13.8
 
 This is a feature audit, not a claim that Dragon Detector is an official port or has identical behavior. The original application remains MIT. Reference firmware is not silently linked into it. [Credits and exact source revisions](../CREDITS.md) · [Measured hardware checks](VALIDATION.md).
+
+## AMOLED feature parity across boards
+
+The v0.13.8 source audit confirms that Waveshare AMOLED, M5Stack StopWatch, Spotpear and Seeed XIAO Round already share the full UI, 27 themes, 25 selectable logo watch faces, stopwatch/locksport timers, notebook, Hunt, mode launcher and lab workflows below. No additional port is needed to expose those existing features on these four profiles. The physical controls, audio, RTC and SD support follow each board's hardware; capture and session limits are intentionally smaller where memory or storage is smaller.
+
+| Profile | Capture buffer | Recon session limit | Application slot free |
+|---|---:|---:|---:|
+| Waveshare AMOLED | 2 MiB | 2 MiB | 52.90% |
+| M5Stack StopWatch | 1 MiB | 256 KiB | 25.33% |
+| Spotpear | 1 MiB | 256 KiB | 56.32% |
+| Seeed XIAO Round | 512 KiB | 256 KiB | 21.04% |
+| Waveshare Lite | No recorder | No session UI | 72.63% |
+
+Lite shares detection and 27 BOOT-selectable radar themes, but remains a dedicated passive radar. Its 2 MiB PSRAM and single BOOT control require a separate reduced-memory interface before adding the full workflows. Full-board watches, timers and labs are not advertised as available on Lite. Every profile retains the existing 21% application-slot reserve, and writable filesystems enforce the same reserve for new writes. [Exact budgets and remaining growth](FLASH-BUDGET.md) · [Hardware capabilities](HARDWARE.md).
 
 ## Marauder: all four full boards
 

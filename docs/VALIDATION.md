@@ -1,4 +1,11 @@
-# Validation status · 0.13.6
+# Validation status · 0.13.8
+
+## Post-release board audit and connected-device updates
+
+- The published clean-CI v0.13.8 packages pass the release validator for all five boards: version, image hashes, non-overlapping offsets, both manifests and the 21% application-slot reserve. The four full profiles already share the AMOLED software workflows; the [feature matrix](FEATURE-MATRIX.md) and [flash budget](FLASH-BUDGET.md) now record the exact board differences and released image sizes. This audit changes documentation, not firmware functionality.
+- A newly connected M5Stack StopWatch C152 received the released application only, after a complete private flash backup and confirmation of the existing partition layout. The write passed esptool checksum verification; firmware SHA-256 is `0705e1d8237be2e2b8f85869e9c40ce7f952d16dda30c7635347a35f80f80c56`. Settings and files were preserved. The running device identifies v0.13.8, passes 23/23 self-tests, and continues both Wi-Fi and BLE reception with zero receive/storage drops during the short check. CRC-verified radar and watch framebuffer captures were reviewed. The actual web post-install clock module reports an available RTC, valid time and the computer's UTC offset. Touch initialization reports enabled; physical taps, haptics and long-duration runtime were not tested in this check.
+- The connected Waveshare Lite also received the released application only after a private full backup and matching partition verification. The 1,722,096-byte write passed esptool checksum verification; firmware SHA-256 is `4019d8105d023bf599f02d377a7ea600ed9eaf7f87c1348fe9f6040eb251289e`. **Normal startup did not pass verification.** Serial output showed ROM download mode, later connections were silent, and the owner reported a blank display. Hardware troubleshooting was stopped at the owner's request. The successful flash write is not a successful runtime test, and the cause of the startup problem is unresolved.
+- XIAO Round remains build/package-tested for this release. The Waveshare AMOLED and Spotpear v0.13.8 runtime checks are recorded below. Private device backups and raw radio captures are excluded from the repository and release assets.
 
 ## Complete themes, community watches and locksport · 2026-10-16
 
