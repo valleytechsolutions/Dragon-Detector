@@ -1,3 +1,11 @@
+# Published 0.13.10 verification
+
+[Release](https://github.com/valleytechsolutions/Dragon-Detector/releases/tag/v0.13.10), [CI](https://github.com/valleytechsolutions/Dragon-Detector/actions/runs/39007446005) and [Pages](https://github.com/valleytechsolutions/Dragon-Detector/actions/runs/39007619244) passed. All five clean builds preserve the 21% reserve. The 78 web tests, native/fuzz and sanitizer checks, and 135 native asset decoder checks pass. Every live firmware segment/manifest and changed web module matches its release source/CI output. All eight uploaded release assets were downloaded and SHA-256 checked.
+
+The connected Waveshare 1.75C received the released app-only image after partition comparison; esptool verified the write. Application SHA-256: `a904ddf222a0055dcbb88be6c389ca9cb264ac81b6dfe832af98a196c4008bfa`. All 23 self-tests pass. The actual web clock module sets current date/time and UTC offset; the device returns valid time before/after a powered software restart. Direct RTC diagnostics correctly report no detected external chip. The clock framebuffer was inspected. Its saved-Wi-Fi clock recovery remains disabled pending the owner’s choice; full shutdown retention is **not** claimed. The already-correct StopWatch firmware was not changed in this correction. Other boards are build/package-tested.
+
+The actual ESP Web Tools 10.4.0 browser lifecycle fixture passes automatic completion-to-clock handoff and selected-mode erase tests. It uses a test port, not hardware flashing; physical clock verification uses the real web module over a local serial-stream adapter. The browser USB chooser/full installation has not been automated end to end.
+
 # 0.13.10 clock correction validation
 
 The earlier 0.13.9 AMOLED check verified USB synchronization and a powered software restart, **not** a hardware RTC or retention through shutdown. The owner subsequently found the clock unset after a power cycle. Direct diagnostic firmware confirms no ACK at 0x51 at either 100/400 kHz; 0x18, 0x34, 0x40, 0x5A and 0x6B acknowledge at both rates. This agrees with the exact 1.75C schematic, which has no PCF85063 calendar device. The non-C model must not be substituted as evidence for the C model.
