@@ -23,6 +23,28 @@ void apply(lv_theme_t*,lv_obj_t* obj){
 }
 }
 const dragon::UiPalette& uiColors(){return dragon::UiPalettes[selected];}
+lv_obj_t* uiMessageBox(lv_obj_t* parent,const char* title,const char* text,const char* buttons[],bool close){
+  const auto& p=uiColors();auto* box=lv_msgbox_create(parent,title,text,buttons,close);
+  lv_obj_set_style_bg_color(box,lv_color_hex(p.surface),0);
+  lv_obj_set_style_bg_opa(box,LV_OPA_COVER,0);
+  lv_obj_set_style_border_color(box,lv_color_hex(p.accent),0);
+  lv_obj_set_style_border_width(box,2,0);
+  lv_obj_set_style_radius(box,uiAscii()?0:12,0);
+  lv_obj_set_style_shadow_color(box,lv_color_hex(p.bg),0);
+  lv_obj_set_style_shadow_width(box,20,0);
+  lv_obj_set_style_shadow_opa(box,LV_OPA_50,0);
+  if(auto* heading=lv_msgbox_get_title(box))lv_obj_set_style_text_color(heading,lv_color_hex(p.accent),0);
+  if(auto* message=lv_msgbox_get_text(box))lv_obj_set_style_text_color(message,lv_color_hex(p.ink),0);
+  auto* content=lv_msgbox_get_content(box);lv_obj_set_style_bg_opa(content,LV_OPA_TRANSP,0);
+  if(auto* choices=lv_msgbox_get_btns(box)){
+    lv_obj_set_style_bg_opa(choices,LV_OPA_TRANSP,0);
+    lv_obj_set_style_border_width(choices,0,0);
+    lv_obj_set_width(choices,LV_PCT(100));
+    lv_obj_set_height(choices,SCREEN_RES*40/360);
+    lv_obj_set_style_border_color(choices,lv_color_hex(p.accent),LV_PART_ITEMS);
+  }
+  return box;
+}
 bool uiAscii(){return selected==24;}
 const lv_font_t* uiFont(const lv_font_t* standard){
   if(!uiAscii())return standard;

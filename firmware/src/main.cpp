@@ -100,7 +100,7 @@ static void command(const String& c){
   // Only locally operable Lite pages and timing controls are added here. Radio
   // ownership, audio, badge upload and full touch menus remain unavailable.
   const bool allowed=c=="badge info"||c=="status"||c=="contacts"||c=="selftest"||c=="screenshot"||c=="ui status"||c=="radar status"||c=="display status"||c=="axon status"||c=="traffic status"||c=="detector status";
-  const bool timing=c.startsWith("time ")||c=="clock status"||c.startsWith("clock offset ")||c=="orientation status"||c=="stopwatch status"||c=="stopwatch laps"||c=="stopwatch start"||c=="stopwatch pause"||c=="stopwatch reset"||c=="stopwatch lap"||c=="stopwatch finish";
+  const bool timing=c.startsWith("time ")||c=="clock status"||c=="clock hardware"||c.startsWith("clock offset ")||c=="orientation status"||c=="stopwatch status"||c=="stopwatch laps"||c=="stopwatch start"||c=="stopwatch pause"||c=="stopwatch reset"||c=="stopwatch lap"||c=="stopwatch finish";
   const bool page=c=="screen radar"||c=="screen clock"||c=="screen stopwatch"||c=="screen signals"||c=="screen diagnostics"||c=="screen startup";
   if(!allowed&&!timing&&!page){Serial.println("LITE_LIMITED no touch menus, badge, audio or radio controls");return;}
 #endif

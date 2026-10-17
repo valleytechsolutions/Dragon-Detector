@@ -99,11 +99,10 @@ static uint32_t inputActions=0;
 static int lastInputAction=-1;
 static int outputBrightness=-1;
 static Preferences settings;
-static lv_obj_t *timerValue=nullptr,*timerState=nullptr,*timerLap=nullptr,*timerStartButton=nullptr,*timerSecondary=nullptr,*timerSplit=nullptr,*clockValue=nullptr,*clockDate=nullptr,*editValue=nullptr,*editPreview=nullptr,*editField=nullptr;
-static dragon::Calendar editDate;
-static int editIndex=0,editOffset=0;
+static lv_obj_t *timerValue=nullptr,*timerState=nullptr,*timerLap=nullptr,*timerStartButton=nullptr,*timerSecondary=nullptr,*timerSplit=nullptr,*clockValue=nullptr,*clockDate=nullptr,*editValue=nullptr;
+static int editOffset=0;
+static lv_obj_t* clockPrompt=nullptr;
 static lv_obj_t* resetBox=nullptr;
-static const char* dateFields[]={"YEAR","MONTH","DAY","HOUR","MINUTE","SECOND","UTC OFFSET"};
 #if BOARD_HAS_SD
 static String directory="/";
 struct FileRow {String path;bool dir;uint32_t size;};static FileRow files[96];static int fileCount=0;static bool filesTruncated=false;
@@ -143,12 +142,12 @@ static void locksportColors(lv_obj_t* object){
 void uiNotify(const char* text,const char* detail,const dragon::DeviceKey* key,bool watched){
   dragon::DetectionNotice item;strlcpy(item.title,text,sizeof(item.title));strlcpy(item.detail,detail,sizeof(item.detail));item.watched=watched;item.at=millis();item.hasKey=key!=nullptr;if(key){item.key=*key;int i=findContact(*key);if(i>=0)item.family=contacts[i].match.family;}
   for(unsigned f=0;f<unsigned(Family::Count);++f)if(!strcmp(text,dragon::familyName(Family(f)))){item.family=Family(f);break;}
-  if(page==Boot||page==Startup||page==BleLab||page==Stopwatch||page==Clock||page==ClockSettings||page==ClockWheels||page==ClockEdit||(notice&&noticePriority>=item.priority())){noticeQueue.push(item);return;}
+  if(clockPrompt||page==Boot||page==Startup||page==BleLab||page==Stopwatch||page==Clock||page==ClockSettings||page==ClockWheels||page==ClockEdit||(notice&&noticePriority>=item.priority())){noticeQueue.push(item);return;}
   dismissNotice();noticeAt=millis();noticeWatch=watched;noticeHasKey=key!=nullptr;if(key)noticeKey=*key;
-  noticePriority=item.priority();uint32_t accent=dragon::familyColor(item.family);
+  noticePriority=item.priority();uint32_t accent=uiColors().accent;
   if(detector.wakeAlert)lastInteraction=millis();
   notice=lv_obj_create(lv_layer_top());lv_obj_set_size(notice,S(260),S(108));lv_obj_set_pos(notice,S(50),S(218));lv_obj_clear_flag(notice,LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_set_style_bg_color(notice,color(uiColors().bg),0);lv_obj_set_style_border_color(notice,color(accent),0);lv_obj_set_style_border_width(notice,2,0);lv_obj_set_style_radius(notice,S(16),0);lv_obj_set_style_pad_all(notice,0,0);
+  lv_obj_set_style_bg_color(notice,color(uiColors().bg),0);lv_obj_set_style_border_color(notice,color(accent),0);lv_obj_set_style_border_width(notice,2,0);lv_obj_set_style_radius(notice,uiAscii()?0:S(16),0);lv_obj_set_style_pad_all(notice,0,0);
   auto* heading=label(notice,text,10,7,240,F16,accent);lv_obj_set_style_text_align(heading,LV_TEXT_ALIGN_CENTER,0);
   String safe=detector.privacy?String("Detection observed. Open evidence for details."):String(detail);
   auto* message=label(notice,safe.c_str(),12,31,236,F12);lv_obj_set_height(message,S(30));lv_label_set_long_mode(message,LV_LABEL_LONG_DOT);
@@ -195,17 +194,11 @@ static void updateTimer(){
 static void resetStopwatch(){
   if(stopwatch.running||!stopwatch.elapsed(stopwatchNow())||resetBox)return;
   static const char* choices[]={"Keep","Reset",""};
-  resetBox=lv_msgbox_create(root,locksport()?"NEW ATTEMPT?":"RESET STOPWATCH?",locksport()?"Clear this attempt and its splits?":"Clear elapsed time and all laps?",choices,true);lv_obj_set_width(resetBox,S(260));lv_obj_center(resetBox);
-  locksportColors(resetBox);
+  resetBox=uiMessageBox(root,locksport()?"NEW ATTEMPT?":"RESET STOPWATCH?",locksport()?"Clear this attempt and its splits?":"Clear elapsed time and all laps?",choices,true);lv_obj_set_width(resetBox,S(260));lv_obj_center(resetBox);
   lv_obj_add_event_cb(resetBox,[](lv_event_t* e){auto* box=lv_event_get_current_target(e);if(lv_msgbox_get_active_btn(box)==1)stopwatch.reset();lv_msgbox_close(box);resetBox=nullptr;updateTimer();},LV_EVENT_VALUE_CHANGED,nullptr);
   lv_obj_add_event_cb(resetBox,[](lv_event_t*){resetBox=nullptr;},LV_EVENT_DELETE,nullptr);
 }
-static void updateDateEditor(){
-  char value[40],preview[110];int values[]={editDate.year,editDate.month,editDate.day,editDate.hour,editDate.minute,editDate.second,editOffset};
-  if(editIndex==6)snprintf(value,sizeof(value),"%c%02d:%02d",editOffset<0?'-':'+',abs(editOffset)/60,abs(editOffset)%60);else if(editIndex==3)snprintf(value,sizeof(value),"%02d %s",dragon::hour12(editDate.hour),editDate.hour>=12?"PM":"AM");else snprintf(value,sizeof(value),"%02d",values[editIndex]);
-  snprintf(preview,sizeof(preview),"%04d-%02d-%02d\n%02d:%02d:%02d %s  UTC%c%02d:%02d",editDate.year,editDate.month,editDate.day,dragon::hour12(editDate.hour),editDate.minute,editDate.second,editDate.hour>=12?"PM":"AM",editOffset<0?'-':'+',abs(editOffset)/60,abs(editOffset)%60);
-  lv_label_set_text(editValue,value);lv_label_set_text(editField,dateFields[editIndex]);lv_label_set_text(editPreview,preview);
-}
+#include "clock_settings.inc"
 static void radarPick(lv_draw_ctx_t* ctx,float radians);
 static void radarAwokArt(lv_draw_ctx_t* ctx);
 static void radarBaphArt(lv_draw_ctx_t* ctx);
@@ -269,7 +262,7 @@ static void build(){
   // BLE Lab owns its complete screen and returns before the shared mic label
   // is rebuilt. Never retain a label from the page that is about to be freed.
   micBadge=nullptr;
-  timerOrbit=nullptr;timerValue=timerState=timerLap=timerStartButton=timerSecondary=timerSplit=clockValue=clockDate=editValue=editPreview=editField=nullptr;
+  timerOrbit=nullptr;timerValue=timerState=timerLap=timerStartButton=timerSecondary=timerSplit=clockValue=clockDate=editValue=nullptr;
   badgeUnload();page=pending;pageAt=millis();statusLabel=audioLabel=audioMeter=radar=trackingLabel=huntValue=huntMeta=huntGauge=huntGraph=diagnosticsLabel=activityLabel=radarActivity=nullptr;radarPrepared=0;
   lv_obj_clean(root);lv_obj_set_style_bg_color(root,color(uiColors().bg),0);
   #ifndef BOARD_RADAR_LITE
@@ -438,7 +431,9 @@ static void build(){
     }
   }else if(page==Settings){
     title("SETTINGS");body=scrollBody();int n=0;
-    row(body,"Clock & date",rtcAvailable?"Set battery-backed RTC / local time":"Software clock / USB time sync",n++,160);
+    row(body,"Time","Set hours, minutes and AM / PM",n++,160);
+    row(body,"Date","Set month, day and year",n++,162);
+    row(body,"Clock sync & time zone","USB sync / local UTC offset",n++,163);
     row(body,"Orientation","Choose a saved fixed angle",n++,135);
     row(body,"Display & timeouts","Brightness, dimming and screen off",n++,71);
     row(body,"Theme & radar labels",radarThemeNames[radarTheme],n++,117);
@@ -497,21 +492,11 @@ static void build(){
   }else if(page==Clock){
     buildWatch();
   }else if(page==ClockSettings){
-    dismissNotice();title("DATE & TIME","Automatic setup with your computer");
-    auto* help=label(root,"1. Open Dragon Detector Studio.\n2. Connect your detector by USB.\n3. Click Connect detector.\n\nLocal time and date sync for you.",58,100,244,F14);centered(help);
-    auto* info=label(root,rtcAvailable?"RTC keeps time across restarts.":"Resync after complete power loss.",58,213,244,F12,uiColors().accent);centered(info);
-    button(root,"Set manually",66,249,142,36,136);button(root,"Clock",218,249,76,36,133);
+    buildClockSync();
   }else if(page==ClockWheels){
     buildClockWheels();
   }else if(page==ClockEdit){
-    dismissNotice();title("SET LOCAL TIME","Changes apply only when you save");
-    editPreview=label(root,"",49,87,262,F12);centered(editPreview);
-    editField=label(root,"",55,136,250,F14,uiColors().accent);centered(editField);
-    editValue=label(root,"",95,162,170,FTIMER);centered(editValue);
-    auto* minus=button(root,"-",48,162,42,46,137);auto* plus=button(root,"+",270,162,42,46,138);
-    lv_obj_add_event_cb(minus,action,LV_EVENT_LONG_PRESSED_REPEAT,(void*)137);lv_obj_add_event_cb(plus,action,LV_EVENT_LONG_PRESSED_REPEAT,(void*)138);
-    button(root,"< FIELD",65,221,109,35,139);button(root,"FIELD >",185,221,109,35,140);
-    button(root,"Cancel",73,269,100,33,160);button(root,"Save",185,269,100,33,141);updateDateEditor();
+    buildClockZone();
   }else if(page==Orientation){
     title("ORIENTATION","Saved angle / touch follows the display");body=scrollBody();int n=0;
     for(int r=0;r<4;++r){char text[50];snprintf(text,sizeof(text),"%s%d degrees",((4-displayRotation)&3)==r?LV_SYMBOL_OK "  ":"",r*90);row(body,text,"Clockwise / retained after restart",n++,144+r);}
@@ -547,7 +532,7 @@ static void action(lv_event_t* e){
 #if BOARD_HAS_SD
   if(id>=2000 && id<2096){int i=id-2000;if(i>=fileCount)return;if(files[i].dir){directory=files[i].path;go(Files);page=Boot;}else{String ext=files[i].path;ext.toLowerCase();if(ext.endsWith(".mp3")||ext.endsWith(".wav")){audioPlay(files[i].path);go(Audio);}else{
       xSemaphoreTake(sdMutex,portMAX_DELAY);File f=CardFS.open(files[i].path);String text;while(f && f.available() && text.length()<2048){char ch=f.read();text+=(ch=='\n'||ch=='\t'||(ch>=32&&ch<127))?ch:'.';}f.close();xSemaphoreGive(sdMutex);
-      lv_obj_t* box=lv_msgbox_create(root,"FILE PREVIEW",text.c_str(),nullptr,true);lv_obj_set_size(box,S(260),S(225));lv_obj_center(box);
+      lv_obj_t* box=uiMessageBox(root,"FILE PREVIEW",text.c_str(),nullptr,true);lv_obj_set_size(box,S(260),S(225));lv_obj_center(box);
     }}return;}
 #endif
   if(id>=6000 && id<6000+deviceRows){int i=findContact(deviceKeys[id-6000]);if(i>=0){selectContact(i);go(Details);}else{uiNotify("Target expired","Refresh the list or reopen it from History.",nullptr,false);}return;}
@@ -566,8 +551,12 @@ static void action(lv_event_t* e){
 #endif
   switch(id){
     case 150:go(FamilyColors);break;
-    case 161:editIndex=6;go(ClockEdit);break;
-    case 160:go(ClockSettings);break;
+    case 161:editOffset=clockOffsetMinutes;go(ClockEdit);break;
+    case 160:clockTab(0);break;
+    case 162:clockTab(1);break;
+    case 163:clockTab(2);break;
+    case 164:go(Settings);break;
+    case 171:configureClockOffset(editOffset);clockTab(2,true);break;
     case 130:go(Stopwatch);break;
     case 131:if(!resetBox){stopwatch.toggle(stopwatchNow());updateTimer();}break;
     case 132:if(!resetBox){if(stopwatch.running){if(locksport())stopwatch.finish(stopwatchNow());else stopwatch.lap(stopwatchNow());}else resetStopwatch();updateTimer();}break;
@@ -575,14 +564,9 @@ static void action(lv_event_t* e){
     case 133:go(Clock);break;
     case 134:go(Laps);break;
     case 135:go(Orientation);break;
-    case 136:clockLocal(editDate);editOffset=clockOffsetMinutes;editIndex=3;editDate.second=0;go(ClockWheels);break;
-    case 137:case 138:{
-      int delta=id==138?1:-1;int* fields[]={&editDate.year,&editDate.month,&editDate.day,&editDate.hour,&editDate.minute,&editDate.second,&editOffset};
-      int low[]={2000,1,1,0,0,0,-720},high[]={2099,12,dragon::monthDays(editDate.year,editDate.month),23,59,59,840};
-      int& value=*fields[editIndex];value+=delta*(editIndex==6?15:1);if(value>high[editIndex])value=low[editIndex];if(value<low[editIndex])value=high[editIndex];editDate.day=std::min(editDate.day,dragon::monthDays(editDate.year,editDate.month));updateDateEditor();break;
-    }
-    case 139:case 140:editIndex=(editIndex+(id==140?1:6))%7;updateDateEditor();break;
-    case 141:{int64_t epoch=int64_t(dragon::dateEpoch(editDate))-editOffset*60;if(dragon::validEpoch(epoch)&&configureClock(epoch)){configureClockOffset(editOffset);go(Clock);}else {if(editPreview)lv_label_set_text(editPreview,"Could not save time.\nCheck date / RTC connection.");else{auto* box=lv_msgbox_create(root,"TIME NOT SAVED","Check the date, timezone and RTC connection.",nullptr,true);lv_obj_set_width(box,S(260));lv_obj_center(box);}}break;}
+    case 136:clockTab(0,true);break;
+    case 137:case 138:editOffset=constrain(editOffset+(id==138?15:-15),-720,840);updateClockZone();break;
+    case 141:saveClockTab();break;
     case 144:case 145:case 146:case 147:configureOrientation((id-144)*90);go(Orientation);page=Boot;break;
     case 1:go(Radar);break;case 2:go(Menu);break;
     case 10:case 11:case 12:menuTab=id-10;go(Menu);page=Boot;break;
@@ -668,7 +652,7 @@ static void action(lv_event_t* e){
     case 124:radarRecent=!radarRecent;settings.putBool("radar-recent",radarRecent);go(RadarStyle);page=Boot;break;
     case 110:if(historyPage>0)--historyPage;go(History);page=Boot;break;
     case 111:if(size_t((historyPage+1)*10)<historyCount)++historyPage;go(History);page=Boot;break;
-    case 112:{static const char* buttons[]={"Cancel","Clear",""};auto* box=lv_msgbox_create(root,"CLEAR HISTORY?","Erase stored detections on this device? Active scanning can create new records.",buttons,true);lv_obj_set_width(box,S(260));lv_obj_center(box);lv_obj_add_event_cb(box,[](lv_event_t* event){auto* b=lv_event_get_current_target(event);if(lv_msgbox_get_active_btn(b)==1)historyClear();lv_msgbox_close(b);go(History);page=Boot;},LV_EVENT_VALUE_CHANGED,nullptr);break;}
+    case 112:{static const char* buttons[]={"Cancel","Clear",""};auto* box=uiMessageBox(root,"CLEAR HISTORY?","Erase stored detections on this device? Active scanning can create new records.",buttons,true);lv_obj_set_width(box,S(260));lv_obj_center(box);lv_obj_add_event_cb(box,[](lv_event_t* event){auto* b=lv_event_get_current_target(event);if(lv_msgbox_get_active_btn(b)==1)historyClear();lv_msgbox_close(b);go(History);page=Boot;},LV_EVENT_VALUE_CHANGED,nullptr);break;}
     case 200:trackContact(-1);pending=page;page=Boot;break;
   }
 }
@@ -697,7 +681,8 @@ void uiShow(const String& name){if(name=="startup"){go(Startup);page=Boot;return
   if(name=="utilities"){menuTab=1;go(Menu);return;}
   if(name=="notebook"){go(Notebook);return;}if(name=="notebook-ble"){notebookPage=0;go(NotebookBle);return;}if(name=="notebook-probes"){notebookPage=0;go(NotebookProbes);return;}
   if(name=="device-colors"){go(FamilyColors);return;}
-  if(name=="clock-settings"){go(ClockSettings);return;}if(name=="clock-edit"){clockLocal(editDate);editOffset=clockOffsetMinutes;editDate.second=0;go(ClockWheels);return;}
+  if(name=="clock-settings"||name=="clock-edit"||name=="time-settings"){clockTab(0,true);return;}
+  if(name=="date-settings"){clockTab(1,true);return;}if(name=="clock-sync"){clockTab(2,true);return;}
   if(name=="stopwatch"){go(Stopwatch);return;}if(name=="clock"){go(Clock);return;}if(name=="orientation"){go(Orientation);return;}if(name=="laps"){go(Laps);return;}
   if(name=="radar-style"){go(RadarStyle);return;}
   lastInteraction=millis();
@@ -724,9 +709,10 @@ void uiLoop(){
   int level=detector.offSeconds&&idle>=uint32_t(detector.offSeconds)*1000?0:detector.dimSeconds&&idle>=uint32_t(detector.dimSeconds)*1000?detector.idleBrightness:brightness;
   if(level!=outputBrightness){outputBrightness=level;set_brightness(level);}
   if(notice&&!noticeWatch&&millis()-noticeAt>=6000)dismissNotice();
-  if(!notice&&page!=Boot&&page!=Startup&&page!=BleLab&&page!=Recon&&page!=Stopwatch&&page!=Clock&&page!=ClockSettings&&page!=ClockWheels&&page!=ClockEdit){dragon::DetectionNotice next;if(noticeQueue.take(millis(),next)&&detector.enabled(next.family)&&(!detector.quiet||next.watched)&&(!next.hasKey||!(deviceRules(next.key)&(RuleIgnore|RuleSnooze))))uiNotify(next.title,next.detail,next.hasKey?&next.key:nullptr,next.watched);}
+  if(!clockPrompt&&!notice&&page!=Boot&&page!=Startup&&page!=BleLab&&page!=Recon&&page!=Stopwatch&&page!=Clock&&page!=ClockSettings&&page!=ClockWheels&&page!=ClockEdit){dragon::DetectionNotice next;if(noticeQueue.take(millis(),next)&&detector.enabled(next.family)&&(!detector.quiet||next.watched)&&(!next.hasKey||!(deviceRules(next.key)&(RuleIgnore|RuleSnooze))))uiNotify(next.title,next.detail,next.hasKey?&next.key:nullptr,next.watched);}
   if(((page==Boot&&pending==Boot)||(page==Startup&&pending==Startup)) && millis()-pageAt>2200)pending=Radar;
   if(page!=pending)build();
+  clockSetupPrompt();
 #ifndef BOARD_RADAR_LITE
   if(page==BleLab)bleLabViewLoop();
   if(page==Recon)reconViewLoop();
@@ -734,6 +720,7 @@ void uiLoop(){
   if(millis()-lastUpdate>(page==Stopwatch?50:100)){lastUpdate=millis();if(micBadge){if(audioStatus().mode==AudioMode::Recording)lv_obj_clear_flag(micBadge,LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(micBadge,LV_OBJ_FLAG_HIDDEN);}
     if(page==Stopwatch)updateTimer();
     if(page==Clock)watchTick();
+    if(page==ClockSettings)updateClockStatus();
     if(page==Radar && radar){
       radarFrameAt=millis();
       bool deauth=detector.enabled(Family::Deauth)&&trafficStatus.disconnectActive(millis()),spam=detector.enabled(Family::BleSpam)&&trafficStatus.bleActive(millis());

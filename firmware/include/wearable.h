@@ -45,6 +45,22 @@ inline uint32_t dateEpoch(const Calendar& d){
 }
 inline bool validEpoch(uint64_t t){return t>=946684800ull&&t<=4102444799ull;}
 
+// Date and time are independent edits. A date-only save uses the live clock,
+// not the time captured when the editor opened (which may be minutes old).
+struct ClockEdit {
+  Calendar draft{};
+  bool dateConfirmed=false,timeConfirmed=false;
+  void begin(const Calendar& current,bool valid){draft=current;dateConfirmed=timeConfirmed=valid;}
+  void clampDay(){draft.day=std::min(draft.day,monthDays(draft.year,draft.month));}
+  bool confirm(bool dateTab){if(dateTab)dateConfirmed=true;else timeConfirmed=true;return dateConfirmed&&timeConfirmed;}
+  Calendar merge(const Calendar& live,bool liveValid,bool dateTab) const {
+    Calendar result=liveValid?live:draft;
+    if(dateTab||!liveValid){result.year=draft.year;result.month=draft.month;result.day=draft.day;}
+    if(!dateTab||!liveValid){result.hour=draft.hour;result.minute=draft.minute;result.second=0;}
+    return result;
+  }
+};
+
 // LVGL 8's quarter-turn enum rotates content counterclockwise on the panel.
 // Keep these transforms shared with tests and the display flush wrapper.
 struct PixelPoint {int x,y;};

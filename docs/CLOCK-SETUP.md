@@ -7,7 +7,27 @@ Use desktop Chrome or Edge on the [web flasher](https://valleytechsolutions.gith
 3. Keep USB connected. The installer closes automatically after successful flashing and starts clock setup on that same granted port. Wait for the date/time verification result before unplugging.
 4. If USB re-enumerates, click **Finish clock setup**, select that running device, and wait for verification. Failed setup is explicitly reported and can be retried without reflashing.
 
-Connecting **Detector tools** also sets and verifies the computer's current time and timezone. **Sync my local time** repeats this at any time. UTC offsets are fixed; resync after travel or a daylight-saving change. Firmware uses UTC internally and the saved offset for the displayed date/time.
+Connecting **Detector tools** also sets and verifies the computer's current time and timezone. **Sync my local time** repeats this at any time. With **Keep my clock synchronized while connected** checked, the flasher checks once a minute while the USB connection is idle, corrects drift or unset time, and updates the offset after travel or daylight-saving changes. Keep the page open and computer awake; a sleeping browser may delay checks. Uncheck this option to keep a custom manual time. Saving a manual time in the web page pauses automatic checks. Without a connected computer, UTC offsets are fixed; resync after travel or a daylight-saving change. Firmware uses UTC internally and the saved offset for the displayed date/time.
+
+## Set time and date on the device
+
+On the four touch boards, open **Settings → Time** or tap the watch's settings icon. There are three tabs:
+
+- **Time:** scroll the hour, minute and AM/PM wheels, then **Save**. Seconds start at zero and the current date is preserved.
+- **Date:** scroll month, day and year, then **Save**. The clock keeps ticking while you edit; saving the date preserves its current hours, minutes and seconds. February and shorter months automatically limit the day wheel.
+- **Sync:** see the current time/date and USB instructions. **Time zone** adjusts the local UTC offset in 15-minute steps without changing the underlying instant. USB synchronization sets the computer's current offset again.
+
+If the clock is unset, confirm both Time and Date before saving; the first tab offers **Next** to take you to the other. Cancel/Home leaves the clock unchanged. After startup, an unset clock shows a themed **Set your clock** prompt. **Set now** opens these tabs; **Later** leaves the radar usable. Successful USB sync dismisses the prompt automatically.
+
+All editors, detection notices, confirmations and error pop-ups use the selected theme, including light themes. Signal-family colors remain on the radar and its legend. Lite has no touchscreen settings tabs; use USB sync.
+
+Actual AMOLED display captures from 0.13.11:
+
+| Time · GhostStrats | Date · GhostStrats | Sync · DagNazty |
+|---|---|---|
+| ![Separate Time tab](../web/assets/clock-time-01311.png) | ![Separate Date tab](../web/assets/clock-date-01311.png) | ![Clock sync in a light theme](../web/assets/clock-sync-01311.png) |
+
+No firmware can know how long an unpowered clock was off without an independent powered clock or an external time source. USB-only users can keep the device powered, or reconnect the web flasher / enter the current time and date after complete power loss. USB power from a charger alone does not supply the date/time.
 
 ## Hardware clock versus powered system clock
 

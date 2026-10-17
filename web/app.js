@@ -1,5 +1,6 @@
-import {startRadarBackground} from './radar-background.js?v=0.13.10';
-import {finishInstallSession,syncInstalledClock} from './install-clock.js?v=0.13.10';
+import {maintainComputerClock} from './clock-maintenance.js?v=0.13.11';
+import {startRadarBackground} from './radar-background.js?v=0.13.11';
+import {finishInstallSession,syncInstalledClock} from './install-clock.js?v=0.13.11';
 import {updateVisitCounter} from './visit-counter.js?v=0.13.6';
 import {hasFullLab,hasFullRecon,hasSessionTools} from './lab-capabilities.js?v=0.13.3';
 import {sessionName,downloadMission,recipePutCommand,sourceMacCommand} from './mission-tools.js?v=0.13.3';
@@ -7,17 +8,17 @@ import {hasNetworkTools,networkProfileCommand,networkResultsCsv} from './network
 import {normalizeHex,probeRows,probeCsv} from './recon-analysis.js?v=0.13.3';
 import {hasReconTools,reconLines,exportCapture,exportReconFile,captureName,importPortalHtml} from './recon-transfer.js?v=0.13.3';
 import {decodeProfile,exportProfile,exportLog,importProfile,labLines,safeProfileName} from './ble-lab.js?v=0.13.3';
-import {localClockEpoch,setClock,readWearable,setOrientation} from './wearable-transfer.js?v=0.13.10';
-import {syncVerifiedClock,clockResultText} from './clock-verification.js?v=0.13.10';
-import {clockInstallDialogClass} from './clock-install-dialog.js?v=0.13.10';
+import {localClockEpoch,setClock,readWearable,setOrientation} from './wearable-transfer.js?v=0.13.11';
+import {syncVerifiedClock,clockResultText} from './clock-verification.js?v=0.13.11';
+import {clockInstallDialogClass} from './clock-install-dialog.js?v=0.13.11';
 import {deviceQuery} from './device-query.js';
 import {BadgeSerial} from './serial.js?v=0.13.3';
 import {encodeBadge} from './badge-codec.js';
 import {uploadBadge} from './badge-transfer.js?v=0.13.3';
 import {readHistory} from './detector-transfer.js';
-import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasBrandedThemes,hasCommunityThemes,hasLplTheme,hasWearableTools,hasClockTools,hasWifiClock,hasRetainedClock} from './firmware-compat.js?v=0.13.10';
-import {readRadarSettings,saveRadarSettings} from './radar-transfer.js?v=0.13.10';
-import {boardProfiles,connectedProfile,validateManifest,supportsBadge} from './board-profiles.js?v=0.13.10';
+import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasBrandedThemes,hasCommunityThemes,hasLplTheme,hasWearableTools,hasClockTools,hasWifiClock,hasRetainedClock} from './firmware-compat.js?v=0.13.11';
+import {readRadarSettings,saveRadarSettings} from './radar-transfer.js?v=0.13.11';
+import {boardProfiles,connectedProfile,validateManifest,supportsBadge} from './board-profiles.js?v=0.13.11';
 import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan,drawBadgeText} from './badge-editor.js?v=0.13.3';
 import {hasNotebook,readNotebook,customAdvertCommand} from './notebook.js?v=0.13.3';
 const $ = id => document.getElementById(id);
@@ -327,7 +328,7 @@ async function loadWearable(link){
   $('wearable-status').textContent=`${state.rtc?'RTC detected · saved time survives restart':(hasRetainedClock(firmwareVersion)?'Clock retained across powered software restarts; resync after full power loss':'Software clock · set again after restart')}. ${boardProfiles[deviceProfile]?.lite?'Lite orientation is fixed.':'Display orientation stays at your saved angle.'}`;
 }
 $('clock-sync').onclick=()=>serial?detectorAction(async link=>{const result=await syncVerifiedClock(link,deviceProfile,firmwareVersion);await loadWearable(link);$('detector-status').textContent=clockResultText(result);}):$('connect').onclick();
-$('clock-save').onclick=()=>detectorAction(async link=>{const offset=Number($('clock-offset').value);await setClock(link,localClockEpoch($('clock-local').value,offset),offset);await loadWearable(link);$('detector-status').textContent='Local clock saved. Stopwatch elapsed time is unchanged.';});
+$('clock-save').onclick=()=>detectorAction(async link=>{$('clock-auto-sync').checked=false;const offset=Number($('clock-offset').value);await setClock(link,localClockEpoch($('clock-local').value,offset),offset);await loadWearable(link);$('detector-status').textContent='Local clock saved. Stopwatch elapsed time is unchanged.';});
 $('orientation-save').onclick=()=>detectorAction(async link=>{await setOrientation(link,$('orientation-mode').value);await loadWearable(link);$('detector-status').textContent='Orientation preference saved.';});
 for(const page of ['stopwatch','clock'])$('show-'+page).onclick=()=>detectorAction(async link=>{await link.write('screen '+page);$('detector-status').textContent=page==='clock'?'Clock displayed.':'Timer displayed. The TOOOL theme provides OPEN and SPLIT controls; Home leaves a running timer running.';});
 
@@ -468,3 +469,20 @@ async function readRecipe(l){const name=sessionName($('recipe-saved').value),lin
 $('recipe-read').onclick=()=>reconAction(readRecipe);
 $('recipe-run').onclick=()=>reconAction(async l=>{const {name,text}=await readRecipe(l);if(confirm(`Run the saved recipe ${name}?\n\n${text}\nTimed TOOL steps transmit using your current selected target. Home or Stop cancels the recipe.`))await reconDo(l,'recipe run '+name);});
 $('recipe-remove').onclick=()=>reconAction(async l=>{const name=sessionName($('recipe-saved').value);if(confirm('Delete recipe '+name+'?'))await reconDo(l,'recipe remove '+name);});
+
+// All USB operations use the same busy flag, so background clock checks never
+// interleave with flashing, uploads, capture downloads or lab commands.
+let clockCheckAt=0;
+async function maintainUsbClock(){
+  if(!serial||busy||!$('clock-auto-sync').checked||!hasClockTools(deviceProfile,firmwareVersion)||Date.now()-clockCheckAt<60000)return;
+  clockCheckAt=Date.now();
+  await detectorAction(async link=>{
+    try{
+      const result=await maintainComputerClock(link,deviceProfile,firmwareVersion);
+      $('clock-auto-status').textContent=result.corrected?'Current time and timezone restored from this computer.':'Clock checked against this computer.';
+    }catch(error){$('clock-auto-status').textContent='Clock check failed. Reconnect the detector to restore time.';throw error;}
+  });
+}
+setInterval(maintainUsbClock,60000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)maintainUsbClock();});
+$('clock-auto-sync').onchange=()=>{clockCheckAt=0;$('clock-auto-status').textContent=$('clock-auto-sync').checked?'Checks once a minute while USB is connected and idle.':'Automatic checks paused. Manual clock settings are kept.';maintainUsbClock();};

@@ -1,35 +1,5 @@
 // Native vector dials. Coordinates use a 360px design space. No per-frame
 // framebuffer allocation; theme names belong to the gallery, never the dial.
-static lv_obj_t* dateWheels[6]{};
-static void wheelOptions(lv_obj_t* wheel,int first,int last,int selected){
-  String options;for(int i=first;i<=last;++i){if(i!=first)options+='\n';if(i<10)options+='0';options+=i;}
-  lv_roller_set_options(wheel,options.c_str(),LV_ROLLER_MODE_NORMAL);lv_roller_set_selected(wheel,selected-first,LV_ANIM_OFF);
-}
-static void wheelChanged(lv_event_t* e){
-  int field=(intptr_t)lv_event_get_user_data(e);int value=lv_roller_get_selected(lv_event_get_target(e));
-  if(field==0)editDate.year=2000+value;else if(field==1)editDate.month=1+value;else if(field==2)editDate.day=1+value;
-  else if(field==3)editDate.hour=dragon::hour24(value+1,editDate.hour>=12);else if(field==4)editDate.minute=value;
-  else editDate.hour=dragon::hour24(dragon::hour12(editDate.hour),value==1);
-  if(field<2){editDate.day=std::min(editDate.day,dragon::monthDays(editDate.year,editDate.month));wheelOptions(dateWheels[2],1,dragon::monthDays(editDate.year,editDate.month),editDate.day);}
-}
-static void buildClockWheels(){
-  editDate.year=constrain(editDate.year,2000,2099);editDate.day=std::min(editDate.day,dragon::monthDays(editDate.year,editDate.month));
-  dismissNotice();title("SET LOCAL TIME","Scroll the wheels, then Save");
-  const int x[]={65,153,225,73,153,233},y[]={102,102,102,201,201,201},w[]={80,64,64,64,64,56};
-  const int first[]={2000,1,1,1,0,0},last[]={2099,12,dragon::monthDays(editDate.year,editDate.month),12,59,1};
-  const int current[]={editDate.year,editDate.month,editDate.day,dragon::hour12(editDate.hour),editDate.minute,editDate.hour>=12};
-  const char* names[]={"YEAR","MONTH","DAY","HOUR","MINUTE","AM/PM"};
-  for(int i=0;i<6;++i){
-    centered(label(root,names[i],x[i],y[i]-18,w[i],F12,uiColors().accent));
-    auto* r=dateWheels[i]=lv_roller_create(root);lv_obj_set_pos(r,S(x[i]),S(y[i]));lv_obj_set_width(r,S(w[i]));
-    lv_obj_set_style_text_font(r,uiFont(F16),0);lv_obj_set_style_text_line_space(r,S(3),0);lv_obj_set_style_bg_color(r,color(uiColors().bg),0);lv_obj_set_style_text_color(r,color(uiColors().muted),0);
-    lv_obj_set_style_bg_color(r,color(uiColors().raised),LV_PART_SELECTED);lv_obj_set_style_text_color(r,color(uiColors().ink),LV_PART_SELECTED);
-    lv_obj_set_style_border_width(r,0,0);lv_roller_set_visible_row_count(r,3);
-    if(i==5){lv_roller_set_options(r,"AM\nPM",LV_ROLLER_MODE_NORMAL);lv_roller_set_selected(r,current[i],LV_ANIM_OFF);}else wheelOptions(r,first[i],last[i],current[i]);
-    lv_obj_add_event_cb(r,wheelChanged,LV_EVENT_VALUE_CHANGED,(void*)(intptr_t)i);
-  }
-  button(root,"Cancel",65,276,74,30,160);button(root,"Zone",144,276,65,30,161);button(root,"Save",214,276,80,30,141);
-}
 static uint8_t watchFace=0;
 static lv_obj_t* watchDial=nullptr;
 static uint32_t watchFrameAt=0;

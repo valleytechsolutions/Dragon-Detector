@@ -21,6 +21,17 @@ static void wearableTests(){
   assert(dateEpoch({2000,1,1,0,0,0})==946684800u);
   assert(dateEpoch({2024,2,29,0,0,0})==1709164800u);
   assert(dateEpoch({2099,12,31,23,59,59})==4102444799u);
+  ClockEdit edit;edit.begin({2026,10,17,9,30,42},true);
+  edit.draft.day=20;
+  auto dateOnly=edit.merge({2026,10,17,9,35,16},true,true);
+  assert(dateOnly.day==20&&dateOnly.hour==9&&dateOnly.minute==35&&dateOnly.second==16);
+  edit.draft.hour=0;edit.draft.minute=5;
+  auto timeOnly=edit.merge({2026,10,18,0,1,20},true,false);
+  assert(timeOnly.day==18&&timeOnly.hour==0&&timeOnly.minute==5&&timeOnly.second==0);
+  edit.begin({},false);assert(!edit.confirm(false));assert(edit.confirm(true));
+  edit.begin({},false);assert(!edit.confirm(true));assert(edit.confirm(false));
+  edit.draft={2028,2,31};edit.clampDay();assert(edit.draft.day==29);
+  edit.draft.year=2027;edit.clampDay();assert(edit.draft.day==28);
   for(Calendar d: {Calendar{2023,2,29},Calendar{2024,4,31},Calendar{2026,0,1},Calendar{2100,1,1},Calendar{2026,1,1,24},Calendar{2026,1,1,0,60},Calendar{2026,1,1,0,0,60}})assert(dateEpoch(d)==0);
   // Every pixel survives the display/input inverse, at all panel sizes.
   for(int size:{240,360,466})for(int r=0;r<4;++r)for(int y=0;y<size;++y)for(int x=0;x<size;++x){auto a=rotatePoint(x,y,size,r),b=unrotatePoint(a.x,a.y,size,r);assert(a.x>=0&&a.y>=0&&a.x<size&&a.y<size&&b.x==x&&b.y==y);}

@@ -1,6 +1,6 @@
 ![Dragon Detector promotional artwork](media/cover.png)
 
-**0.13.10:** Automatic post-flash clock setup now verifies local date/time and reads hardware RTCs directly, including a ticking check. Update installs preserve saved settings. Waveshare **1.75C** uses USB or saved-Wi-Fi recovery after shutdown; its schematic does not contain the PCF85063 fitted to the non-C model. [Clock fix release notes](docs/RELEASE-0.13.10.md) · [Clock setup](docs/CLOCK-SETUP.md).
+**0.13.11:** Separate **Time**, **Date** and **Sync** settings tabs, larger clock wheels, themed pop-ups and an unset-clock reminder. The web flasher can keep the clock aligned with your computer while connected. All five profiles preserve the flash reserve. [Release notes](docs/RELEASE-0.13.11.md) · [Clock setup](docs/CLOCK-SETUP.md).
 
 **0.13.9:** Ghostbusters and Lockpickers United, 29 GUI themes and 27 logo watches, a shared VTS boot animation, five BOOT-operated Lite pages, lossless artwork compression, and optional saved-Wi-Fi clock recovery on all four full boards. [Release notes](docs/RELEASE-0.13.9.md) · [Spotpear time setup wiki](https://github.com/valleytechsolutions/Dragon-Detector/wiki/Spotpear-Clock-Setup).
 

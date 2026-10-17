@@ -3,6 +3,7 @@
 #include <lvgl.h>
 const dragon::UiPalette& uiColors();
 void uiApplyTheme(unsigned index);
+lv_obj_t* uiMessageBox(lv_obj_t* parent,const char* title,const char* text,const char* buttons[],bool close);
 bool uiAscii();
 const lv_font_t* uiFont(const lv_font_t* standard);
 extern "C" {

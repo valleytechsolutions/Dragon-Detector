@@ -10,6 +10,7 @@ test('every GUI palette keeps normal, secondary and action text legible',()=>{
   for(const [index,[bg,surface,raised,ink,muted,accent,border,onAccent]] of palettes.entries()){
     for(const fill of [bg,surface,raised])assert.ok(contrast(ink,fill)>=4.5,`theme ${index}: primary text`);
     for(const fill of [bg,surface])assert.ok(contrast(muted,fill)>=4.5,`theme ${index}: secondary text`);
+    for(const fill of [bg,surface])assert.ok(contrast(accent,fill)>=4.5,`theme ${index}: popup heading`);
     assert.ok(contrast(onAccent,accent)>=4.5,`theme ${index}: filled action`);
   }
 });
