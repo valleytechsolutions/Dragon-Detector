@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include "app.h"
+#include "personal_theme.h"
 #include "notebook.h"
 #include "vendor_registry.h"
 #include "background_radio.h"
@@ -90,6 +91,7 @@ static void health(){
 }
 static uint32_t loopLastUs[6]{},loopMaxUs[6]{};
 static void command(const String& c){
+  if(personalThemeCommand(c))return;
   if(c=="system restart"){
     if(stopwatch.running||reconOwnsRadio()||bleLabOwnsRadio()||reconStorageBusy()){Serial.println("SYSTEM_ERROR stop timing and radio sessions first");return;}
     Serial.println("SYSTEM_RESTARTING");Serial.flush();delay(50);ESP.restart();return;
@@ -177,7 +179,7 @@ void setup(){
   contacts.data=(Contact*)ps_malloc(MAX_CONTACTS*sizeof(Contact));
   if(!contacts.data){Serial.println("FATAL: contact storage allocation failed");while(true)delay(100);}
   for(size_t i=0;i<MAX_CONTACTS;++i)new(&contacts[i]) Contact{};
-  runSelfTests();boardBegin();uiBegin();wearableBegin();
+  runSelfTests();boardBegin();personalThemeBegin();uiBegin();wearableBegin();
   uint32_t at=millis();while(millis()-at<1600){uiLoop();delay(5);}
   storageBegin();badgeInit();audioBegin();detectorBegin();notebookBegin();
 #ifndef BOARD_RADAR_LITE

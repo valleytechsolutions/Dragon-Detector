@@ -75,7 +75,7 @@ def run(port, output):
 
     try:
         identity = query('badge info', 'BADGE_INFO')
-        assert 'READY' in identity and '0.13.16 ' in identity, identity
+        assert re.match(r'BADGE_INFO 0\.13\.(?:1[6-9]|[2-9]\d|\d{3,}) READY', identity.replace('466 ', '').replace('360 ', '').replace('240 ', '')), identity
         lite = 'Lite' in identity
         assert values(query('scan status', 'SCAN_STATUS'))['lab'] == 0, 'Stop active radio sessions first'
         initial_timer = values(query('stopwatch status', 'STOPWATCH_STATUS'))

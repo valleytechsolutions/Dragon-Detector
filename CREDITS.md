@@ -205,3 +205,9 @@ Capsule Corp and Dragon Ball belong to their respective rights holders, includin
 ## Sparrows · 0.13.15
 
 SPARROWS and its keyhole/wordmark artwork belong to Sparrows Lock Picks. The supplied `sparrows logo.jpg` is preserved unchanged as `media/theme-logos/sparrows-source.jpg` and encoded directly for black display surfaces. The segmented dial and stylized picks are code-drawn interpretations informed by Sparrows’ official product designs; they are not exact tool reproductions. This community theme is not affiliated with or endorsed by Sparrows. [References and theme guide](docs/SPARROWS.md).
+
+## DZ_AZ and personal themes · 0.13.17
+
+The user supplied the unchanged [crow reference](media/theme-logos/dzaz-reference.jpg). The transparent [DZ_AZ crow emblem](media/theme-logos/dzaz.png) is a new illustrated derivative created with the built-in image-generation tool; [prompt and artwork details](docs/DZ-AZ.md#artwork). Feather geometry and animation are original drawing code. The source photograph remains its owner’s work.
+
+The personal-theme editor, DDT1 format, previews and firmware renderers are original project code. Users provide their own images; those images are transferred locally over USB and are not added to this repository or published by the editor. The example design uses the already credited Dragon Detector/BWM mark.

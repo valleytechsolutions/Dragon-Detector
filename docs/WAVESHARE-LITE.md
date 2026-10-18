@@ -12,7 +12,7 @@ Hold BOOT for about 0.8 seconds to cycle **Radar → Clock → Timer → Signals
 
 | Page | Tap | Double tap | Hold |
 |---|---|---|---|
-| Radar / Clock | Next of 33 themes | Next theme | Next page |
+| Radar / Clock | Next of 34 built-in themes | Next theme | Next page |
 | Stopwatch, running | Pause | Lap | Next page |
 | Locksport timer, running | Pause | OPEN (final split and stop) | Next page |
 | Timer, paused | Start/resume | Reset attempt and laps | Next page |

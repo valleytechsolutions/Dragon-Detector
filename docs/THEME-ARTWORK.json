@@ -268,5 +268,19 @@
     "sha256": "d2ff56c484fdc47b70adcd086ab84e34057a8cea82323e0b9dec4a29a19445c7",
     "source_bytes_match": true,
     "derivation": "Unchanged supplied original; encoded directly for black firmware surfaces."
+  },
+  {
+    "file": "media/theme-logos/dzaz-reference.jpg",
+    "supplied_name": "dzaz.jpg",
+    "sha256": "f06a878dd9509f697cb431f57b6eeaccce098a15a315e22840c5ae25d770e416",
+    "source_bytes_match": true,
+    "derivation": "Unchanged user-supplied crow photo."
+  },
+  {
+    "file": "media/theme-logos/dzaz.png",
+    "supplied_name": "dzaz.jpg",
+    "sha256": "adfc31b58d9023f12b6fa3443f317afaefa9c024d9df154f072a04b7e6e3e936",
+    "source_bytes_match": false,
+    "derivation": "Built-in image-generation crow-and-DZ_AZ emblem; transparent illustrated derivative. Prompt in docs/DZ-AZ.md."
   }
 ]

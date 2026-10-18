@@ -1,10 +1,10 @@
-# Reference feature comparison · 0.13.15
+# Reference feature comparison · 0.13.17
 
 This is a feature audit, not a claim that Dragon Detector is an official port or has identical behavior. The original application remains MIT. Reference firmware is not silently linked into it. [Credits and exact source revisions](../CREDITS.md) · [Measured hardware checks](VALIDATION.md).
 
 ## AMOLED feature parity across boards
 
-The v0.13.15 source audit confirms that Waveshare AMOLED, M5Stack StopWatch, Spotpear and Seeed XIAO Round already share the full UI, 33 themes, 31 selectable logo watch faces, stopwatch/locksport timers, notebook, Hunt, mode launcher and lab workflows below. StopWatch now also matches the AMOLED’s 2 MiB capture buffer and 2 MiB recon session limit. The physical controls, audio, RTC and SD support follow each board's hardware; capture and session limits are intentionally smaller where memory or storage is smaller.
+The v0.13.17 source audit confirms that Waveshare AMOLED, M5Stack StopWatch, Spotpear and Seeed XIAO Round already share the full UI, 34 built-in themes, 32 built-in logo watch faces, stopwatch/locksport timers, notebook, Hunt, mode launcher and lab workflows below. StopWatch now also matches the AMOLED’s 2 MiB capture buffer and 2 MiB recon session limit. The physical controls, audio, RTC and SD support follow each board's hardware; capture and session limits are intentionally smaller where memory or storage is smaller.
 
 | Profile | Capture buffer | Recon session limit |
 |---|---:|---:|
@@ -14,7 +14,9 @@ The v0.13.15 source audit confirms that Waveshare AMOLED, M5Stack StopWatch, Spo
 | Seeed XIAO Round | 512 KiB | 256 KiB |
 | Waveshare Lite | No recorder | No session UI |
 
-Lite shares detection and all 33 BOOT-selectable themes. It adds compact clock, timing, signal and diagnostic pages. Its 2 MiB PSRAM and single BOOT control still exclude the full touch UI, badge, recorder and active labs. All profiles enforce the current application and storage limits. [Exact budgets](FLASH-BUDGET.md) · [Hardware capabilities](HARDWARE.md).
+Lite shares detection and all 34 built-in BOOT-selectable themes. It adds compact clock, timing, signal and diagnostic pages. Its 2 MiB PSRAM and single BOOT control still exclude the full touch UI, badge, recorder and active labs. All profiles enforce the current application and storage limits. [Exact budgets](FLASH-BUDGET.md) · [Hardware capabilities](HARDWARE.md).
+
+All five also accept one optional [personal logo theme](CUSTOM-THEME.md) from the web flasher. It remains hidden until installed.
 
 ## Marauder: all four full boards
 

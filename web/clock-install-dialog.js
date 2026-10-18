@@ -8,6 +8,8 @@ export function clockInstallDialogClass(Base){
   return class extends Base{
     installMode='update';
     autoClock=true;
+    autoTheme=false;
+    installSucceeded=false;
     _startInstall(){super._startInstall(this.installMode==='factory');}
     async _initialize(justInstalled=false){
       await super._initialize(justInstalled);
@@ -15,7 +17,8 @@ export function clockInstallDialogClass(Base){
       // contradictory second erase chooser; _startInstall enforces that mode.
       // Published manifests still ask when opened in a generic installer.
       if(this._manifest)this._manifest.new_install_prompt_erase=false;
-      if(justInstalled&&this.autoClock&&this._state!=='ERROR'&&this._installState?.state==='finished'){
+      if(justInstalled&&this._state!=='ERROR'&&this._installState?.state==='finished')this.installSucceeded=true;
+      if(this.installSucceeded&&(this.autoClock||this.autoTheme)){
         await this.updateComplete;
         this._closeDialog();
       }

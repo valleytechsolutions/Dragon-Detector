@@ -10,6 +10,16 @@ Wi-Fi and Bluetooth detection, signal tracking, and logo watch faces for five ES
 
 On every board, the clock and stopwatch/Locksport Timer pause background Wi-Fi and Bluetooth scanning. Lap history and time/date settings also stay paused. Return to the radar or other tools to resume scanning; a running timer keeps counting in the background. Previously configured Wi-Fi clock recovery may briefly connect for time synchronization. See [power-saving behavior](docs/CLOCK-POWER.md).
 
+## Personal themes and DZ_AZ
+
+Build your own clock, radar and counter in the [Custom theme tab](https://valleytechsolutions.github.io/Dragon-Detector/#theme-studio). Add a logo, choose colors, hands and numerals, and enable locksport controls. The personal slot appears on the device only after you explicitly install a design. [Creator guide](docs/CUSTOM-THEME.md).
+
+DZ_AZ adds a crow-and-name emblem, rotating feather radar sweep, and short/long feather clock hands. [Theme guide](docs/DZ-AZ.md).
+
+| DZ_AZ radar | DZ_AZ clock | Personal theme example |
+|---|---|---|
+| ![DZ_AZ radar](web/assets/radar-dzaz-01317.png) | ![DZ_AZ clock](web/assets/watch-dzaz-01317.png) | ![Personal logo clock](web/assets/watch-custom-01317.png) |
+
 ## Install
 
 1. Open the [web flasher](https://valleytechsolutions.github.io/Dragon-Detector/#install) in desktop Chrome or Edge and connect your board with a USB data cable.
@@ -28,9 +38,9 @@ On every board, the clock and stopwatch/Locksport Timer pause background Wi-Fi a
 | **Seeed XIAO ESP32-S3 + Round Display** | 240 × 240 LCD | Touch, RTC, microSD, 8 MB flash |
 | **Waveshare ESP32-S3-LCD-1.28 Lite** | 240 × 240 LCD | BOOT button, 16 MB flash; no touch |
 
-The four full boards share the radar, 33 themes, 31 logo watch faces, timers, notebook, badge editor, radio tools, and BLE Lab. StopWatch and Waveshare AMOLED support 2 MiB captures and 2 MiB recon sessions. Their total file storage differs.
+The four full boards share the radar, 34 built-in themes, 32 built-in logo watch faces, timers, notebook, badge editor, radio tools, and BLE Lab. StopWatch and Waveshare AMOLED support 2 MiB captures and 2 MiB recon sessions. Their total file storage differs.
 
-Lite provides five button-operated pages: radar, clock, timer, signals, and diagnostics. It shares detection and all 33 themes, with compact clocks. It does not include Badge Studio, audio, or active labs.
+Lite provides five button-operated pages: radar, clock, timer, signals, and diagnostics. It shares detection and all 34 built-in themes, with compact clocks. It does not include Badge Studio, audio, or active labs.
 
 Firmware is board-specific. The Waveshare **1.75C** and non-C models have different wiring. [Hardware guide](docs/HARDWARE.md) · [Feature comparison](docs/FEATURE-MATRIX.md) · [Tested hardware and limitations](docs/VALIDATION.md)
 
@@ -88,7 +98,7 @@ Detection matches observable radio signatures; it does not establish intent, own
 | Directory | Contents |
 |---|---|
 | `firmware/` | Shared application and board adapters |
-| `web/` | USB flasher, device tools, and Badge Studio |
+| `web/` | USB flasher, personal-theme creator, device tools, and Badge Studio |
 | `tools/` | Build, packaging, and validation scripts |
 | `tests/` | Native firmware and browser-module tests |
 | `hardware/` | Board partitions and archived projects |

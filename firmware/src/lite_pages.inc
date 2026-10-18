@@ -7,7 +7,7 @@ static unsigned signalIndex=0;
 static uint64_t timerFrame=0;
 static dragon::Calendar clockFrame;
 static bool clockValid=false;
-static bool liteLocksport(){return radarTheme==6||radarTheme==8||radarTheme==9||radarTheme==21||radarTheme==26||radarTheme==28||radarTheme==32;}
+static bool liteLocksport(){return radarTheme==6||radarTheme==8||radarTheme==9||radarTheme==21||radarTheme==26||radarTheme==28||radarTheme==32||(radarTheme==dragon::PersonalThemeId&&(personalTheme().flags&8));}
 static void pageText(lv_draw_ctx_t* ctx,const char* value,int x,int y,int width,uint32_t rgb){
   lv_draw_label_dsc_t d;lv_draw_label_dsc_init(&d);d.color=color(rgb);d.font=&lv_font_montserrat_10;d.align=LV_TEXT_ALIGN_CENTER;
   lv_area_t a{lv_coord_t(x),lv_coord_t(y),lv_coord_t(x+width-1),lv_coord_t(y+15)};lv_draw_label(ctx,&d,&a,value,nullptr);
@@ -20,7 +20,9 @@ static void liteHand(lv_draw_ctx_t* ctx,float angle,float length,uint32_t rgb,bo
   if(pick){stroke(-9,0,length*.4f,0,7,0x677684);stroke(-8,-1,length*.4f,-1,2,0xd6dce1);stroke(length-8,0,length,-4,3,rgb);}
 }
 static void litePageDraw(lv_event_t* e){
-  auto* ctx=lv_event_get_draw_ctx(e);const auto& p=dragon::UiPalettes[radarTheme];
+  auto* ctx=lv_event_get_draw_ctx(e);const auto& p=themeUiColors(radarTheme);
+  if(litePage==LitePage::Clock&&radarTheme==33){dzazWatch(ctx,clockFrame,clockValid);return;}
+  if(litePage==LitePage::Clock&&radarTheme==dragon::PersonalThemeId){personalThemeClock(ctx,clockFrame,clockValid);return;}
   const bool dragonClock=litePage==LitePage::Clock&&radarTheme==0;
   disc(ctx,120,120,118,dragonClock?0x76532b:p.border);disc(ctx,120,120,116,dragonClock?0x000000:p.bg);
   if(litePage==LitePage::Clock){
@@ -65,10 +67,10 @@ static void setLitePage(LitePage next){
   lv_obj_set_y(pageValue,next==LitePage::Clock?158:next==LitePage::Timer?95:76);
   lv_obj_set_y(pageSub,next==LitePage::Clock?187:next==LitePage::Timer?138:171);
   bool special=next==LitePage::Clock&&(radarTheme==0||radarTheme>=29);
-  if(radarLogos[radarTheme]&&!special&&!(next==LitePage::Radar&&radarTheme==32))lv_obj_clear_flag(logo,LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(logo,LV_OBJ_FLAG_HIDDEN);
+  if(radarLogo(radarTheme)&&!special&&!(next==LitePage::Radar&&radarTheme==32))lv_obj_clear_flag(logo,LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(logo,LV_OBJ_FLAG_HIDDEN);
   lv_obj_align(logo,LV_ALIGN_TOP_MID,0,9);
   if(special){lv_obj_add_flag(pageTitle,LV_OBJ_FLAG_HIDDEN);lv_obj_set_y(pageValue,radarTheme==29?24:157);lv_obj_set_y(pageSub,radarTheme==29?48:188);}
-  if(next==LitePage::Clock&&(radarTheme==31||radarTheme==32))for(auto* o:{pageTitle,pageValue,pageSub,pageHint})lv_obj_add_flag(o,LV_OBJ_FLAG_HIDDEN);
+  if(next==LitePage::Clock&&(radarTheme==31||radarTheme==32||radarTheme==33||radarTheme==dragon::PersonalThemeId))for(auto* o:{pageTitle,pageValue,pageSub,pageHint})lv_obj_add_flag(o,LV_OBJ_FLAG_HIDDEN);
   lv_obj_invalidate(root);
 }
 static void createLitePages(){
@@ -82,7 +84,7 @@ static void createLitePages(){
   setLitePage(LitePage::Radar);
 }
 static void updateLitePage(){
-  const auto& p=dragon::UiPalettes[radarTheme];char value[180];
+  const auto& p=themeUiColors(radarTheme);char value[180];
   for(auto* o:{pageTitle,pageSub,pageHint})lv_obj_set_style_text_color(o,color(p.muted),0);
   lv_obj_set_style_text_color(pageValue,color(p.ink),0);
   lv_obj_set_style_bg_color(pageValue,color(p.bg),0);lv_obj_set_style_bg_opa(pageValue,LV_OPA_COVER,0);

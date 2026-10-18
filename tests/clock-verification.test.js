@@ -75,3 +75,13 @@ test('update mode never accepts the upstream no-Improv default erase',()=>{
   dialog.installMode='factory';dialog._startInstall(false);assert.deepEqual(events[1],['erase',true]);
   assert.throws(()=>clockInstallDialogClass(class {}),/integration changed/);
 });
+test('personal-theme handoff requires a completed install even without clock sync',async()=>{
+  for(const finished of [false,true]){
+    const {dialog,events}=dialogRig();dialog.autoClock=false;dialog.autoTheme=true;
+    await dialog._initialize(finished);
+    assert.equal(dialog.installSucceeded,finished);
+    assert.equal(events.includes('normal close'),finished);
+  }
+  const {dialog,events}=dialogRig();dialog.autoTheme=true;dialog._state='ERROR';
+  await dialog._initialize(true);assert.equal(dialog.installSucceeded,false);assert.ok(!events.includes('normal close'));
+});

@@ -10,18 +10,23 @@ import {hasReconTools,reconLines,exportCapture,exportReconFile,captureName,impor
 import {decodeProfile,exportProfile,exportLog,importProfile,labLines,safeProfileName} from './ble-lab.js?v=0.13.3';
 import {localClockEpoch,setClock,readWearable,setOrientation} from './wearable-transfer.js?v=0.13.12';
 import {syncVerifiedClock,clockResultText} from './clock-verification.js?v=0.13.12';
-import {clockInstallDialogClass} from './clock-install-dialog.js?v=0.13.12';
+import {clockInstallDialogClass} from './clock-install-dialog.js?v=0.13.17';
 import {deviceQuery} from './device-query.js';
 import {BadgeSerial} from './serial.js?v=0.13.3';
 import {encodeBadge} from './badge-codec.js';
 import {uploadBadge} from './badge-transfer.js?v=0.13.3';
 import {readHistory} from './detector-transfer.js';
 import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasBrandedThemes,hasCommunityThemes,hasRunnerThemes,hasCapsuleSparrowsThemes,hasLplTheme,hasWearableTools,hasClockTools,hasWifiClock,hasRetainedClock} from './firmware-compat.js?v=0.13.15';
-import {readRadarSettings,saveRadarSettings} from './radar-transfer.js?v=0.13.15';
-import {boardProfiles,connectedProfile,validateManifest,supportsBadge} from './board-profiles.js?v=0.13.15';
+import {readRadarSettings,saveRadarSettings} from './radar-transfer.js?v=0.13.17';
+import {boardProfiles,connectedProfile,validateManifest,supportsBadge} from './board-profiles.js?v=0.13.17';
 import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan,drawBadgeText} from './badge-editor.js?v=0.13.3';
 import {hasNotebook,readNotebook,customAdvertCommand} from './notebook.js?v=0.13.3';
 import {revealLocation} from './navigation.js?v=0.13.14';
+import {createThemeStudio} from './theme-studio.js?v=0.13.17';
+import {setupWorkspaceTabs} from './workspace-tabs.js?v=0.13.17';
+import {installPersonalTheme} from './theme-install.js?v=0.13.17';
+import {hasPersonalThemes} from './theme-transfer.js?v=0.13.17';
+setupWorkspaceTabs();
 revealLocation();
 const $ = id => document.getElementById(id);
 void updateVisitCounter($('visit-count'));
@@ -83,6 +88,7 @@ const canvas=$('preview'), ctx=canvas.getContext('2d',{willReadFrequently:true})
 const guideCanvas=$('preview-guides'),guideCtx=guideCanvas.getContext('2d');
 let photo=null,size=466,zoom=1,offsetX=0,offsetY=0,turns=0,mirror=false,busy=false,firmwareVersion='',deviceProfile='',badgeProfile='stopwatch',photoName='',imageRequest=0;
 
+const themeStudio=createThemeStudio({state:()=>({serial,busy,version:firmwareVersion,board:models[deviceProfile]||'Device'}),connect:()=>$('connect').onclick(),disconnect,run:detectorAction});
 let lastInstallBoard='';
 function installLock(active){
   installActive=active;busy=active;controls();installEnabled();
@@ -98,18 +104,27 @@ function clockSetupFailure(error){
 }
 $('install-button').onclick=async()=>{
   if($('install-button').disabled||busy||serial)return;
+  let customTheme;try{customTheme=themeStudio.installation();}catch(error){$('clock-setup-status').textContent=error.message;location.hash='theme-studio';return;}
   const selected=board,autoClock=$('auto-clock').checked;
   lastInstallBoard=selected;installLock(true);$('finish-clock').hidden=true;
   let port;
   try{
     port=await navigator.serial.requestPort();await port.open({baudRate:115200,bufferSize:8192});
     const dialog=document.createElement('dragon-clock-install-dialog');
-    dialog.installMode=$('install-mode').value;dialog.autoClock=autoClock;
+    dialog.installMode=$('install-mode').value;dialog.autoClock=autoClock;dialog.autoTheme=!!customTheme;
     dialog.port=port;dialog.manifestPath=$('installer').getAttribute('manifest');
     dialog.addEventListener('closed',async()=>{
+      let themePhase=false;
       $('clock-setup-status').textContent=autoClock?'Step 2 of 2: setting date, time and timezone; verifying the clock…':'Closing installer USB connection…';
-      try{const result=await finishInstallSession(port,selected,autoClock);clockSetupResult(result);}
-      catch(error){if(autoClock)clockSetupFailure(error);else $('clock-setup-status').textContent='Installer closed. USB may need reconnecting.';}
+      try{
+        const result=await finishInstallSession(port,selected,autoClock);clockSetupResult(result);
+        if(customTheme&&dialog.installSucceeded){
+          themePhase=true;
+          await installPersonalTheme(port,selected,customTheme,p=>$('clock-setup-status').textContent=`Installing your personal theme · ${p}%`);
+          $('clock-setup-status').textContent='Firmware and personal theme installed and verified.'+(autoClock?' Local date and time verified.':'');themeStudio.installed();
+        }else if(customTheme)$('clock-setup-status').textContent='Installation was not completed. Your personal theme was not sent.';
+      }
+      catch(error){if(themePhase)$('clock-setup-status').textContent=`Firmware installed, but the personal theme was not confirmed: ${error.message} Open Custom theme, connect the running device, and install your design there.`;else if(autoClock)clockSetupFailure(error);else $('clock-setup-status').textContent='Installer closed. USB may need reconnecting.';}
       finally{installLock(false);$('install-button').focus();}
     },{once:true});
     document.body.appendChild(dialog);
@@ -138,6 +153,8 @@ function setBadgeProfile(id){
   $('badge-board').value=id;draw();
 }
 function controls(){
+  themeStudio.update();
+  for(const option of $('radar-theme').options)if(option.dataset.personal)option.disabled=!serial||!hasPersonalThemes(firmwareVersion);
   const labReady=!!serial&&hasFullLab(deviceProfile,firmwareVersion),reconReady=!!serial&&hasFullRecon(deviceProfile,firmwareVersion);
   document.querySelectorAll('#ble-lab button').forEach(b=>b.disabled=busy||!labReady);
   document.querySelectorAll('#radio-tools button').forEach(b=>b.disabled=busy||!reconReady);
@@ -301,7 +318,7 @@ $('sync-time').onclick=()=>detectorAction(async link=>{
 });
 $('show-radar').onclick=()=>detectorAction(async link=>{await link.write('screen radar');$('detector-status').textContent='Radar view selected.';});
 $('show-activity').onclick=()=>detectorAction(async link=>{await link.write('screen activity');$('detector-status').textContent='Radio Activity selected on the board: deauthentication and BLE spam evidence.';});
-$('radar-save').onclick=()=>detectorAction(async link=>{if(['capsule-corp','sparrows'].includes($('radar-theme').value)&&!hasCapsuleSparrowsThemes(firmwareVersion))throw new Error('Update to firmware 0.13.15 to use Capsule Corp or Sparrows.');if(['hackazillarex','m33k-t3ch'].includes($('radar-theme').value)&&!hasRunnerThemes(firmwareVersion))throw new Error('Update to firmware 0.13.12 for Hackazillarex and m33k_t3ch.');if(['ghostbusters','lpu'].includes($('radar-theme').value)&&!hasRetainedClock(firmwareVersion))throw new Error('Update to firmware 0.13.9 for Ghostbusters and Lockpickers United.');if($('radar-theme').value==='lpl'&&!hasLplTheme(firmwareVersion))throw new Error('Update to firmware 0.13.8 to use Covert Instruments / LockPickingLawyer.');if(['toool','church','toool-dark','covert','awok','baph0mau5','wdgwars','ghoststrats','n3rdsec','halehound','waveshare','m5stack','lab5','sasquach','nyan','dmac','seeed','dagnazty','octo-pig','deflock'].includes($('radar-theme').value)&&!hasCommunityThemes(firmwareVersion))throw new Error('Update to firmware 0.13.6 to use the community themes.');if($('radar-theme').selectedOptions[0].dataset.branded&&!hasBrandedThemes(firmwareVersion))throw new Error('Update to firmware 0.13.1 to use branded themes.');await saveRadarSettings(link,{theme:$('radar-theme').value,labels:$('radar-labels').checked,recent:$('radar-recent').checked});$('detector-status').textContent='Radar theme, labels and recent-signal preferences saved on your detector.';});
+$('radar-save').onclick=()=>detectorAction(async link=>{if(['custom','dzaz'].includes($('radar-theme').value)&&!hasPersonalThemes(firmwareVersion))throw new Error('Update to firmware 0.13.17 to use this theme.');if(['capsule-corp','sparrows'].includes($('radar-theme').value)&&!hasCapsuleSparrowsThemes(firmwareVersion))throw new Error('Update to firmware 0.13.15 to use Capsule Corp or Sparrows.');if(['hackazillarex','m33k-t3ch'].includes($('radar-theme').value)&&!hasRunnerThemes(firmwareVersion))throw new Error('Update to firmware 0.13.12 for Hackazillarex and m33k_t3ch.');if(['ghostbusters','lpu'].includes($('radar-theme').value)&&!hasRetainedClock(firmwareVersion))throw new Error('Update to firmware 0.13.9 for Ghostbusters and Lockpickers United.');if($('radar-theme').value==='lpl'&&!hasLplTheme(firmwareVersion))throw new Error('Update to firmware 0.13.8 to use Covert Instruments / LockPickingLawyer.');if(['toool','church','toool-dark','covert','awok','baph0mau5','wdgwars','ghoststrats','n3rdsec','halehound','waveshare','m5stack','lab5','sasquach','nyan','dmac','seeed','dagnazty','octo-pig','deflock'].includes($('radar-theme').value)&&!hasCommunityThemes(firmwareVersion))throw new Error('Update to firmware 0.13.6 to use the community themes.');if($('radar-theme').selectedOptions[0].dataset.branded&&!hasBrandedThemes(firmwareVersion))throw new Error('Update to firmware 0.13.1 to use branded themes.');await saveRadarSettings(link,{theme:$('radar-theme').value,labels:$('radar-labels').checked,recent:$('radar-recent').checked});$('detector-status').textContent='Radar theme, labels and recent-signal preferences saved on your detector.';});
 $('display-save').onclick=()=>detectorAction(async link=>{const values=['display-brightness','display-dim','display-off','display-level'].map(id=>Number($(id).value));await link.write('display set '+values.join(' '));const reply=await link.wait(s=>s==='DISPLAY_OK'||s==='DISPLAY_ERROR');if(reply!=='DISPLAY_OK')throw new Error('Display settings were rejected.');$('detector-status').textContent='Display preferences saved on your detector.';});
 draw();loadStock();
 

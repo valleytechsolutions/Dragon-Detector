@@ -21,6 +21,7 @@ static void disc(lv_draw_ctx_t* ctx,int x,int y,int r,uint32_t c,int opa=255){
 #include "cyber_runner.inc"
 #include "capsule_theme.inc"
 #include "sparrows_theme.inc"
+#include "dzaz_theme.inc"
 static const char* radarFamilyName(Family f){
 #if SCREEN_RES<=240
   // Keep the family on one line, leaving the second line for signal/age.
@@ -57,7 +58,7 @@ static void callout(lv_draw_ctx_t* ctx,const Dot& dot,unsigned slot,const char* 
 #endif
 }
 static void radarDraw(lv_event_t* e){
-  auto* ctx=lv_event_get_draw_ctx(e);const auto& theme=radarPalettes[radarTheme];
+  auto* ctx=lv_event_get_draw_ctx(e);const auto& theme=radarPalette(radarTheme);
   // LVGL may render several internal-RAM tiles for one frame. Advance signal
   // positions just once so leader lines and dots cannot disagree across tiles.
   const uint32_t now=radarFrameAt;
@@ -121,7 +122,9 @@ static void radarDraw(lv_event_t* e){
   static uint32_t sweepAt=0;if(radioEnabled)sweepAt=now;
   float angle=(sweepAt%6000)*.00104719755f,dx=cosf(angle),dy=sinf(angle);
   if(radarTheme==28){locksportPinRim(ctx,uint64_t(sweepAt%6000)*10000);lpuEmblem(ctx,150);}
-  if(radarTheme==31){}
+  if(radarTheme==dragon::PersonalThemeId)personalThemeSweep(ctx,angle);
+  else if(radarTheme==31){}
+  else if(radarTheme==33)crowFeather(ctx,angle/6.28318530718f+.25f,164,17,0xc7d5e0);
   else if(radarTheme==32)sparrowsPick(ctx,angle/6.28318530718f+.25f,146,true);
   else if(radarTheme==29)boneSweep(ctx,angle);
   else if(radarTheme==30)cyberSweep(ctx,angle);

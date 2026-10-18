@@ -1,6 +1,7 @@
 #include "board_pins.h"
 #ifndef BOARD_RADAR_LITE
 #include "ui_theme.h"
+#include "personal_theme.h"
 #include <initializer_list>
 namespace {
 unsigned selected=1;
@@ -22,7 +23,7 @@ void apply(lv_theme_t*,lv_obj_t* obj){
   if(lv_obj_check_type(obj,&lv_obj_class)||lv_obj_check_type(obj,&lv_msgbox_class)||lv_obj_check_type(obj,&lv_textarea_class))lv_obj_add_style(obj,&panel,0);
 }
 }
-const dragon::UiPalette& uiColors(){return dragon::UiPalettes[selected];}
+const dragon::UiPalette& uiColors(){return themeUiColors(selected);}
 lv_obj_t* uiMessageBox(lv_obj_t* parent,const char* title,const char* text,const char* buttons[],bool close){
   const auto& p=uiColors();auto* box=lv_msgbox_create(parent,title,text,buttons,close);
   lv_obj_set_style_bg_color(box,lv_color_hex(p.surface),0);

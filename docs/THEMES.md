@@ -1,10 +1,10 @@
 # Radar themes
 
-Firmware **0.13.15** offers 33 themes, including Covert Instruments × McNally, TOOOL, TOOOL Dark and Church of Malware, on Waveshare AMOLED, M5Stack StopWatch, Spotpear and Seeed XIAO + Round Display.
+Firmware **0.13.17** offers 34 built-in themes, including Covert Instruments × McNally, TOOOL, TOOOL Dark and Church of Malware, on Waveshare AMOLED, M5Stack StopWatch, Spotpear and Seeed XIAO + Round Display.
 
 The saved theme also controls menus, settings, dialogs, utility screens, BLE Lab and radio tools. Watch designs remain independently swipeable. All five profiles show the Dragon Ball/BWM mark on black at power-on, then open the saved radar theme. Custom badge artwork and detection-family colors retain their meaning.
 
-Open **Tools → System → Settings → Theme & radar labels** and scroll to the theme. It saves immediately; tap Home to return to radar. Or connect through the [web tools](https://valleytechsolutions.github.io/Dragon-Detector/#detector), choose Radar appearance → Theme, and save. Older firmware keeps its original three choices until updated. Waveshare Lite cycles all 33 themes with BOOT and saves the selection. Hold BOOT to cycle radar, compact clock, timer, signals and diagnostics; see [Lite controls](WAVESHARE-LITE.md). Its LPL radar includes the central emblem and rotating scales.
+Open **Tools → System → Settings → Theme & radar labels** and scroll to the theme. It saves immediately; tap Home to return to radar. Or connect through the [web tools](https://valleytechsolutions.github.io/Dragon-Detector/#detector), choose Radar appearance → Theme, and save. Older firmware keeps its original three choices until updated. Waveshare Lite cycles all 34 built-in themes with BOOT and saves the selection. Hold BOOT to cycle radar, compact clock, timer, signals and diagnostics; see [Lite controls](WAVESHARE-LITE.md). Its LPL radar includes the central emblem and rotating scales.
 
 | Valleytech | Biscuit Shop | Marauder |
 |---|---|---|
@@ -15,7 +15,7 @@ These are CRC-verified 466×466 logical display captures from the Waveshare, not
 
 Green radar (default), Dragon Ball and Black / gold / red keep their BWM1 logo. Existing saved selections stay unchanged. Family-colored labels use the same [26 device-family colors](RADAR-COLORS.md) and leader lines; Capsule Corp uses yellow contact dots to match its Dragon Radar display. Radio status, target count, battery indicator, RSSI placement, scan scheduling and badge images are unaffected by a theme change.
 
-USB names: `radar theme dragon`, `green`, `gold`, `valleytech`, `biscuit`, `marauder`, `toool`, `church`, `toool-dark`, `covert`, `awok`, `baph0mau5`, `wdgwars`, `ghoststrats`, `n3rdsec`, `halehound`, `waveshare`, `m5stack`, `lab5`, `sasquach`, `nyan`, `dmac`, `seeed`, `dagnazty`, `octo-pig`, `deflock`, `lpl`, `ghostbusters`, `lpu`, `hackazillarex`, `m33k-t3ch`, `capsule-corp`, or `sparrows` (prefix each with `radar theme`). `radar status` reports saved indices 0–32 in that order. Unknown themes are rejected without changing the current selection.
+USB names: `radar theme dragon`, `green`, `gold`, `valleytech`, `biscuit`, `marauder`, `toool`, `church`, `toool-dark`, `covert`, `awok`, `baph0mau5`, `wdgwars`, `ghoststrats`, `n3rdsec`, `halehound`, `waveshare`, `m5stack`, `lab5`, `sasquach`, `nyan`, `dmac`, `seeed`, `dagnazty`, `octo-pig`, `deflock`, `lpl`, `ghostbusters`, `lpu`, `hackazillarex`, `m33k-t3ch`, `capsule-corp`, `sparrows`, `dzaz`, or `custom` (prefix each with `radar theme`). `radar status` reports saved indices 0–34 in that order; custom is available only after installing a design. Unknown themes are rejected without changing the current selection.
 
 ## TOOOL · 0.13.6
 
@@ -211,3 +211,7 @@ Silver instrument bezel, emerald grid and yellow detected-signal markers. The lo
 ## Sparrows · 0.13.15
 
 Black, red and steel, the supplied keyhole emblem, segmented rings and two pick-shaped watch hands. The radar uses a rotating hook-shaped sweep. Selecting Sparrows enables Locksport Timer controls and the animated elapsed-time rim. USB theme `sparrows` is index 32; full-board watch index 35. The complete watch also runs on Lite. [Design and attribution](SPARROWS.md).
+
+## DZ_AZ and personal themes · 0.13.17
+
+[DZ_AZ](DZ-AZ.md) adds a crow emblem, feather sweep and feather clock hands on all five boards. The optional [personal theme](CUSTOM-THEME.md) adds one user-created logo clock, radar and counter. Create it in the web flasher’s dedicated Custom theme tab and select the install option; it stays hidden on devices without a saved design.

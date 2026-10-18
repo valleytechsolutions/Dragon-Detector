@@ -27,7 +27,7 @@ static lv_img_dsc_t liteBackdrop;
 static void prepareLiteBackdrop(lv_obj_t* root){
   static auto* pixels=(lv_color_t*)heap_caps_malloc(SCREEN_RES*SCREEN_RES*sizeof(lv_color_t),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);
   if(!pixels){Serial.println("LITE_BACKGROUND cache unavailable");return;}
-  const auto& theme=radarPalettes[radarTheme];
+  const auto& theme=radarPalette(radarTheme);
   auto* canvas=lv_canvas_create(root);lv_canvas_set_buffer(canvas,pixels,SCREEN_RES,SCREEN_RES,LV_IMG_CF_TRUE_COLOR);lv_canvas_fill_bg(canvas,color(theme.bottom),LV_OPA_COVER);
   lv_draw_rect_dsc_t field;lv_draw_rect_dsc_init(&field);field.radius=LV_RADIUS_CIRCLE;field.bg_color=color(theme.top);field.bg_grad.dir=LV_GRAD_DIR_VER;field.bg_grad.stops[0].color=field.bg_color;field.bg_grad.stops[1].color=color(theme.bottom);
   lv_canvas_draw_rect(canvas,32,32,176,176,&field);
@@ -74,16 +74,16 @@ static lv_obj_t* text(const char* value,int y,int width,const lv_font_t* font,ui
 void uiBegin(){
   if(!prepareThemeLogos())Serial.println("THEME_LOGOS PSRAM allocation failed / fallback logos");
   prefsReady=litePrefs.begin("lite-ui",false);
-  if(prefsReady){unsigned saved=litePrefs.getUChar("theme",1);radarTheme=saved<RadarThemeCount?saved:1;}
-  candidatesOnly=true;radarRecent=true;scr_lvgl_init();root=lv_scr_act();lv_obj_clear_flag(root,LV_OBJ_FLAG_SCROLLABLE);lv_obj_set_style_bg_color(root,color(radarPalettes[radarTheme].bottom),0);
+  if(prefsReady){unsigned saved=litePrefs.getUChar("theme",1);radarTheme=saved<RadarThemeCount&&(saved!=dragon::PersonalThemeId||personalThemeReady())?saved:1;}
+  candidatesOnly=true;radarRecent=true;scr_lvgl_init();root=lv_scr_act();lv_obj_clear_flag(root,LV_OBJ_FLAG_SCROLLABLE);lv_obj_set_style_bg_color(root,color(radarPalette(radarTheme).bottom),0);
   prepareLiteBackdrop(root);
   radar=lv_obj_create(root);lv_obj_remove_style_all(radar);lv_obj_set_pos(radar,0,0);lv_obj_set_size(radar,SCREEN_RES,SCREEN_RES);lv_obj_clear_flag(radar,LV_OBJ_FLAG_SCROLLABLE);lv_obj_clear_flag(radar,LV_OBJ_FLAG_CLICKABLE);
   lv_obj_add_event_cb(radar,radarDraw,LV_EVENT_DRAW_MAIN,nullptr);
-  logo=lv_img_create(root);if(radarLogos[radarTheme])lv_img_set_src(logo,radarLogos[radarTheme]);else lv_obj_add_flag(logo,LV_OBJ_FLAG_HIDDEN);lv_obj_align(logo,LV_ALIGN_TOP_MID,0,9);
-  status=text("STARTING RADIO",44,184,&lv_font_montserrat_10,radarPalettes[radarTheme].text);
-  activity=text("",57,172,&lv_font_montserrat_10,dragon::UiPalettes[radarTheme].accent);
-  pageLabel=text("",193,150,&lv_font_montserrat_10,radarPalettes[radarTheme].text);
-  notice=text("",207,132,&lv_font_montserrat_10,dragon::UiPalettes[radarTheme].ink);
+  logo=lv_img_create(root);if(radarLogo(radarTheme))lv_img_set_src(logo,radarLogo(radarTheme));else lv_obj_add_flag(logo,LV_OBJ_FLAG_HIDDEN);lv_obj_align(logo,LV_ALIGN_TOP_MID,0,9);
+  status=text("STARTING RADIO",44,184,&lv_font_montserrat_10,radarPalette(radarTheme).text);
+  activity=text("",57,172,&lv_font_montserrat_10,themeUiColors(radarTheme).accent);
+  pageLabel=text("",193,150,&lv_font_montserrat_10,radarPalette(radarTheme).text);
+  notice=text("",207,132,&lv_font_montserrat_10,themeUiColors(radarTheme).ink);
   lv_obj_set_height(notice,13);lv_obj_add_flag(activity,LV_OBJ_FLAG_HIDDEN);lv_obj_add_flag(notice,LV_OBJ_FLAG_HIDDEN);
   createLitePages();
   startLiteSplash();
@@ -114,19 +114,21 @@ void uiNotify(const char* title,const char*,const dragon::DeviceKey*,bool){
   if(!notice||litePage!=LitePage::Radar)return;noticeAt=millis();lv_label_set_text(notice,title);lv_obj_clear_flag(notice,LV_OBJ_FLAG_HIDDEN);lv_obj_add_flag(pageHint,LV_OBJ_FLAG_HIDDEN);
 }
 void uiShow(const String& name){if(name=="startup"){startLiteSplash();return;}for(unsigned i=0;i<5;++i)if(name==litePageNames[i]){setLitePage(LitePage(i));return;}}
-void uiKey(bool held){
-  if(held||!root)return;
-  radarTheme=(radarTheme+1)%RadarThemeCount;themeDirty=true;themeChangedAt=millis();
-  prepareLiteBackdrop(root);lv_obj_set_style_bg_color(root,color(radarPalettes[radarTheme].bottom),0);
-  lv_obj_set_style_text_color(status,color(radarPalettes[radarTheme].text),0);
-  lv_obj_set_style_text_color(pageLabel,color(radarPalettes[radarTheme].text),0);
-  lv_obj_set_style_text_color(activity,color(dragon::UiPalettes[radarTheme].accent),0);
-  lv_obj_set_style_text_color(notice,color(dragon::UiPalettes[radarTheme].ink),0);
-  if(radarLogos[radarTheme]){lv_img_set_src(logo,radarLogos[radarTheme]);lv_obj_clear_flag(logo,LV_OBJ_FLAG_HIDDEN);}
+static void refreshLiteTheme(){
+  themeDirty=true;themeChangedAt=millis();
+  prepareLiteBackdrop(root);lv_obj_set_style_bg_color(root,color(radarPalette(radarTheme).bottom),0);
+  lv_obj_set_style_text_color(status,color(radarPalette(radarTheme).text),0);
+  lv_obj_set_style_text_color(pageLabel,color(radarPalette(radarTheme).text),0);
+  lv_obj_set_style_text_color(activity,color(themeUiColors(radarTheme).accent),0);
+  lv_obj_set_style_text_color(notice,color(themeUiColors(radarTheme).ink),0);
+  if(radarLogo(radarTheme)){lv_img_set_src(logo,radarLogo(radarTheme));lv_obj_clear_flag(logo,LV_OBJ_FLAG_HIDDEN);}
   else lv_obj_add_flag(logo,LV_OBJ_FLAG_HIDDEN);
   lv_obj_align(logo,LV_ALIGN_TOP_MID,0,9);setLitePage(litePage);lv_obj_invalidate(root);
   Serial.printf("LITE_THEME theme=%u name=%s\n",radarTheme,radarThemeCommands[radarTheme]);
 }
+void uiKey(bool held){if(held||!root)return;do{radarTheme=(radarTheme+1)%RadarThemeCount;}while(radarTheme==dragon::PersonalThemeId&&!personalThemeReady());refreshLiteTheme();}
+void uiPersonalThemeChanged(){radarTheme=dragon::PersonalThemeId;refreshLiteTheme();if(prefsReady)litePrefs.putUChar("theme",radarTheme);themeDirty=false;setLitePage(LitePage::Clock);}
+void uiPersonalThemeRemoved(){if(radarTheme==dragon::PersonalThemeId)radarTheme=1;refreshLiteTheme();if(prefsReady)litePrefs.putUChar("theme",radarTheme);themeDirty=false;setLitePage(LitePage::Radar);}
 bool uiStopwatchKey(bool,uint64_t){return false;}
 bool uiCommand(const String& c){
   if(c=="ui status"){Serial.printf("UI_STATUS page=%s lite=1 frames=%lu backdrop=%u frame_ms=83\n",litePageNames[unsigned(litePage)],frames,liteBackdrop.data?1:0);return true;}

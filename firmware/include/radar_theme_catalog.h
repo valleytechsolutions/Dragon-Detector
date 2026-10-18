@@ -1,6 +1,7 @@
 #pragma once
 #include <lvgl.h>
 #include "ui_palette.h"
+#include "personal_theme.h"
 extern const lv_img_dsc_t radar_logo;
 extern lv_img_dsc_t radar_logo_awok;
 extern lv_img_dsc_t radar_logo_baph;
@@ -27,6 +28,7 @@ extern lv_img_dsc_t radar_logo_wdgwars;
 extern lv_img_dsc_t radar_logo_ghostbusters,radar_logo_lpu;
 extern lv_img_dsc_t radar_logo_hackazillarex,radar_logo_m33k;
 extern lv_img_dsc_t radar_logo_capsule,radar_logo_sparrows;
+extern lv_img_dsc_t radar_logo_dzaz;
 bool prepareThemeLogos();
 struct RadarPalette {uint32_t top,bottom,grid,ring,dot,sweep,text,panel;};
 static const RadarPalette radarPalettes[]={
@@ -62,13 +64,21 @@ static const RadarPalette radarPalettes[]={
   {0x000000,0x070204,0x31121b,0x9f3946,0xffedcf,0xff7073,0xffedcf,0x191113},
   {0x060818,0x030410,0x24203f,0x65487e,0xffffff,0x4ae9ff,0xfff2fc,0x14172e},
   {0x22a953,0x1e944b,0x146c3b,0xc9d6dd,0xffeb47,0xeaff91,0xf1ffcf,0x0b4028},
-  {0x000000,0x000000,0x36151d,0x8d2332,0xfff1ed,0xd9384c,0xf3f2ef,0x141114}
+  {0x000000,0x000000,0x36151d,0x8d2332,0xfff1ed,0xd9384c,0xf3f2ef,0x141114},
+  {0x101923,0x05080e,0x243543,0x647b8e,0xdce6ef,0xb6cbdc,0xe5edf4,0x121c27},
+  {0x080d16,0x080d16,0x243542,0x68e2c1,0x72aaff,0x68e2c1,0xf3f6fb,0x151e28}
 };
 // Persistent indices 0..2 remain unchanged for existing settings.
-static const char* radarThemeNames[]={"Dragon Ball","Green radar","Black / gold / red","Valleytech","Biscuit Shop","Marauder","TOOOL","Church of Malware","TOOOL Dark","Covert Instruments / McNally","AWOK","Baph0Mau5","WDGWARS","GhostStrats","N3rdsec","HaleHound","Waveshare","M5Stack","LAB5","Talking Sasquach","Nyan Devices","DMAC","Seeed Studio","DagNazty","0ct0's Pig","DeFlock","Covert Instruments / LockPickingLawyer","Ghostbusters","Lockpickers United","Hackazillarex","m33k_t3ch","Capsule Corp","Sparrows"};
-static const char* radarThemeCommands[]={"dragon","green","gold","valleytech","biscuit","marauder","toool","church","toool-dark","covert","awok","baph0mau5","wdgwars","ghoststrats","n3rdsec","halehound","waveshare","m5stack","lab5","sasquach","nyan","dmac","seeed","dagnazty","octo-pig","deflock","lpl","ghostbusters","lpu","hackazillarex","m33k-t3ch","capsule-corp","sparrows"};
-static const char* radarThemeDescriptions[]={"Emerald grid / colored device families","Green phosphor / rings and live sweep","Dark field / gold rings / red sweep","Silver rings / cyan sweep / VTS logo","Warm amber / cream / Biscuit Shop logo","Black field / red sweep / JCMK logo","White / red / locksport timer + watch","Monochrome circuits / binary watch","Near-black / red / locksport timer + watch","Black / silver / pick hands + locksport timer","Midnight ink / neon paint / mushroom dial","Violet ritual dial / sigils / ember gold","Cyan / magenta / world map / signal dial","Black / grey / purple / glowing slit eyes","Black / white / gold / original skull","Black / hot pink / violet / living hellfire","Green / silver / precision waveform dial","Blue / white / modular hybrid dial","Neon laboratory / large 12-hour digital","Forest / teal / character-arm watch","Pink / rainbow / flying Nyan Cat","Teal / pink / acrylic picks / locksport counter","Lime / deep teal / leaf-circuit maker dial","White / black / skull and talon dial","Pink ASCII octopus / interactive wandering pig","Navy / steel blue / camera-raven viewfinder","Navy / gold / balance scales / locksport timer","No-ghost / proton stream / containment clock","Monochrome / silver picks / moving pin seconds","Red / ivory / bone sweep / jumping T-rex","Cyan / magenta / cyber circuits / neon dial","Silver / blue / emerald grid / Capsule chronometer","Black / red / steel picks / locksport timer"};
-static const lv_img_dsc_t* radarLogos[]={&radar_logo,&radar_logo,&radar_logo,&radar_logo_valleytech,&radar_logo_biscuit,&radar_logo_marauder,&radar_logo_toool,&radar_logo_church,&radar_logo_toool,&radar_logo_ci,&radar_logo_awok,&radar_logo_baph,&radar_logo_wdgwars,nullptr,&radar_logo_n3rdsec,&radar_logo_halehound,&radar_logo_waveshare,&radar_logo_m5stack,&radar_logo_lab5,&radar_logo_sasquach,&radar_logo_nyan,&radar_logo_dmac,&radar_logo_seeed,&radar_logo_dagnazty,nullptr,&radar_logo_deflock,&radar_logo_ci,&radar_logo_ghostbusters,&radar_logo_lpu,&radar_logo_hackazillarex,&radar_logo_m33k,&radar_logo_capsule,&radar_logo_sparrows};
+static const char* radarThemeNames[]={"Dragon Ball","Green radar","Black / gold / red","Valleytech","Biscuit Shop","Marauder","TOOOL","Church of Malware","TOOOL Dark","Covert Instruments / McNally","AWOK","Baph0Mau5","WDGWARS","GhostStrats","N3rdsec","HaleHound","Waveshare","M5Stack","LAB5","Talking Sasquach","Nyan Devices","DMAC","Seeed Studio","DagNazty","0ct0's Pig","DeFlock","Covert Instruments / LockPickingLawyer","Ghostbusters","Lockpickers United","Hackazillarex","m33k_t3ch","Capsule Corp","Sparrows","DZ_AZ","Personal theme"};
+static const char* radarThemeCommands[]={"dragon","green","gold","valleytech","biscuit","marauder","toool","church","toool-dark","covert","awok","baph0mau5","wdgwars","ghoststrats","n3rdsec","halehound","waveshare","m5stack","lab5","sasquach","nyan","dmac","seeed","dagnazty","octo-pig","deflock","lpl","ghostbusters","lpu","hackazillarex","m33k-t3ch","capsule-corp","sparrows","dzaz","custom"};
+static const char* radarThemeDescriptions[]={"Emerald grid / colored device families","Green phosphor / rings and live sweep","Dark field / gold rings / red sweep","Silver rings / cyan sweep / VTS logo","Warm amber / cream / Biscuit Shop logo","Black field / red sweep / JCMK logo","White / red / locksport timer + watch","Monochrome circuits / binary watch","Near-black / red / locksport timer + watch","Black / silver / pick hands + locksport timer","Midnight ink / neon paint / mushroom dial","Violet ritual dial / sigils / ember gold","Cyan / magenta / world map / signal dial","Black / grey / purple / glowing slit eyes","Black / white / gold / original skull","Black / hot pink / violet / living hellfire","Green / silver / precision waveform dial","Blue / white / modular hybrid dial","Neon laboratory / large 12-hour digital","Forest / teal / character-arm watch","Pink / rainbow / flying Nyan Cat","Teal / pink / acrylic picks / locksport counter","Lime / deep teal / leaf-circuit maker dial","White / black / skull and talon dial","Pink ASCII octopus / interactive wandering pig","Navy / steel blue / camera-raven viewfinder","Navy / gold / balance scales / locksport timer","No-ghost / proton stream / containment clock","Monochrome / silver picks / moving pin seconds","Red / ivory / bone sweep / jumping T-rex","Cyan / magenta / cyber circuits / neon dial","Silver / blue / emerald grid / Capsule chronometer","Black / red / steel picks / locksport timer","Charcoal crow / rotating feather / feather hands","Your logo, colors and watch from Theme Studio"};
+static const lv_img_dsc_t* radarLogos[]={&radar_logo,&radar_logo,&radar_logo,&radar_logo_valleytech,&radar_logo_biscuit,&radar_logo_marauder,&radar_logo_toool,&radar_logo_church,&radar_logo_toool,&radar_logo_ci,&radar_logo_awok,&radar_logo_baph,&radar_logo_wdgwars,nullptr,&radar_logo_n3rdsec,&radar_logo_halehound,&radar_logo_waveshare,&radar_logo_m5stack,&radar_logo_lab5,&radar_logo_sasquach,&radar_logo_nyan,&radar_logo_dmac,&radar_logo_seeed,&radar_logo_dagnazty,nullptr,&radar_logo_deflock,&radar_logo_ci,&radar_logo_ghostbusters,&radar_logo_lpu,&radar_logo_hackazillarex,&radar_logo_m33k,&radar_logo_capsule,&radar_logo_sparrows,&radar_logo_dzaz,nullptr};
 static constexpr unsigned RadarThemeCount=sizeof(radarThemeNames)/sizeof(radarThemeNames[0]);
+static RadarPalette radarPalette(unsigned i){
+  if(i!=dragon::PersonalThemeId)return radarPalettes[i];
+  const auto& c=personalTheme();const auto& p=themeUiColors(i);
+  return {c.bg,c.bg,p.raised,p.border,c.secondary,c.accent,c.ink,p.surface};
+}
+static const lv_img_dsc_t* radarLogo(unsigned i){return i==dragon::PersonalThemeId?personalThemeLogo():radarLogos[i];}
 static_assert(dragon::UiPaletteCount==RadarThemeCount,"All themes need UI palettes");
 static_assert(sizeof(radarPalettes)/sizeof(radarPalettes[0])==RadarThemeCount && sizeof(radarLogos)/sizeof(radarLogos[0])==RadarThemeCount && sizeof(radarThemeCommands)/sizeof(radarThemeCommands[0])==RadarThemeCount && sizeof(radarThemeDescriptions)/sizeof(radarThemeDescriptions[0])==RadarThemeCount,"Every radar theme needs a palette, logo and menu/USB name");

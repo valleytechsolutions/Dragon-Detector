@@ -1,4 +1,5 @@
 #include "app.h"
+#include "personal_theme.h"
 #include "notebook.h"
 #include "vendor_registry.h"
 #include "ble_lab.h"
@@ -69,7 +70,7 @@ static bool lpu(){return radarTheme==28;}
 static bool lpl(){return radarTheme==26;}
 static bool sparrows(){return radarTheme==32;}
 static bool dmac(){return radarTheme==21;}
-static bool locksport(){return radarTheme==6||radarTheme==8||covert()||dmac()||lpl()||lpu()||sparrows();}
+static bool locksport(){return radarTheme==6||radarTheme==8||covert()||dmac()||lpl()||lpu()||sparrows()||(radarTheme==dragon::PersonalThemeId&&(personalTheme().flags&8));}
 static bool locksportDark(){return locksport()&&radarTheme!=6;}
 static uint32_t locksportBg(){return uiColors().bg;}
 static uint32_t locksportInk(){return uiColors().ink;}
@@ -224,7 +225,9 @@ static void radarPick(lv_draw_ctx_t* ctx,float radians){
   watchPick(ctx,radians/WatchTau+.25f,pickMcTickler,pickMcTicklerTriangles,true,1.16f);
 }
 static void selectRadarTheme(uint8_t selected){
+  if(selected==dragon::PersonalThemeId&&!personalThemeReady())return;
   radarTheme=selected;dismissNotice();uiApplyTheme(radarTheme);settings.putUChar("radar-theme",radarTheme);
+  if(radarTheme==dragon::PersonalThemeId){watchFace=dragon::PersonalWatchId;settings.putUChar("watch-face",watchFace);return;}
   if(radarTheme==0){watchFace=0;settings.putUChar("watch-face",watchFace);}
   if(locksport()){watchFace=sparrows()?35:lpu()?31:lpl()?29:dmac()?24:covert()?12:locksportDark()?11:9;settings.putUChar("watch-face",watchFace);}
   else if(radarTheme==7){watchFace=10;settings.putUChar("watch-face",watchFace);}
@@ -277,9 +280,9 @@ static void build(){
   }else if(page==Radar){
     radar=lv_obj_create(root);lv_obj_remove_style_all(radar);lv_obj_set_pos(radar,0,0);lv_obj_set_size(radar,SCREEN_RES,SCREEN_RES);lv_obj_clear_flag(radar,LV_OBJ_FLAG_SCROLLABLE);lv_obj_add_flag(radar,LV_OBJ_FLAG_CLICKABLE);
     lv_obj_add_event_cb(radar,radarDraw,LV_EVENT_DRAW_MAIN,nullptr);lv_obj_add_event_cb(radar,radarTap,LV_EVENT_CLICKED,nullptr);
-    if(radarTheme==8||radarTheme==14||dmac()||radarTheme==22||radarTheme==23)circleLogo(root,radarLogos[radarTheme],17);
-    else if(radarTheme!=13&&radarTheme!=24&&radarTheme!=32){auto* logo=lv_img_create(root);lv_img_set_src(logo,radarLogos[radarTheme]);lv_obj_align(logo,LV_ALIGN_TOP_MID,0,S(17));lv_obj_clear_flag(logo,LV_OBJ_FLAG_CLICKABLE);if(radarTheme==10||radarTheme==3){lv_obj_set_style_img_recolor(logo,color(radarTheme==3?0xe1e8ec:0xffffff),0);lv_obj_set_style_img_recolor_opa(logo,LV_OPA_COVER,0);}}
-    const auto& theme=radarPalettes[radarTheme];
+    if(radarTheme==8||radarTheme==14||dmac()||radarTheme==22||radarTheme==23)circleLogo(root,radarLogo(radarTheme),17);
+    else if(radarTheme!=13&&radarTheme!=24&&radarTheme!=32){auto* logo=lv_img_create(root);lv_img_set_src(logo,radarLogo(radarTheme));lv_obj_align(logo,LV_ALIGN_TOP_MID,0,S(17));lv_obj_clear_flag(logo,LV_OBJ_FLAG_CLICKABLE);if(radarTheme==10||radarTheme==3){lv_obj_set_style_img_recolor(logo,color(radarTheme==3?0xe1e8ec:0xffffff),0);lv_obj_set_style_img_recolor_opa(logo,LV_OPA_COVER,0);}}
+    const auto& theme=radarPalette(radarTheme);
     statusLabel=label(root,"LISTENING",56,66,248,F12,theme.text);lv_obj_set_style_text_align(statusLabel,LV_TEXT_ALIGN_CENTER,0);legible(statusLabel);lv_obj_set_style_bg_color(statusLabel,color(theme.panel),0);lv_obj_set_style_bg_opa(statusLabel,LV_OPA_60,0);
     radarActivity=label(root,"",75,84,210,F12,0xffbc76);lv_obj_set_style_text_align(radarActivity,LV_TEXT_ALIGN_CENTER,0);legible(radarActivity);lv_obj_add_flag(radarActivity,LV_OBJ_FLAG_CLICKABLE);lv_obj_add_event_cb(radarActivity,action,LV_EVENT_CLICKED,(void*)116);
     trackingLabel=label(root,"TAP A SIGNAL",70,280,220,F12,theme.text);lv_obj_set_style_text_align(trackingLabel,LV_TEXT_ALIGN_CENTER,0);
@@ -466,9 +469,9 @@ static void build(){
   }else if(page==Stopwatch){
     dismissNotice();lv_obj_set_style_bg_color(root,color(locksport()?locksportBg():uiColors().bg),0);buildChronographFrame();
     if(locksport()){
-      if(!covert()&&!dmac()&&!lpl()&&!lpu()&&!sparrows()){circleLogo(root,&radar_logo_toool,20);centered(label(root,"LOCKSPORT TIMER",48,74,264,F20,locksportAccent()));}
+      if(radarTheme!=dragon::PersonalThemeId&&!covert()&&!dmac()&&!lpl()&&!lpu()&&!sparrows()){circleLogo(root,&radar_logo_toool,20);centered(label(root,"LOCKSPORT TIMER",48,74,264,F20,locksportAccent()));}
       button(root,LV_SYMBOL_HOME,149,307,62,33,1);
-    }else title("CHRONOGRAPH","Precision stopwatch");
+    }else if(radarTheme!=dragon::PersonalThemeId)title("CHRONOGRAPH","Precision stopwatch");
     timerState=label(root,"",50,locksport()?106:98,260,F12,locksport()?locksportAccent():uiColors().accent);centered(timerState);
     timerValue=label(root,"00:00.00",33,locksport()?136:130,294,FTIMER,locksport()?locksportInk():uiColors().ink);centered(timerValue);
     timerLap=label(root,"",50,184,260,F14,uiColors().muted);centered(timerLap);
@@ -507,7 +510,7 @@ static void build(){
     for(unsigned i=0;i<unsigned(Family::Count);++i)row(body,dragon::familyName(Family(i)),"Dot, leader and label",i,0,dragon::familyColor(Family(i)));
   }else if(page==RadarStyle){
     title("THEME & RADAR","Menus / utilities / radar");body=scrollBody();int n=0;
-    for(unsigned i=0;i<RadarThemeCount;++i){String name=String(radarTheme==i?LV_SYMBOL_OK "  ":"")+radarThemeNames[i];row(body,name.c_str(),radarThemeDescriptions[i],n++,9000+i);}
+    for(unsigned i=0;i<RadarThemeCount;++i){if(i==dragon::PersonalThemeId&&!personalThemeReady())continue;String name=String(radarTheme==i?LV_SYMBOL_OK "  ":"")+radarThemeNames[i];row(body,name.c_str(),radarThemeDescriptions[i],n++,9000+i);}
     row(body,"Device color legend","Unique family colors in every theme",n++,150);
     row(body,radarLabels?"Device labels: ON":"Device labels: OFF",radarLabels?"Priority tags + tapped dot / all dots visible":"All dots together / tap for evidence",n++,121);
     row(body,radarRecent?"Recent signals: 2 minutes":"Recent signals: OFF","Stale dots show last-seen age, not live RSSI",n++,124);
@@ -691,6 +694,8 @@ void uiShow(const String& name){if(name=="startup"){go(Startup);page=Boot;return
   if(name=="activity"){go(Activity);return;}
   if(name=="badge")go(Badge);else if(name=="radar")go(Radar);else if(name=="menu")go(Menu);else if(name=="wifi"){filter=1;go(Devices);}else if(name=="ble"){filter=2;go(Devices);}else if(name=="audio")go(Audio);else if(name=="alerts")go(Alerts);else if(name=="channels")go(Channels);else if(name=="about")go(About);else if(name=="settings")go(Settings);else if(name=="hunt")go(Hunt);else if(name=="detectors")go(Detectors);else if(name=="history")go(History);else if(name=="display")go(Display);else if(name=="health")go(Diagnostics);else if(name=="targets"){filter=0;devicePage=0;go(Devices);}
 }
+void uiPersonalThemeChanged(){selectRadarTheme(dragon::PersonalThemeId);go(Clock);page=Boot;}
+void uiPersonalThemeRemoved(){if(radarTheme==dragon::PersonalThemeId)selectRadarTheme(1);if(watchFace==dragon::PersonalWatchId){watchFace=0;settings.putUChar("watch-face",watchFace);}go(Radar);page=Boot;}
 void uiBegin(){
   if(!prepareThemeLogos())Serial.println("THEME_LOGOS PSRAM allocation failed / fallback logos");
   settings.begin("dd-ui",false);
@@ -698,7 +703,7 @@ void uiBegin(){
   if(!settings.getBool("panel-v04",false)){settings.putUChar("brightness",100);settings.putBool("panel-v04",true);}
   brightness=settings.getUChar("brightness",100);if(brightness<25||brightness>100)brightness=100;candidatesOnly=settings.getBool("candidates",true);
   if(!settings.getBool("radar-v07",false)){settings.putBool("radar-labels",true);settings.putUChar("radar-theme",1);settings.putBool("radar-v07",true);}
-  radarLabels=settings.getBool("radar-labels",true);radarRecent=settings.getBool("radar-recent",true);radarTheme=settings.getUChar("radar-theme",1);if(radarTheme>=RadarThemeCount)radarTheme=1;
+  radarLabels=settings.getBool("radar-labels",true);radarRecent=settings.getBool("radar-recent",true);radarTheme=settings.getUChar("radar-theme",1);if(radarTheme>=RadarThemeCount||(radarTheme==dragon::PersonalThemeId&&!personalThemeReady()))radarTheme=1;
   scr_lvgl_init();uiApplyTheme(radarTheme);set_brightness(brightness);lastInteraction=millis();root=lv_scr_act();lv_obj_clear_flag(root,LV_OBJ_FLAG_SCROLLABLE);lv_obj_set_style_bg_color(root,color(uiColors().bg),0);
 #ifndef BOARD_RADAR_LITE
   pinMode(BTN_PIN,INPUT_PULLUP);
@@ -729,7 +734,7 @@ void uiLoop(){
       lv_label_set_text(radarActivity,deauth&&spam?"DEAUTH + BLE BURST  >":deauth?"DEAUTH ACTIVITY  >":spam?"BLE SPAM CANDIDATE  >":"");
       if(deauth||spam)lv_obj_clear_flag(radarActivity,LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(radarActivity,LV_OBJ_FLAG_HIDDEN);
       if(trackedContact>=0 && trackingLabel){auto& t=contacts[trackedContact];uint32_t age=millis()-t.seen;String line=age>10000?"SIGNAL LOST / HUNT":String("HUNT / ")+t.signal.direction();lv_label_set_text(trackingLabel,line.c_str());}
-      else if(trackingLabel){char primary[64];if(radarPrimary>=0){auto& c=contacts[radarPrimary];snprintf(primary,sizeof(primary),"%s / %d dBm",radarFamilyName(c.match.family),c.rssi);lv_obj_set_style_text_color(trackingLabel,color(familyColor(c.match.family)),0);}else{strlcpy(primary,reconMode()==dragon::ReconMode::Radar?"TAP A DOT FOR ITS TAG":dragon::reconModes[unsigned(reconMode())].name,sizeof(primary));lv_obj_set_style_text_color(trackingLabel,color(radarPalettes[radarTheme].text),0);}lv_label_set_text(trackingLabel,primary);}
+      else if(trackingLabel){char primary[64];if(radarPrimary>=0){auto& c=contacts[radarPrimary];snprintf(primary,sizeof(primary),"%s / %d dBm",radarFamilyName(c.match.family),c.rssi);lv_obj_set_style_text_color(trackingLabel,color(familyColor(c.match.family)),0);}else{strlcpy(primary,reconMode()==dragon::ReconMode::Radar?"TAP A DOT FOR ITS TAG":dragon::reconModes[unsigned(reconMode())].name,sizeof(primary));lv_obj_set_style_text_color(trackingLabel,color(radarPalette(radarTheme).text),0);}lv_label_set_text(trackingLabel,primary);}
       if(locksport()&&trackingLabel){if(trackedContact>=0)lv_obj_set_style_text_color(trackingLabel,color(familyColor(contacts[trackedContact].match.family)),0);lv_obj_set_style_bg_color(trackingLabel,color((radarPrimary>=0||trackedContact>=0)?dragon::RadarLabelBackground:locksportBg()),0);lv_obj_set_style_bg_opa(trackingLabel,LV_OPA_COVER,0);lv_obj_set_style_radius(trackingLabel,S(5),0);}
       lv_obj_invalidate(radar);int count=0;for(auto& c:contacts)if(radarVisible(c,millis()))++count;char s[96];int n=snprintf(s,sizeof(s),"%s %s / %d %s",radioEnabled?(blePhase?"BLE":"WI-FI"):"PAUSED",captureEnabled?"PCAP":"RX",count,count==1?"target":"targets");
       int battery=batteryPercent();if(battery>=0)snprintf(s+n,sizeof(s)-n,"  /  %s%d%%",batteryCharging()?LV_SYMBOL_CHARGE " ":"",battery);
@@ -787,7 +792,7 @@ bool uiCommand(const String& cmd){
   if(cmd=="radar labels on"||cmd=="radar labels off"){radarLabels=cmd.endsWith("on");settings.putBool("radar-labels",radarLabels);Serial.printf("RADAR_LABELS %u\n",radarLabels);return true;}
   if(cmd=="radar recent on"||cmd=="radar recent off"){radarRecent=cmd.endsWith("on");settings.putBool("radar-recent",radarRecent);Serial.printf("RADAR_RECENT %u\n",radarRecent);return true;}
   if(cmd=="radar next"||cmd=="radar previous"){Serial.println("RADAR_ALL_CONTACTS no pages");return true;}
-  if(cmd.startsWith("radar theme ")){for(unsigned i=0;i<RadarThemeCount;++i)if(cmd.substring(12)==radarThemeCommands[i]){selectRadarTheme(i);go(Radar);page=Boot;Serial.printf("RADAR_THEME %u\n",radarTheme);return true;}Serial.println("RADAR_THEME_ERROR unknown theme");return true;}
+  if(cmd.startsWith("radar theme ")){for(unsigned i=0;i<RadarThemeCount;++i)if(cmd.substring(12)==radarThemeCommands[i]){if(i==dragon::PersonalThemeId&&!personalThemeReady()){Serial.println("RADAR_THEME_ERROR upload a personal theme first");return true;}selectRadarTheme(i);go(Radar);page=Boot;Serial.printf("RADAR_THEME %u\n",radarTheme);return true;}Serial.println("RADAR_THEME_ERROR unknown theme");return true;}
   if(cmd=="display status"){Serial.printf("DISPLAY_SETTINGS brightness=%d output=%d dim=%u off=%u dim_level=%u wake=%u\n",brightness,outputBrightness,detector.dimSeconds,detector.offSeconds,detector.idleBrightness,detector.wakeAlert);return true;}
   if(cmd.startsWith("display set ")){
     unsigned b=0,dim=0,off=0,level=0;char extra;

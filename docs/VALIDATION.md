@@ -1,30 +1,29 @@
-# Release verification · 0.13.16
+# Release verification · 0.13.17
 
-[Release](https://github.com/valleytechsolutions/Dragon-Detector/releases/tag/v0.13.16) · [Build and test run](https://github.com/valleytechsolutions/Dragon-Detector/actions/runs/39138745421) · [Web deployment](https://github.com/valleytechsolutions/Dragon-Detector/actions/runs/39138999457)
-
-All five board builds passed. The live web flasher's firmware segments, manifests and assets match the clean CI artifacts and source commit `4ff5ee2d690f3a5374c62483c0d09f900d8e2c43`. Release downloads were checked against their SHA-256 hashes.
+[Release and verification files](https://github.com/valleytechsolutions/Dragon-Detector/releases/tag/v0.13.17) · [Build and test workflow](https://github.com/valleytechsolutions/Dragon-Detector/actions/workflows/build.yml) · [Web deployment](https://github.com/valleytechsolutions/Dragon-Detector/actions/workflows/pages.yml)
 
 ## Automated checks
 
-- 81 web tests, native and sanitizer suites, and 150,000 parser fuzz inputs.
-- 162 compressed logo variants decoded to their expected pixel CRC32.
-- Three flash-budget tests, including integer rounding and the application limit.
-- Gitleaks found no credentials in tracked source or Git history. GitHub Actions are pinned to commit hashes. This is a credential scan, not a comprehensive vulnerability assessment.
+- 89 browser-module tests, including custom format round trips, malformed input, upload/readback checksums, board identity checks and cancelled-install handling.
+- Native and sanitizer suites, 150,000 detector fuzz inputs and 10,000 personal-theme header fuzz inputs.
+- 168 compressed logo variants decoded against their original pixel CRC32.
+- All five board builds and application-size checks. The release includes each profile’s memory budget.
+- Gitleaks scans tracked source and Git history. This credential scan is not a comprehensive vulnerability assessment.
 
 ## Connected hardware
 
-| Board | Released application | Self-tests | Clock verification |
-|---|---|---|---|
-| Waveshare AMOLED 1.75C | Written and hash-verified | 23/23 | Current time, offset and powered restart |
-| M5Stack StopWatch C152 | Written and hash-verified | 23/23 | Current time, offset, RTC readback/ticking and powered restart |
-| Spotpear JC3636W518 | Written and hash-verified | 23/23 | Current time, offset and powered restart |
+AMOLED 1.75C, M5Stack StopWatch C152 and Spotpear are checked over USB. Tests cover application write verification, 23/23 self-tests, current time and offset, software restart, personal-theme upload/readback and hidden-slot behavior. StopWatch also receives hardware RTC readback and ticking checks. The AMOLED transfer tests include a wrong checksum and incomplete upload, both preserving the preceding theme.
 
-On all three connected boards, clock, timer, lap history and Time/Date/Sync settings stopped both Wi-Fi/BLE listening counters and packet counts while time continued advancing. Start, lap, pause and reset worked with scanning paused. Returning to radar resumed both radios and received traffic. The serial resume command could not override the pause. A separate AMOLED check stopped a passive capture on entering the clock, retained its data and rejected a new capture while paused.
+Clock, timer, lap history and Time/Date/Sync settings pause scanning while time advances. Timer controls and resumed Wi-Fi/BLE reception are checked. DZ_AZ and personal-theme screenshots are actual firmware framebuffer captures. The Custom theme editor is exercised in a browser for import/export, preview controls, tab navigation and opt-in state.
 
-Updates preserved the partition layout, saved theme, watch and selected radio mode. Each device was returned to its previous screen. No current-consumption or battery-life percentage was measured.
+Run-specific results, released binary hashes and live-flasher checks are recorded in `RELEASE-VERIFICATION.json`. Device updates preserve partitions, saved files and preferences. Test-created personal designs are removed before restoring the original theme, watch and daily screen.
 
-XIAO and Lite are build/package-tested in this release. Lite hardware checks remain paused. AMOLED 1.75C and Spotpear report no external RTC; complete power loss requires USB synchronization or configured Wi-Fi recovery. Wi-Fi setup remains deferred; live NTP recovery was not tested in this release.
+## Limits
 
-The real web clock modules were exercised over a local serial-stream adapter. Browser USB selection and a complete browser flashing session were not hardware-tested. The StopWatch factory image was assembled from the same verified CI segments and its GitHub download was checked. M5Burner's upload form rejected the new version; no 0.13.16 catalog entry was created. A factory burn through M5Burner itself was not hardware-tested. [M5Burner status](M5BURNER.md).
+- XIAO and Lite are build/package-tested; Lite hardware tests remain paused.
+- The real web transfer and clock modules run through a local serial-stream adapter for hardware tests. A complete browser USB chooser/firmware-flash session is not hardware-tested.
+- No battery-life or current-consumption percentage is claimed.
+- AMOLED 1.75C and Spotpear require USB or configured Wi-Fi time recovery after full power loss. Wi-Fi setup remains deferred; live NTP recovery is not tested here.
+- The StopWatch factory package is assembled from clean release segments. Factory installation through M5Burner itself and catalog publication are not verified. [M5Burner status](M5BURNER.md).
 
-`RELEASE-VERIFICATION.json` and `M5BURNER-VERIFICATION.json` accompany the release. They contain measured results and checksums, without private backups, credentials or scan identities. Earlier verification records remain with their [releases](https://github.com/valleytechsolutions/Dragon-Detector/releases).
+Earlier evidence remains attached to its [release](https://github.com/valleytechsolutions/Dragon-Detector/releases).
