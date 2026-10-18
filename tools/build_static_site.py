@@ -81,6 +81,8 @@ def build(output):
 
     def rewrite_link(value, source, destination):
         value = html.unescape(value)
+        original = value
+        value = value.replace('https://git.churchofmalware.org/Valleytech/Dragon-Detector', REPO).replace('/src/branch/main/', '/blob/main/')
         parsed = urlsplit(value)
         for site in ('https://valleytechsolutions.github.io/Dragon-Detector/', 'https://valleytech-dragon-detector.pages.dev/'):
             if value.startswith(site):
@@ -100,12 +102,12 @@ def build(output):
         elif value.startswith(REPO + '/wiki/Spotpear-Clock-Setup'):
             path = ROOT / 'docs/SPOTPEAR-CLOCK.md'
         elif parsed.scheme or parsed.netloc or not parsed.path:
-            return html.escape(value, quote=True)
+            return html.escape(original, quote=True)
         else:
             path = source.parent / unquote(parsed.path)
         path = path.resolve()
         if not path.is_relative_to(ROOT) or not path.is_file():
-            return html.escape(value, quote=True)
+            return html.escape(original, quote=True)
         if path in guides:
             target = guides[path]
         elif path.is_relative_to(ROOT / 'web'):
@@ -115,7 +117,7 @@ def build(output):
             (output / target).parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(path, output / target)
         else:
-            return html.escape(value, quote=True)
+            return html.escape(original, quote=True)
         result = posixpath.relpath(target.as_posix(), destination.parent.as_posix())
         if parsed.fragment:
             result += '#' + parsed.fragment
