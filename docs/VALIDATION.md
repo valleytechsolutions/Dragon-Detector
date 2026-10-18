@@ -1,6 +1,8 @@
 # Release verification · 0.13.17
 
-[Release and verification files](https://github.com/valleytechsolutions/Dragon-Detector/releases/tag/v0.13.17) · [Build and test workflow](https://github.com/valleytechsolutions/Dragon-Detector/actions/workflows/build.yml) · [Web deployment](https://github.com/valleytechsolutions/Dragon-Detector/actions/workflows/pages.yml)
+[Release and verification files](https://github.com/valleytechsolutions/Dragon-Detector/releases/tag/v0.13.17) · [Passing build and test run](https://github.com/valleytechsolutions/Dragon-Detector/actions/runs/39159301105) · [Successful web deployment](https://github.com/valleytechsolutions/Dragon-Detector/actions/runs/39159542534)
+
+Firmware and web assets were built from `eb83437ad23f37851ee55089d0d0cfe8590d10ab`.
 
 ## Automated checks
 
@@ -18,6 +20,8 @@ Clock, timer, lap history and Time/Date/Sync settings pause scanning while time 
 
 Run-specific results, released binary hashes and live-flasher checks are recorded in `RELEASE-VERIFICATION.json`. Device updates preserve partitions, saved files and preferences. Test-created personal designs are removed before restoring the original theme, watch and daily screen.
 
+The live web flasher's five firmware packages and new web assets match the release builds. All 13 GitHub release attachments were downloaded using the authenticated GitHub CLI and matched both the local package hashes and GitHub's SHA-256 digests.
+
 ## Limits
 
 - XIAO and Lite are build/package-tested; Lite hardware tests remain paused.
@@ -25,5 +29,6 @@ Run-specific results, released binary hashes and live-flasher checks are recorde
 - No battery-life or current-consumption percentage is claimed.
 - AMOLED 1.75C and Spotpear require USB or configured Wi-Fi time recovery after full power loss. Wi-Fi setup remains deferred; live NTP recovery is not tested here.
 - The StopWatch factory package is assembled from clean release segments. Factory installation through M5Burner itself and catalog publication are not verified. [M5Burner status](M5BURNER.md).
+- Signed-out GitHub requests returned HTTP 404 for the release, repository and owner profile during final verification on October 18, 2026. Public GitHub download access could not be confirmed; the live web flasher and its firmware downloads were reachable and verified.
 
 Earlier evidence remains attached to its [release](https://github.com/valleytechsolutions/Dragon-Detector/releases).
