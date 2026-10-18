@@ -1,6 +1,8 @@
 # Release verification · 0.13.17
 
-[Release and verification files](https://git.churchofmalware.org/Valleytech/Dragon-Detector/releases/tag/v0.13.17) · [Passing build and test run](https://github.com/valleytechsolutions/Dragon-Detector/actions/runs/39159301105) · [Successful web deployment](https://github.com/valleytechsolutions/Dragon-Detector/actions/runs/39159542534)
+[Release and verification files](https://git.churchofmalware.org/Valleytech/Dragon-Detector/releases/tag/v0.13.17)
+
+Historical GitHub evidence: passing build/test run `39159301105` and successful deployment `39159542534`. These run records are temporarily unavailable publicly; release verification files are linked above.
 
 Firmware and web assets were built from `eb83437ad23f37851ee55089d0d0cfe8590d10ab`.
 
