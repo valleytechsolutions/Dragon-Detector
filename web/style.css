@@ -80,3 +80,16 @@ header nav{gap:22px;font-size:12px}
 #radar-motion{font-size:10px;white-space:nowrap}
 @media(max-width:1050px){header{flex-wrap:wrap}header nav{width:100%;gap:20px}.hero{gap:30px}.visit-counter{top:27px}.hero .lede{font-size:16px}}
 @media(max-width:700px){header{padding:20px}.visit-counter{right:20px;top:24px}.brand{padding-right:65px}header nav{gap:17px}.hero{padding-top:40px;gap:20px}.hero h1{font-size:78px}.project-logo{max-width:250px}.hero .radar-art{margin-top:16px}.release-banner{align-items:flex-start;flex-wrap:wrap;gap:9px 18px}.release-banner span{width:100%;order:2}.release-banner a{margin-left:auto}.theme-library{padding:0 16px}.theme-library>summary{flex-wrap:wrap}.theme-library>summary small{display:none}.section-heading h2{font-size:36px}.nav-tools>div{right:0}.feature-strip{gap:20px}}
+
+/* A small, equally weighted set of device previews. */
+.firmware-previews{padding-top:65px;scroll-margin-top:30px}
+.firmware-previews .preview-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;margin:28px 0}
+.firmware-previews .preview-grid figure{padding:24px 18px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+.firmware-previews #locksport{padding:24px 18px;scroll-margin-top:30px}
+.firmware-previews .preview-grid img{max-width:220px}
+.firmware-previews figcaption strong{display:block;margin:18px 0 6px;color:var(--text);font-size:16px;font-weight:600}
+.firmware-previews figcaption span{display:block;font-size:12px}
+.preview-description{max-width:780px;font-size:13px;line-height:1.8;color:var(--muted)}
+.preview-links{display:flex;flex-wrap:wrap;gap:16px 28px;margin:20px 0}
+.theme-disclaimer{max-width:840px;margin:24px 0 0;font-size:12px;line-height:1.7;color:var(--muted)}
+@media(max-width:650px){.firmware-previews .preview-grid{grid-template-columns:1fr;gap:16px}.firmware-previews .preview-grid img{max-width:200px}}
