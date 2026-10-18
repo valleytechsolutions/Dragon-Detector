@@ -42,6 +42,7 @@ function installEnabled(){
   else if(!installerReady)$('install-message').textContent=installerFailed?'The USB installer could not load. Check your connection and reload this page.':'Loading the USB installer…';
   else if(serial)$('install-message').textContent='Disconnect Detector tools / Badge Studio before opening the installer.';
   else if(installActive)$('install-message').textContent='USB is in use by the installer or clock setup.';
+  else if(!board)$('install-message').textContent='Select a board to load its release.';
   else if(releaseReady)$('install-message').textContent='Confirm your board, then connect its USB port.';
 }
 const installerTimer=setTimeout(()=>{installerFailed=true;installEnabled();},10000);
