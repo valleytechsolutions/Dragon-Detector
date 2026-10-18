@@ -24,7 +24,7 @@ Hunt retains background detection on every board: BLE Hunt gets a 4.4-second BLE
 
 On all four full boards, explicitly selected survey/capture modes or started BLE/network/portal/CSI/transmit sessions specialize or take ownership of the radio. Stop/Home/session timeout restores the previous listening mode. A saved Wi-Fi-only or BLE-only mode intentionally remains specialized until Dragon radar is selected. Ordinary Settings no longer offers Pause; legacy `pause` is rejected. `scan status` exposes both listening-time counters and all eleven channel dwell counters.
 
-The separate Lite variant keeps its fixed always-on radar and shared classifiers. No notebook menu or active lab controls are added to its untouchable display.
+The separate Lite variant keeps its passive radar and shared classifiers, with scanning paused on its clock and timer pages. No notebook menu or active lab controls are added to its untouchable display.
 
 ## Advertisement tests
 

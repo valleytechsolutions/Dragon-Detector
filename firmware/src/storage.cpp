@@ -68,6 +68,7 @@ void addAlert(const char* title,const char* detail,const uint8_t* mac){
 }
 #if BOARD_HAS_SD
 bool setCapture(bool enabled){
+  if(enabled&&radioStandby())return false;
   if(!sdReady)return false;
   xSemaphoreTake(sdMutex,portMAX_DELAY);
   captureEnabled=false;if(pcapFile){pcapFile.flush();pcapFile.close();}

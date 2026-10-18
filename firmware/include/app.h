@@ -53,6 +53,8 @@ bool setCapture(bool enabled);
 void radioBegin();
 void radioLoop();
 void setRadio(bool enabled);
+bool radioStandby();
+void setRadioStandby(bool enabled);
 void uiBegin();
 void uiLoop();
 void uiShow(const String& name);

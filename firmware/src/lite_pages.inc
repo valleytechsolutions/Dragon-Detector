@@ -54,6 +54,7 @@ static void litePageDraw(lv_event_t* e){
   }
 }
 static void setLitePage(LitePage next){
+  setRadioStandby(next==LitePage::Clock||next==LitePage::Timer);
   litePage=next;noticeAt=0;
   lv_obj_clear_flag(pageHint,LV_OBJ_FLAG_HIDDEN);
   for(auto* o:{radar,status,activity,pageLabel,notice})lv_obj_add_flag(o,LV_OBJ_FLAG_HIDDEN);

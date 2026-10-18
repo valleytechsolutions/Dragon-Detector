@@ -2,6 +2,8 @@
 #include "notebook.h"
 #include "ble_lab.h"
 #include "recon.h"
+#include "recipes.h"
+#include "missions.h"
 #include <WiFi.h>
 #include <NimBLEDevice.h>
 #include <esp_wifi.h>
@@ -13,6 +15,20 @@
 #include "radio_schedule.h"
 
 bool radioEnabled=true,blePhase=false,candidatesOnly=true;
+static bool standby=false;
+bool radioStandby(){return standby;}
+void setRadioStandby(bool enabled){
+  if(standby==enabled)return;
+  standby=enabled;
+  if(enabled){
+    recipeStop();
+#ifndef BOARD_RADAR_LITE
+    missionStop();
+#endif
+    reconStop();bleLabStop();setCapture(false);
+  }
+  setRadio(!enabled);
+}
 bool radarRecent=true;
 int trackedContact=-1;
 bool radarVisible(const Contact& c,uint32_t now){
@@ -96,6 +112,7 @@ unsigned recentDisconnects(){return disconnects.recent(millis());}
 static bool fox=false;
 bool foxTransmit(){return fox;}
 void setFoxTransmit(bool enabled){
+  if(enabled&&standby)return;
   if(bleLabOwnsRadio()||reconOwnsRadio())return;
   if(!scanner)return;
   auto* advertising=NimBLEDevice::getAdvertising();advertising->stop();fox=false;
@@ -291,6 +308,7 @@ void radioBegin(){
   Serial.println("RADIO ready: BLE-first 2200ms / Wi-Fi 2200ms; channels 1-11; Axon reserved queue");
 }
 void setRadio(bool enabled){
+  enabled=enabled&&!standby;
   if(bleLabOwnsRadio()||reconOwnsRadio())return;
   if(!queue || !scanner)return;
   if(!enabled && fox)setFoxTransmit(false);

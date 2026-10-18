@@ -69,7 +69,7 @@ Spotpear and XIAO additionally support optional SD event CSV and bounded 16 MB P
 
 ## Display and navigation
 
-**Settings → Display & timeouts** provides brightness, dim-after, dim level, screen-off-after and wake-on-alert. Both timers default to **Never**. **Restore always-on defaults** sets 100% brightness and disables both timers. The web detector tools can save the same settings. Reception continues when the screen dims or turns off. Touch wakes a dark display; the waking touch is consumed so it does not accidentally press a hidden button.
+**Settings → Display & timeouts** provides brightness, dim-after, dim level, screen-off-after and wake-on-alert. Both timers default to **Never**. **Restore always-on defaults** sets 100% brightness and disables both timers. The web detector tools can save the same settings. Reception continues when a scanning screen dims or turns off. Clock, timer, lap history and time/date settings pause scanning even while the display remains on; leaving those pages resumes it. Touch wakes a dark display; the waking touch is consumed so it does not accidentally press a hidden button.
 
 Tap **Tools** to open the menu and **Home** to return to radar. There is no swipe-to-open gesture; lists still scroll normally. Waveshare BOOT toggles radar/tools. StopWatch yellow returns to radar; blue opens tools and, from tools, opens badge.
 

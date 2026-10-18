@@ -52,3 +52,7 @@ All four full boards support saved-Wi-Fi clock recovery; Lite does not. Follow [
 ## Diagnostic commands
 
 `clock status` reports the system time and local offset. `clock hardware` in 0.13.10+ reports a direct RTC read as `CLOCK_HARDWARE detected=1 valid=1 epoch=...` when available; a software-only board returns zeros. `net time status` reports the selected Wi-Fi recovery state. A valid system time alone does not prove a hardware RTC is present.
+
+## Clock and timer power saving
+
+From 0.13.16, clock, timer, lap-history and time/date settings pause background Wi-Fi/Bluetooth scanning on all boards. USB time synchronization remains available. Previously configured Wi-Fi time recovery may briefly connect to set the clock, then disconnects without restarting detection while these screens remain open. See [power-saving behavior](CLOCK-POWER.md).

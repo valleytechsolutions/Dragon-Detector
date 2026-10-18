@@ -42,7 +42,7 @@ bool takeProbe(const char* address,const char* hex){using namespace dragon::tool
 bool portalActive(){return active;}
 void drainLog(){Submission event;for(unsigned i=0;queue&&i<4&&xQueueReceive(queue,&event,0)==pdTRUE;++i){if(eventCount<32){events[eventCount++]=event;logDirty=true;}else ++dropped;}}
 void portalStop(){if(!active&&!server&&dns<0)return;if(server){httpd_stop(server);server=nullptr;}drainLog();if(dns>=0){close(dns);dns=-1;}esp_wifi_set_promiscuous(false);esp_wifi_set_mode(WIFI_MODE_NULL);if(portalNetif){esp_netif_destroy_default_wifi(portalNetif);portalNetif=nullptr;}active=false;channelLock=oldLock;setRadio(resume);strlcpy(message,"Portal stopped / radar restored",sizeof(message));}
-bool portalStart(){using namespace dragon::toolkit;if(active||logDirty||reconOwnsRadio()||reconStorageBusy()||bleLabOwnsRadio()||status.recording||!validName(name)||ESP.getFreeHeap()<35000)return false;
+bool portalStart(){using namespace dragon::toolkit;if(radioStandby()||active||logDirty||reconOwnsRadio()||reconStorageBusy()||bleLabOwnsRadio()||status.recording||!validName(name)||ESP.getFreeHeap()<35000)return false;
  if(!loadHtml()){strlcpy(message,"Portal HTML failed CRC; import or reset template",sizeof(message));return false;}
  if(!queue){if(!events)events=(Submission*)ps_calloc(32,sizeof(Submission));if(!queueMemory)queueMemory=(uint8_t*)ps_malloc(4*sizeof(Submission));if(!events||!queueMemory)return false;queue=xQueueCreateStatic(4,sizeof(Submission),queueMemory,&queueControl);if(!queue)return false;}
  if(!portalNetif){esp_err_t err=esp_netif_init();if(err!=ESP_OK&&err!=ESP_ERR_INVALID_STATE)return false;portalNetif=esp_netif_create_default_wifi_ap();if(!portalNetif)return false;}

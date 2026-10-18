@@ -69,7 +69,8 @@ static Ap* selected(){if(aps&&target.hasAp)for(unsigned i=0;i<ApCapacity;++i)if(
 static bool cloneMode(AttackMode m){return m==AttackMode::CloneBeacon||m==AttackMode::ApSpam||m==AttackMode::ChannelSwitch||m==AttackMode::Quiet;}
 bool available(AttackMode m,char* why,size_t cap){
  const char* error=nullptr;auto* ap=selected();
- if(unsigned(m)>=unsigned(AttackMode::Count))error="Unknown tool";
+ if(radioStandby())error="Leave clock or timer to use radio tools";
+ else if(unsigned(m)>=unsigned(AttackMode::Count))error="Unknown tool";
  else if(busy()||crypto==1)error="Stop active tool / wait for cleanup";
  else if(status.recording)error="Stop recording first; keep or save capture";
  else if(!packet||!beacon)error="Packet memory unavailable";
@@ -96,7 +97,7 @@ static bool captureInit(bool ble,bool eapol){
  if(ble){const char* header="uptime_ms,address,address_type,rssi,advertisement_length,payload_length,payload_hex\n";status.bytes=strlen(header);memcpy(capture,header,status.bytes);}else{pcapHeader(capture);status.bytes=24;}
  captureAt=millis();status.recording=true;wifiRecording=!ble;captureDirty=true;return true;
 }
-bool captureStart(bool ble,bool eapol){if(busy()||status.recording||captureDirty){say("Stop and save or discard the current capture first");return false;}
+bool captureStart(bool ble,bool eapol){if(radioStandby()){say("Leave clock or timer to capture");return false;}if(busy()||status.recording||captureDirty){say("Stop and save or discard the current capture first");return false;}
  if(!ble&&captureSelected&&(!target.hasAp||!selected()||millis()-selected()->seen>=30000||selected()->channel!=target.channel)){say("Selected-AP capture requires a fresh selected network");return false;}
  if(!captureInit(ble,eapol))return false;capturePreviousMode=mode;capturePreviousLock=channelLock;captureModeOwned=true;mode=ble?ReconMode::BleCapture:ReconMode::WifiCapture;channelLock=!ble&&captureSelected?target.channel:0;trackedContact=-1;radioApplyMode();say("Recording to RAM; Stop, then Save to recon flash");return true;
 }

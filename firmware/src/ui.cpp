@@ -266,6 +266,7 @@ static void build(){
   micBadge=nullptr;
   timerOrbit=nullptr;timerValue=timerState=timerLap=timerStartButton=timerSecondary=timerSplit=clockValue=clockDate=editValue=nullptr;
   badgeUnload();page=pending;pageAt=millis();statusLabel=audioLabel=audioMeter=radar=trackingLabel=huntValue=huntMeta=huntGauge=huntGraph=diagnosticsLabel=activityLabel=radarActivity=nullptr;radarPrepared=0;
+  setRadioStandby(page==Clock||page==Stopwatch||page==Laps||page==ClockSettings||page==ClockWheels||page==ClockEdit);
   lv_obj_clean(root);lv_obj_set_style_bg_color(root,color(uiColors().bg),0);
   #ifndef BOARD_RADAR_LITE
   if(page==BleLab){bleLabView(root);return;}

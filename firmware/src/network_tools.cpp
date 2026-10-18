@@ -52,7 +52,7 @@ bool startTimeService(){
 bool requestTime(){
  if(timeWaiting||timeService)return false;
  if(active){if(!connected||scanning)return false;timeWaiting=true;if(startTimeService())return true;timeWaiting=false;return false;}
- if(timeProfile<0||!networkConnect(timeProfile))return false;
+ if(timeProfile<0||!networkConnect(timeProfile,true))return false;
  timeOwned=timeWaiting=true;timeResult="joining";return true;
 }
 void finishTime(bool ok){
@@ -68,6 +68,7 @@ bool valid(const Profile& p){size_t n=strnlen(p.name,33),k=strnlen(p.password,64
 bool store(unsigned slot,const Profile& p){char key[4];snprintf(key,sizeof(key),"p%u",slot);uint8_t bytes[sizeof(Profile)+4];memcpy(bytes,&p,sizeof(p));uint32_t crc=dragon::lab::checksum(bytes,sizeof(p));memcpy(bytes+sizeof(p),&crc,4);if(prefs.putBytes(key,bytes,sizeof(bytes))!=sizeof(bytes))return false;profiles[slot]=p;return true;}
 void scanStop(){if(fd>=0){close(fd);fd=-1;}scanning=waiting=false;}
 bool scanStart(uint32_t first,uint32_t last){
+ if(radioStandby()){note("Leave clock or timer to scan");return false;}
  uint32_t own=ntohl(address.ip.addr),mask=ntohl(address.netmask.addr);
  if(!active||!connected||scanning||!dragon::net::range(first,last,own,mask)){note("Join first; choose up to 254 local subnet hosts");return false;}
  if(dirty){note("Save or clear scan results before another scan");return false;}
@@ -108,7 +109,8 @@ void networkStop(){
  esp_wifi_set_config(WIFI_IF_STA,&blank);esp_wifi_set_mode(WIFI_MODE_NULL);
  if(wifiEvents){esp_event_handler_instance_unregister(WIFI_EVENT,ESP_EVENT_ANY_ID,wifiEvents);wifiEvents=nullptr;}
  if(iface){esp_netif_destroy_default_wifi(iface);iface=nullptr;}active=connected=false;address={};channelLock=oldLock;setRadio(resume);note("Disconnected / previous radar state restored");}
-bool networkConnect(unsigned index){using namespace dragon::toolkit;
+bool networkConnect(unsigned index,bool clockOnly){using namespace dragon::toolkit;
+ if(radioStandby()&&!clockOnly){note("Leave clock or timer to use network tools");return false;}
  if(active||index>=8||!valid(profiles[index])||reconOwnsRadio()||reconStorageBusy()||bleLabOwnsRadio()||status.recording||ESP.getFreeHeap()<35000){note("Choose a saved profile; stop other radio sessions");return false;}
  esp_err_t err=esp_netif_init();if(err!=ESP_OK&&err!=ESP_ERR_INVALID_STATE)return false;
  iface=esp_netif_create_default_wifi_sta();if(!iface){note("Network interface unavailable");return false;}

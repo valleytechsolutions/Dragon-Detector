@@ -6,6 +6,10 @@ Wi-Fi and Bluetooth detection, signal tracking, and logo watch faces for five ES
 
 [**Install firmware**](https://valleytechsolutions.github.io/Dragon-Detector/#install) · [Latest release](https://github.com/valleytechsolutions/Dragon-Detector/releases/latest) · [User guides](docs/GUI.md) · [Clock setup](https://github.com/valleytechsolutions/Dragon-Detector/wiki/Clock-Setup)
 
+## Clock and timer power saving
+
+On every board, the clock and stopwatch/Locksport Timer pause background Wi-Fi and Bluetooth scanning. Lap history and time/date settings also stay paused. Return to the radar or other tools to resume scanning; a running timer keeps counting in the background. Previously configured Wi-Fi clock recovery may briefly connect for time synchronization. See [power-saving behavior](docs/CLOCK-POWER.md).
+
 ## Install
 
 1. Open the [web flasher](https://valleytechsolutions.github.io/Dragon-Detector/#install) in desktop Chrome or Edge and connect your board with a USB data cable.

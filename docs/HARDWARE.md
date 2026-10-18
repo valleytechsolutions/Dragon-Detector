@@ -68,6 +68,6 @@ A fourth profile, `xiao_round`, supports the 240×240 GC9A01/CHSC6X expansion wi
 
 ## Waveshare 1.28 Lite
 
-The `waveshare_lite` profile supports the **non-touch ESP32-S3-LCD-1.28**, with 16 MB flash, 2 MB quad-SPI PSRAM and a 240×240 GC9A01 panel. This is a dedicated always-on passive radar with every contact on one screen, no audio, touch, menus, badge, clock or persistent history. [Wiring, behavior and recovery](WAVESHARE-LITE.md).
+The `waveshare_lite` profile supports the **non-touch ESP32-S3-LCD-1.28**, with 16 MB flash, 2 MB quad-SPI PSRAM and a 240×240 GC9A01 panel. Its BOOT button navigates passive radar, clock, timer, signals and status pages. Clock and timer pages pause scanning. It has no audio, touch, full menus, badge or persistent history. [Wiring, behavior and recovery](WAVESHARE-LITE.md).
 
 All four full profiles compile the [mode launcher and radio toolkit](RADIO-TOOLKIT.md), BLE Lab, notebook and sessions in 0.13.x. Lite excludes interactive labs. Waveshare's 32 MB partition layout remains unchanged from 0.9.8. No current profile implements automatic orientation, MP3 playback, microphone recording, 5/6 GHz or Bluetooth Classic.

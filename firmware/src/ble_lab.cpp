@@ -199,7 +199,7 @@ void worker(void*){for(;;){xSemaphoreTake(jobReady,portMAX_DELAY);Job run=job;
   say(ok?(run==Read?"Value refreshed":run==Write?"Write acknowledged by peer":run==WriteNr?"Write command queued; no peer acknowledgement":run==Unsubscribe?"Unsubscribed":"Subscribed; notifications appear in Events"):"Operation rejected / may require pairing or permission");state=Monitoring;
  }else if(run!=None){say("Connection no longer available");stopWorker();}
  }}
-bool start(Job next,unsigned index=0){if(!profile||!workerTask||working()||finished||reconOwnsRadio())return false;
+bool start(Job next,unsigned index=0){if((radioStandby()&&next!=Stop)||!profile||!workerTask||working()||finished||reconOwnsRadio())return false;
  if(next==Discover||next==Clone||next==Replay){if(owned||reconStorageBusy())return false;missionStop();reconStop();resumeRadio=radioEnabled;setRadio(false);owned=true;cancelled=false;eventCount=eventHead=0;eventDrops=0;}
  else if(next==BridgeWrite){if(state!=Bridging)return false;}else if(next!=Stop&&state!=Monitoring)return false;
  job=next;jobIndex=index;state=Working;say(next==Discover?"Connecting...":next==Clone?"Building local GATT peripheral...":next==Stop?"Stopping lab / restoring radar...":"Request pending...");xSemaphoreGive(jobReady);return true;}
