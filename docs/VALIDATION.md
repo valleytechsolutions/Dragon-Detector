@@ -1,8 +1,8 @@
-# Release verification · 0.13.15
+# Release verification · 0.13.16
 
-[Release](https://github.com/valleytechsolutions/Dragon-Detector/releases/tag/v0.13.15) · [Build and test run](https://github.com/valleytechsolutions/Dragon-Detector/actions/runs/39073525657) · [Web deployment](https://github.com/valleytechsolutions/Dragon-Detector/actions/runs/39073757943)
+[Release](https://github.com/valleytechsolutions/Dragon-Detector/releases/tag/v0.13.16) · [Build and test run](https://github.com/valleytechsolutions/Dragon-Detector/actions/runs/39138745421) · [Web deployment](https://github.com/valleytechsolutions/Dragon-Detector/actions/runs/39138999457)
 
-All five board builds passed. The live web flasher's firmware segments, manifests and updated assets match the clean CI artifacts and source commit `b83a33aba0406a580125630eaeae18fde215764f`. Release downloads were checked against their SHA-256 hashes.
+All five board builds passed. The live web flasher's firmware segments, manifests and assets match the clean CI artifacts and source commit `4ff5ee2d690f3a5374c62483c0d09f900d8e2c43`. Release downloads were checked against their SHA-256 hashes.
 
 ## Automated checks
 
@@ -19,12 +19,12 @@ All five board builds passed. The live web flasher's firmware segments, manifest
 | M5Stack StopWatch C152 | Written and hash-verified | 23/23 | Current time, offset, RTC readback/ticking and powered restart |
 | Spotpear JC3636W518 | Written and hash-verified | 23/23 | Current time, offset and powered restart |
 
-Updates preserved the existing partition layout and saved appearance. Actual display captures confirm the Capsule Corp and Sparrows radar/watch layouts, Sparrows Locksport Timer and Dragon Ball/BWM startup. StopWatch allocated its 2 MiB capture buffer and recorded BLE traffic while retaining more than 2 MiB free PSRAM; its recon session limit reports 2 MiB.
+On all three connected boards, clock, timer, lap history and Time/Date/Sync settings stopped both Wi-Fi/BLE listening counters and packet counts while time continued advancing. Start, lap, pause and reset worked with scanning paused. Returning to radar resumed both radios and received traffic. The serial resume command could not override the pause. A separate AMOLED check stopped a passive capture on entering the clock, retained its data and rejected a new capture while paused.
 
-On all three connected boards, the Sparrows timer changed frames while running, held an identical frame and elapsed value while paused, and recorded SPLIT followed by OPEN correctly. The checks reset their own test attempts and restored each board's previous watch and radar selection.
+Updates preserved the partition layout, saved theme, watch and selected radio mode. Each device was returned to its previous screen. No current-consumption or battery-life percentage was measured.
 
-XIAO and Lite are build/package-tested in this release. Lite hardware checks remain paused. AMOLED 1.75C and Spotpear report no external RTC; complete power loss requires USB synchronization or configured Wi-Fi recovery. Wi-Fi setup remains deferred.
+XIAO and Lite are build/package-tested in this release. Lite hardware checks remain paused. AMOLED 1.75C and Spotpear report no external RTC; complete power loss requires USB synchronization or configured Wi-Fi recovery. Wi-Fi setup remains deferred; live NTP recovery was not tested in this release.
 
-The real web clock modules were exercised over a local serial-stream adapter. Browser USB selection and a complete browser flashing session were not hardware-tested. The M5Burner factory download matches the release; a factory burn through M5Burner itself was not hardware-tested. [M5Burner status](M5BURNER.md).
+The real web clock modules were exercised over a local serial-stream adapter. Browser USB selection and a complete browser flashing session were not hardware-tested. The StopWatch factory image was assembled from the same verified CI segments and its GitHub download was checked. M5Burner's upload form rejected the new version; no 0.13.16 catalog entry was created. A factory burn through M5Burner itself was not hardware-tested. [M5Burner status](M5BURNER.md).
 
-`RELEASE-VERIFICATION.json` and `M5BURNER-VERIFICATION.json` accompany the release. They contain the measured results and checksums, without private backups, credentials or scan identities. Earlier verification records remain with their [releases](https://github.com/valleytechsolutions/Dragon-Detector/releases).
+`RELEASE-VERIFICATION.json` and `M5BURNER-VERIFICATION.json` accompany the release. They contain measured results and checksums, without private backups, credentials or scan identities. Earlier verification records remain with their [releases](https://github.com/valleytechsolutions/Dragon-Detector/releases).
