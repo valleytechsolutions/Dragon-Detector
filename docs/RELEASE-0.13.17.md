@@ -12,4 +12,4 @@ Create one personal clock, radar and counter in the web flasher's **Custom theme
 
 Clock/counter scanning pauses, automatic USB time setup and existing saved settings remain supported. Use the matching **Update** image to preserve files and settings.
 
-[Custom theme guide](https://github.com/valleytechsolutions/Dragon-Detector/blob/main/docs/CUSTOM-THEME.md) · [DZ_AZ](https://github.com/valleytechsolutions/Dragon-Detector/blob/main/docs/DZ-AZ.md) · [Web flasher](https://valleytech-dragon-detector.pages.dev/#theme-studio)
+[Custom theme guide](https://git.churchofmalware.org/Valleytech/Dragon-Detector/src/branch/main/docs/CUSTOM-THEME.md) · [DZ_AZ](https://git.churchofmalware.org/Valleytech/Dragon-Detector/src/branch/main/docs/DZ-AZ.md) · [Web flasher](https://valleytech-dragon-detector.pages.dev/#theme-studio)

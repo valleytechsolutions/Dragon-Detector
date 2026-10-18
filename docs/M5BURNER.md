@@ -1,6 +1,6 @@
 # M5Burner · M5Stack StopWatch C152
 
-The **v0.13.17** factory image matches the [GitHub release](https://github.com/valleytechsolutions/Dragon-Detector/releases/tag/v0.13.17). It includes 34 built-in themes, 32 logo watches and an optional personal theme, locksport timers, the Dragon Ball/BWM startup and 2 MiB capture/session limits. DZ_AZ adds feather hands and a feather sweep. Use the web flasher’s Custom theme tab to install a personal logo design; it remains hidden until installed. Clock and timer screens pause scanning.
+The **v0.13.17** factory image matches the [GitHub release](https://git.churchofmalware.org/Valleytech/Dragon-Detector/releases/tag/v0.13.17). It includes 34 built-in themes, 32 logo watches and an optional personal theme, locksport timers, the Dragon Ball/BWM startup and 2 MiB capture/session limits. DZ_AZ adds feather hands and a feather sweep. Use the web flasher’s Custom theme tab to install a personal logo design; it remains hidden until installed. Clock and timer screens pause scanning.
 
 **Catalog status:** the 0.13.17 upload attempt on October 18, 2026 was rejected by M5Burner’s shared-description validation, even when submitting the existing public description. No new catalog version was created. The verified factory package is attached to the GitHub release. Use the web flasher for the supported update flow.
 
