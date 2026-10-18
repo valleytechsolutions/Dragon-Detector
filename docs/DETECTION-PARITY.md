@@ -55,7 +55,7 @@ History keeps encounter counts, not a claim that someone is following the wearer
 
 ## Signature provenance
 
-- Flock facts: [Flock Noir](https://github.com/valleytechsolutions/Flock-Noir), Colonel Panic and the credited Flock-You research; [detailed evidence](DETECTION.md).
+- Flock facts: [Flock Noir](https://git.churchofmalware.org/Valleytech/Flock-Noir), Colonel Panic and the credited Flock-You research; [detailed evidence](DETECTION.md).
 - Vendor assignments: [Wireshark's IEEE-derived registry](https://www.wireshark.org/download/automated/data/manuf), checked 2026-10-13. The independently selected facts are in [vendor-prefixes.csv](data/vendor-prefixes.csv). This includes registered camera-vendor blocks beyond the reference's smaller list. No registry organization is treated as proof of a product or intent.
 - Bluetooth assignments: [Bluetooth SIG](https://www.bluetooth.com/specifications/assigned-numbers/).
 - Google framing: [Find Hub Network Accessory Specification](https://developers.google.com/nearby/fast-pair/specifications/extensions/fmdn).

@@ -46,7 +46,7 @@ A five-sample median, accepting at most one sample per 100 ms, precedes elapsed-
 
 ## Sources
 
-- [Flock Noir snapshot](https://github.com/valleytechsolutions/Flock-Noir/blob/0559417e4f5e96f615ca4c4b42c3e0f0d56e2337/firmware/FlockNoir/radio_protocol.h), [Colonel Panic / Unified Blue](https://github.com/colonelpanichacks/oui-spy-unified-blue), [Flock-You](https://github.com/colonelpanichacks/flock-you).
+- [Flock Noir snapshot](https://git.churchofmalware.org/Valleytech/Flock-Noir/src/branch/0559417e4f5e96f615ca4c4b42c3e0f0d56e2337/firmware/FlockNoir/radio_protocol.h), [Colonel Panic / Unified Blue](https://github.com/colonelpanichacks/oui-spy-unified-blue), [Flock-You](https://github.com/colonelpanichacks/flock-you).
 - [ESP32 Marauder](https://github.com/justcallmekoko/ESP32Marauder); [MIT notice](licenses/MARAUDER-LICENSE.txt).
 - [SquachWatch-CYD](https://github.com/skizzophrenic/SquachWatch-CYD) feature reference; [scope comparison](DETECTION-PARITY.md).
 - [Wireshark IEEE-derived registry](https://www.wireshark.org/download/automated/data/manuf); selected [assignment facts](data/vendor-prefixes.csv).

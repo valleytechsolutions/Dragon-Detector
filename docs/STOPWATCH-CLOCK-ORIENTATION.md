@@ -105,4 +105,4 @@ Select Lockpickers United for the monochrome logo, silver pick hands and Lockspo
 
 ## Saved Wi-Fi time recovery
 
-All four full boards can opt into periodic Internet time from one saved network. It runs at boot and every six hours, with 15-minute retries and bounded radio ownership. The offset stays fixed until resynced. [Full Spotpear setup guide](SPOTPEAR-CLOCK.md) · [GitHub wiki](https://github.com/valleytechsolutions/Dragon-Detector/wiki/Spotpear-Clock-Setup).
+All four full boards can opt into periodic Internet time from one saved network. It runs at boot and every six hours, with 15-minute retries and bounded radio ownership. The offset stays fixed until resynced. [Full Spotpear setup guide](SPOTPEAR-CLOCK.md) · [GitHub wiki](https://git.churchofmalware.org/Valleytech/Dragon-Detector/wiki/Spotpear-Clock-Setup).

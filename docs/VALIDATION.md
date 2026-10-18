@@ -1,6 +1,6 @@
 # Release verification · 0.13.17
 
-[Release and verification files](https://github.com/valleytechsolutions/Dragon-Detector/releases/tag/v0.13.17) · [Passing build and test run](https://github.com/valleytechsolutions/Dragon-Detector/actions/runs/39159301105) · [Successful web deployment](https://github.com/valleytechsolutions/Dragon-Detector/actions/runs/39159542534)
+[Release and verification files](https://git.churchofmalware.org/Valleytech/Dragon-Detector/releases/tag/v0.13.17) · [Passing build and test run](https://github.com/valleytechsolutions/Dragon-Detector/actions/runs/39159301105) · [Successful web deployment](https://github.com/valleytechsolutions/Dragon-Detector/actions/runs/39159542534)
 
 Firmware and web assets were built from `eb83437ad23f37851ee55089d0d0cfe8590d10ab`.
 
@@ -31,4 +31,4 @@ The live web flasher's five firmware packages and new web assets match the relea
 - The StopWatch factory package is assembled from clean release segments. Factory installation through M5Burner itself and catalog publication are not verified. [M5Burner status](M5BURNER.md).
 - Signed-out GitHub requests returned HTTP 404 for the release, repository and owner profile during final verification on October 18, 2026. Public GitHub download access could not be confirmed; the live web flasher and its firmware downloads were reachable and verified.
 
-Earlier evidence remains attached to its [release](https://github.com/valleytechsolutions/Dragon-Detector/releases).
+Earlier evidence remains attached to its [release](https://git.churchofmalware.org/Valleytech/Dragon-Detector/releases).

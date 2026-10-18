@@ -6,7 +6,7 @@ Wi-Fi and Bluetooth detection, signal tracking, and logo watch faces for five ES
 
 **Web flasher available:** [Install from the independent host](https://valleytech-dragon-detector.pages.dev/). The original GitHub Pages address and GitHub-hosted images are temporarily unavailable. Source, artwork and release files are intact; existing devices are unaffected. [Hosting status](docs/HOSTING-STATUS.md).
 
-[**Install firmware**](https://valleytech-dragon-detector.pages.dev/#install) · [Latest release](https://github.com/valleytechsolutions/Dragon-Detector/releases/latest) · [User guides](docs/GUI.md) · [Clock setup](https://github.com/valleytechsolutions/Dragon-Detector/wiki/Clock-Setup)
+[**Install firmware**](https://valleytech-dragon-detector.pages.dev/#install) · [Latest release](https://git.churchofmalware.org/Valleytech/Dragon-Detector/releases/latest) · [User guides](docs/GUI.md) · [Clock setup](https://git.churchofmalware.org/Valleytech/Dragon-Detector/wiki/Clock-Setup)
 
 ## Clock and timer power saving
 
@@ -28,7 +28,7 @@ DZ_AZ adds a crow-and-name emblem, rotating feather radar sweep, and short/long 
 2. Select the exact board. Use **Update matching Dragon Detector** for a compatible installation, or **Fresh install** for a new board. Fresh install replaces saved files and settings.
 3. Choose **Connect & install** and keep USB connected until installation and automatic date/time verification finish.
 
-[Installation and recovery](docs/FLASHING.md) · [M5Burner package](docs/M5BURNER.md) · [Release checksums](https://github.com/valleytechsolutions/Dragon-Detector/releases/latest)
+[Installation and recovery](docs/FLASHING.md) · [M5Burner package](docs/M5BURNER.md) · [Release checksums](https://git.churchofmalware.org/Valleytech/Dragon-Detector/releases/latest)
 
 ## Supported hardware
 
@@ -95,7 +95,7 @@ Detection matches observable radio signatures; it does not establish intent, own
 
 ## Development
 
-[Build instructions](docs/BUILDING.md) · [Security](SECURITY.md) · [Release notes](https://github.com/valleytechsolutions/Dragon-Detector/releases)
+[Build instructions](docs/BUILDING.md) · [Security](SECURITY.md) · [Release notes](https://git.churchofmalware.org/Valleytech/Dragon-Detector/releases)
 
 | Directory | Contents |
 |---|---|
