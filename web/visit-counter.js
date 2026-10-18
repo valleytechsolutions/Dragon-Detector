@@ -1,4 +1,5 @@
-export async function updateVisitCounter(element,{fetcher=fetch,production=location.origin==='https://valleytechsolutions.github.io',endpoint='https://dragon-detector-visits.valleytechsolutions-dd.workers.dev/visits'}={}) {
+export const isProductionOrigin = origin => ['https://valleytechsolutions.github.io','https://valleytech-dragon-detector.pages.dev'].includes(origin);
+export async function updateVisitCounter(element,{fetcher=fetch,production=isProductionOrigin(location.origin),endpoint='https://dragon-detector-visits.valleytechsolutions-dd.workers.dev/visits'}={}) {
   if(!element)return;
   try {
     // One request per page load. Hash navigation and the back/forward cache do

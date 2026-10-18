@@ -1,6 +1,6 @@
 # Date and time setup
 
-Use desktop Chrome or Edge on the [web flasher](https://valleytechsolutions.github.io/Dragon-Detector/). Check that your computer's date, time and timezone are correct before installing.
+Use desktop Chrome or Edge on the [web flasher](https://valleytech-dragon-detector.pages.dev/). Check that your computer's date, time and timezone are correct before installing.
 
 1. Select the exact board. Choose **Update** to preserve existing settings and user files.
 2. Leave automatic local-time setup checked, connect the matching USB device, and install.

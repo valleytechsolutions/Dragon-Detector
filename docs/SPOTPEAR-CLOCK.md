@@ -4,7 +4,7 @@ Spotpear JC3636W518 uses the ESP32-S3 software clock. In 0.13.9 it retains time 
 
 ## Set it from your computer
 
-1. Open the [Dragon Detector web flasher and Studio](https://valleytechsolutions.github.io/Dragon-Detector/) in desktop **Chrome or Edge**. Use a USB data cable and close other serial monitors.
+1. Open the [Dragon Detector web flasher and Studio](https://valleytech-dragon-detector.pages.dev/) in desktop **Chrome or Edge**. Use a USB data cable and close other serial monitors.
 2. Select **Spotpear / Guition JC3636W518**. If updating, use **Update matching Dragon Detector** for an already compatible installation to preserve settings and files.
 3. Leave **Set my local date & time after installation** enabled. With 0.13.10+ the installer closes automatically after flashing and starts clock verification. Keep USB connected until the verified result appears. Older installers require closing the dialog manually. If USB reconnects under a new port, use **Finish clock setup** and choose the running Spotpear.
 4. Alternatively, use **Connect detector** in Studio. Connection automatically copies the computer's current date, time and UTC offset. **Sync my local time** repeats this later.

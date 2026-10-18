@@ -1,6 +1,6 @@
 # Your own clock, radar and counter
 
-Firmware 0.13.17 supports one personal theme on all five boards. The [Custom theme tab](https://valleytechsolutions.github.io/Dragon-Detector/#theme-studio) holds the entire editor. A normal installation does not show a personal theme on the device until you explicitly install a design.
+Firmware 0.13.17 supports one personal theme on all five boards. The [Custom theme tab](https://valleytech-dragon-detector.pages.dev/#theme-studio) holds the entire editor. A normal installation does not show a personal theme on the device until you explicitly install a design.
 
 ## Create and install
 

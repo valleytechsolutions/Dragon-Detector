@@ -11,4 +11,4 @@
 
 The release verification asset records exact build hashes, automated tests, public-flasher checks and on-device checks. Native BOOT tests cover startup-held buttons, bounce, long holds, rearming and millisecond rollover. Clock tests cover all four identities, offset boundaries/fractional zones, installer ownership, opt-out, wrong devices, reconnect retries and failed readback. The verification asset identifies each physically tested board. XIAO Round and Waveshare Lite were build-tested; a successful build is not a claim of fresh on-device testing.
 
-[Web flasher](https://valleytechsolutions.github.io/Dragon-Detector/) · [Lite controls and recovery](WAVESHARE-LITE.md) · [Artwork and software credits](../CREDITS.md)
+[Web flasher](https://valleytech-dragon-detector.pages.dev/) · [Lite controls and recovery](WAVESHARE-LITE.md) · [Artwork and software credits](../CREDITS.md)

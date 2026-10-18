@@ -4,7 +4,7 @@ The top-right counter shows page loads across all visitors, beginning October 16
 2026. Reloading counts again; navigating between page sections does not. It is
 not a count of unique people, firmware installs, or visits before this release.
 
-The static GitHub Pages flasher calls the small Cloudflare Worker in
+The GitHub Pages and independent Cloudflare Pages flashers call the same Worker in
 `services/visit-counter/`. A SQLite-backed Durable Object stores one integer and
 increments it in a single atomic statement. No visitor identifiers, IP addresses
 or cookies are stored by the application. Worker request logging is disabled;
@@ -12,7 +12,7 @@ Cloudflare still handles requests as the infrastructure provider.
 
 Public endpoint: <https://dragon-detector-visits.valleytechsolutions-dd.workers.dev/visits>.
 GET reads without incrementing; POST increments and is restricted to the
-production site's browser origin. CORS prevents other browser sites from using
+two production sites' browser origins. CORS prevents other browser sites from using
 the write endpoint, but this is a decorative page counter, not an abuse-proof
 analytics system. Automated clients can imitate page requests.
 

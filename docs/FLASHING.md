@@ -2,7 +2,7 @@
 
 # Flash Dragon Detector
 
-**[Open the web flasher](https://valleytechsolutions.github.io/Dragon-Detector/)** in desktop Chrome or Edge. HTTPS or localhost is required for Web Serial. Use a USB data cable and close serial monitors first.
+**[Open the web flasher](https://valleytech-dragon-detector.pages.dev/)** in desktop Chrome or Edge. HTTPS or localhost is required for Web Serial. Use a USB data cable and close serial monitors first.
 
 1. Check the exact printed model: Spotpear JC3636W518, Waveshare **ESP32-S3-Touch-AMOLED-1.75C**, M5Stack StopWatch C152, **Seeed XIAO ESP32-S3 + Round Display**, or the non-touch **Waveshare ESP32-S3-LCD-1.28 Lite**.
 2. Select that board. The ESP32-S3 chip check does not distinguish these boards.

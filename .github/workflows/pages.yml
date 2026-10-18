@@ -57,9 +57,13 @@ jobs:
         run: python tools/validate_release.py
       - name: Verify browser accepts every generated manifest
         run: node tools/check_web_manifests.mjs
+      - name: Package firmware and standalone guides
+        run: |
+          python -m pip install -r tools/requirements-site.txt
+          python tools/build_static_site.py --output .build/site
       - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
-          path: web
+          path: .build/site
       - uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
         id: deployment

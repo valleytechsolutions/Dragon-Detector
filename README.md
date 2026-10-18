@@ -4,7 +4,9 @@
 
 Wi-Fi and Bluetooth detection, signal tracking, and logo watch faces for five ESP32-S3 displays.
 
-[**Install firmware**](https://valleytechsolutions.github.io/Dragon-Detector/#install) · [Latest release](https://github.com/valleytechsolutions/Dragon-Detector/releases/latest) · [User guides](docs/GUI.md) · [Clock setup](https://github.com/valleytechsolutions/Dragon-Detector/wiki/Clock-Setup)
+**Web flasher available:** [Install from the independent host](https://valleytech-dragon-detector.pages.dev/). The original GitHub Pages address and GitHub-hosted images are temporarily unavailable. Source, artwork and release files are intact; existing devices are unaffected. [Hosting status](docs/HOSTING-STATUS.md).
+
+[**Install firmware**](https://valleytech-dragon-detector.pages.dev/#install) · [Latest release](https://github.com/valleytechsolutions/Dragon-Detector/releases/latest) · [User guides](docs/GUI.md) · [Clock setup](https://github.com/valleytechsolutions/Dragon-Detector/wiki/Clock-Setup)
 
 ## Clock and timer power saving
 
@@ -12,7 +14,7 @@ On every board, the clock and stopwatch/Locksport Timer pause background Wi-Fi a
 
 ## Personal themes and DZ_AZ
 
-Build your own clock, radar and counter in the [Custom theme tab](https://valleytechsolutions.github.io/Dragon-Detector/#theme-studio). Add a logo, choose colors, hands and numerals, and enable locksport controls. The personal slot appears on the device only after you explicitly install a design. [Creator guide](docs/CUSTOM-THEME.md).
+Build your own clock, radar and counter in the [Custom theme tab](https://valleytech-dragon-detector.pages.dev/#theme-studio). Add a logo, choose colors, hands and numerals, and enable locksport controls. The personal slot appears on the device only after you explicitly install a design. [Creator guide](docs/CUSTOM-THEME.md).
 
 DZ_AZ adds a crow-and-name emblem, rotating feather radar sweep, and short/long feather clock hands. [Theme guide](docs/DZ-AZ.md).
 
@@ -22,7 +24,7 @@ DZ_AZ adds a crow-and-name emblem, rotating feather radar sweep, and short/long 
 
 ## Install
 
-1. Open the [web flasher](https://valleytechsolutions.github.io/Dragon-Detector/#install) in desktop Chrome or Edge and connect your board with a USB data cable.
+1. Open the [web flasher](https://valleytech-dragon-detector.pages.dev/#install) in desktop Chrome or Edge and connect your board with a USB data cable.
 2. Select the exact board. Use **Update matching Dragon Detector** for a compatible installation, or **Fresh install** for a new board. Fresh install replaces saved files and settings.
 3. Choose **Connect & install** and keep USB connected until installation and automatic date/time verification finish.
 
@@ -79,7 +81,7 @@ Black, red and steel with the supplied keyhole emblem, a hook sweep and pick-sha
 
 **START / PAUSE** controls the attempt, **SPLIT** records a milestone, and **OPEN** records the finish. The rim animates while counting and stops when paused. **LOG** holds the latest 50 splits until reset or reboot. TOOOL and TOOOL Dark also include matching locksport timers.
 
-Images are firmware display captures. [Locksport gallery](https://valleytechsolutions.github.io/Dragon-Detector/#locksport)
+Images are firmware display captures. [Locksport gallery](https://valleytech-dragon-detector.pages.dev/#locksport)
 
 ## Tools
 
@@ -87,7 +89,7 @@ Images are firmware display captures. [Locksport gallery](https://valleytechsolu
 - **Recon:** surveys, protocol counters, packet captures, sessions, and CSV exports. [Recon guide](docs/RECON-013.md)
 - **BLE Lab:** GATT inspection, explicit pairing, profile storage, emulation, and a cached-read bridge. [Capabilities and limits](docs/FEATURE-MATRIX.md)
 - **Clock and timers:** analog/digital watches, stopwatch, locksport timing, and separate Time, Date, and Sync settings. USB sets local time and timezone. Devices without an external RTC need USB or configured Wi-Fi after complete power loss. [Clock setup](docs/CLOCK-SETUP.md)
-- **Badge Studio:** prepare and upload your own artwork from the browser. [Open Studio](https://valleytechsolutions.github.io/Dragon-Detector/#studio)
+- **Badge Studio:** prepare and upload your own artwork from the browser. [Open Studio](https://valleytech-dragon-detector.pages.dev/#studio)
 
 Detection matches observable radio signatures; it does not establish intent, ownership, or recording state. Radar radius represents signal strength, and its angle is decorative. Silent devices, Bluetooth Classic, and 5/6 GHz Wi-Fi are outside coverage. [Detection evidence](docs/DETECTION.md)
 

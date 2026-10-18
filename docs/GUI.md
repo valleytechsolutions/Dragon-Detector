@@ -7,7 +7,7 @@ These are CRC-verified logical display captures from the firmware on the connect
 | ![Utilities with Saved files](../media/waveshare-utilities-0132.png) | ![Settings with internal capture controls](../media/waveshare-settings-0132.png) | ![Capture studio](../media/waveshare-captures-0132.png) |
 
 - **Tools → Utilities → Saved files** opens the internal-flash capture library on Waveshare AMOLED and M5Stack. There is no SD card menu or card prompt on either board.
-- **Settings → Capture studio** opens Wi-Fi/BLE recording controls. **Settings → Saved captures** opens the same capture library. Download saved captures through USB at [Radio tools → Capture library](https://valleytechsolutions.github.io/Dragon-Detector/#radio-tools).
+- **Settings → Capture studio** opens Wi-Fi/BLE recording controls. **Settings → Saved captures** opens the same capture library. Download saved captures through USB at [Radio tools → Capture library](https://valleytech-dragon-detector.pages.dev/#radio-tools).
 - GATT profiles and BLE event logs remain in BLE Lab; detection history has its own USB CSV export. Saved files is a capture library, not a browser for every private system file.
 - Spotpear and XIAO keep **Utilities → SD files** and optional SD CSV/PCAP settings for their actual card slots. They also have the internal-flash capture controls.
 - Lite has themed radar, compact clock, timer, signals and diagnostics pages. It has no touch settings, badge or interactive lab pages.

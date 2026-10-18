@@ -18,6 +18,7 @@ Thumbs.db
 
 .work/
 .build/
+.wrangler/
 web/firmware/
 *.obj
 *.lib

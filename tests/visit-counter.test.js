@@ -2,9 +2,22 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import worker,{VisitCounter} from '../services/visit-counter/worker.js';
-import {updateVisitCounter} from '../web/visit-counter.js';
+import {updateVisitCounter,isProductionOrigin} from '../web/visit-counter.js';
 
 const origin='https://valleytechsolutions.github.io';
+test('both published sites can count visits; preview and unrelated origins cannot',async()=>{
+  const f=fixture();try{
+    for(const site of [origin,'https://valleytech-dragon-detector.pages.dev']){
+      assert.equal(isProductionOrigin(site),true);
+      assert.equal((await worker.fetch(new Request('https://counter/visits',{method:'POST',headers:{Origin:site}}),f.env)).status,200);
+    }
+    for(const site of ['https://preview.valleytech-dragon-detector.pages.dev','https://valleytech-dragon-detector.pages.dev.evil.test','http://localhost:8149']){
+      assert.equal(isProductionOrigin(site),false);
+      assert.equal((await worker.fetch(new Request('https://counter/visits',{method:'POST',headers:{Origin:site}}),f.env)).status,403);
+    }
+    assert.equal((await (await worker.fetch(new Request('https://counter/visits'),f.env)).json()).count,2);
+  }finally{f.db.close();}
+});
 function fixture(){
   const db=new DatabaseSync(':memory:');
   const ctx={storage:{sql:{exec(query){const rows=db.prepare(query).all();return {one:()=>rows[0]};}}}};

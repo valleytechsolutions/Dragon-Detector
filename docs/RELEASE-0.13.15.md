@@ -6,4 +6,4 @@
 - Adds matching light menus, settings and dialogs on full boards. There are now 33 themes and 31 independently selectable full-board watch faces.
 - The web flasher includes both new themes and checks firmware compatibility before selecting it. Existing saved themes, McNally logo placement and the Dragon Ball/BWM boot remain unchanged.
 
-Choose your exact board in the [web flasher](https://valleytechsolutions.github.io/Dragon-Detector/#install). Keep USB connected until clock verification completes. [Clock setup](CLOCK-SETUP.md) · [Capsule Corp artwork](CAPSULE-CORP.md) · [Validation](VALIDATION.md)
+Choose your exact board in the [web flasher](https://valleytech-dragon-detector.pages.dev/#install). Keep USB connected until clock verification completes. [Clock setup](CLOCK-SETUP.md) · [Capsule Corp artwork](CAPSULE-CORP.md) · [Validation](VALIDATION.md)

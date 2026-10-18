@@ -1,0 +1,8 @@
+/firmware/*
+  Cache-Control: no-store
+
+/guides/*
+  Cache-Control: no-cache
+
+/*
+  X-Content-Type-Options: nosniff

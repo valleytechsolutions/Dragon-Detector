@@ -6,7 +6,7 @@ The [Seeed Round Display](https://wiki.seeedstudio.com/get_start_round_display/)
 
 ## Install
 
-Choose **Seeed XIAO Round** in the [web flasher](https://valleytechsolutions.github.io/Dragon-Detector/). Use Fresh install when coming from Seeed examples or any other firmware. Updates require this exact profile's 0.9.2-or-newer partition layout. The two application slots are 3 MB each; the internal badge/history filesystem occupies `0x610000`–`0x7FFFFF`. Other Dragon Detector board images have different wiring and flash layouts.
+Choose **Seeed XIAO Round** in the [web flasher](https://valleytech-dragon-detector.pages.dev/). Use Fresh install when coming from Seeed examples or any other firmware. Updates require this exact profile's 0.9.2-or-newer partition layout. The two application slots are 3 MB each; the internal badge/history filesystem occupies `0x610000`–`0x7FFFFF`. Other Dragon Detector board images have different wiring and flash layouts.
 
 To enter download mode, hold BOOT, tap RESET, then release BOOT. After flashing, release BOOT and tap RESET if it stays in the bootloader. Keep the Round Display power switch on. On revision 1.1, the BL switch must connect D6 for brightness/dimming to be controlled by firmware; its bypass setting can leave the backlight permanently on. [Seeed switch and pin documentation](https://wiki.seeedstudio.com/seeedstudio_round_display_usage/).
 

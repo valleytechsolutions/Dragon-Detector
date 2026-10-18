@@ -45,7 +45,7 @@ An 11,520-byte display tile uses internal RAM; the 384-contact store and receive
 
 ## Install and recover
 
-Open the [web flasher](https://valleytechsolutions.github.io/Dragon-Detector/), choose **Waveshare 1.28 Lite**, confirm the exact board and select its CH343 USB serial port. Use desktop Chrome/Edge and a USB data cable. Close serial monitors first. If connection fails, hold BOOT, tap RESET, then release BOOT and retry. A missing CH343 port may require the driver linked in [Waveshare's documentation](https://docs.waveshare.com/ESP32-S3-LCD-1.28).
+Open the [web flasher](https://valleytech-dragon-detector.pages.dev/), choose **Waveshare 1.28 Lite**, confirm the exact board and select its CH343 USB serial port. Use desktop Chrome/Edge and a USB data cable. Close serial monitors first. If connection fails, hold BOOT, tap RESET, then release BOOT and retry. A missing CH343 port may require the driver linked in [Waveshare's documentation](https://docs.waveshare.com/ESP32-S3-LCD-1.28).
 
 Fresh installation erases the previous firmware/data. Back up a third-party port first. Update is for this exact Lite 0.9.4+ layout: app0 `0x10000` (6 MB), app1 `0x610000` (6 MB), reserved LittleFS `0xc10000` (0x3f0000 bytes). An older port may be updated without erasing only after verifying the actual partition table; its version/name alone is insufficient. Lite does not mount or write the reserved filesystem.
 

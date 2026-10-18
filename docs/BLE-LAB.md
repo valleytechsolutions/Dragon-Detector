@@ -1,6 +1,6 @@
 # BLE Lab · four full boards
 
-Available on Waveshare AMOLED since 0.9.8 and on M5Stack StopWatch, Spotpear and Seeed XIAO Round in **0.13.0**. Open **Tools → Recon → BLE Lab**, or the [web flasher](https://valleytechsolutions.github.io/Dragon-Detector/#ble-lab). Existing partition layouts stay unchanged. Lite remains radar-only. [0.13 HID, bridge and storage details](RECON-013.md).
+Available on Waveshare AMOLED since 0.9.8 and on M5Stack StopWatch, Spotpear and Seeed XIAO Round in **0.13.0**. Open **Tools → Recon → BLE Lab**, or the [web flasher](https://valleytech-dragon-detector.pages.dev/#ble-lab). Existing partition layouts stay unchanged. Lite remains radar-only. [0.13 HID, bridge and storage details](RECON-013.md).
 
 ![BLE Lab on the Waveshare, CRC-verified logical display capture](../media/ble-lab-098.png)
 

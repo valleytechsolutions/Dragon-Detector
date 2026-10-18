@@ -4,7 +4,7 @@ Firmware **0.13.17** offers 34 built-in themes, including Covert Instruments × 
 
 The saved theme also controls menus, settings, dialogs, utility screens, BLE Lab and radio tools. Watch designs remain independently swipeable. All five profiles show the Dragon Ball/BWM mark on black at power-on, then open the saved radar theme. Custom badge artwork and detection-family colors retain their meaning.
 
-Open **Tools → System → Settings → Theme & radar labels** and scroll to the theme. It saves immediately; tap Home to return to radar. Or connect through the [web tools](https://valleytechsolutions.github.io/Dragon-Detector/#detector), choose Radar appearance → Theme, and save. Older firmware keeps its original three choices until updated. Waveshare Lite cycles all 34 built-in themes with BOOT and saves the selection. Hold BOOT to cycle radar, compact clock, timer, signals and diagnostics; see [Lite controls](WAVESHARE-LITE.md). Its LPL radar includes the central emblem and rotating scales.
+Open **Tools → System → Settings → Theme & radar labels** and scroll to the theme. It saves immediately; tap Home to return to radar. Or connect through the [web tools](https://valleytech-dragon-detector.pages.dev/#detector), choose Radar appearance → Theme, and save. Older firmware keeps its original three choices until updated. Waveshare Lite cycles all 34 built-in themes with BOOT and saves the selection. Hold BOOT to cycle radar, compact clock, timer, signals and diagnostics; see [Lite controls](WAVESHARE-LITE.md). Its LPL radar includes the central emblem and rotating scales.
 
 | Valleytech | Biscuit Shop | Marauder |
 |---|---|---|

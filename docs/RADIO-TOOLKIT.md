@@ -4,7 +4,7 @@
 
 # Waveshare modes and radio toolkit · 0.11.1
 
-Available on **ESP32-S3-Touch-AMOLED-1.75C**. Open **Tools → Recon → Modes** or **Radio tools**. Desktop controls live in [Radio tools on the web flasher](https://valleytechsolutions.github.io/Dragon-Detector/#radio-tools). The historical Waveshare release notes below are retained for reference.
+Available on **ESP32-S3-Touch-AMOLED-1.75C**. Open **Tools → Recon → Modes** or **Radio tools**. Desktop controls live in [Radio tools on the web flasher](https://valleytech-dragon-detector.pages.dev/#radio-tools). The historical Waveshare release notes below are retained for reference.
 
 ## Listening modes
 

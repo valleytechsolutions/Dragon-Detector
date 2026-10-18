@@ -6,8 +6,8 @@ The **v0.13.17** factory image matches the [GitHub release](https://github.com/v
 
 ## Installation
 
-1. Download the **v0.13.17 StopWatch C152 factory BIN** from the GitHub release. It is not yet available in the M5Burner catalog. This image is for **C152 only**; the web flasher provides the supported installation flow.
-2. Back up saved files and settings. A factory image replaces them. For a compatible existing installation, use **Update matching Dragon Detector** in the [web flasher](https://valleytechsolutions.github.io/Dragon-Detector/#install).
+1. Download the [**v0.13.17 StopWatch C152 factory BIN**](https://valleytech-dragon-detector.pages.dev/firmware/stopwatch/factory-0x0.bin) and its [SHA-256 checksums](https://valleytech-dragon-detector.pages.dev/firmware/stopwatch/SHA256SUMS.txt). It is not yet available in the M5Burner catalog. This image is for **C152 only**; the web flasher provides the supported installation flow.
+2. Back up saved files and settings. A factory image replaces them. For a compatible existing installation, use **Update matching Dragon Detector** in the [web flasher](https://valleytech-dragon-detector.pages.dev/#install).
 3. Connect USB. Hold the StopWatch power button for about two seconds until the green LED lights, then release. Burn at **0x0**, **ESP32-S3**, **16 MB**, **DIO / 80 MHz**. No separate filesystem upload is needed.
 4. Briefly press the power button to restart. Close M5Burner's serial connection, then connect **Detector tools** in the web flasher to set and verify time, date and timezone. M5Burner does not synchronize the clock.
 
@@ -21,6 +21,6 @@ On the device, **Settings → Time** has separate **Time**, **Date** and **Sync*
 - Released application passed 23/23 C152 self-tests, clock/timer scanning checks and RTC checks. Factory installation through M5Burner itself was not hardware-tested.
 - Existing M5Burner project `2111312268664066049`. No new version ID was returned.
 
-![Clock running with background scanning paused](https://github.com/valleytechsolutions/Dragon-Detector/releases/download/v0.13.17/StopWatch-clock-current-0.13.17.png)
+![Clock running with background scanning paused](../web/assets/stopwatch-clock-01317.png)
 
 Display capture from a physical StopWatch. [Credits](../CREDITS.md) · [Validation](VALIDATION.md).

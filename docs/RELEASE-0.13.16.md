@@ -7,4 +7,4 @@ Clock and stopwatch/Locksport Timer screens now pause background Wi-Fi and Bluet
 - Previously configured Wi-Fi time recovery can briefly synchronize the clock without restarting background detection.
 - All themes and saved settings remain compatible. Use the matching **Update** image to preserve files and settings.
 
-See [clock power saving](https://github.com/valleytechsolutions/Dragon-Detector/blob/main/docs/CLOCK-POWER.md) and [the web flasher](https://valleytechsolutions.github.io/Dragon-Detector/).
+See [clock power saving](https://github.com/valleytechsolutions/Dragon-Detector/blob/main/docs/CLOCK-POWER.md) and [the web flasher](https://valleytech-dragon-detector.pages.dev/).
