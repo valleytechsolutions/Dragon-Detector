@@ -140,7 +140,12 @@ def build(output):
     downloads = ['<h1>Firmware downloads</h1><p>Version ' + VERSION + '. These are board-specific images. Use the web flasher for automatic installation and clock verification. Compare downloaded files with the SHA-256 list for the same board.</p>']
     for folder in sorted((output / 'firmware').iterdir()):
         info = json.loads((folder / 'factory.json').read_text())
-        downloads.append('<h2>' + html.escape(info['name'].removesuffix(' (factory)')) + '</h2><ul>')
+        downloads.append('<h2>' + html.escape(info['name'].removesuffix(' (factory)')) + '</h2>')
+        metadata = json.loads((folder / 'build-info.json').read_text(encoding='utf-8'))
+        if metadata.get('hardware_validation') == 'pending':
+            downloads.append('<p><strong>Experimental — physical hardware testing is pending.</strong> '
+                             '<a href="WAVESHARE-AMOLED-175.html">Installation and arrival checklist</a>.</p>')
+        downloads.append('<ul>')
         for file in sorted(folder.iterdir()):
             downloads.append(f'<li><a href="../firmware/{folder.name}/{file.name}">{html.escape(file.name)}</a> ({file.stat().st_size:,} bytes)</li>')
         downloads.append('</ul>')
@@ -149,7 +154,7 @@ def build(output):
     if too_large:
         raise ValueError(f'Files exceed static host limit: {too_large}')
     validate_links(output)
-    print(f'Prepared {len(guides)} guides and all five verified firmware profiles in {output}')
+    print(f'Prepared {len(guides)} guides and verified firmware packages in {output}')
 
 
 if __name__ == '__main__':

@@ -29,6 +29,13 @@ def build(board,skip):
     # Each standalone board ZIP also carries the embedded fonts' license.
     shutil.copyfile(ROOT/'docs/licenses/Montserrat-OFL.txt',out/'FONT-LICENSE.txt')
     shutil.copyfile(ROOT/'docs/licenses/Unscii-NOTICE.txt',out/'ASCII-FONT-NOTICE.txt')
+    if board=='waveshare_175':
+        (out/'BOARD-STATUS.txt').write_text(
+            'EXPERIMENTAL: ESP32-S3-Touch-AMOLED-1.75 (non-C), 16 MB flash.\n'
+            'Compiled and automatically checked; physical hardware testing is pending.\n'
+            'Not compatible with the 32 MB 1.75C profile. Use Fresh installation for a new board.\n'
+            'Installation and arrival checklist:\n'
+            'https://valleytech-dragon-detector.pages.dev/guides/WAVESHARE-AMOLED-175.html\n',encoding='utf-8')
     filesystem_segments=[('littlefs.bin',fs_offset)]
     if board=='waveshare':
         # A second independent LittleFS. Updates NEVER write either filesystem.
