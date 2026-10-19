@@ -21,6 +21,7 @@ static void liteHand(lv_draw_ctx_t* ctx,float angle,float length,uint32_t rgb,bo
 }
 static void litePageDraw(lv_event_t* e){
   auto* ctx=lv_event_get_draw_ctx(e);const auto& p=themeUiColors(radarTheme);
+  if(litePage==LitePage::Clock&&radarTheme==CanCommanderTheme){canCommanderWatch(ctx,clockFrame,clockValid,radarFrameAt);return;}
   if(litePage==LitePage::Clock&&radarTheme==33){dzazWatch(ctx,clockFrame,clockValid);return;}
   if(litePage==LitePage::Clock&&radarTheme==dragon::PersonalThemeId){personalThemeClock(ctx,clockFrame,clockValid);return;}
   const bool dragonClock=litePage==LitePage::Clock&&radarTheme==0;
@@ -48,6 +49,7 @@ static void litePageDraw(lv_event_t* e){
       liteHand(ctx,seconds*.104719755f,79,p.muted,false);disc(ctx,120,120,5,p.accent);disc(ctx,120,120,2,p.bg);
     }
   }else if(litePage==LitePage::Timer){
+    if(radarTheme==CanCommanderTheme){canBusRim(ctx,uint32_t(timerFrame/10000),true);return;}
     if(radarTheme==28){locksportPinRim(ctx,timerFrame);return;}
     lv_draw_arc_dsc_t d;lv_draw_arc_dsc_init(&d);d.color=color(p.border);d.width=3;lv_point_t center{120,120};lv_draw_arc(ctx,&d,&center,105,0,359);
     float a=float(timerFrame%60000000ull)*.000000104719755f;
@@ -67,10 +69,10 @@ static void setLitePage(LitePage next){
   lv_obj_set_y(pageValue,next==LitePage::Clock?158:next==LitePage::Timer?95:76);
   lv_obj_set_y(pageSub,next==LitePage::Clock?187:next==LitePage::Timer?138:171);
   bool special=next==LitePage::Clock&&(radarTheme==0||radarTheme>=29);
-  if(radarLogo(radarTheme)&&!special&&!(next==LitePage::Radar&&radarTheme==32))lv_obj_clear_flag(logo,LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(logo,LV_OBJ_FLAG_HIDDEN);
+  if(radarLogo(radarTheme)&&!special&&!(next==LitePage::Radar&&(radarTheme==32||radarTheme==CanCommanderTheme)))lv_obj_clear_flag(logo,LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(logo,LV_OBJ_FLAG_HIDDEN);
   lv_obj_align(logo,LV_ALIGN_TOP_MID,0,9);
   if(special){lv_obj_add_flag(pageTitle,LV_OBJ_FLAG_HIDDEN);lv_obj_set_y(pageValue,radarTheme==29?24:157);lv_obj_set_y(pageSub,radarTheme==29?48:188);}
-  if(next==LitePage::Clock&&(radarTheme==31||radarTheme==32||radarTheme==33||radarTheme==dragon::PersonalThemeId))for(auto* o:{pageTitle,pageValue,pageSub,pageHint})lv_obj_add_flag(o,LV_OBJ_FLAG_HIDDEN);
+  if(next==LitePage::Clock&&(radarTheme==31||radarTheme==32||radarTheme==33||radarTheme==CanCommanderTheme||radarTheme==dragon::PersonalThemeId))for(auto* o:{pageTitle,pageValue,pageSub,pageHint})lv_obj_add_flag(o,LV_OBJ_FLAG_HIDDEN);
   lv_obj_invalidate(root);
 }
 static void createLitePages(){

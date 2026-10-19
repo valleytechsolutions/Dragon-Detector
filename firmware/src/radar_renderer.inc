@@ -22,6 +22,7 @@ static void disc(lv_draw_ctx_t* ctx,int x,int y,int r,uint32_t c,int opa=255){
 #include "capsule_theme.inc"
 #include "sparrows_theme.inc"
 #include "dzaz_theme.inc"
+#include "can_commander_theme.inc"
 static const char* radarFamilyName(Family f){
 #if SCREEN_RES<=240
   // Keep the family on one line, leaving the second line for signal/age.
@@ -64,7 +65,7 @@ static void radarDraw(lv_event_t* e){
   const uint32_t now=radarFrameAt;
   static uint32_t plotFrame=UINT32_MAX;const bool advancePlot=plotFrame!=now;plotFrame=now;
   lv_draw_arc_dsc_t arc;lv_draw_arc_dsc_init(&arc);arc.color=color(theme.ring);arc.width=std::max(1,S(1));arc.opa=160;
-  if(radarTheme==31)capsuleRadarField(ctx,now);else if(radarTheme==32)sparrowsRadarField(ctx);else{
+  if(radarTheme==CanCommanderTheme)canRadarField(ctx,now,radioEnabled);else if(radarTheme==31)capsuleRadarField(ctx,now);else if(radarTheme==32)sparrowsRadarField(ctx);else{
 #ifdef BOARD_RADAR_LITE
   if(liteBackdrop.data){lv_draw_img_dsc_t d;lv_draw_img_dsc_init(&d);lv_area_t a{0,0,SCREEN_RES-1,SCREEN_RES-1};lv_draw_img(ctx,&d,&a,&liteBackdrop);}
   else disc(ctx,CENTER,CENTER,S(178),theme.bottom);
@@ -123,6 +124,7 @@ static void radarDraw(lv_event_t* e){
   float angle=(sweepAt%6000)*.00104719755f,dx=cosf(angle),dy=sinf(angle);
   if(radarTheme==28){locksportPinRim(ctx,uint64_t(sweepAt%6000)*10000);lpuEmblem(ctx,150);}
   if(radarTheme==dragon::PersonalThemeId)personalThemeSweep(ctx,angle);
+  else if(radarTheme==CanCommanderTheme)canRadarSweep(ctx,angle/6.28318530718f+.25f);
   else if(radarTheme==31){}
   else if(radarTheme==33)crowFeather(ctx,angle/6.28318530718f+.25f,164,17,0xc7d5e0);
   else if(radarTheme==32)sparrowsPick(ctx,angle/6.28318530718f+.25f,146,true);
@@ -186,6 +188,7 @@ static void radarDraw(lv_event_t* e){
     disc(ctx,dot.x,dot.y,S(5),radarTheme==31?0xffed48:dragon::familyColor(family));
   }
   // Decorative center cursor, not a compass. Keep it above the sweep/labels.
+  if(radarTheme==CanCommanderTheme)return;
 #ifdef BOARD_RADAR_LITE
   for(int sign:{-1,1}){line(ctx,CENTER+sign*3,CENTER,CENTER+sign*8,CENTER,theme.ring,1);line(ctx,CENTER,CENTER+sign*3,CENTER,CENTER+sign*8,theme.ring,1);}
   disc(ctx,CENTER,CENTER,1,theme.text);

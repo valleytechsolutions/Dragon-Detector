@@ -6,7 +6,11 @@ Wi-Fi and Bluetooth detection, signal tracking, and logo watch faces for five ES
 
 **Web flasher available:** [Install from the independent host](https://valleytech-dragon-detector.pages.dev/). The original GitHub Pages address and GitHub-hosted images are temporarily unavailable. Source, artwork and release files are intact; existing devices are unaffected. [Hosting status](docs/HOSTING-STATUS.md).
 
-[**Install firmware**](https://valleytech-dragon-detector.pages.dev/#install) · [Latest release](https://git.churchofmalware.org/Valleytech/Dragon-Detector/releases/latest) · [User guides](docs/GUI.md) · [Clock setup](https://git.churchofmalware.org/Valleytech/Dragon-Detector/wiki/Clock-Setup)
+[**Install firmware**](https://valleytech-dragon-detector.pages.dev/#install) · [Latest release](docs/RELEASE-0.13.18.md) · [User guides](docs/GUI.md) · [Clock setup](https://git.churchofmalware.org/Valleytech/Dragon-Detector/wiki/Clock-Setup)
+
+## Can Commander · 0.13.18
+
+A tribute to Matthew Kukanich: the original MK emblem, silver and navy instruments, animated CAN-H/CAN-L traces and a dedicated clock-data watch. Includes matching menus and a session stopwatch on all five boards. [Explore Can Commander](docs/CAN-COMMANDER.md).
 
 ## Clock and timer power saving
 

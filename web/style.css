@@ -93,3 +93,7 @@ header nav{gap:22px;font-size:12px}
 .preview-links{display:flex;flex-wrap:wrap;gap:16px 28px;margin:20px 0}
 .theme-disclaimer{max-width:840px;margin:24px 0 0;font-size:12px;line-height:1.7;color:var(--muted)}
 @media(max-width:650px){.firmware-previews .preview-grid{grid-template-columns:1fr;gap:16px}.firmware-previews .preview-grid img{max-width:200px}}
+#can-commander{--line:#314b60;--panel:#101d29;--text:#e8edf2;--muted:#abbccb;--lime:#72c5e8}
+#can-commander .preview-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+#can-commander .preview-grid img{max-width:320px}
+@media(max-width:650px){#can-commander .preview-grid{grid-template-columns:1fr}#can-commander .preview-grid img{max-width:280px}}

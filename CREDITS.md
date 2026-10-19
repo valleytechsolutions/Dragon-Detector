@@ -206,6 +206,10 @@ Capsule Corp and Dragon Ball belong to their respective rights holders, includin
 
 SPARROWS and its keyhole/wordmark artwork belong to Sparrows Lock Picks. The supplied `sparrows logo.jpg` is preserved unchanged as `media/theme-logos/sparrows-source.jpg` and encoded directly for black display surfaces. The segmented dial and stylized picks are code-drawn interpretations informed by Sparrows’ official product designs; they are not exact tool reproductions. This community theme is not affiliated with or endorsed by Sparrows. [References and theme guide](docs/SPARROWS.md).
 
+## Can Commander · 0.13.18
+
+The user supplied Matthew Kukanich's [MK emblem](media/theme-logos/can-commander-mk.jpg), retained byte-for-byte with its SHA-256 in the artwork ledger. Display assets use the same artwork with only resizing and palette encoding. The CAN-inspired instrument graphics and animation are original code. The logo remains its owner's property; theme inclusion does not imply affiliation or endorsement. [Theme details and technical references](docs/CAN-COMMANDER.md).
+
 ## DZ_AZ and personal themes · 0.13.17
 
 The user supplied the unchanged [crow reference](media/theme-logos/dzaz-reference.jpg). The transparent [DZ_AZ crow emblem](media/theme-logos/dzaz.png) is a new illustrated derivative created with the built-in image-generation tool; [prompt and artwork details](docs/DZ-AZ.md#artwork). Feather geometry and animation are original drawing code. The source photograph remains its owner’s work.

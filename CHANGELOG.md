@@ -1,5 +1,13 @@
 # Changes
 
+## 0.13.18 — Can Commander
+
+- Adds Matthew Kukanich's original MK logo, a CAN-inspired paired radar sweep, circuit nodes and navy/silver/blue interface colors.
+- Adds a dedicated clock with three time fields, date, hexadecimal clock-data bytes, differential-waveform animation and seconds marker.
+- Adds a matching session timer with a one-minute perimeter indicator on all five boards.
+- Appends theme 35 and watch 38 without moving saved selections or the optional personal-theme slot.
+
+
 ## 0.13.6 — Complete themes, locksport and community watches
 
 - Adds DeFlock (theme 25, watch 28): supplied camera-raven artwork, navy/steel-blue menus and radar, viewfinder details, large 24-hour time and an optical seconds rim.

@@ -30,4 +30,6 @@ export function hasLplTheme(version){return /^0\.13\.(?:[89]|[1-9]\d+)$/.test(ve
 // Appended persistent theme IDs 29 and 30.
 export function hasRunnerThemes(version){const m=/^0\.13\.(0|[1-9]\d*)$/.exec(version);return !!m&&Number(m[1])>=12;}
 
+export function hasCanCommanderTheme(version){const m=/^0\.13\.(0|[1-9]\d*)$/.exec(version);return !!m&&Number(m[1])>=18;}
+
 export function hasCapsuleSparrowsThemes(version){const m=/^0\.13\.(0|[1-9]\d*)$/.exec(version);return !!m&&Number(m[1])>=15;}

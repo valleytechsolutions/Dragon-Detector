@@ -155,7 +155,7 @@
   },
   {
     "file": "media/theme-logos/seeed-studio-source.avif",
-    "supplied_name": "2015\u65b0LOGO04.original.avif",
+    "supplied_name": "2015新LOGO04.original.avif",
     "sha256": "950247a3477492fd901c55a34a018b8945a868ffd0b4ac73450f02d721c3ef95",
     "source_bytes_match": true,
     "direct_copy_before_source_replacement": false
@@ -282,5 +282,12 @@
     "sha256": "adfc31b58d9023f12b6fa3443f317afaefa9c024d9df154f072a04b7e6e3e936",
     "source_bytes_match": false,
     "derivation": "Built-in image-generation crow-and-DZ_AZ emblem; transparent illustrated derivative. Prompt in docs/DZ-AZ.md."
+  },
+  {
+    "file": "media/theme-logos/can-commander-mk.jpg",
+    "supplied_name": "channels4_profile.jpg",
+    "sha256": "87417b27bdcd35648cb7887f15387dd2a0a687a5652957ba5cf9c123bebb5a31",
+    "source_bytes_match": true,
+    "derivation": "Unchanged user-supplied MK emblem for Matthew Kukanich. Native display copies use resizing and palette encoding only."
   }
 ]
