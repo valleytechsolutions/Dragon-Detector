@@ -1,4 +1,4 @@
-// Waveshare ESP32-S3-Touch-AMOLED-1.75C: CO5300 QSPI AMOLED, CST9217 touch, AXP2101 PMU.
+// Shared CO5300/CST9217/AXP2101 adapter; variant wiring comes from board_pins.h.
 #include "app.h"
 #include "board_pins.h"
 #include <lvgl.h>

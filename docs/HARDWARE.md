@@ -1,6 +1,6 @@
 # Exact board profiles
 
-Current firmware: **0.13.10**. Another display on the same ESP32-S3 needs different firmware.
+Current firmware: **0.13.19**. Another display on the same ESP32-S3 needs different firmware.
 
 | Feature | Waveshare AMOLED 1.75C | M5Stack StopWatch C152 | Spotpear JC3636W518 | XIAO ESP32-S3 + Round Display | Waveshare LCD 1.28 Lite |
 |---|---|---|---|---|---|
@@ -23,9 +23,13 @@ Current firmware: **0.13.10**. Another display on the same ESP32-S3 needs differ
 
 All four full boards use the same classifiers and lab workflows; Waveshare's advantage is dedicated recon storage, not different radio bands or extra processing power. Builds and new writes check available space; existing files are never deleted automatically. [Exact budgets](FLASH-BUDGET.md) · [Feature limits](FEATURE-MATRIX.md) · [GUI tour](GUI.md).
 
+## Experimental non-C AMOLED 1.75
+
+The sixth profile, `waveshare_175`, targets the 16 MB **ESP32-S3-Touch-AMOLED-1.75**: full 466 px UI, RTC, microSD, 7.94 MiB shared internal storage, 2 MiB captures and 2 MiB sessions. Hardware testing is pending. It has different reset and audio pins from the C model. See the [wiring, install and validation guide](WAVESHARE-AMOLED-175.md).
+
 ## Storage follows the hardware
 
-**Waveshare AMOLED and M5Stack:** Utilities → Saved files opens the internal capture library. Settings provides Capture studio and Saved captures; SD controls and SD command handlers are excluded from the build. Capture Studio saves Wi-Fi PCAP and BLE CSV in flash. GATT profiles and event logs are in BLE Lab, detection history is separate, and downloads are in the browser's Radio tools / BLE Lab / Detector tools. No card is required.
+**Waveshare AMOLED 1.75C and M5Stack:** Utilities → Saved files opens the internal capture library. Settings provides Capture studio and Saved captures; SD controls and SD command handlers are excluded from the build. Capture Studio saves Wi-Fi PCAP and BLE CSV in flash. GATT profiles and event logs are in BLE Lab, detection history is separate, and downloads are in the browser's Radio tools / BLE Lab / Detector tools. No card is required.
 
 **Spotpear and XIAO:** Utilities → SD files browses an inserted FAT32 card. Settings retains opt-in SD event logging and SD PCAP. These are separate from internal Capture Studio, badge/history and BLE Lab storage; an absent card does not disable those internal features. Inserted-card behavior is not newly validated by this release.
 

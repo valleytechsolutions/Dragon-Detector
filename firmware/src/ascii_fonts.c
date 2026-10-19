@@ -2,7 +2,7 @@
 // Source SHA-256: 1be7ca5552beb67f6bf1bed4a0db92a53835f1c07cb0f643063d82ffb0dccba0
 #include <lvgl.h>
 #ifndef BOARD_RADAR_LITE
-#if defined(BOARD_AMOLED_175C) || defined(BOARD_STOPWATCH)
+#if defined(BOARD_AMOLED_175C) || defined(BOARD_AMOLED_175) || defined(BOARD_STOPWATCH)
 static const uint8_t micro_bitmap[]={
 0,0,0,68,68,0,170,0,0,174,174,160,72,98,224,10,68,160,68,238,160,68,0,0,36,68,64,66,34,64,6,246,
 160,4,228,64,0,0,68,0,224,0,0,0,64,18,68,128,106,234,160,68,68,64,98,68,128,98,98,160,106,174,32,238,

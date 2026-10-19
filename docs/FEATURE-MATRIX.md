@@ -1,5 +1,7 @@
 # Reference feature comparison · 0.13.17
 
+**Experimental addition (0.13.19):** the non-C Waveshare AMOLED 1.75 includes the full 466 px interface and shared tools, PCF85063 RTC verification, microSD, 2 MiB captures/sessions and 7.94 MiB shared file storage. Physical testing is pending. [Port details](WAVESHARE-AMOLED-175.md).
+
 This is a feature audit, not a claim that Dragon Detector is an official port or has identical behavior. The original application remains MIT. Reference firmware is not silently linked into it. [Credits and exact source revisions](../CREDITS.md) · [Measured hardware checks](VALIDATION.md).
 
 ## AMOLED feature parity across boards

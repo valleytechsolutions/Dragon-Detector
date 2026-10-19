@@ -209,7 +209,7 @@ test('flasher rejects wrong boards, partitions, remote paths and destructive upd
  for(const [board,p] of Object.entries(boardProfiles))for(const mode of ['factory','update']){
   const parts=[{path:'bootloader.bin',offset:0},{path:'partitions.bin',offset:0x8000},{path:'boot_app0.bin',offset:0xe000},{path:'firmware.bin',offset:0x10000}];
   if(mode==='factory')parts.push({path:'littlefs.bin',offset:p.filesystemOffset});
-  const good={name:`Dragon Detector — ${p.firmwareName} (${mode})`,version:'0.9.4',new_install_prompt_erase:mode==='factory',builds:[{chipFamily:'ESP32-S3',parts}]};
+  const good={name:`Dragon Detector — ${p.firmwareName} (${mode})`,version:p.minVersion||'0.9.4',new_install_prompt_erase:!!p.minVersion||mode==='factory',...(p.minVersion?{new_install_improv_wait_time:0}:{}),builds:[{chipFamily:'ESP32-S3',parts}]};
   assert.equal(validateManifest(good,board,mode),good);
   if(board==='waveshare_lite'){const old=structuredClone(good);old.version='0.9.3';assert.throws(()=>validateManifest(old,board,mode),/0.9.4/);}
   if(board==='xiao_round'){const old=structuredClone(good);old.version='0.9.1';assert.throws(()=>validateManifest(old,board,mode),/0.9.2/);}

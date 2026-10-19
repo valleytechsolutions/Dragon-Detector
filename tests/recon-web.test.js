@@ -45,7 +45,7 @@ test('mission export uses the checked recon transport and rejects arbitrary comm
 });
 test('0.12 contracts accept every real board manifest and preserve both Waveshare filesystems',()=>{
  assert.ok(hasNotebook('0.12.0'));assert.ok(hasReconTools('0.12.0'));assert.ok(hasNetworkTools('0.12.0'));assert.ok(!hasNotebook('0.11.1'));
- for(const version of ['0.11.1','0.12.0'])for(const [id,p] of Object.entries(boardProfiles))for(const mode of ['update','factory']){
+ for(const version of ['0.11.1','0.12.0'])for(const [id,p] of Object.entries(boardProfiles).filter(([,p])=>!p.minVersion))for(const mode of ['update','factory']){
   const parts=[{path:'bootloader.bin',offset:0},{path:'partitions.bin',offset:0x8000},{path:'boot_app0.bin',offset:0xe000},{path:'firmware.bin',offset:0x10000}];
   if(mode==='factory'){parts.push({path:'littlefs.bin',offset:p.filesystemOffset});if(id==='waveshare')parts.push({path:'reconfs.bin',offset:p.reconOffset});}
   const data={name:`Dragon Detector — ${p.firmwareName} (${mode})`,version,new_install_prompt_erase:mode==='factory',builds:[{chipFamily:'ESP32-S3',parts}]};assert.equal(validateManifest(data,id,mode),data);assert.ok(parseBadgeInfo(`BADGE_INFO ${version} ${p.size} ${p.lite?'RADAR_ONLY':'READY'} ${p.firmwareName}`));

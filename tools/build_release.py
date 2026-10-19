@@ -3,7 +3,7 @@ from pathlib import Path
 import argparse, csv, hashlib, json, os, re, shutil, subprocess, sys
 from flash_budget import report as flash_report
 ROOT=Path(__file__).resolve().parents[1]
-BOARDS={'spotpear':('Spotpear JC3636W518','spotpear'),'waveshare':('Waveshare ESP32-S3-Touch-AMOLED-1.75C','waveshare-amoled'),'stopwatch':('M5Stack StopWatch C152','m5stack-stopwatch'),'xiao_round':('Seeed XIAO ESP32-S3 + Round Display','xiao-round'),'waveshare_lite':('Waveshare ESP32-S3-LCD-1.28 Lite','waveshare-lite')}
+BOARDS={'waveshare_175':('Waveshare ESP32-S3-Touch-AMOLED-1.75','waveshare-amoled-175'),'spotpear':('Spotpear JC3636W518','spotpear'),'waveshare':('Waveshare ESP32-S3-Touch-AMOLED-1.75C','waveshare-amoled'),'stopwatch':('M5Stack StopWatch C152','m5stack-stopwatch'),'xiao_round':('Seeed XIAO ESP32-S3 + Round Display','xiao-round'),'waveshare_lite':('Waveshare ESP32-S3-LCD-1.28 Lite','waveshare-lite')}
 VERSION=re.search(r'#define DRAGON_VERSION "([0-9.]+)"',(ROOT/'firmware/include/version.h').read_text()).group(1)
 
 def run(*args):subprocess.run([sys.executable,*args],cwd=ROOT,check=True)
@@ -60,6 +60,7 @@ def build(board,skip):
         checks.append(f'{hashlib.sha256(data).hexdigest()}  {file.name}\n')
     (out/'SHA256SUMS.txt').write_text(''.join(checks),encoding='ascii')
     metadata={'version':VERSION,'board':board,'name':BOARDS[board][0],'source_commit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),'source_dirty':bool(subprocess.check_output(['git','status','--porcelain','--untracked-files=normal'],cwd=ROOT,text=True).strip()),'filesystem_offset':fs_offset,'filesystem_size':fs_size,'factory_resets_badges':True,'update_preserves_nvs_and_filesystem':True}
+    metadata['hardware_validation']='pending' if board=='waveshare_175' else 'existing-profile'
     metadata['flash_size']=0x2000000 if board=='waveshare' else 0x800000 if board=='xiao_round' else 0x1000000
     metadata['memory']=flash_report(entries,(build/'firmware.bin').stat().st_size,metadata['flash_size'])
     (out/'memory-budget.json').write_text(json.dumps(metadata['memory'],indent=2)+'\n',encoding='utf-8')

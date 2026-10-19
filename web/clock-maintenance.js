@@ -1,5 +1,5 @@
 import {readWearable} from './wearable-transfer.js?v=0.13.11';
-import {syncVerifiedClock} from './clock-verification.js?v=0.13.11';
+import {syncVerifiedClock} from './clock-verification.js?v=0.13.19';
 
 // Called only while the granted USB connection is idle. Never infer current
 // time from an old timestamp; the computer supplies the present instant.

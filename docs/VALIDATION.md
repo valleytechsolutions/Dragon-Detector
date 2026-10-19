@@ -34,3 +34,7 @@ The live web flasher's five firmware packages and new web assets match the relea
 - Signed-out GitHub requests returned HTTP 404 for the release, repository and owner profile during final verification on October 18, 2026. Public GitHub download access could not be confirmed; the live web flasher and its firmware downloads were reachable and verified.
 
 Earlier evidence remains attached to its [release](https://git.churchofmalware.org/Valleytech/Dragon-Detector/releases).
+
+## 0.13.19 non-C AMOLED 1.75
+
+The `waveshare_175` port is prepared from the official schematic and maintained BSP. Automated pin/partition/manifest checks and compilation are separate from physical validation. No physical unit has been tested for this port. Display, touch, RTC retention, buttons, SD, audio and battery operation remain on the [arrival checklist](WAVESHARE-AMOLED-175.md#arrival-checklist).

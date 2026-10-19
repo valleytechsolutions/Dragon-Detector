@@ -1,5 +1,9 @@
 # Changes
 
+## 0.13.19
+
+- Add the experimental non-C Waveshare AMOLED 1.75 port: corrected reset/audio wiring, RTC verification, microSD, full 466 px UI and a separate 16 MB web-flasher profile. Hardware testing is pending.
+
 ## 0.13.18 — Can Commander
 
 - Adds Matthew Kukanich's original MK logo, a CAN-inspired paired radar sweep, circuit nodes and navy/silver/blue interface colors.

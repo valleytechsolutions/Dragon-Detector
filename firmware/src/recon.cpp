@@ -39,7 +39,7 @@ static uint8_t* packet=nullptr;static uint8_t* beacon=nullptr;static size_t beac
 static std::atomic<int> crypto{0};
 #ifdef BOARD_XIAO_ROUND
 constexpr size_t CaptureCapacity=512*1024;
-#elif defined(BOARD_AMOLED_175C) || defined(BOARD_STOPWATCH)
+#elif defined(BOARD_AMOLED_175C) || defined(BOARD_AMOLED_175) || defined(BOARD_STOPWATCH)
 constexpr size_t CaptureCapacity=2*1024*1024;
 #else
 constexpr size_t CaptureCapacity=1024*1024;

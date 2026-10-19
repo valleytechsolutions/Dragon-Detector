@@ -56,7 +56,7 @@ void wearableBegin(){
 }
 bool configureClock(uint32_t epoch){
   if(!dragon::validEpoch(epoch))return false;
-#if defined(BOARD_STOPWATCH) || defined(BOARD_XIAO_ROUND)
+#if defined(BOARD_STOPWATCH) || defined(BOARD_XIAO_ROUND) || defined(BOARD_AMOLED_175)
   // These profiles promise a hardware clock. Never silently report a volatile
   // software-only write as successful if their RTC is disconnected or failed.
   if(!rtcAvailable)return false;

@@ -215,3 +215,7 @@ The user supplied Matthew Kukanich's [MK emblem](media/theme-logos/can-commander
 The user supplied the unchanged [crow reference](media/theme-logos/dzaz-reference.jpg). The transparent [DZ_AZ crow emblem](media/theme-logos/dzaz.png) is a new illustrated derivative created with the built-in image-generation tool; [prompt and artwork details](docs/DZ-AZ.md#artwork). Feather geometry and animation are original drawing code. The source photograph remains its owner’s work.
 
 The personal-theme editor, DDT1 format, previews and firmware renderers are original project code. Users provide their own images; those images are transferred locally over USB and are not added to this repository or published by the editor. The example design uses the already credited Dragon Detector/BWM mark.
+
+### Waveshare non-C AMOLED 1.75 port
+
+Hardware mapping was checked against Waveshare's official schematic, hardware reference and maintained BSP at revision `e4344e70c2fa78a13e8a06566507f1ba8af6672a`. See [sources and port status](docs/WAVESHARE-AMOLED-175.md#sources). The shared CO5300, SensorLib and XPowersLib dependencies retain their existing notices.

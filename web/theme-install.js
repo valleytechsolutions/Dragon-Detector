@@ -1,7 +1,7 @@
 import {BadgeSerial} from './serial.js?v=0.13.3';
 import {deviceQuery} from './device-query.js';
-import {parseBadgeInfo} from './firmware-compat.js?v=0.13.15';
-import {connectedProfile} from './board-profiles.js?v=0.13.17';
+import {parseBadgeInfo} from './firmware-compat.js?v=0.13.19';
+import {connectedProfile} from './board-profiles.js?v=0.13.19';
 import {hasPersonalThemes,uploadTheme} from './theme-transfer.js';
 import {decodeTheme} from './theme-codec.js';
 

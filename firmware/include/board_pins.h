@@ -26,13 +26,26 @@
 #define SCREEN_RES 466
 #define BOARD_HAS_AUDIO 0
 #define BOARD_HAS_SD 0
-#elif defined(BOARD_AMOLED_175C)
-// Waveshare ESP32-S3-Touch-AMOLED-1.75C. Bus pins match Waveshare's pin_config.h for the
-// non-C 1.75 board, but the C variant moves LCD reset to GPIO 1 and touch reset to GPIO 2
-// (the non-C board's SD pins) and has no card slot. Source: xiaozhi-esp32
-// main/boards/waveshare/esp32-s3-touch-amoled-1.75/config.h, 1_75C branch.
+#elif defined(BOARD_AMOLED_175C) || defined(BOARD_AMOLED_175)
+// The two AMOLED variants share their buses but not reset, SD or MCLK wiring.
+// Official non-C schematic/BSP reference: docs/WAVESHARE-AMOLED-175.md.
 
+#ifdef BOARD_AMOLED_175
+#define BOARD_NAME "Waveshare ESP32-S3-Touch-AMOLED-1.75"
+#define LCD_RESET 39
+#define TP_RESET 40
+#define AUDIO_I2S_MCK_IO 42
+#define BOARD_HAS_SD 1
+#define SD_MMC_CLK_PIN 2
+#define SD_MMC_CMD_PIN 1
+#define SD_MMC_D0_PIN 3
+#else
 #define BOARD_NAME "Waveshare ESP32-S3-Touch-AMOLED-1.75C"
+#define LCD_RESET 1
+#define TP_RESET 2
+#define AUDIO_I2S_MCK_IO 16
+#define BOARD_HAS_SD 0
+#endif
 #define SCREEN_RES 466
 #define BOARD_HAS_AUDIO 0
 
@@ -42,24 +55,19 @@
 #define LCD_SDIO3 7
 #define LCD_SCLK 38
 #define LCD_CS 12
-#define LCD_RESET 1
 #define LCD_COL_OFFSET 6
 
 // Touch, AXP2101 and QMI8658 share this bus. Probe optional RTC revisions.
 #define IIC_SDA 15
 #define IIC_SCL 14
 #define TP_INT 11
-#define TP_RESET 2
 #define TP_I2C_ADDR 0x5A
 
 // Waveshare official 07_ES8311 example / pin_config.h.
-#define AUDIO_I2S_MCK_IO 16
 #define AUDIO_I2S_BCK_IO 9
 #define AUDIO_I2S_WS_IO 45
 #define AUDIO_I2S_DO_IO 8
 #define AUDIO_MUTE_PIN 46
-
-#define BOARD_HAS_SD 0
 
 #else
 

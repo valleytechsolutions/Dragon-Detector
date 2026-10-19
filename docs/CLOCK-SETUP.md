@@ -11,7 +11,7 @@ Connecting **Detector tools** also sets and verifies the computer's current time
 
 ## Set time and date on the device
 
-On the four touch boards, open **Settings → Time** or tap the watch's settings icon. There are three tabs:
+On touch boards, open **Settings → Time** or tap the watch's settings icon. There are three tabs:
 
 - **Time:** scroll the hour, minute and AM/PM wheels, then **Save**. Seconds start at zero and the current date is preserved.
 - **Date:** scroll month, day and year, then **Save**. The clock keeps ticking while you edit; saving the date preserves its current hours, minutes and seconds. February and shorter months automatically limit the day wheel.
@@ -33,6 +33,7 @@ No firmware can know how long an unpowered clock was off without an independent 
 
 | Device | Time source | After shutdown |
 |---|---|---|
+| Waveshare AMOLED **1.75 non-C** · experimental | PCF85063 hardware RTC | Requires a powered RTC supply; battery-backed retention awaits hardware testing |
 | M5Stack StopWatch C152 | RX8130CE hardware RTC | Keeps time while its backup supply is powered |
 | Seeed XIAO + Round Display | BM8563 hardware RTC | Keeps time while its RTC battery/supply is powered |
 | Waveshare AMOLED **1.75C** | ESP32 system clock on tested hardware | USB sync or configured saved-Wi-Fi recovery required after full power-off |
@@ -41,13 +42,13 @@ No firmware can know how long an unpowered clock was off without an independent 
 
 The 1.75C schematic does not show the PCF85063 present on the **non-C** 1.75. The manufacturer introduction mentions an RTC, but its [C schematic](https://files.waveshare.com/wiki/ESP32-S3-Touch-AMOLED-1.75C/ESP32-S3-Touch-AMOLED-1.75C-schematic.pdf) and direct I2C checks of the tested unit do not support promising a separate calendar RTC. The PMU's RTCLDO is only a supply output. Firmware still probes for an optional RTC; detected hardware is verified before any persistence claim.
 
-In 0.13.10+, the flasher reads the hardware clock directly after setting it and checks again after 1.2 seconds to confirm that it advances. A missing RTC on StopWatch/XIAO, invalid/stale readback, or stopped oscillator fails setup. A correctly set software clock is reported separately with its power-off limitation. The firmware never restores an old saved timestamp and presents it as current time.
+In 0.13.10+, the flasher reads the hardware clock directly after setting it and checks again after 1.2 seconds to confirm that it advances. A missing RTC on StopWatch/XIAO/non-C AMOLED 1.75, invalid/stale readback, or stopped oscillator fails setup. A correctly set software clock is reported separately with its power-off limitation. The firmware never restores an old saved timestamp and presents it as current time.
 
 Powered software resets retain system time in 0.13.9+. Hardware reset/power cycling are different: without an independent powered RTC, elapsed off-time cannot be reconstructed offline. Keeping a software-clock board powered preserves time; complete battery discharge also loses it.
 
 ## Optional recovery over saved Wi-Fi
 
-All four full boards support saved-Wi-Fi clock recovery; Lite does not. Follow [the network setup steps](SPOTPEAR-CLOCK.md#recover-automatically-using-a-saved-wi-fi-network) for any full board. The profile must be explicitly saved and selected for clock recovery. A network with Internet access is required. The firmware retries after a failed attempt; while offline after power loss it cannot know the current date/time. Wi-Fi secrets are entered on the flasher, not in chat.
+All full profiles support saved-Wi-Fi clock recovery; Lite does not. Follow [the network setup steps](SPOTPEAR-CLOCK.md#recover-automatically-using-a-saved-wi-fi-network) for any full board. The profile must be explicitly saved and selected for clock recovery. A network with Internet access is required. The firmware retries after a failed attempt; while offline after power loss it cannot know the current date/time. Wi-Fi secrets are entered on the flasher, not in chat.
 
 ## Diagnostic commands
 

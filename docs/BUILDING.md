@@ -35,3 +35,7 @@ Open `http://127.0.0.1:8765` in Chrome/Edge. There is no frontend build step. ES
 For a preview with standalone guides, verified firmware downloads and publication checks, follow [Publishing](GITHUB-UPLOAD.md#independent-hosting).
 
 The current original application/web/tooling is MIT. Vendored drivers/libraries retain their own license notices. `ESP8266Audio` is explicitly excluded from every current build. Historical projects under `hardware/` keep their previous licenses and must not be relabeled. See [CREDITS.md](../CREDITS.md).
+
+## Non-C AMOLED 1.75 experimental build
+
+Run `pio run -e waveshare_175` and `python tools/build_release.py --board waveshare_175`. This uses the shared AMOLED adapter with a separate 16 MB partition table. It does not use the `waveshare` C-variant environment. See [port status](WAVESHARE-AMOLED-175.md).

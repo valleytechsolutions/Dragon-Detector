@@ -2,15 +2,19 @@
 
 # Dragon Detector
 
-Wi-Fi and Bluetooth detection, signal tracking, and logo watch faces for five ESP32-S3 displays.
+Wi-Fi and Bluetooth detection, signal tracking, and logo watch faces for ESP32-S3 displays.
 
 **Web flasher available:** [Install from the independent host](https://valleytech-dragon-detector.pages.dev/). The original GitHub Pages address and GitHub-hosted images are temporarily unavailable. Source, artwork and release files are intact; existing devices are unaffected. [Hosting status](docs/HOSTING-STATUS.md).
 
-[**Install firmware**](https://valleytech-dragon-detector.pages.dev/#install) · [Latest release](docs/RELEASE-0.13.18.md) · [User guides](docs/GUI.md) · [Clock setup](https://git.churchofmalware.org/Valleytech/Dragon-Detector/wiki/Clock-Setup)
+[**Install firmware**](https://valleytech-dragon-detector.pages.dev/#install) · [Latest release](docs/RELEASE-0.13.19.md) · [User guides](docs/GUI.md) · [Clock setup](https://git.churchofmalware.org/Valleytech/Dragon-Detector/wiki/Clock-Setup)
+
+## Waveshare AMOLED 1.75 · experimental port
+
+The 16 MB **non-C** board now has its own build and flasher entry, including RTC and microSD support. It is compile-tested and awaits physical hardware testing. [Installation and arrival checklist](docs/WAVESHARE-AMOLED-175.md).
 
 ## Can Commander · 0.13.18
 
-A tribute to Matthew Kukanich: the original MK emblem, silver and navy instruments, animated CAN-H/CAN-L traces and a dedicated clock-data watch. Includes matching menus and a session stopwatch on all five boards. [Explore Can Commander](docs/CAN-COMMANDER.md).
+A tribute to Matthew Kukanich: the original MK emblem, silver and navy instruments, animated CAN-H/CAN-L traces and a dedicated clock-data watch. Includes matching menus and a session stopwatch on all six profiles. [Explore Can Commander](docs/CAN-COMMANDER.md).
 
 ## Clock and timer power saving
 
@@ -39,14 +43,15 @@ DZ_AZ adds a crow-and-name emblem, rotating feather radar sweep, and short/long 
 | Board | Display | Controls and peripherals |
 |---|---|---|
 | **Waveshare ESP32-S3-Touch-AMOLED-1.75C** | 466 × 466 AMOLED | Touch, BOOT/PWR, 32 MB flash |
+| **Waveshare ESP32-S3-Touch-AMOLED-1.75 · Experimental** | 466 × 466 AMOLED | Touch, BOOT/PWR, PCF85063 RTC, microSD, 16 MB flash; hardware testing pending |
 | **M5Stack StopWatch C152** | 466 × 466 AMOLED | Touch, yellow/blue buttons, RTC, haptics, 16 MB flash |
 | **Spotpear / Guition JC3636W518** | 360 × 360 LCD | Touch, optional microSD, 16 MB flash |
 | **Seeed XIAO ESP32-S3 + Round Display** | 240 × 240 LCD | Touch, RTC, microSD, 8 MB flash |
 | **Waveshare ESP32-S3-LCD-1.28 Lite** | 240 × 240 LCD | BOOT button, 16 MB flash; no touch |
 
-The four full boards share the radar, 34 built-in themes, 32 built-in logo watch faces, timers, notebook, badge editor, radio tools, and BLE Lab. StopWatch and Waveshare AMOLED support 2 MiB captures and 2 MiB recon sessions. Their total file storage differs.
+The five full profiles share the radar, 35 built-in themes, logo watch faces, timers, notebook, badge editor, radio tools, and BLE Lab. StopWatch and Waveshare AMOLED support 2 MiB captures and 2 MiB recon sessions. Their total file storage differs.
 
-Lite provides five button-operated pages: radar, clock, timer, signals, and diagnostics. It shares detection and all 34 built-in themes, with compact clocks. It does not include Badge Studio, audio, or active labs.
+Lite provides five button-operated pages: radar, clock, timer, signals, and diagnostics. It shares detection and all 35 built-in themes, with compact clocks. It does not include Badge Studio, audio, or active labs.
 
 Firmware is board-specific. The Waveshare **1.75C** and non-C models have different wiring. [Hardware guide](docs/HARDWARE.md) · [Feature comparison](docs/FEATURE-MATRIX.md) · [Tested hardware and limitations](docs/VALIDATION.md)
 
@@ -62,7 +67,7 @@ The collection includes maker, community, character, and locksport designs. [Bro
 
 ## Capsule Corp
 
-A silver Dragon Radar bezel, emerald grid and yellow signal markers, paired with a white-and-blue Capsule Corp chronometer. Included on all five boards, with matching menus on the full profiles. [Theme guide](docs/CAPSULE-CORP.md).
+A silver Dragon Radar bezel, emerald grid and yellow signal markers, paired with a white-and-blue Capsule Corp chronometer. Included on all six profiles, with matching menus on the full profiles. [Theme guide](docs/CAPSULE-CORP.md).
 
 | Radar | Watch |
 |---|---|
@@ -110,7 +115,7 @@ Detection matches observable radio signatures; it does not establish intent, own
 | `hardware/` | Board partitions and archived projects |
 | `docs/` | Setup guides, architecture, and validation |
 
-CI tests the firmware core and browser modules, builds all five profiles, and publishes matching firmware, manifests, and SHA-256 checksums. Historical projects under `hardware/` retain their original licenses and are not current update targets.
+CI tests the firmware core and browser modules, builds all six profiles, and publishes matching firmware, manifests, and SHA-256 checksums. Historical projects under `hardware/` retain their original licenses and are not current update targets.
 
 ## Credits and license
 

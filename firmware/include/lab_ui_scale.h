@@ -13,7 +13,7 @@ inline const lv_font_t* font14(){return &lv_font_montserrat_8;}
 inline const lv_font_t* font16(){return &lv_font_montserrat_10;}
 inline const lv_font_t* font18(){return &lv_font_montserrat_10;}
 inline const lv_font_t* font26(){return &lv_font_montserrat_14;}
-#elif defined(BOARD_AMOLED_175C) || defined(BOARD_STOPWATCH)
+#elif defined(BOARD_AMOLED_175C) || defined(BOARD_AMOLED_175) || defined(BOARD_STOPWATCH)
 inline const lv_font_t* font14(){return &lv_font_montserrat_14;}
 inline const lv_font_t* font16(){return &lv_font_montserrat_16;}
 inline const lv_font_t* font18(){return &lv_font_montserrat_18;}
