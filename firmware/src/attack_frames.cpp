@@ -1,6 +1,7 @@
 // Independently bounded protocol builders informed by ESP32 Marauder's MIT
 // WiFiScan implementation. See CREDITS.md and third_party/licenses/MARAUDER.txt.
 #include "attack_frames.h"
+#include "ibeacon.h"
 #include "packet_helpers.h"
 #include <string.h>
 #include <stdio.h>
@@ -31,7 +32,7 @@ const AttackDefinition attackDefinitions[] = {
   {"AP clone / random BSSIDs",false,true,false},
   {"Rickroll beacon playlist",false,false,false},
   {"Funny beacon playlist",false,false,false},
-  {"BLE iBeacon simulator",true,false,false},
+  {"Spoof iBeacon",true,false,false},
   {"BLE Eddystone UID",true,false,false},
   {"BLE Eddystone telemetry",true,false,false},
   {"BLE BTHome sensor",true,false,false},
@@ -120,10 +121,7 @@ size_t buildBleAttack(uint8_t* out,size_t cap,AttackMode mode,const uint8_t e[96
   if(mode==AttackMode::BleMix)mode=AttackMode(unsigned(AttackMode::SwiftPair)+(e[0]%6));
   uint8_t b[31]{};size_t n=0;
   switch(mode) {
-    case AttackMode::IBeacon: {
-      const uint8_t data[]={2,1,6,26,0xff,0x4c,0,2,0x15,0x44,0x52,0x41,0x47,0x4f,0x4e,0x4c,0x41,0x42,0,0,0,0,0,0,1,0,1,0,1,0xc5};
-      memcpy(b,data,sizeof(data));memcpy(b+25,e,4);n=sizeof(data);break;
-    }
+    case AttackMode::IBeacon: return dragon::ibeacon::encode(out,cap,dragon::ibeacon::Identity{});
     case AttackMode::EddystoneUid: {
       const uint8_t data[]={2,1,6,3,3,0xaa,0xfe,23,0x16,0xaa,0xfe,0,0xc5,'D','r','a','g','o','n','-','L','a','b',0,0,0,0,0,0,0,0};
       memcpy(b,data,sizeof(data));memcpy(b+23,e,6);n=sizeof(data);break;

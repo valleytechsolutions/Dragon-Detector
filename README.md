@@ -6,7 +6,11 @@ Wi-Fi and Bluetooth detection, signal tracking, and logo watch faces for ESP32-S
 
 **Web flasher available:** [Install from the independent host](https://valleytech-dragon-detector.pages.dev/). The original GitHub Pages address and GitHub-hosted images are temporarily unavailable. Source, artwork and release files are intact; existing devices are unaffected. [Hosting status](docs/HOSTING-STATUS.md).
 
-[**Install firmware**](https://valleytech-dragon-detector.pages.dev/#install) · [Latest release](docs/RELEASE-0.13.19.md) · [User guides](docs/GUI.md) · [Clock setup](https://git.churchofmalware.org/Valleytech/Dragon-Detector/wiki/Clock-Setup)
+[**Install firmware**](https://valleytech-dragon-detector.pages.dev/#install) · [Latest release](docs/RELEASE-0.13.20.md) · [User guides](docs/GUI.md) · [Clock setup](https://git.churchofmalware.org/Valleytech/Dragon-Detector/wiki/Clock-Setup)
+
+## Find My Beeper · 0.13.20
+
+Open **Attacks → BLE attacks → Find My Beeper** to select your tracker and request one beep. Tested on an owned AirTag with audible confirmation. This release also adds configurable iBeacon fields and fixes browser replay selection. [Instructions and compatibility](docs/BLE-TOOLS-01320.md).
 
 ## Waveshare AMOLED 1.75 · experimental port
 

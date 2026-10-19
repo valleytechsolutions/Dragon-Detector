@@ -97,3 +97,6 @@ header nav{gap:22px;font-size:12px}
 #can-commander .preview-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 #can-commander .preview-grid img{max-width:320px}
 @media(max-width:650px){#can-commander .preview-grid{grid-template-columns:1fr}#can-commander .preview-grid img{max-width:280px}}
+
+#radio-tools .form-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+@media(max-width:600px){#radio-tools .form-row{grid-template-columns:1fr;gap:0}}

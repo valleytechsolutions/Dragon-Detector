@@ -32,6 +32,7 @@ static bool captureModeOwned=false;static ReconMode capturePreviousMode=ReconMod
 static bool resumeRadio=false,captureEapol=false;
 static uint8_t previousLock=0,ownMac[6]{},saeMaterial[96]{},saeClient[6]{},token[128]{};
 static uint8_t customAdvertisement[31]{};static size_t customLength=0;
+static dragon::ibeacon::Identity beaconIdentity;
 static uint8_t configuredSource[6]{};static bool sourceConfigured=false;
 static size_t tokenSize=0;static uint16_t sequence=0;static uint32_t lastTx=0,captureAt=0;
 static AttackTarget running;static uint16_t runSeconds=15,runRate=10;
@@ -132,7 +133,7 @@ static void tick(uint32_t now){
  if(sourceConfigured)memcpy(source,configuredSource,6);
  if(m==AttackMode::SaeCommit){if(crypto==1)return;if(crypto!=2){stop();say("SAE key generation failed");return;}memcpy(entropy,saeMaterial,96);memcpy(source,saeClient,6);}
  if(m==AttackMode::SsidList)strlcpy(running.ssid,ssids[sequence%ssidCount],33);
- size_t n=m==AttackMode::CustomBle?copyBleAdvertisement(packet,1200,customAdvertisement,customLength):cloneMode(m)?cloneBeacon(packet,1200,beacon,beaconLength,sequence++,m==AttackMode::ChannelSwitch?37:m==AttackMode::Quiet?40:0,running.destinationChannel):ble?buildBleAttack(packet,1200,m,entropy):buildWifiAttack(packet,1200,m,running,source,sequence++,entropy);
+ size_t n=m==AttackMode::IBeacon?dragon::ibeacon::encode(packet,1200,beaconIdentity):m==AttackMode::CustomBle?copyBleAdvertisement(packet,1200,customAdvertisement,customLength):cloneMode(m)?cloneBeacon(packet,1200,beacon,beaconLength,sequence++,m==AttackMode::ChannelSwitch?37:m==AttackMode::Quiet?40:0,running.destinationChannel):ble?buildBleAttack(packet,1200,m,entropy):buildWifiAttack(packet,1200,m,running,source,sequence++,entropy);
  if(n&&m==AttackMode::ApSpam){memcpy(packet+10,source,6);memcpy(packet+16,source,6);}
  if(n==128&&m==AttackMode::SaeCommit&&tokenSize){memmove(packet+32+tokenSize,packet+32,96);memcpy(packet+32,token,tokenSize);n+=tokenSize;}
  int result=ESP_ERR_INVALID_ARG;
@@ -178,6 +179,8 @@ bool reconSetMode(ReconMode next){if(!validMode(unsigned(next))||busy())return f
 void reconStop(){networkStop();csiStop();portalStop();stop();captureStop();}
 uint16_t reconHopDwell(){return hopDwell;}
 uint8_t reconNextChannel(uint8_t current){return analysis::nextChannel(current,hopMask);}
+bool reconSetIBeacon(const dragon::ibeacon::Identity& value){if(busy()||status.recording)return false;beaconIdentity=value;return true;}
+const dragon::ibeacon::Identity& reconIBeacon(){return beaconIdentity;}
 void reconBegin(){networkBegin();prefs.begin("dd-recon",false);loadList();unsigned m=prefs.getUChar("mode",0);mode=validMode(m)?ReconMode(m):ReconMode::Radar;probes=(analysis::Probe*)ps_calloc(96,sizeof(analysis::Probe));aps=(Ap*)ps_calloc(ApCapacity,sizeof(Ap));clients=(dragon::toolkit::Client*)ps_calloc(ClientCapacity,sizeof(dragon::toolkit::Client));packet=(uint8_t*)ps_malloc(1200);beacon=(uint8_t*)ps_malloc(1024);radioApplyMode();}
 void reconLoop(){recipeLoop();missionLoop();networkLoop();csiLoop();portalLoop();tick(millis());saveTick();if(status.recording&&millis()-captureAt>=15*60*1000){captureStop();say("15-minute capture limit; Save to retain");}}
 void reconWifi(const uint8_t* p,size_t n,size_t original,uint64_t us,int rssi,uint8_t channel){
@@ -209,6 +212,8 @@ bool reconCommand(const String& c){
  else if(c.startsWith("recon filter ")){unsigned kind,selected;char tail;bool ok=sscanf(c.c_str(),"recon filter %u %u %c",&kind,&selected,&tail)==2&&selected<2&&setCaptureFilter(kind,selected);Serial.println(ok?"RECON_OK":"RECON_ERROR filter or busy");}
  else if(c.startsWith("recon hop ")&&!busy()&&!status.recording){unsigned mask,dwell;char tail;bool ok=sscanf(c.c_str(),"recon hop %u %u %c",&mask,&dwell,&tail)==2&&mask&&mask<=0x7ff&&dwell>=80&&dwell<=2000;if(ok){hopMask=mask;hopDwell=dwell;channelLock=0;}Serial.println(ok?"RECON_OK":"RECON_ERROR hop mask/dwell");}
  else if(c=="tool list"){for(unsigned i=0;i<unsigned(AttackMode::Count);++i){auto& d=attackDefinitions[i];Serial.printf("TOOL %u ble=%u ap=%u client=%u %s\n",i,d.ble,d.needsAp,d.needsClient,d.name);}Serial.println("RECON_OK");}
+ else if(c=="tool ibeacon"){char uuid[37];dragon::ibeacon::uuidText(beaconIdentity,uuid);Serial.printf("RECON_IBEACON uuid=%s major=%u minor=%u power=%d\nRECON_OK\n",uuid,beaconIdentity.major,beaconIdentity.minor,beaconIdentity.power);}
+ else if(c.startsWith("tool ibeacon ")){char uuid[37],extra;unsigned major,minor;int power;dragon::ibeacon::Identity value;bool ok=sscanf(c.c_str(),"tool ibeacon %36s %u %u %d %c",uuid,&major,&minor,&power,&extra)==4&&major<=65535&&minor<=65535&&power>=-128&&power<=127&&dragon::ibeacon::parseUuid(uuid,value.uuid);if(ok){value.major=major;value.minor=minor;value.power=power;ok=reconSetIBeacon(value);}Serial.println(ok?"RECON_OK iBeacon configured in RAM; start Spoof iBeacon to transmit":"RECON_ERROR UUID / major / minor / power or radio busy");}
  else if(c.startsWith("tool payload ")&&!busy()){uint8_t data[31],validated[31];size_t count=0;bool ok=lab::decodeHex(c.substring(13).c_str(),data,sizeof(data),count)&&copyBleAdvertisement(validated,sizeof(validated),data,count);if(ok){memcpy(customAdvertisement,validated,count);customLength=count;}Serial.println(ok?"RECON_OK custom advertisement stored in RAM; select BLE custom advertisement to transmit":"RECON_ERROR complete 1-31 byte AD payload required");}
  else if(c=="tool payload"){Serial.print("RECON_PAYLOAD ");for(size_t i=0;i<customLength;++i)Serial.printf("%02x",customAdvertisement[i]);Serial.println();Serial.println("RECON_OK");}
  else if(c=="tool aps"){for(unsigned i=0;aps&&i<ApCapacity;++i)if(aps[i].used){char mac[18];macText(aps[i].mac,mac);Serial.printf("TOOL_AP %u %s ch=%u rssi=%d age=%lu security=%u name=%s\n",i,mac,aps[i].channel,aps[i].rssi,(millis()-aps[i].seen)/1000,aps[i].security,aps[i].name);}Serial.println("RECON_OK");}

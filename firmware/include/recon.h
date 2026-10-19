@@ -1,10 +1,13 @@
 #pragma once
 #include <Arduino.h>
 #include "recon_modes.h"
+#include "ibeacon.h"
 #ifndef BOARD_RADAR_LITE
 #include <FS.h>
 size_t reconCaptureCapacity();
 void reconBegin();
+bool reconSetIBeacon(const dragon::ibeacon::Identity&);
+const dragon::ibeacon::Identity& reconIBeacon();
 void reconLoop();
 bool reconCommand(const String&);
 dragon::ReconMode reconMode();

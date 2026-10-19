@@ -219,3 +219,7 @@ The personal-theme editor, DDT1 format, previews and firmware renderers are orig
 ### Waveshare non-C AMOLED 1.75 port
 
 Hardware mapping was checked against Waveshare's official schematic, hardware reference and maintained BSP at revision `e4344e70c2fa78a13e8a06566507f1ba8af6672a`. See [sources and port status](docs/WAVESHARE-AMOLED-175.md#sources). The shared CO5300, SensorLib and XPowersLib dependencies retain their existing notices.
+
+## Find My Beeper / 0.13.20
+
+[JustCallMeKoko / ESP32 Marauder](https://github.com/justcallmekoko/ESP32Marauder/tree/d3ceb28afeda1196ca27c13adeaa69ada52383f3) supplied the AirTag/FMNA/DULT service and command references and the Find My Sound workflow. Its MIT notices remain in the repository. The direct-request worker, response handling, tracker selection UI, iBeacon configuration/parser and tests are original Dragon Detector code. DULT response distinctions follow the [accessory protocol draft](https://datatracker.ietf.org/doc/html/draft-ledvina-dult-accessory-protocol-00), a work in progress.

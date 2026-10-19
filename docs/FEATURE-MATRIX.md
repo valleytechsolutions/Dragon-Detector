@@ -34,7 +34,8 @@ All five also accept one optional [personal logo theme](CUSTOM-THEME.md) from th
 | Evil Portal / KARMA | Local portal, captive DNS, optional HTML, explicit recent probe-SSID selection, bounded submission log; no Internet proxy or automatic disconnect step |
 | Apple/Samsung/Google/Windows/Flipper/mixed BLE advertisement tests | Existing timed BLE transmitter modes |
 | AirTag identity replay | BLE Lab legacy advertisement replay; optional random-static identity only; no keys or rotating-identity cryptography |
-| Find My sound | Explicit connected AirTag/Find My/DULT characteristic write; peer may reject it |
+| Find My Beeper | Direct, selected AirTag/FMNA/DULT request under Attacks → BLE attacks; response handling and cleanup; actual AirTag beep confirmed on 1.75C |
+| Spoof iBeacon | Configurable UUID, major/minor and measured power; selected-advertisement field copy; stable timed payload |
 | CSI motion monitor | Experimental independent amplitude-shape monitor; calibrated signal-change score, low-data state and 120-point CSV. No phase-fusion equivalence or occupancy guarantee |
 | Save/load SSIDs, custom HTML, capture browser | Recon flash playlist/template/capture library; checked browser download and individual deletion |
 | Recon missions / desktop tool | Named sessions with independently encoded RCN1/PRB1/REL1 files and checked ZIP download; no GPS fix. External desktop integration is not yet tested |

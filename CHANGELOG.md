@@ -1,5 +1,12 @@
 # Changes
 
+## 0.13.20
+
+- Adds Find My Beeper under Attacks → BLE attacks, with a dedicated selection/result screen and confirmation before each request.
+- Connects directly to a selected tracker; subscribes to FMNA/DULT responses, reports protocol rejection/completion and restores scanning. An owned AirTag beep was physically confirmed on 1.75C.
+- Adds configurable, stable iBeacon UUID/major/minor/measured-power fields and copying from a selected advertisement.
+- Applies the browser's displayed device selection before advertisement replay.
+
 ## 0.13.19
 
 - Add the experimental non-C Waveshare AMOLED 1.75 port: corrected reset/audio wiring, RTC verification, microSD, full 466 px UI and a separate 16 MB web-flasher profile. Hardware testing is pending.

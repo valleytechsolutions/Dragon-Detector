@@ -9,6 +9,7 @@ bool bleLabOwnsRadio();
 void bleLabStop();
 void bleLabObserve(const uint8_t*,uint8_t,int,const uint8_t*,size_t,size_t,uint32_t);
 void bleLabView(void*);
+void bleLabBeeperPage();
 void bleLabViewLoop();
 void bleLabSelect(const uint8_t*,uint8_t,const char*);
 void radioRebindBle();

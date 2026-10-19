@@ -1,4 +1,17 @@
-# Release verification · 0.13.17
+# Release verification
+
+## 0.13.20 · Find My Beeper
+
+- The owner's AirTag was isolated by a battery-out/battery-in scan comparison. On Waveshare 1.75C, one direct sound write was acknowledged and the owner confirmed the audible beep. The BLE worker disconnected and returned to radar, with the stored badge unchanged.
+- Controlled Windows peripherals verified the AirTag opcode, FMNA indication subscription before the write, and DULT acceptance/rejection responses. Windows peripheral reconnections were intermittent; DULT completion parsing is covered by native fixtures rather than a physical DULT accessory claim.
+- Native checks cover UUID parsing, iBeacon wire encoding/decoding, malformed lengths, signed calibration values and DULT response distinctions, alongside the existing detector, packet-builder and fuzz suites.
+- A separate BLE receiver observed the configured iBeacon UUID, major/minor and signed measured power; the timed run stopped and restored scanning.
+- 96 web-module tests pass, including board/version gating, explicit address selection and iBeacon input validation.
+- All six profiles compile. The non-C AMOLED 1.75, XIAO Round and Lite remain build-tested for this release. The real AirTag result applies to the tested 1.75C and AirTag combination.
+
+The web update preserves NVS and filesystems. Active BLE tests pause scanning and release the radio when finished. No claim is made that every pairing advertisement produces a popup or crash on current phones. [Feature instructions](BLE-TOOLS-01320.md).
+
+## 0.13.17
 
 [Release and verification files](https://git.churchofmalware.org/Valleytech/Dragon-Detector/releases/tag/v0.13.17)
 

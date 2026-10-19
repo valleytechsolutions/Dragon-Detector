@@ -1,3 +1,4 @@
+import {hasBleTools,observedAddress,iBeaconCommand,parseIBeacon} from './ble-tools.js?v=0.13.20';
 import {maintainComputerClock} from './clock-maintenance.js?v=0.13.19';
 import {startRadarBackground} from './radar-background.js?v=0.13.12';
 import {finishInstallSession,syncInstalledClock} from './install-clock.js?v=0.13.19';
@@ -162,6 +163,7 @@ function controls(){
   document.querySelectorAll('[data-requires="0.11"]').forEach(b=>b.disabled=busy||!reconReady||!/^0\.(?:11|12|13)\.\d+$/.test(firmwareVersion));
   document.querySelectorAll('[data-requires="0.11.1"]').forEach(b=>b.disabled=busy||!reconReady||!hasNetworkTools(firmwareVersion));
   document.querySelectorAll('[data-requires="0.13"]').forEach(b=>b.disabled=busy||!serial||!hasSessionTools(deviceProfile,firmwareVersion));
+  for(const id of ['ibeacon-save','ibeacon-read','lab-ibeacon'])$(id).disabled=busy||!serial||!hasBleTools(deviceProfile,firmwareVersion);
   $('lab-initialize').disabled=busy||!labReady||deviceProfile!=='waveshare';
   const lite=!!boardProfiles[deviceProfile]?.lite;
   for(const id of ['notebook-open','notebook-probes','notebook-adverts','notebook-memory'])$(id).disabled=busy||!serial||lite||!hasNotebook(firmwareVersion);
@@ -434,8 +436,12 @@ $('recon-filter-status').onclick=()=>reconAction(l=>reconDo(l,'recon filter'));
 $('recon-hop-save').onclick=()=>reconAction(l=>reconDo(l,'recon hop '+$('recon-hop').value));
 
 $('lab-select').onclick=()=>labAction(l=>{const d=$('lab-device').value;if(!/^[0-9a-f:]{17} [0-3]$/i.test(d))throw new Error('Choose your observed device.');return labCommand(l,'lab select '+d);});
-$('lab-replay').onclick=()=>labAction(async l=>{if(confirm('Replay the selected owned peripheral’s legacy advertisement for up to 30 seconds? Radar pauses until Stop. Captured identity replay needs a random-static address.'))await labCommand(l,'lab replay'+($('lab-replay-identity').checked?' identity':''));});
-$('lab-sound').onclick=()=>labAction(async l=>{if(confirm('Send one sound request to the connected Find My / DULT tracker? The tracker decides whether to allow it.'))await labCommand(l,'lab sound');});
+$('lab-replay').onclick=()=>labAction(async l=>{const d=observedAddress($('lab-device').value);if(confirm(`Replay ${d.split(' ')[0]}'s legacy advertisement for up to 30 seconds? Radar pauses until Stop. Captured identity replay needs a random-static address.`)){await labCommand(l,'lab select '+d);await labCommand(l,'lab replay'+($('lab-replay-identity').checked?' identity':''));}});
+$('lab-sound').onclick=()=>labAction(async l=>{const direct=hasBleTools(deviceProfile,firmwareVersion),d=direct?observedAddress($('lab-device').value):'';if(confirm(`Send one sound request to ${direct?d.split(' ')[0]:'the connected tracker'}? The tracker decides whether to allow it.`)){if(d)await labCommand(l,'lab select '+d);await labCommand(l,'lab sound');$('lab-output').textContent+='\nUse Status for the result. An acknowledged request does not prove audible sound.';}});
+$('lab-ibeacon').onclick=()=>labAction(async l=>{const d=observedAddress($('lab-device').value);await labCommand(l,'lab select '+d);await labCommand(l,'lab ibeacon');const value=parseIBeacon(await reconLines(l,'tool ibeacon'));for(const key of ['uuid','major','minor','power'])$('ibeacon-'+key).value=value[key];$('lab-output').textContent='iBeacon fields copied. Review them in Radio tools, choose Spoof iBeacon and start a timed test.';});
+$('ibeacon-save').onclick=()=>reconAction(l=>reconDo(l,iBeaconCommand($('ibeacon-uuid').value,$('ibeacon-major').value,$('ibeacon-minor').value,$('ibeacon-power').value)));
+$('ibeacon-read').onclick=()=>reconAction(async l=>{const value=parseIBeacon(await reconDo(l,'tool ibeacon'));for(const key of ['uuid','major','minor','power'])$('ibeacon-'+key).value=value[key];});
+
 for(const [id,command] of Object.entries({'portal-status':'portal status','portal-stop':'portal stop','portal-log':'portal log','portal-save':'portal save'}))$(id).onclick=()=>reconAction(l=>reconDo(l,command));
 $('portal-name-save').onclick=()=>reconAction(l=>{const n=$('portal-name').value;if(!/^[ -~]{1,32}$/.test(n))throw new Error('Use a printable 1–32 byte SSID.');return reconDo(l,'portal name '+n);});
 $('portal-start').onclick=()=>reconAction(async l=>{const rows=await reconLines(l,'portal status');if(!confirm('Start this local lab AP?\n'+rows.join('\n')+'\nRadar pauses until Stop or timeout.'))return;const n=Number($('recon-seconds').value);if(!Number.isInteger(n)||n<1||n>60)throw new Error('Duration must be 1–60 seconds.');await reconDo(l,'tool seconds '+n);await reconDo(l,'portal start');});
