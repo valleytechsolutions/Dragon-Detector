@@ -1,6 +1,8 @@
 # Exact board profiles
 
-Current firmware: **0.13.20**. Another display on the same ESP32-S3 needs different firmware.
+Current firmware: **0.13.23**. Another display on the same ESP32-S3 needs different firmware.
+
+[Device purchase links and exact model choices](../README.md#supported-hardware) · [Shop from the web flasher](https://valleytech-dragon-detector.pages.dev/#buy-hardware). The XIAO setup needs both the ESP32-S3 board and Round Display. Waveshare 1.75C, 1.75 and 1.75-G use separate installer profiles.
 
 | Feature | Waveshare AMOLED 1.75C | M5Stack StopWatch C152 | Spotpear JC3636W518 | XIAO ESP32-S3 + Round Display | Waveshare LCD 1.28 Lite |
 |---|---|---|---|---|---|
@@ -8,7 +10,7 @@ Current firmware: **0.13.20**. Another display on the same ESP32-S3 needs differ
 | Flash / PSRAM | 32 / 8 MB | 16 / 8 MB | 16 / 8 MB | 8 / 8 MB | 16 / 2 MB |
 | Physical timing controls | BOOT + short PWR | Yellow Start/Pause + blue Lap | On-screen | BOOT Start/Pause + on-screen Lap | BOOT tap / double-tap / hold |
 | Radar / same detection families | Yes | Yes | Yes | Yes | Yes |
-| 29 themes / badge / touch menus | Yes | Yes | Yes | Yes | 29 themes; no badge/touch |
+| 37 themes / badge / touch menus | Yes | Yes | Yes | Yes | 37 themes; no badge/touch |
 | RSSI Hunt / watch lists / history | Yes | Yes | Yes | Yes | Radar + signal details; no saved history |
 | Notebook / eight modes / 29 radio tools | Yes | Yes | Yes | Yes | No |
 | BLE Lab / GATT / recon sessions / recipes | Yes | Yes | Yes | Yes | No |
@@ -25,11 +27,11 @@ All four full boards use the same classifiers and lab workflows; Waveshare's adv
 
 ## Experimental non-C AMOLED 1.75
 
-The sixth profile, `waveshare_175`, targets the 16 MB **ESP32-S3-Touch-AMOLED-1.75**: full 466 px UI, RTC, microSD, 7.94 MiB shared internal storage, 2 MiB captures and 2 MiB sessions. Hardware testing is pending. It has different reset and audio pins from the C model. See the [wiring, install and validation guide](WAVESHARE-AMOLED-175.md).
+The `waveshare_175` profile targets the 16 MB **ESP32-S3-Touch-AMOLED-1.75**: full 466 px UI, RTC, microSD, 7.94 MiB shared internal storage, 2 MiB captures and 2 MiB sessions. The separate `waveshare_175_gps` profile adds support for the **1.75-G** with onboard LC76G GPS. The non-C baseline was reported working by a tester; new SD/GPS/touch features await physical testing. These models have different reset and audio pins from the C model. See the [wiring, install and validation guide](WAVESHARE-AMOLED-175.md).
 
 ## Experimental Elecrow CrowPanel 2.1 Rotary
 
-The `elecrow_21` profile targets the 480 × 480 ST7701 IPS rotary board, with 16 MB flash and 8 MB PSRAM. It uses the full interface, CST826 touch, the outer-ring encoder and its press switch. It has 7.94 MiB shared internal storage, a 1 MiB capture buffer and 256 KiB recon sessions. No SD, speaker or external RTC is configured. Physical testing is pending. [Wiring, installation and controls](ELECROW-ROTARY-21.md).
+The `elecrow_21` profile targets the 480 × 480 ST7701 IPS rotary board, with 16 MB flash and 8 MB PSRAM. It uses the full interface, CST826 touch, the outer-ring encoder and its press switch. It has 7.94 MiB shared internal storage, a 1 MiB capture buffer and 256 KiB recon sessions. No SD, speaker or external RTC is configured. Initial display, ring, scanning and clock/timer checks passed on one unit; wider testing remains. [Wiring, installation and controls](ELECROW-ROTARY-21.md).
 
 ## Storage follows the hardware
 

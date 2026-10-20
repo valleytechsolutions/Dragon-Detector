@@ -46,21 +46,24 @@ Build your own clock, radar and counter in the [Custom theme tab](https://valley
 
 ## Supported hardware
 
-| Board | Display | Controls and peripherals |
-|---|---|---|
-| **Waveshare ESP32-S3-Touch-AMOLED-1.75C** | 466 × 466 AMOLED | Touch, BOOT/PWR, 32 MB flash |
-| **Waveshare ESP32-S3-Touch-AMOLED-1.75 · SD beta** | 466 × 466 AMOLED | Touch, BOOT/PWR, PCF85063 RTC, microSD, 16 MB flash; new SD features await field tests |
-| **M5Stack StopWatch C152** | 466 × 466 AMOLED | Touch, yellow/blue buttons, RTC, haptics, 16 MB flash |
-| **Elecrow CrowPanel 2.1 Rotary · Experimental** | 480 × 480 IPS | Touch, rotary ring and press, 16 MB flash; initial hardware checks passed |
-| **Spotpear / Guition JC3636W518** | 360 × 360 LCD | Touch, optional microSD, 16 MB flash |
-| **Seeed XIAO ESP32-S3 + Round Display** | 240 × 240 LCD | Touch, RTC, microSD, 8 MB flash |
-| **Waveshare ESP32-S3-LCD-1.28 Lite** | 240 × 240 LCD | BOOT button, 16 MB flash; no touch |
+Some store links are affiliate links. Purchases through them may earn Valleytech a commission.
 
-The seven full profiles share the radar, 35 built-in themes, logo watch faces, timers, notebook, badge editor, radio tools, and BLE Lab. StopWatch and Waveshare AMOLED support 2 MiB captures and 2 MiB recon sessions. Their total file storage differs.
+| Board | Display | Controls and peripherals | Get the hardware |
+|---|---|---|---|
+| **Waveshare ESP32-S3-Touch-AMOLED-1.75C** | 466 × 466 AMOLED | Touch, BOOT/PWR, 32 MB flash; choose the **C** model | [Waveshare](https://www.waveshare.com/esp32-s3-touch-amoled-1.75c.htm?&aff_id=122099) |
+| **Waveshare ESP32-S3-Touch-AMOLED-1.75 · SD beta** | 466 × 466 AMOLED | Touch, BOOT/PWR, RTC, microSD, 16 MB flash; select **Standard version** | [Waveshare](https://www.waveshare.com/esp32-s3-touch-amoled-1.75.htm?&aff_id=122099) |
+| **Waveshare ESP32-S3-Touch-AMOLED-1.75-G · GPS beta** | 466 × 466 AMOLED | RTC, microSD, onboard LC76G GPS; select **GPS version** | [Waveshare · choose GPS](https://www.waveshare.com/esp32-s3-touch-amoled-1.75.htm?&aff_id=122099) |
+| **M5Stack StopWatch C152** | 466 × 466 AMOLED | Touch, yellow/blue buttons, RTC, speaker, haptics, 16 MB flash | [M5Stack](https://shop.m5stack.com/products/m5stack-stopwatch-dev-kit-esp32-s3?ref=marvvxzb&variant=48862593515777) |
+| **Elecrow CrowPanel 2.1 Rotary · Experimental** | 480 × 480 IPS | Touch, rotary ring and press, 16 MB flash; V1.0 board | [Elecrow](https://www.elecrow.com/crowpanel-2-1inch-hmi-esp32-rotary-display-480-480-ips-round-touch-knob-screen.html) |
+| **Spotpear / Guition JC3636W518** | 360 × 360 LCD | Touch, optional microSD, 16 MB flash; match the board model | [Spotpear](https://spotpear.com/shop/EPS32-S3R8-1.8inch-360x360-Round-LCD-Display-WIFI-Secondary-TouchScreen-AIDA64-Arduino-LVGL-WirelessAida64-Wireless-Power-Video-Electronic-Photo-Frame-MP3/EPS32-S3-1.8inch-Touch-LCD-360-Aida64.html) |
+| **Seeed XIAO ESP32-S3 + Round Display** | 240 × 240 LCD | Touch, RTC, microSD, 8 MB flash; **both parts required** | [ESP32-S3 board](https://www.seeedstudio.com/XIAO-ESP32S3-p-5627.html?c_event_medium=search%3A%3Aresults&c_event_id=2529207033%3A%3Axiao+round+display&sensecap_affiliate=qV5RXdv&referring_service=link) + [Round Display](https://www.seeedstudio.com/1-28-Round-Touch-Display-for-Seeed-Studio-XIAO-ESP32.html?c_event_medium=search%3A%3Aresults_recommend&c_event_id=2529207033%3A%3Axiao+round+display&sensecap_affiliate=qV5RXdv&referring_service=link) |
+| **Waveshare ESP32-S3-LCD-1.28 Lite** | 240 × 240 LCD | BOOT button, 16 MB flash; **non-touch** model | [Waveshare](https://www.waveshare.com/esp32-s3-lcd-1.28.htm) |
 
-Lite provides five button-operated pages: radar, clock, timer, signals, and diagnostics. It shares detection and all 35 built-in themes, with compact clocks. It does not include Badge Studio, audio, or active labs.
+The seven full profiles share the radar, 37 built-in themes, logo watch faces, timers, notebook, badge editor, radio tools, and BLE Lab. StopWatch and Waveshare AMOLED support 2 MiB captures and 2 MiB recon sessions. Their total file storage differs.
 
-Firmware is board-specific. The Waveshare **1.75C** and non-C models have different wiring. [Hardware guide](docs/HARDWARE.md) · [Feature comparison](docs/FEATURE-MATRIX.md) · [Tested hardware and limitations](docs/VALIDATION.md)
+Lite provides five button-operated pages: radar, clock, timer, signals, and diagnostics. It shares detection and all 37 built-in themes, with compact clocks. It does not include Badge Studio, audio, or active labs.
+
+Firmware is board-specific. The Waveshare **1.75C**, **1.75** and **1.75-G** each have a separate installer profile. New non-C SD/GPS features await field testing; Elecrow has passed initial checks on one unit. [Hardware guide](docs/HARDWARE.md) · [Feature comparison](docs/FEATURE-MATRIX.md) · [Tested hardware and limitations](docs/VALIDATION.md)
 
 ## Radar and watches
 

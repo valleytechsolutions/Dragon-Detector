@@ -100,3 +100,9 @@ header nav{gap:22px;font-size:12px}
 
 #locksport .preview-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 @media(max-width:650px){#locksport .preview-grid{grid-template-columns:1fr}}
+
+#buy-hardware{padding-top:65px;scroll-margin-top:30px}
+#buy-hardware table{min-width:650px}
+#buy-hardware tbody th{width:32%}
+#buy-hardware td:last-child{min-width:170px}
+.purchase-disclosure{font-size:14px;line-height:1.7;color:var(--text);margin:0 0 20px}
