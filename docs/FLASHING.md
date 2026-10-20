@@ -42,7 +42,7 @@ Replace the port and board folder with the exact device. This is a factory write
 
 ## Recovery
 
-**M5Stack StopWatch:** connect USB, hold the power button for about two seconds until its green LED lights, then release to enter download mode. After flashing, a short power-button press restarts it. This differs from boards with separate BOOT/RESET buttons. [Official instructions](https://docs.m5stack.com/en/core/StopWatch).
+**M5Stack StopWatch:** connect USB, hold the power button for about two seconds until its green LED lights, then release to enter download mode. Leave all buttons alone during flashing and verification. After flashing, a short power-button press restarts it. If the screen stays blank, close the serial connection, unplug USB, double-press power to turn it off, wait five seconds, then press power once. Reconnect USB after the logo appears and choose **Finish clock setup** or **Connect & sync local time**. This full power cycle recovered a C152 that remained in download mode after a verified 0.13.20 factory installation. [Official power-button controls](https://docs.m5stack.com/en/core/StopWatch).
 
 **Spotpear/Waveshare/XIAO:** Hold BOOT, tap RESET, release BOOT, then select the bootloader port. Try a known data cable and another direct USB port. Stop any other program holding the serial port. If the display is blank but USB responds, confirm the board variant before trying another build. For badge storage errors, back up existing flash before reinstalling the correct factory image. The firmware never auto-formats a failed mount.
 

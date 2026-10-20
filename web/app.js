@@ -101,7 +101,8 @@ function clockSetupResult(result){
   $('finish-clock').hidden=true;
 }
 function clockSetupFailure(error){
-  $('clock-setup-status').textContent=`Local time was not confirmed: ${error.message} If USB changed after flashing, use Finish clock setup to select the running board.`;
+  const recovery=lastInstallBoard==='stopwatch'?' If the StopWatch display is blank, close any serial monitor, unplug USB, double-press power to turn it off, wait five seconds, then press power once and reconnect USB.':' If USB changed after flashing, reconnect the running board.';
+  $('clock-setup-status').textContent=`Local time was not confirmed: ${error.message}${recovery} Use Finish clock setup to set and verify its clock.`;
   $('finish-clock').hidden=false;
 }
 $('install-button').onclick=async()=>{
