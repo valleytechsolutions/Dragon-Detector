@@ -1,6 +1,6 @@
 # Exact board profiles
 
-Current firmware: **0.13.19**. Another display on the same ESP32-S3 needs different firmware.
+Current firmware: **0.13.20**. Another display on the same ESP32-S3 needs different firmware.
 
 | Feature | Waveshare AMOLED 1.75C | M5Stack StopWatch C152 | Spotpear JC3636W518 | XIAO ESP32-S3 + Round Display | Waveshare LCD 1.28 Lite |
 |---|---|---|---|---|---|
@@ -26,6 +26,10 @@ All four full boards use the same classifiers and lab workflows; Waveshare's adv
 ## Experimental non-C AMOLED 1.75
 
 The sixth profile, `waveshare_175`, targets the 16 MB **ESP32-S3-Touch-AMOLED-1.75**: full 466 px UI, RTC, microSD, 7.94 MiB shared internal storage, 2 MiB captures and 2 MiB sessions. Hardware testing is pending. It has different reset and audio pins from the C model. See the [wiring, install and validation guide](WAVESHARE-AMOLED-175.md).
+
+## Experimental Elecrow CrowPanel 2.1 Rotary
+
+The `elecrow_21` profile targets the 480 × 480 ST7701 IPS rotary board, with 16 MB flash and 8 MB PSRAM. It uses the full interface, CST826 touch, the outer-ring encoder and its press switch. It has 7.94 MiB shared internal storage, a 1 MiB capture buffer and 256 KiB recon sessions. No SD, speaker or external RTC is configured. Physical testing is pending. [Wiring, installation and controls](ELECROW-ROTARY-21.md).
 
 ## Storage follows the hardware
 

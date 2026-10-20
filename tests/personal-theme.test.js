@@ -58,8 +58,8 @@ test('upload acknowledges every short USB chunk and checks persisted checksum',a
   await assert.rejects(uploadTheme(rig({badCrc:true}).link,bytes),/did not match/);
 });
 test('readback is complete, checksum-checked and portable',async()=>{assert.deepEqual(await readTheme(rig().link),bytes);await assert.rejects(readTheme(rig({badCrc:true}).link),/checksum/);});
-test('post-flash theme install verifies all five board identities and closes USB',async()=>{
-  for(const board of Object.keys(boardProfiles)){const r=rig({board});await installPersonalTheme({},board,bytes,()=>{},{makeLink:()=>r.link});assert.deepEqual(r.writes.slice(0,2),['OPEN','badge info']);assert.equal(r.writes.at(-1),'CLOSE');}
+test('post-flash theme install verifies all board identities and closes USB',async()=>{
+  for(const board of Object.keys(boardProfiles)){const r=rig({board,version:boardProfiles[board].minVersion||'0.13.17'});await installPersonalTheme({},board,bytes,()=>{},{makeLink:()=>r.link});assert.deepEqual(r.writes.slice(0,2),['OPEN','badge info']);assert.equal(r.writes.at(-1),'CLOSE');}
   for(const options of [{board:'spotpear'},{version:'0.13.16'}]){const r=rig(options);await assert.rejects(installPersonalTheme({},'waveshare',bytes,()=>{},{makeLink:()=>r.link}),/does not match/);assert.deepEqual(r.writes,['OPEN','badge info','CLOSE']);}
   assert.equal(hasPersonalThemes('0.13.16'),false);assert.equal(hasPersonalThemes('0.13.17'),true);assert.equal(hasPersonalThemes('garbage'),false);
 });

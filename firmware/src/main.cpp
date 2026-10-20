@@ -121,6 +121,9 @@ static void command(const String& c){
 #ifdef BOARD_STOPWATCH
   else if(c=="touch status"){extern void stopwatchTouchStatus();stopwatchTouchStatus();}
 #endif
+#ifdef BOARD_CROWPANEL_21
+  else if(c=="touch status"||c=="rotary status"){extern void crowInputStatus();crowInputStatus();}
+#endif
   else if(c=="pause")Serial.println("RADIO_ALWAYS_ON select an explicit Waveshare radio mode instead");
   else if(c=="resume")setRadio(true);
   else if(c=="record")audioRecord();

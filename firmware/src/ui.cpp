@@ -10,6 +10,7 @@
 #include "radar_layout.h"
 #include "notifications.h"
 #include "ui_theme.h"
+#include "rotary_ui.h"
 #include <lvgl.h>
 #include <math.h>
 #include <esp_heap_caps.h>
@@ -669,6 +670,10 @@ bool uiTouch(bool pressed,int,int){
   // Navigation uses visible Tools/Home buttons. Leave drags to LVGL lists.
   return true;
 }
+#ifdef BOARD_CROWPANEL_21
+lv_obj_t* uiRotaryScope(){return resetBox?resetBox:clockPrompt?clockPrompt:notice?notice:root;}
+bool uiRotaryWake(){bool wasOff=outputBrightness==0;lastInteraction=millis();return wasOff;}
+#endif
 void uiShow(const String& name){if(name=="startup"){go(Startup);page=Boot;return;}if(name=="radar")recipeStop();
 #ifndef BOARD_RADAR_LITE
   if(name=="modes"||name=="tools"){openRadioTools=name=="tools";go(Recon);return;}
@@ -763,6 +768,9 @@ void uiLoop(){
     }
     if(page==Audio && audioLabel){auto s=audioStatus();String text=String(s.mode==AudioMode::Recording?"RECORDING":s.mode==AudioMode::Playing?"PLAYING":s.mode==AudioMode::Error?"ERROR":"READY")+"  "+s.seconds+"s  Vol "+s.volume+"%\n"+s.message;lv_label_set_text(audioLabel,text.c_str());lv_bar_set_value(audioMeter,s.peak,LV_ANIM_OFF);}
   }
+#ifdef BOARD_CROWPANEL_21
+  rotaryUiLoop();
+#endif
   lv_timer_handler();
 }
 

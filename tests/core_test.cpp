@@ -33,7 +33,9 @@ static Match ble(const std::vector<uint8_t>& p){auto f=parseBle(p.data(),p.size(
 
 #include "dino_runner_test.h"
 #include "personal_theme_test.h"
+#include "rotary_input_test.h"
 int main(){
+  rotaryInputTests();
   personalThemeTests();
   dinoRunnerTests();
   liteControlsTests();

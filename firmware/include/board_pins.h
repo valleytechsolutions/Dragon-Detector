@@ -3,7 +3,19 @@
 
 #define BTN_PIN 0
 
-#if defined(BOARD_RADAR_LITE)
+#if defined(BOARD_CROWPANEL_21)
+#define BOARD_NAME "Elecrow CrowPanel 2.1 Rotary"
+#define SCREEN_RES 480
+#define BOARD_HAS_AUDIO 0
+#define BOARD_HAS_SD 0
+#define CROW_SDA 38
+#define CROW_SCL 39
+#define CROW_BACKLIGHT 6
+#define CROW_ENCODER_A 42
+#define CROW_ENCODER_B 4
+#define CROW_EXPANDER_ADDR 0x21
+#define CROW_TOUCH_ADDR 0x15
+#elif defined(BOARD_RADAR_LITE)
 #define BOARD_NAME "Waveshare ESP32-S3-LCD-1.28 Lite"
 #define SCREEN_RES 240
 #define BOARD_HAS_AUDIO 0

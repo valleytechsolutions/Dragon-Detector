@@ -26,7 +26,7 @@ static bool start(const char* text,bool isPreview=false){
 void audioBegin(){
  prefs.begin("dd-tones",false);status.volume=constrain(prefs.getUChar("volume",100),0,100);huntSound=prefs.getBool("hunt",true);audioFocus=prefs.getInt("focus",-1);if(audioFocus<-1||audioFocus>=int(Family::Count))audioFocus=-1;
  for(unsigned i=0;i<unsigned(Family::Count);++i){char key[12];snprintf(key,sizeof(key),"tone%u",i);String value=prefs.getString(key,"");dragon::Melody test;if(value.length()<=dragon::TONE_TEXT_MAX&&dragon::parseTone(value.c_str(),test))custom[i]=value;else prefs.remove(key);}
- #ifdef BOARD_XIAO_ROUND
+ #if defined(BOARD_XIAO_ROUND) || defined(BOARD_CROWPANEL_21)
  ready=false;strlcpy(status.message,"No onboard speaker / visual alerts",sizeof(status.message));
  #else
  ready=toneOutputBegin();snprintf(status.message,sizeof(status.message),"%s",ready?"RTTTL speaker ready":"Speaker initialization failed");if(!ready)status.mode=AudioMode::Error;
@@ -36,7 +36,7 @@ void audioBegin(){
 void audioSave(){prefs.putUChar("volume",status.volume);prefs.putBool("hunt",huntSound);prefs.putInt("focus",audioFocus);detectorSave();}
 void audioVolume(int v){status.volume=constrain(v,0,100);audioSave();}
 void audioStop(){playing=preview=false;queue.clear();toneOutput(0,0,0);
-#ifdef BOARD_XIAO_ROUND
+#if defined(BOARD_XIAO_ROUND) || defined(BOARD_CROWPANEL_21)
  status.mode=AudioMode::Idle;
 #else
  status.mode=ready?AudioMode::Idle:AudioMode::Error;

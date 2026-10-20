@@ -12,6 +12,7 @@ function rig(board='waveshare',{rtc=1,offset=345,valid=1,identity,drift=0,openFa
     async wait(match){
       const reply=this.command==='badge info'?`BADGE_INFO ${version} ${boardProfiles[board].size} ${boardProfiles[board].lite?(version==='0.13.7'?'RADAR_ONLY':'LITE'):'READY'} ${identity||boardProfiles[board].firmwareName}`:
         this.command.startsWith('time ')?'TIME_OK':this.command.startsWith('clock offset ')?'CLOCK_OK':
+        this.command==='clock hardware'?`CLOCK_HARDWARE detected=0 valid=0 epoch=0`:
         this.command==='clock status'?`CLOCK_STATUS rtc=${rtc} valid=${valid} epoch=${epoch+drift} offset=${offset}`:'ORIENTATION_STATUS manual=1 degrees=0';
       assert.ok(match(reply),reply);return reply;
     }
@@ -22,9 +23,9 @@ test('post-install clock verifies each full board, current offset and RTC state'
   for(const board of Object.keys(boardProfiles).filter(k=>!boardProfiles[k].lite)){
     for(const offset of [-720,-240,0,330,345,840]){
       const rtc=['stopwatch','xiao_round','waveshare_175'].includes(board)?1:0;
-      const r=rig(board,{offset,rtc});const result=await syncInstalledClock({},board,r.options);
+      const r=rig(board,{offset,rtc,version:board==='elecrow_21'?'0.13.20':'0.13.7'});const result=await syncInstalledClock({},board,r.options);
       assert.equal(result.board,board);assert.equal(result.rtc,!!rtc);assert.equal(result.offset,offset);
-      assert.deepEqual(r.writes,['badge info',`time ${r.epoch}`,`clock offset ${offset}`,'clock status','orientation status']);
+      assert.deepEqual(r.writes,['badge info',`time ${r.epoch}`,`clock offset ${offset}`,'clock status','orientation status',...(board==='elecrow_21'?['clock hardware']:[])]);
       assert.deepEqual(r.events,['open','close']);
     }
   }

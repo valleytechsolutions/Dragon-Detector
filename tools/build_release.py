@@ -3,7 +3,7 @@ from pathlib import Path
 import argparse, csv, hashlib, json, os, re, shutil, subprocess, sys
 from flash_budget import report as flash_report
 ROOT=Path(__file__).resolve().parents[1]
-BOARDS={'waveshare_175':('Waveshare ESP32-S3-Touch-AMOLED-1.75','waveshare-amoled-175'),'spotpear':('Spotpear JC3636W518','spotpear'),'waveshare':('Waveshare ESP32-S3-Touch-AMOLED-1.75C','waveshare-amoled'),'stopwatch':('M5Stack StopWatch C152','m5stack-stopwatch'),'xiao_round':('Seeed XIAO ESP32-S3 + Round Display','xiao-round'),'waveshare_lite':('Waveshare ESP32-S3-LCD-1.28 Lite','waveshare-lite')}
+BOARDS={'elecrow_21':('Elecrow CrowPanel 2.1 Rotary','elecrow-rotary-21'),'waveshare_175':('Waveshare ESP32-S3-Touch-AMOLED-1.75','waveshare-amoled-175'),'spotpear':('Spotpear JC3636W518','spotpear'),'waveshare':('Waveshare ESP32-S3-Touch-AMOLED-1.75C','waveshare-amoled'),'stopwatch':('M5Stack StopWatch C152','m5stack-stopwatch'),'xiao_round':('Seeed XIAO ESP32-S3 + Round Display','xiao-round'),'waveshare_lite':('Waveshare ESP32-S3-LCD-1.28 Lite','waveshare-lite')}
 VERSION=re.search(r'#define DRAGON_VERSION "([0-9.]+)"',(ROOT/'firmware/include/version.h').read_text()).group(1)
 
 def run(*args):subprocess.run([sys.executable,*args],cwd=ROOT,check=True)
@@ -29,6 +29,13 @@ def build(board,skip):
     # Each standalone board ZIP also carries the embedded fonts' license.
     shutil.copyfile(ROOT/'docs/licenses/Montserrat-OFL.txt',out/'FONT-LICENSE.txt')
     shutil.copyfile(ROOT/'docs/licenses/Unscii-NOTICE.txt',out/'ASCII-FONT-NOTICE.txt')
+    if board=='elecrow_21':
+        shutil.copyfile(ROOT/'docs/licenses/Arduino-GFX-license.txt',out/'DISPLAY-LICENSE.txt')
+        (out/'BOARD-STATUS.txt').write_text(
+            'EXPERIMENTAL: Elecrow CrowPanel 2.1 Rotary, 480 x 480, 16 MB flash.\n'
+            'Compiled and automatically checked; physical hardware testing is pending.\n'
+            'Use Fresh installation for the factory demo or another board profile.\n'
+            'https://valleytech-dragon-detector.pages.dev/guides/ELECROW-ROTARY-21.html\n',encoding='utf-8')
     if board=='waveshare_175':
         (out/'BOARD-STATUS.txt').write_text(
             'EXPERIMENTAL: ESP32-S3-Touch-AMOLED-1.75 (non-C), 16 MB flash.\n'
@@ -61,13 +68,13 @@ def build(board,skip):
     checks=[]
     for file in sorted(out.glob('*.bin')):
         data=file.read_bytes();assert b'C:/Users/' not in data and b'C:\\Users\\' not in data, 'Private workstation path in image'
-        if file.name=='firmware.bin' and board in ('waveshare','stopwatch','waveshare_lite'):
+        if file.name=='firmware.bin' and board in ('waveshare','stopwatch','waveshare_lite','elecrow_21'):
             for prompt in (b'SD CARD',b'SD files',b'SD event logging:',b'Requires a mounted SD card',b'Insert FAT32 card',b'SD: this board has no card slot'):
                 assert prompt not in data,(board,'Unsupported card UI in firmware',prompt)
         checks.append(f'{hashlib.sha256(data).hexdigest()}  {file.name}\n')
     (out/'SHA256SUMS.txt').write_text(''.join(checks),encoding='ascii')
     metadata={'version':VERSION,'board':board,'name':BOARDS[board][0],'source_commit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),'source_dirty':bool(subprocess.check_output(['git','status','--porcelain','--untracked-files=normal'],cwd=ROOT,text=True).strip()),'filesystem_offset':fs_offset,'filesystem_size':fs_size,'factory_resets_badges':True,'update_preserves_nvs_and_filesystem':True}
-    metadata['hardware_validation']='pending' if board=='waveshare_175' else 'existing-profile'
+    metadata['hardware_validation']='pending' if board in ('waveshare_175','elecrow_21') else 'existing-profile'
     metadata['flash_size']=0x2000000 if board=='waveshare' else 0x800000 if board=='xiao_round' else 0x1000000
     metadata['memory']=flash_report(entries,(build/'firmware.bin').stat().st_size,metadata['flash_size'])
     (out/'memory-budget.json').write_text(json.dumps(metadata['memory'],indent=2)+'\n',encoding='utf-8')

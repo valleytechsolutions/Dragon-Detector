@@ -1,5 +1,11 @@
 # Release verification
 
+## Elecrow CrowPanel 2.1 Rotary · experimental
+
+The 480 × 480 profile compiles with the pinned Arduino_GFX driver. Native tests cover clockwise/counterclockwise detents, switch bounce, missing edges, short presses, holds and timestamp rollover. Rotation tests now cover every pixel at 480 × 480. The 100 browser-module tests include the new board's identity checks, flash layouts, full-size badge encoding, personal-theme installation and software-clock verification.
+
+Physical display, touch, rotary and startup testing is **pending**. The unit has not enumerated over USB, and no firmware has been written to it. See the [port guide and hardware checklist](ELECROW-ROTARY-21.md).
+
 ## 0.13.20 · Find My Beeper
 
 - The owner's AirTag was isolated by a battery-out/battery-in scan comparison. On Waveshare 1.75C, one direct sound write was acknowledged and the owner confirmed the audible beep. The BLE worker disconnected and returned to radar, with the stored badge unchanged.

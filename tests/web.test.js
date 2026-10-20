@@ -38,7 +38,7 @@ test('studio reads both legacy paged and 0.9.6+ single-screen radar settings',as
 
 test('badge text stays inside the circular screen at extreme positions and font sizes',()=>{
   assert.deepEqual(badgeTextLayout('',466),[]);
-  for(const size of [240,360,466])for(const fontPercent of [4,7,14])for(const yPercent of [0,12,50,88,100]){
+  for(const size of [240,360,466,480])for(const fontPercent of [4,7,14])for(const yPercent of [0,12,50,88,100]){
     const lines=badgeTextLayout('BWM\nDragon Detector\nA long message that must fit\nignored',size,{fontPercent,yPercent});
     assert.equal(lines.length,3);
     for(const line of lines){
@@ -106,7 +106,7 @@ test('radar settings read back every write, including when USB acknowledgment is
   for(const theme of ['36','99','100','00','-1']){link.wait=async()=> 'RADAR_SETTINGS theme='+theme+' labels=1 recent=0 pages=1 plotted=6 primary=-1';await assert.rejects(readRadarSettings(link),/Invalid radar settings/);}
 });
 test('CRC matches firmware IEEE CRC-32 wire contract',()=>assert.equal(crc32(new TextEncoder().encode('123456789')),0xcbf43926));
-for(const size of [240,360,466])test(`DDB1 ${size}: header, exact size and RGB565 byte order`,()=>{
+for(const size of [240,360,466,480])test(`DDB1 ${size}: header, exact size and RGB565 byte order`,()=>{
   const p=new Uint8Array(size*size*4);p.set([255,0,0,255,0,255,0,255,0,0,255,255]);const b=encodeBadge(p,size);
   assert.equal(b.length,8+size*size*2);assert.deepEqual([...b.slice(0,8)],[68,68,66,49,size&255,size>>8,size&255,size>>8]);
   assert.deepEqual([...b.slice(8,14)],[248,0,7,224,0,31]);
@@ -221,7 +221,7 @@ test('flasher rejects wrong boards, partitions, remote paths and destructive upd
 });
 
 test('rotated and mirrored badge fits preserve every image corner within the safe circle',()=>{
- for(const size of [240,360,466])for(const [w,h] of [[800,400],[400,800],[466,466],[2000,50]])for(const turns of [-1,0,1,2,3,4])for(const mirror of [false,true]){
+ for(const size of [240,360,466,480])for(const [w,h] of [[800,400],[400,800],[466,466],[2000,50]])for(const turns of [-1,0,1,2,3,4])for(const mirror of [false,true]){
   const g=badgeTransform(w,h,size,{zoom:fitBadgeZoom(w,h,size,turns),turns,mirror});
   for(const x of [-w/2,w/2])for(const y of [-h/2,h/2]){
    const dx=g.scale*(x*g.mirror*Math.cos(g.angle)-y*Math.sin(g.angle)),dy=g.scale*(x*g.mirror*Math.sin(g.angle)+y*Math.cos(g.angle));

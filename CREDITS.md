@@ -223,3 +223,9 @@ Hardware mapping was checked against Waveshare's official schematic, hardware re
 ## Find My Beeper / 0.13.20
 
 [JustCallMeKoko / ESP32 Marauder](https://github.com/justcallmekoko/ESP32Marauder/tree/d3ceb28afeda1196ca27c13adeaa69ada52383f3) supplied the AirTag/FMNA/DULT service and command references and the Find My Sound workflow. Its MIT notices remain in the repository. The direct-request worker, response handling, tracker selection UI, iBeacon configuration/parser and tests are original Dragon Detector code. DULT response distinctions follow the [accessory protocol draft](https://datatracker.ietf.org/doc/html/draft-ledvina-dult-accessory-protocol-00), a work in progress.
+
+## Elecrow CrowPanel 2.1 Rotary port
+
+The board pin mapping, ST7701 initialization selection, RGB timings and PCF8574 reset sequence follow Elecrow’s official hardware examples at revision `52c772195033bf0c08568fa21cfc8606bac75df0`. The touch, encoder and LVGL integration are project code. [Hardware sources](docs/ELECROW-ROTARY-21.md#sources).
+
+Display support uses [Arduino_GFX 1.5.6 by moononournation](https://github.com/moononournation/Arduino_GFX/tree/58ac1d46438b9406f87a53ae87ca9f377ca805fb), pinned for the existing Arduino 3.0.7 / ESP-IDF 5.1 toolchain. [Included license](docs/licenses/Arduino-GFX-license.txt). Other dependency notices remain in effect.
