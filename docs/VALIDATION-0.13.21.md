@@ -47,5 +47,6 @@ route accuracy, GPS loss/reacquisition, and real WiGLE import. Follow the
 [board checklist](WAVESHARE-AMOLED-175.md#new-feature-field-checklist).
 
 GATT emulation does not imply proprietary protocol compatibility. Microphone
-recording and IMU gesture/step features have not been added. No hardware flashing,
-WiGLE upload or public deployment was performed as part of these checks.
+recording and IMU gesture/step features have not been added. No hardware flashing
+or WiGLE upload was performed. Publication status is recorded separately from
+these automated and local browser checks.

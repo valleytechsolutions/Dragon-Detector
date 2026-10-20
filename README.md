@@ -12,7 +12,7 @@ Wi-Fi and Bluetooth detection, signal tracking, and logo watch faces for ESP32-S
 
 Open **Attacks → BLE attacks → Find My Beeper** to select your tracker and request one beep. Tested on an owned AirTag with audible confirmation. This release also adds configurable iBeacon fields and fixes browser replay selection. [Instructions and compatibility](docs/BLE-TOOLS-01320.md).
 
-## Waveshare AMOLED 1.75 / 1.75-G · 0.13.21 local beta
+## Waveshare AMOLED 1.75 / 1.75-G · 0.13.21 beta
 
 The tested non-C baseline now has SD-first profiles, events, captures and surveys,
 plus a separate LC76G GPS build for passive Wi-Fi/BLE wardriving and WiGLE CSV.
