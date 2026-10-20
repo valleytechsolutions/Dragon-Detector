@@ -17,7 +17,7 @@
 #include "tracking.h"
 #include "monitor.h"
 #include "contacts.h"
-#include "version.h"
+#include "dragon_version.h"
 #include "traffic.h"
 #include "wearable.h"
 extern dragon::TrafficStatus trafficStatus;

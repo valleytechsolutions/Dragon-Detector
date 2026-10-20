@@ -1,6 +1,6 @@
 # Elecrow CrowPanel 2.1 Rotary
 
-This experimental profile targets the **CrowPanel 2.1-inch HMI ESP32-S3 rotary display**, hardware V1.0, with a 480 × 480 IPS touchscreen, 16 MB flash and 8 MB PSRAM. It is intended for stationary USB-powered use. Boot, display alignment and color order have been verified on a physical unit. Rotary and touchscreen validation is in progress.
+This experimental profile targets the **CrowPanel 2.1-inch HMI ESP32-S3 rotary display**, hardware V1.0, with a 480 × 480 IPS touchscreen, 16 MB flash and 8 MB PSRAM. It is intended for stationary USB-powered use. Startup, color order and ring navigation have been checked on a physical unit. Extended display stability and touchscreen validation are in progress.
 
 The profile includes the full radar interface, 35 built-in themes, logo watch faces, the optional personal theme, badge, clock, stopwatch and locksport timers, notebook and shared radio tools. It has no SD controls. Captures and profiles use internal storage and can be downloaded over USB. No speaker, haptic motor, battery gauge or external RTC is configured.
 
@@ -53,11 +53,15 @@ There is no external RTC configured. The clock keeps running while powered, but 
 | Internal files | 0x810000, 7.94 MiB shared filesystem |
 | Capture limits | 1 MiB RAM capture buffer; 256 KiB per recon session |
 
-Panel commands use Arduino_GFX 1.5.6. RGB output uses the ESP-IDF driver directly, with two complete frame buffers, 20-line DMA bounce buffers and periodic VSYNC recovery after flash/cache stalls. LVGL draws a complete frame before it is submitted. The old frame buffer is reused only after two frame-boundary callbacks, including a callback that could race with submission. The flush path converts LVGL byte order and the panel's BGR channels without modifying the LVGL drawing buffer. This profile retains the project's Arduino 3.0.7 framework and supplies the compatible ESP-IDF 5.1 name for the SPI interrupt selector. Other board profiles keep their own display drivers.
+Panel commands use Arduino_GFX 1.5.6. RGB output uses the ESP-IDF driver directly, with two complete frame buffers and 20-line DMA bounce buffers. LVGL draws a complete frame before it is submitted. The old frame buffer is reused only after two frame-boundary callbacks, including a callback that could race with submission. The flush path converts LVGL byte order and the panel's BGR channels without modifying the LVGL drawing buffer.
+
+This profile builds Arduino 3.0.7 as an ESP-IDF 5.1.4 component using `hardware/elecrow-rotary-21/sdkconfig.defaults`. Instructions and read-only data are copied to PSRAM at startup, keeping the display's source memory accessible during flash writes. The RGB interrupt remains in internal RAM, and the data cache uses 64-byte lines. Routine display restarts are disabled; recovery is requested only after a frame wait times out. This follows [Espressif's guidance for RGB display drift](https://docs.espressif.com/projects/esp-faq/en/latest/software-framework/peripherals/lcd.html#why-do-i-get-drift-overall-drift-of-the-display-when-esp32-s3-is-driving-an-rgb-lcd-screen). Other board profiles retain their existing Arduino builds and display drivers.
 
 ## Physical validation
 
-Initial checks on 2026-10-19 verified the 16 MB flash / 8 MB PSRAM identity, a full backup, startup, 23 firmware self-tests, passive scanning, centered output, color order and USB clock readback. Extended checks remain:
+Initial checks on 2026-10-19 verified the 16 MB flash / 8 MB PSRAM identity, a full backup, startup, color order, ring navigation and USB clock readback. The earlier build developed intermittent display drift. On 2026-10-20, the revised ESP-IDF build passed 23 firmware self-tests and a five-minute passive scan with repeated settings saves, without a reset or display-buffer timeout. Free memory remained steady. These diagnostics do not establish physical centering; visual confirmation of the revised build is still required.
+
+Extended checks remain:
 
 - Chip identity, 16 MB flash and PSRAM availability; save a private full flash backup.
 - Boot animation, color order, centering and stability while scanning.

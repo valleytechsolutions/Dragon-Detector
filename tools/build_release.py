@@ -4,7 +4,7 @@ import argparse, csv, hashlib, json, os, re, shutil, subprocess, sys
 from flash_budget import report as flash_report
 ROOT=Path(__file__).resolve().parents[1]
 BOARDS={'elecrow_21':('Elecrow CrowPanel 2.1 Rotary','elecrow-rotary-21'),'waveshare_175_gps':('Waveshare ESP32-S3-Touch-AMOLED-1.75-G','waveshare-amoled-175'),'waveshare_175':('Waveshare ESP32-S3-Touch-AMOLED-1.75','waveshare-amoled-175'),'spotpear':('Spotpear JC3636W518','spotpear'),'waveshare':('Waveshare ESP32-S3-Touch-AMOLED-1.75C','waveshare-amoled'),'stopwatch':('M5Stack StopWatch C152','m5stack-stopwatch'),'xiao_round':('Seeed XIAO ESP32-S3 + Round Display','xiao-round'),'waveshare_lite':('Waveshare ESP32-S3-LCD-1.28 Lite','waveshare-lite')}
-VERSION=re.search(r'#define DRAGON_VERSION "([0-9.]+)"',(ROOT/'firmware/include/version.h').read_text()).group(1)
+VERSION=re.search(r'#define DRAGON_VERSION "([0-9.]+)"',(ROOT/'firmware/include/dragon_version.h').read_text()).group(1)
 
 def run(*args):subprocess.run([sys.executable,*args],cwd=ROOT,check=True)
 def build(board,skip):

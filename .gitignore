@@ -20,5 +20,6 @@ Thumbs.db
 .build/
 .wrangler/
 web/firmware/
+managed_components/
 *.obj
 *.lib

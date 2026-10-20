@@ -7,7 +7,7 @@ been tested on physical hardware. The existing 1.75C is a different, 32 MB board
 
 ## Elecrow CrowPanel 2.1 Rotary
 
-Adds a separate 480 × 480 IPS profile with touch, rotary navigation and press-to-select. It includes the shared themes, watch faces and timers, USB clock setup and internal storage, with no SD controls. The RGB driver corrects the panel color order and recovers display synchronization after flash/cache stalls. Initial display and startup checks passed on hardware; extended validation is ongoing. See the [Elecrow setup guide](ELECROW-ROTARY-21.md).
+Adds a separate 480 × 480 IPS profile with touch, rotary navigation and press-to-select. It includes the shared themes, watch faces and timers, USB clock setup and internal storage, with no SD controls. This board builds ESP-IDF from source so RGB display buffers remain accessible during flash writes. It uses complete frame buffers and paced ring navigation. Startup and passive scan tests passed on hardware; extended display validation is ongoing. See the [Elecrow setup guide](ELECROW-ROTARY-21.md).
 
 Existing board downloads retain their separately listed versions.
 

@@ -9,7 +9,12 @@
 #include <soc/gpio_struct.h>
 #include <esp_lcd_panel_rgb.h>
 #include <esp_lcd_panel_ops.h>
+#include <esp_log.h>
 #include <freertos/semphr.h>
+
+#if !CONFIG_SPIRAM_FETCH_INSTRUCTIONS || !CONFIG_SPIRAM_RODATA || !CONFIG_LCD_RGB_ISR_IRAM_SAFE
+#error "CrowPanel RGB requires the board's flash-safe ESP-IDF configuration"
+#endif
 
 extern bool uiTouch(bool,int,int);
 namespace {
@@ -60,7 +65,7 @@ void beginPanel(){
   initBus.beginWrite();initBus.writeCommand(0x36);initBus.write(0x08);initBus.endWrite();
   esp_lcd_rgb_panel_config_t config{};
   config.clk_src=LCD_CLK_SRC_DEFAULT;
-  // 8 MHz leaves bandwidth for radio activity and flash writes on the shared bus.
+  // Keep display bandwidth below the panel's maximum while radios are active.
   config.timings.pclk_hz=8000000;
   config.timings.h_res=480;config.timings.v_res=480;
   config.timings.hsync_pulse_width=4;config.timings.hsync_back_porch=20;config.timings.hsync_front_porch=10;
@@ -126,6 +131,8 @@ void readTouch(lv_indev_drv_t*,lv_indev_data_t* data){
 }
 bool alertSound=false,alertVibration=false;
 void boardBegin(){
+  // SDK logs share USB with binary screenshots and capture downloads.
+  esp_log_level_set("*",ESP_LOG_NONE);
   pinMode(CROW_BACKLIGHT,OUTPUT);digitalWrite(CROW_BACKLIGHT,LOW);
   Wire.begin(CROW_SDA,CROW_SCL,400000);Wire.setTimeOut(20);
   expanderReady=writeExpander(0xff);
@@ -175,8 +182,6 @@ void scr_lvgl_init(){
   rotaryUiBegin();
 }
 void boardLoop(){
-  static uint32_t refreshed=0;
-  if(millis()-refreshed>=100){refreshed=millis();esp_lcd_rgb_panel_restart(panel);}
   portENTER_CRITICAL(&encoderMux);int steps=detents;detents=0;portEXIT_CRITICAL(&encoderMux);
   position+=steps;bool click=false,back=false;
   static uint32_t polled=0;
@@ -193,7 +198,11 @@ void boardLoop(){
 void crowInputStatus(){
   Serial.printf("ROTARY_STATUS position=%d edges=%lu clicks=%lu holds=%lu errors=%lu\n",position,edges,clicks,holds,i2cErrors);
   Serial.printf("TOUCH_STATUS enabled=%u presses=%lu samples=%lu xy=%d,%d\n",touchReady,touchPresses,touchSamples,lastX,lastY);
-  Serial.printf("DISPLAY_STATUS frames=%lu wait_timeouts=%lu buffers=2 pclk=8000000\n",frameBoundaries,frameWaitTimeouts);
+  Serial.printf("DISPLAY_STATUS frames=%lu wait_timeouts=%lu buffers=2 pclk=8000000 xip=1 cache_line=%u\n",frameBoundaries,frameWaitTimeouts,unsigned(CONFIG_ESP32S3_DATA_CACHE_LINE_SIZE));
+  Serial.printf("DISPLAY_MEMORY internal=%u largest=%u minimum=%u psram=%u\n",
+    unsigned(heap_caps_get_free_size(MALLOC_CAP_INTERNAL)),
+    unsigned(heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL)),
+    unsigned(heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL)),ESP.getFreePsram());
 }
 int batteryPercent(){return -1;}
 bool batteryCharging(){return false;}

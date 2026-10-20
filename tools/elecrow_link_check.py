@@ -16,7 +16,7 @@ def check_board_hooks(source, target, env):
         "boardBegin()", "boardLoop()", "scr_lvgl_init()",
         "set_brightness(unsigned char)", "boardSensorsBegin()",
     )}
-    for obj in (Path(env.subst("$BUILD_DIR")) / "src").glob("*.o"):
+    for obj in (Path(env.subst("$BUILD_DIR")) / "firmware" / "src").glob("*.o"):
         symbols = subprocess.check_output([str(nm), "-g", "-C", "--defined-only", str(obj)], text=True)
         for line in symbols.splitlines():
             fields = line.split(maxsplit=2)

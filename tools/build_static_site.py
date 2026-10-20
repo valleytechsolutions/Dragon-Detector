@@ -15,7 +15,7 @@ import markdown
 ROOT = Path(__file__).resolve().parents[1]
 REPO = 'https://github.com/valleytechsolutions/Dragon-Detector'
 MAX_FILE_BYTES = 25 * 1024 * 1024
-VERSION = re.search(r'#define DRAGON_VERSION "([0-9.]+)"', (ROOT / 'firmware/include/version.h').read_text()).group(1)
+VERSION = re.search(r'#define DRAGON_VERSION "([0-9.]+)"', (ROOT / 'firmware/include/dragon_version.h').read_text()).group(1)
 
 
 def validate_links(output):

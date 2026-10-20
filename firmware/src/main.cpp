@@ -193,6 +193,9 @@ void setup(){
 #ifndef BOARD_RADAR_LITE
   if(!dragon::vendorRegistryBegin())Serial.println("REGISTRY unavailable: PSRAM allocation or integrity check");
 #endif
+#ifdef BOARD_CROWPANEL_21
+  extern void crowInputStatus();crowInputStatus();
+#endif
   radioBegin();bleLabBegin();reconBegin();wardriveBegin();Serial.println("DRAGON READY");health();
 }
 void loop(){
