@@ -8,13 +8,6 @@ Wi-Fi and Bluetooth detection, signal tracking, and logo watch faces for ESP32-S
 
 [**Install firmware**](https://valleytech-dragon-detector.pages.dev/#install) · [Latest release](docs/RELEASE-0.13.23.md) · [User guides](docs/GUI.md) · [Clock setup](https://git.churchofmalware.org/Valleytech/Dragon-Detector/wiki/Clock-Setup)
 
-## Ogg and XomBi · 0.13.23
-
-**Ogg** pairs the supplied eye emblem with a simple green-and-black radar and
-digital clock. **XomBi** uses the zombie hacker portrait, moss-green surfaces
-and phosphor accents. Both theme the menus and utilities, with the original
-artwork retained. [Previews and selection instructions](docs/RELEASE-0.13.23.md).
-
 ## Radar controls and repeating Find My Beeper · 0.13.22
 
 Press a dot for immediate selection, then tap its summary or double-tap for details.
@@ -35,23 +28,13 @@ Tap a dot for its summary; double-tap for details, Hunt and BLE/GATT tools.
 New SD/GPS/touch behavior awaits physical testing. No mandatory SD pack is needed.
 [Beta guide](docs/WAVESHARE-AMOLED-175.md) · [Change notes](docs/RELEASE-0.13.21.md).
 
-## Can Commander · 0.13.18
-
-A tribute to Matthew Kukanich: the original MK emblem, silver and navy instruments, animated CAN-H/CAN-L traces and a dedicated clock-data watch. Includes matching menus and a session stopwatch on all eight profiles. [Explore Can Commander](docs/CAN-COMMANDER.md).
-
 ## Clock and timer power saving
 
 On every board, the clock and stopwatch/Locksport Timer pause background Wi-Fi and Bluetooth scanning. Lap history and time/date settings also stay paused. Return to the radar or other tools to resume scanning; a running timer keeps counting in the background. Previously configured Wi-Fi clock recovery may briefly connect for time synchronization. See [power-saving behavior](docs/CLOCK-POWER.md).
 
-## Personal themes and DZ_AZ
+## Personal themes
 
 Build your own clock, radar and counter in the [Custom theme tab](https://valleytech-dragon-detector.pages.dev/#theme-studio). Add a logo, choose colors, hands and numerals, and enable locksport controls. The personal slot appears on the device only after you explicitly install a design. [Creator guide](docs/CUSTOM-THEME.md).
-
-DZ_AZ adds a crow-and-name emblem, rotating feather radar sweep, and short/long feather clock hands. [Theme guide](docs/DZ-AZ.md).
-
-| DZ_AZ radar | DZ_AZ clock | Personal theme example |
-|---|---|---|
-| ![DZ_AZ radar](web/assets/radar-dzaz-01317.png) | ![DZ_AZ clock](web/assets/watch-dzaz-01317.png) | ![Personal logo clock](web/assets/watch-custom-01317.png) |
 
 ## Install
 
@@ -81,38 +64,22 @@ Firmware is board-specific. The Waveshare **1.75C** and non-C models have differ
 
 ## Radar and watches
 
-| Dragon Ball | Covert Instruments × McNally | Logo watch |
+| Valleytech | BWM | Dragon Ball radar |
 |---|---|---|
-| ![Dragon Ball radar](web/assets/radar-dragon-01313.png) | ![McNally and CI radar](web/assets/radar-covert-01314.png) | ![Dragon Ball watch](web/assets/watch-dragon-01313.png) |
+| ![Valleytech clock](web/assets/watch-valleytech-0136.png) | ![BWM clock](web/assets/watch-bwm-0136.png) | ![Dragon Ball radar](web/assets/radar-dragon-01313.png) |
 
 Choose a theme in **Settings → Theme & radar labels**. It applies to the radar, matching clock, menus, and dialogs. The Dragon Ball/BWM animation appears at power-on on every board. Swipe the clock to choose another watch face.
 
 The collection includes maker, community, character, and locksport designs. [Browse the theme gallery](docs/THEMES.md) · [Watch controls](docs/STOPWATCH-CLOCK-ORIENTATION.md) · [Artwork credits](CREDITS.md)
 
-## Capsule Corp
-
-A silver Dragon Radar bezel, emerald grid and yellow signal markers, paired with a white-and-blue Capsule Corp chronometer. Included on all eight profiles, with matching menus on the full profiles. [Theme guide](docs/CAPSULE-CORP.md).
-
-| Radar | Watch |
-|---|---|
-| ![Capsule Corp radar](web/assets/radar-capsule-01315.png) | ![Capsule Corp watch](web/assets/watch-capsule-01315.png) |
-
-## Sparrows
-
-Black, red and steel with the supplied keyhole emblem, a hook sweep and pick-shaped clock hands. The Locksport Timer includes SPLIT, OPEN and a moving rim. [Theme guide](docs/SPARROWS.md).
-
-| Radar | Watch | Locksport Timer |
-|---|---|---|
-| ![Sparrows radar](web/assets/radar-sparrows-01315.png) | ![Sparrows watch](web/assets/watch-sparrows-01315.png) | ![Sparrows timer](web/assets/timer-sparrows-01315.png) |
-
 ## Locksport
 
-| McNally × Covert Instruments | LockPickingLawyer × CI | DMAC | Lockpickers United |
-|---|---|---|---|
-| ![McNally pick watch](web/assets/watch-covert-01314.png) | ![LockPickingLawyer watch](web/assets/watch-lpl-0138.png) | ![DMAC pick watch](web/assets/watch-dmac-0136.png) | ![LPU watch](web/assets/watch-lpu-0139.png) |
-| ![McNally timer](web/assets/timer-covert-01314.png) | ![LockPickingLawyer timer](web/assets/timer-lpl-0138.png) | ![DMAC timer](web/assets/timer-dmac-0136.png) | ![LPU timer](web/assets/timer-lpu-0139.png) |
+| TOOOL | TOOOL Dark |
+|---|---|
+| ![TOOOL watch](web/assets/watch-toool-0136.png) | ![TOOOL Dark watch](web/assets/watch-toool-dark-0136.png) |
+| ![TOOOL Locksport Timer](web/assets/timer-toool-0136.png) | ![TOOOL Dark Locksport Timer](web/assets/timer-toool-dark-0136.png) |
 
-**START / PAUSE** controls the attempt, **SPLIT** records a milestone, and **OPEN** records the finish. The rim animates while counting and stops when paused. **LOG** holds the latest 50 splits until reset or reboot. TOOOL and TOOOL Dark also include matching locksport timers.
+**START / PAUSE** controls the attempt, **SPLIT** records a milestone, and **OPEN** records the finish. The rim animates while counting and stops when paused. **LOG** holds the latest 50 splits until reset or reboot.
 
 Images are firmware display captures. [Locksport gallery](https://valleytech-dragon-detector.pages.dev/#locksport)
 
