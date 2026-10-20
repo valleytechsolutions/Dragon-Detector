@@ -1,10 +1,13 @@
 # Radar themes
 
-Firmware **0.13.17** offers 34 built-in themes, including Covert Instruments × McNally, TOOOL, TOOOL Dark and Church of Malware, on Waveshare AMOLED, M5Stack StopWatch, Spotpear and Seeed XIAO + Round Display.
+Firmware **0.13.23** offers 37 built-in themes plus an optional personal design
+across all seven hardware profiles. The latest additions are
+[Ogg and XomBi](RELEASE-0.13.23.md): simple green-and-black Ogg artwork and a
+zombie hacker portrait with moss-green controls.
 
-The saved theme also controls menus, settings, dialogs, utility screens, BLE Lab and radio tools. Watch designs remain independently swipeable. All five profiles show the Dragon Ball/BWM mark on black at power-on, then open the saved radar theme. Custom badge artwork and detection-family colors retain their meaning.
+The saved theme also controls menus, settings, dialogs, utility screens, BLE Lab and radio tools on full profiles. Watch designs remain independently swipeable. All seven profiles show the Dragon Ball/BWM mark on black at power-on, then open the saved radar theme. Custom badge artwork and detection-family colors retain their meaning.
 
-Open **Tools → System → Settings → Theme & radar labels** and scroll to the theme. It saves immediately; tap Home to return to radar. Or connect through the [web tools](https://valleytech-dragon-detector.pages.dev/#detector), choose Radar appearance → Theme, and save. Older firmware keeps its original three choices until updated. Waveshare Lite cycles all 34 built-in themes with BOOT and saves the selection. Hold BOOT to cycle radar, compact clock, timer, signals and diagnostics; see [Lite controls](WAVESHARE-LITE.md). Its LPL radar includes the central emblem and rotating scales.
+Open **Tools → System → Settings → Theme & radar labels** and scroll to the theme. It saves immediately; tap Home to return to radar. Or connect through the [web tools](https://valleytech-dragon-detector.pages.dev/#detector), choose Radar appearance → Theme, and save. Older firmware keeps its original three choices until updated. Waveshare Lite cycles all 37 built-in themes with BOOT and saves the selection. Hold BOOT to cycle radar, compact clock, timer, signals and diagnostics; see [Lite controls](WAVESHARE-LITE.md). Its LPL radar includes the central emblem and rotating scales.
 
 | Valleytech | Biscuit Shop | Marauder |
 |---|---|---|
@@ -13,9 +16,9 @@ Open **Tools → System → Settings → Theme & radar labels** and scroll to th
 
 These are CRC-verified 466×466 logical display captures from the Waveshare, not panel photographs. The small logo is sized natively for each panel. The Valleytech silhouette is isolated on the dark radar, rendered in silver without a white backing; Biscuit's white logo uses transparency; the JCMK source retains its black background. [Unmodified sources and attribution](../CREDITS.md#radar-theme-artwork--0131).
 
-Green radar (default), Dragon Ball and Black / gold / red keep their BWM1 logo. Existing saved selections stay unchanged. Family-colored labels use the same [26 device-family colors](RADAR-COLORS.md) and leader lines; Capsule Corp uses yellow contact dots to match its Dragon Radar display. Radio status, target count, battery indicator, RSSI placement, scan scheduling and badge images are unaffected by a theme change.
+Green radar (default), Dragon Ball and Black / gold / red keep their BWM1 logo. Existing saved selections stay unchanged. Family-colored labels use the same [26 device-family colors](RADAR-COLORS.md) and leader lines. Since 0.13.22, each retained device gets a distinct shade within its family color range on every theme. Radio status, target count, battery indicator, RSSI placement, scan scheduling and badge images are unaffected by a theme change.
 
-USB names: `radar theme dragon`, `green`, `gold`, `valleytech`, `biscuit`, `marauder`, `toool`, `church`, `toool-dark`, `covert`, `awok`, `baph0mau5`, `wdgwars`, `ghoststrats`, `n3rdsec`, `halehound`, `waveshare`, `m5stack`, `lab5`, `sasquach`, `nyan`, `dmac`, `seeed`, `dagnazty`, `octo-pig`, `deflock`, `lpl`, `ghostbusters`, `lpu`, `hackazillarex`, `m33k-t3ch`, `capsule-corp`, `sparrows`, `dzaz`, or `custom` (prefix each with `radar theme`). `radar status` reports saved indices 0–34 in that order; custom is available only after installing a design. Unknown themes are rejected without changing the current selection.
+USB names: `radar theme dragon`, `green`, `gold`, `valleytech`, `biscuit`, `marauder`, `toool`, `church`, `toool-dark`, `covert`, `awok`, `baph0mau5`, `wdgwars`, `ghoststrats`, `n3rdsec`, `halehound`, `waveshare`, `m5stack`, `lab5`, `sasquach`, `nyan`, `dmac`, `seeed`, `dagnazty`, `octo-pig`, `deflock`, `lpl`, `ghostbusters`, `lpu`, `hackazillarex`, `m33k-t3ch`, `capsule-corp`, `sparrows`, `dzaz`, `custom`, `can-commander`, `ogg`, or `xombi` (prefix each with `radar theme`). `radar status` reports saved indices 0–37 in that order; custom is available only after installing a design. Unknown themes are rejected without changing the current selection.
 
 ## TOOOL · 0.13.6
 

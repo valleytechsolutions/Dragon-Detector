@@ -46,9 +46,11 @@ static const WatchPalette watches[]={
   {"SPARROWS",0x000000,0xf3f2ef,0xff8790,0x686069,false},
   {"DZ_AZ",0x070a10,0xe5edf4,0xb6cbdc,0x647b8e,true},
   {"PERSONAL THEME",0x080d16,0xf3f6fb,0x68e2c1,0xa1adbe,true},
-  {"CAN COMMANDER",0x02040c,0xe8edf2,0x72c5e8,0x92a9ba,false}
+  {"CAN COMMANDER",0x02040c,0xe8edf2,0x72c5e8,0x92a9ba,false},
+  {"OGG",0x000000,0xe0f5e0,0x3ee052,0x9ac9a0,false},
+  {"XomBi",0x090f0b,0xdceccc,0xa7e76b,0xabc49b,false}
 };
-static constexpr uint8_t WatchFaces[]={0,1,2,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38};
+static constexpr uint8_t WatchFaces[]={0,1,2,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40};
 static constexpr unsigned WatchCount=sizeof(WatchFaces)/sizeof(WatchFaces[0]);
 static bool watchFaceAllowed(unsigned face){if(face==dragon::PersonalWatchId&&!personalThemeReady())return false;for(auto id:WatchFaces)if(id==face)return true;return false;}
 static unsigned watchFacePosition(){for(unsigned i=0;i<WatchCount;++i)if(WatchFaces[i]==watchFace)return i;return 0;}
@@ -285,6 +287,7 @@ static void watchDraw(lv_event_t* e){
     watchText(ctx,text,70,294,220,F12,p.accent);return;
   }
   if(watchFace==dragon::PersonalWatchId){personalThemeClock(ctx,d,valid);return;}
+  if(watchFace==OggWatch||watchFace==XombiWatch){greenWatch(ctx,d,valid,watchFace==XombiWatch);return;}
   if(watchFace==CanCommanderWatch){canCommanderWatch(ctx,d,valid,watchFrameAt);return;}
   if(watchFace==36){dzazWatch(ctx,d,valid);return;}
   if(watchFace==35){sparrowsWatch(ctx,d,valid);return;}

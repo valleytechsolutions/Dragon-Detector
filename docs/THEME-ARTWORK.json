@@ -289,5 +289,19 @@
     "sha256": "87417b27bdcd35648cb7887f15387dd2a0a687a5652957ba5cf9c123bebb5a31",
     "source_bytes_match": true,
     "derivation": "Unchanged user-supplied MK emblem for Matthew Kukanich. Native display copies use resizing and palette encoding only."
+  },
+  {
+    "file": "media/theme-logos/ogg-source.jpg",
+    "supplied_name": "rh-2lBRy_400x400.jpg",
+    "sha256": "c18d8d59736db67bbff10362cc29d59db93f7bd140d14c3b1b26c5abd64bacd5",
+    "source_bytes_match": true,
+    "derivation": "Unchanged user-supplied artwork; firmware resizes and palette-encodes it, then clips the JPEG corners with a circular display mask."
+  },
+  {
+    "file": "media/theme-logos/xombi-source.jpg",
+    "supplied_name": "120074416.jpg",
+    "sha256": "2c16a609093ae744ec1ca5ffbb4536087a1674612b4962b942c722d100f546bd",
+    "source_bytes_match": true,
+    "derivation": "Unchanged user-supplied artwork; firmware resizes and palette-encodes it, then clips the JPEG corners with a circular display mask."
   }
 ]

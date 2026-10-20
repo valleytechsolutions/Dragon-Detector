@@ -6,7 +6,14 @@ Wi-Fi and Bluetooth detection, signal tracking, and logo watch faces for ESP32-S
 
 **Web flasher available:** [Install from the independent host](https://valleytech-dragon-detector.pages.dev/). The original GitHub Pages address and GitHub-hosted images are temporarily unavailable. Source, artwork and release files are intact; existing devices are unaffected. [Hosting status](docs/HOSTING-STATUS.md).
 
-[**Install firmware**](https://valleytech-dragon-detector.pages.dev/#install) · [Latest release](docs/RELEASE-0.13.22.md) · [User guides](docs/GUI.md) · [Clock setup](https://git.churchofmalware.org/Valleytech/Dragon-Detector/wiki/Clock-Setup)
+[**Install firmware**](https://valleytech-dragon-detector.pages.dev/#install) · [Latest release](docs/RELEASE-0.13.23.md) · [User guides](docs/GUI.md) · [Clock setup](https://git.churchofmalware.org/Valleytech/Dragon-Detector/wiki/Clock-Setup)
+
+## Ogg and XomBi · 0.13.23
+
+**Ogg** pairs the supplied eye emblem with a simple green-and-black radar and
+digital clock. **XomBi** uses the zombie hacker portrait, moss-green surfaces
+and phosphor accents. Both theme the menus and utilities, with the original
+artwork retained. [Previews and selection instructions](docs/RELEASE-0.13.23.md).
 
 ## Radar controls and repeating Find My Beeper · 0.13.22
 

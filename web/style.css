@@ -101,3 +101,5 @@ header nav{gap:22px;font-size:12px}
 
 #radio-tools .form-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
 @media(max-width:600px){#radio-tools .form-row{grid-template-columns:1fr;gap:0}}
+
+#green-themes{--line:#315b38;--panel:#08130c;--lime:#a7e76b}#green-themes .preview-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#green-themes .preview-grid img{max-width:320px}@media(max-width:600px){#green-themes .preview-grid{grid-template-columns:1fr}#green-themes .preview-grid img{max-width:280px}}
