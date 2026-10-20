@@ -6,8 +6,10 @@ XomBi retains the supplied zombie-hacker portrait and adds two original undead f
 
 The coordinated [MITM theme](MITM-THEME.md) adds the owner-supplied photograph with slowly changing neon accents. It appends a new theme ID; existing selections keep their IDs. OGG and XomBi keep their existing names and selections. The public showcase photographs are unchanged.
 
+**Hypnotic** adds a black-and-white cartoon spiral that turns once every 12 seconds. The clock has a fixed, high-contrast time/date window; the radar uses a muted spiral beneath device colors and labels. It is drawn directly in firmware, including Lite, without additional artwork files.
+
 This release retains the [0.13.25 RTC fixes](RELEASE-0.13.25.md) and all nine profiles, including the [LILYGO round 1.75 beta](LILYGO-AMOLED-175.md). Select **Update** for your exact matching board to preserve settings and files. No SD artwork pack is required.
 
-Choose **Ogg**, **XomBi**, or **MITM** in Settings → Theme & radar labels, then open Clock. On full boards, USB commands are `radar theme ogg`, `radar theme xombi`, and `radar theme mitm`. Clock faces remain independently selectable.
+Choose **Ogg**, **XomBi**, **MITM**, or **Hypnotic** in Settings → Theme & radar labels, then open Clock. On full boards, USB commands are `radar theme ogg`, `radar theme xombi`, `radar theme mitm`, and `radar theme hypnotic`. Clock faces remain independently selectable.
 
-Validation includes actual LVGL renders at 240, 360, 466 and 480 pixels, unset-time rendering, 109 browser-module tests and native compressed-artwork decoder checks. These are software-rendered previews; physical panel checks of the new artwork remain pending. RTC off-time testing remains confirmed on StopWatch, with XIAO, Waveshare and LILYGO awaiting their own hardware checks.
+Validation includes actual LVGL renders at 240, 360, 466 and 480 pixels, unset-time rendering, 110 browser-module tests and native compressed-artwork decoder checks. These are software-rendered previews; physical panel checks of the new artwork remain pending. RTC off-time testing remains confirmed on StopWatch, with XIAO, Waveshare and LILYGO awaiting their own hardware checks.
