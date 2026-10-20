@@ -251,3 +251,7 @@ Display support uses [Arduino_GFX 1.5.6 by moononournation](https://github.com/m
 
 These are feature/workflow references, not claims of complete parity, endorsement,
 or tested GPS hardware compatibility. Review date: 2026-10-19.
+
+## MuldersreVenge
+
+The project owner supplied `media/theme-logos/muldersrevenge-source.png` for the MuldersreVenge firmware theme. The original file is retained unchanged; native display copies use resizing and palette encoding only. Artwork rights remain with its original owner.

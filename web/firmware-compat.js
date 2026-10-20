@@ -36,3 +36,5 @@ export function hasGreenArtThemes(version){const m=/^0\.13\.(0|[1-9]\d*)$/.exec(
 export function hasCanCommanderTheme(version){const m=/^0\.13\.(0|[1-9]\d*)$/.exec(version);return !!m&&Number(m[1])>=18;}
 
 export function hasCapsuleSparrowsThemes(version){const m=/^0\.13\.(0|[1-9]\d*)$/.exec(version);return !!m&&Number(m[1])>=15;}
+
+export function hasMuldersRevengeTheme(version){const m=/^0\.13\.(0|[1-9]\d*)$/.exec(version);return !!m&&Number(m[1])>=24;}

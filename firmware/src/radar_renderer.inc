@@ -34,6 +34,7 @@ static void disc(lv_draw_ctx_t* ctx,int x,int y,int r,uint32_t c,int opa=255){
 #include "dzaz_theme.inc"
 #include "can_commander_theme.inc"
 #include "green_art_themes.inc"
+#include "muldersrevenge_theme.inc"
 static const char* radarFamilyName(Family f){
 #if SCREEN_RES<=240
   // Keep the family on one line, leaving the second line for signal/age.
@@ -76,7 +77,7 @@ static void radarDraw(lv_event_t* e){
   const uint32_t now=radarFrameAt;
   static uint32_t plotFrame=UINT32_MAX;const bool advancePlot=plotFrame!=now;plotFrame=now;
   lv_draw_arc_dsc_t arc;lv_draw_arc_dsc_init(&arc);arc.color=color(theme.ring);arc.width=std::max(1,S(1));arc.opa=160;
-  if(greenArtTheme(radarTheme))greenRadarField(ctx,radarTheme==XombiTheme);else if(radarTheme==CanCommanderTheme)canRadarField(ctx,now,radioEnabled);else if(radarTheme==31)capsuleRadarField(ctx,now);else if(radarTheme==32)sparrowsRadarField(ctx);else{
+  if(radarTheme==MuldersRevengeTheme)muldersRadarField(ctx);else if(greenArtTheme(radarTheme))greenRadarField(ctx,radarTheme==XombiTheme);else if(radarTheme==CanCommanderTheme)canRadarField(ctx,now,radioEnabled);else if(radarTheme==31)capsuleRadarField(ctx,now);else if(radarTheme==32)sparrowsRadarField(ctx);else{
 #ifdef BOARD_RADAR_LITE
   if(liteBackdrop.data){lv_draw_img_dsc_t d;lv_draw_img_dsc_init(&d);lv_area_t a{0,0,SCREEN_RES-1,SCREEN_RES-1};lv_draw_img(ctx,&d,&a,&liteBackdrop);}
   else disc(ctx,CENTER,CENTER,S(178),theme.bottom);

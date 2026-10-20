@@ -303,5 +303,12 @@
     "sha256": "2c16a609093ae744ec1ca5ffbb4536087a1674612b4962b942c722d100f546bd",
     "source_bytes_match": true,
     "derivation": "Unchanged user-supplied artwork; firmware resizes and palette-encodes it, then clips the JPEG corners with a circular display mask."
+  },
+  {
+    "file": "media/theme-logos/muldersrevenge-source.png",
+    "supplied_name": "MuldersreVenge.png",
+    "sha256": "3ff763d9f568093364c01184521ebfeb1e233f6f8225c8739f735f0e40573b68",
+    "source_bytes_match": true,
+    "derivation": "Unchanged user-supplied artwork. Native firmware copies use resizing and palette encoding only; the full emblem and wordmark are retained."
   }
 ]
