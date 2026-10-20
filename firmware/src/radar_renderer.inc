@@ -35,6 +35,7 @@ static void disc(lv_draw_ctx_t* ctx,int x,int y,int r,uint32_t c,int opa=255){
 #include "can_commander_theme.inc"
 #include "green_art_themes.inc"
 #include "muldersrevenge_theme.inc"
+#include "mitm_theme.inc"
 static const char* radarFamilyName(Family f){
 #if SCREEN_RES<=240
   // Keep the family on one line, leaving the second line for signal/age.

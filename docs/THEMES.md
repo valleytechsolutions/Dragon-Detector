@@ -1,13 +1,14 @@
 # Radar themes
 
-Firmware **0.13.23** offers 37 built-in themes plus an optional personal design
-across all seven hardware profiles. The latest additions are
-[Ogg and XomBi](RELEASE-0.13.23.md): simple green-and-black Ogg artwork and a
-zombie hacker portrait with moss-green controls.
+Firmware **0.13.26** offers 39 built-in themes plus an optional personal design
+across all nine hardware profiles. [Latest changes](RELEASE-0.13.26.md): OGG gains
+a green-and-black analog dial with knife hands; XomBi adds zombie figures and a
+moss-edged digital clock. [MITM](MITM-THEME.md) adds the supplied photo and
+slowly changing neon accents.
 
-The saved theme also controls menus, settings, dialogs, utility screens, BLE Lab and radio tools on full profiles. Watch designs remain independently swipeable. All seven profiles show the Dragon Ball/BWM mark on black at power-on, then open the saved radar theme. Custom badge artwork and detection-family colors retain their meaning.
+The saved theme also controls menus, settings, dialogs, utility screens, BLE Lab and radio tools on full profiles. Watch designs remain independently swipeable. All nine profiles show the Dragon Ball/BWM mark on black at power-on, then open the saved radar theme. Custom badge artwork and detection-family colors retain their meaning.
 
-Open **Tools → System → Settings → Theme & radar labels** and scroll to the theme. It saves immediately; tap Home to return to radar. Or connect through the [web tools](https://valleytech-dragon-detector.pages.dev/#detector), choose Radar appearance → Theme, and save. Older firmware keeps its original three choices until updated. Waveshare Lite cycles all 37 built-in themes with BOOT and saves the selection. Hold BOOT to cycle radar, compact clock, timer, signals and diagnostics; see [Lite controls](WAVESHARE-LITE.md). Its LPL radar includes the central emblem and rotating scales.
+Open **Tools → System → Settings → Theme & radar labels** and scroll to the theme. It saves immediately; tap Home to return to radar. Or connect through the [web tools](https://valleytech-dragon-detector.pages.dev/#detector), choose Radar appearance → Theme, and save. Older firmware keeps its original three choices until updated. Waveshare Lite cycles all 39 built-in themes with BOOT and saves the selection. Hold BOOT to cycle radar, compact clock, timer, signals and diagnostics; see [Lite controls](WAVESHARE-LITE.md). Its LPL radar includes the central emblem and rotating scales.
 
 | Valleytech | Biscuit Shop | Marauder |
 |---|---|---|
@@ -18,7 +19,7 @@ These are CRC-verified 466×466 logical display captures from the Waveshare, not
 
 Green radar (default), Dragon Ball and Black / gold / red keep their BWM1 logo. Existing saved selections stay unchanged. Family-colored labels use the same [26 device-family colors](RADAR-COLORS.md) and leader lines. Since 0.13.22, each retained device gets a distinct shade within its family color range on every theme. Radio status, target count, battery indicator, RSSI placement, scan scheduling and badge images are unaffected by a theme change.
 
-USB names: `radar theme dragon`, `green`, `gold`, `valleytech`, `biscuit`, `marauder`, `toool`, `church`, `toool-dark`, `covert`, `awok`, `baph0mau5`, `wdgwars`, `ghoststrats`, `n3rdsec`, `halehound`, `waveshare`, `m5stack`, `lab5`, `sasquach`, `nyan`, `dmac`, `seeed`, `dagnazty`, `octo-pig`, `deflock`, `lpl`, `ghostbusters`, `lpu`, `hackazillarex`, `m33k-t3ch`, `capsule-corp`, `sparrows`, `dzaz`, `custom`, `can-commander`, `ogg`, or `xombi` (prefix each with `radar theme`). `radar status` reports saved indices 0–37 in that order; custom is available only after installing a design. Unknown themes are rejected without changing the current selection.
+USB names: `radar theme dragon`, `green`, `gold`, `valleytech`, `biscuit`, `marauder`, `toool`, `church`, `toool-dark`, `covert`, `awok`, `baph0mau5`, `wdgwars`, `ghoststrats`, `n3rdsec`, `halehound`, `waveshare`, `m5stack`, `lab5`, `sasquach`, `nyan`, `dmac`, `seeed`, `dagnazty`, `octo-pig`, `deflock`, `lpl`, `ghostbusters`, `lpu`, `hackazillarex`, `m33k-t3ch`, `capsule-corp`, `sparrows`, `dzaz`, `custom`, `can-commander`, `ogg`, `xombi`, `muldersrevenge`, or `mitm` (prefix each with `radar theme`). `radar status` reports saved indices 0–39 in that order; custom is available only after installing a design. Unknown themes are rejected without changing the current selection.
 
 ## TOOOL · 0.13.6
 
@@ -218,3 +219,8 @@ Black, red and steel, the supplied keyhole emblem, segmented rings and two pick-
 ## DZ_AZ and personal themes · 0.13.17
 
 [DZ_AZ](DZ-AZ.md) adds a crow emblem, feather sweep and feather clock hands on all five boards. The optional [personal theme](CUSTOM-THEME.md) adds one user-created logo clock, radar and counter. Create it in the web flasher’s dedicated Custom theme tab and select the install option; it stays hidden on devices without a saved design.
+
+
+## OGG and XomBi · 0.13.26 refinement
+
+OGG retains the original green eye emblem. Its shorter, wider knife indicates hours; the longer, lighter knife indicates minutes. The small digital window uses 24-hour time. XomBi retains the original zombie-hacker portrait and adds two vector-drawn zombie figures, a moss-edged time window and a worn seconds track. Both designs retain their previous theme IDs and apply to all four panel resolutions, including Lite. No external SD assets are required.

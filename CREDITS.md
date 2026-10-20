@@ -259,3 +259,5 @@ or tested GPS hardware compatibility. Review date: 2026-10-19.
 ## MuldersreVenge
 
 The project owner supplied `media/theme-logos/muldersrevenge-source.png` for the MuldersreVenge firmware theme. The original file is retained unchanged; native display copies use resizing and palette encoding only. Artwork rights remain with its original owner.
+
+MITM clock photograph: `media/theme-logos/mitm-source.jpg`, supplied by the project owner as `channels4_profile.jpg`. Original preserved; embedded at native dial resolutions. No ownership or affiliation is implied.
