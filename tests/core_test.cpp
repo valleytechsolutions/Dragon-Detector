@@ -19,6 +19,7 @@ static Match ble(const std::vector<uint8_t>& p){auto f=parseBle(p.data(),p.size(
 #include "service_encoding_test.h"
 #include "radar_layout_test.h"
 #include "wearable_test.h"
+#include "wardrive_test.h"
 #include "axon_test.h"
 #include "ble_profile_test.h"
 #include "recon_test.h"
@@ -36,6 +37,8 @@ static Match ble(const std::vector<uint8_t>& p){auto f=parseBle(p.data(),p.size(
 #include "rotary_input_test.h"
 int main(){
   rotaryInputTests();
+
+  wardriveTests();
   personalThemeTests();
   dinoRunnerTests();
   liteControlsTests();

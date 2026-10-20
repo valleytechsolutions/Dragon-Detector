@@ -229,3 +229,15 @@ Hardware mapping was checked against Waveshare's official schematic, hardware re
 The board pin mapping, ST7701 initialization selection, RGB timings and PCF8574 reset sequence follow Elecrow’s official hardware examples at revision `52c772195033bf0c08568fa21cfc8606bac75df0`. The touch, encoder and LVGL integration are project code. [Hardware sources](docs/ELECROW-ROTARY-21.md#sources).
 
 Display support uses [Arduino_GFX 1.5.6 by moononournation](https://github.com/moononournation/Arduino_GFX/tree/58ac1d46438b9406f87a53ae87ca9f377ca805fb), pinned for the existing Arduino 3.0.7 / ESP-IDF 5.1 toolchain. [Included license](docs/licenses/Arduino-GFX-license.txt). Other dependency notices remain in effect.
+
+## AMOLED SD/GPS workflow references · 0.13.21 beta
+
+- **Waveshare**: [hardware reference](https://github.com/waveshareteam/ESP32-S3-Touch-AMOLED-1.75/blob/main/HARDWARE_REFERENCE.md) and [LC76G I²C protocol demonstration](https://github.com/waveshareteam/ESP32-S3-Touch-AMOLED-1.75/blob/main/examples/arduino/09_LC76G_I2C/09_LC76G_I2C.ino). The shared bus/pin/address and command-byte facts inform an independently written bounded cooperative adapter. Vendor application code is not bundled.
+- **LC76G transport review**: [Quectel forum field reports](https://forums.quectel.com/t/lc76g-pa-i2c-firmware/26743) and [fuzzybear62's implementation for this board](https://github.com/fuzzybear62/esphome-lc76g) informed FIFO backlog and shared-bus error review. No source was copied. Their field results do not validate this firmware's independent driver.
+- **JustCallMeKoko / ESP32 Marauder**: [WiGLE format definitions](https://github.com/justcallmekoko/ESP32Marauder/blob/master/esp32_marauder/WigleFormat.h) and SD/capture workflows informed interoperability and storage review. Existing MIT notice remains above. The new writer, NMEA parser and CSV serializer are original implementations.
+- **WiGLE**: [Android wardriving application and format history](https://github.com/wiglenet/wigle-wifi-wardriving). WiGLE 1.6 UTF-8 CSV is the interchange target; no WiGLE app code or credentials are included, and successful service ingestion is not yet field-verified.
+- **Matthew Kukanich / ChimeraBLE**: [Cardputer storage guide](https://github.com/MatthewKuKanich/ChimeraBLE/blob/main/CARDPUTER_GUIDE.md), automatic data-directory creation and optional lookup assets. Dragon Detector retains its independently implemented BLE Lab and DDG1 profile format.
+- **JimGat / Cheap Yellow Monster (CYM)**: [README](https://github.com/JimGat/CYM/blob/main/README.md), optional SD lookup/dictionary assets and storage provisioning workflow. No CYM source, assets or key dictionaries are copied. An SD pack is not required to boot Dragon Detector.
+
+These are feature/workflow references, not claims of complete parity, endorsement,
+or tested GPS hardware compatibility. Review date: 2026-10-19.

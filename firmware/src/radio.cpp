@@ -4,6 +4,7 @@
 #include "recon.h"
 #include "recipes.h"
 #include "missions.h"
+#include "wardrive.h"
 #include <WiFi.h>
 #include <NimBLEDevice.h>
 #include <esp_wifi.h>
@@ -16,6 +17,7 @@
 
 bool radioEnabled=true,blePhase=false,candidatesOnly=true;
 static bool standby=false;
+static bool wardriveTransition=false;
 bool radioStandby(){return standby;}
 void setRadioStandby(bool enabled){
   if(standby==enabled)return;
@@ -42,6 +44,7 @@ uint16_t radioQueueHigh=0;
 static ContactCache contactCache;
 uint8_t wifiChannel=1,channelLock=0;
 struct Observation { uint32_t at; uint64_t us; uint16_t len,original,advLength; int8_t rssi; uint8_t channel,kind,addressType,mac[6]; uint8_t data[1024]; };
+static std::atomic<bool> wardriveScanning{false};
 static std::atomic<uint32_t> drops{0},axonDrops{0},axonQueued{0};
 static constexpr unsigned QUEUE_SIZE=96;
 static constexpr unsigned AXON_RESERVE=24;
@@ -50,7 +53,7 @@ static Observation* observations;
 // Free/ready queues carry one-byte pool indexes. Only received bytes are copied
 // in callbacks; the old implementation copied/cleared a 1 KB object each time.
 static bool reserveObservation(uint8_t& index,bool priority){
-  if((priority||uxQueueMessagesWaiting(freeSlots)>AXON_RESERVE)&&xQueueReceive(freeSlots,&index,0)==pdTRUE)return true;
+  if((wardriveScanning||priority||uxQueueMessagesWaiting(freeSlots)>AXON_RESERVE)&&xQueueReceive(freeSlots,&index,0)==pdTRUE)return true;
   ++drops;if(priority)++axonDrops;return false;
 }
 static void enqueueObservation(uint8_t index,bool priority){
@@ -130,7 +133,8 @@ static void wifiRx(void* buffer,wifi_promiscuous_pkt_type_t type){
   if(type!=WIFI_PKT_MGMT && type!=WIFI_PKT_DATA)return;
   auto* p=static_cast<wifi_promiscuous_pkt_t*>(buffer);
   if(p->rx_ctrl.rx_state || p->rx_ctrl.sig_len<28)return;
-  bool priority=dragon::inspectAxonWifi(p->payload,p->rx_ctrl.sig_len-4).detected();
+  if(wardriveScanning&&(type!=WIFI_PKT_MGMT||(p->payload[0]!=0x80&&p->payload[0]!=0x50)))return;
+  bool priority=!wardriveScanning&&dragon::inspectAxonWifi(p->payload,p->rx_ctrl.sig_len-4).detected();
   uint8_t index;if(!reserveObservation(index,priority))return;auto& o=observations[index];o.at=millis();o.us=esp_timer_get_time();o.kind=0;o.addressType=0;
   o.original=p->rx_ctrl.sig_len-4;
   // Without PCAP, a data frame only needs its maximum MAC header + LLC for
@@ -153,7 +157,7 @@ class BleCallbacks:public NimBLEScanCallbacks {
   void onResult(const NimBLEAdvertisedDevice* d) override {
     auto addr=d->getAddress();uint8_t mac[6];for(int i=0;i<6;++i)mac[i]=addr.getBase()->val[5-i];
     const auto& payload=d->getPayload();
-    bool priority=dragon::inspectAxonBle(payload.data(),payload.size(),d->getAdvLength(),mac,addr.getType()).detected();
+    bool priority=!wardriveScanning&&dragon::inspectAxonBle(payload.data(),payload.size(),d->getAdvLength(),mac,addr.getType()).detected();
     uint8_t index;if(!reserveObservation(index,priority))return;auto& o=observations[index];o.at=millis();o.kind=1;o.channel=0;o.us=0;o.rssi=d->getRSSI();
     memcpy(o.mac,mac,6);o.addressType=addr.getType();
     o.original=payload.size();o.advLength=d->getAdvLength();o.len=std::min<size_t>(payload.size(),sizeof(o.data));memcpy(o.data,payload.data(),o.len);
@@ -228,6 +232,13 @@ static void checkBleBurst(Contact& participant,const Observation& o,uint8_t grou
   }
 }
 static void process(const Observation& o){
+  if(wardriveBusy()){
+    if(wardriveActive()){
+      if(o.kind==0)wardriveWifi(o.data,o.len,o.rssi,o.channel,o.at);
+      else if(o.len==o.original)wardriveBle(o.mac,o.addressType,o.rssi,o.data,o.len,o.at);
+    }
+    return;
+  }
   if(o.kind==0){
     reconWifi(o.data,o.len,o.original,o.us,o.rssi,o.channel);
     if(reconOwnsRadio())return;
@@ -309,7 +320,7 @@ void radioBegin(){
 }
 void setRadio(bool enabled){
   enabled=enabled&&!standby;
-  if(bleLabOwnsRadio()||reconOwnsRadio())return;
+  if(!wardriveTransition&&(bleLabOwnsRadio()||reconOwnsRadio()))return;
   if(!queue || !scanner)return;
   if(!enabled && fox)setFoxTransmit(false);
   radioEnabled=enabled;scanCommand(ScanAction::Stop);esp_wifi_set_promiscuous(false);
@@ -318,9 +329,9 @@ void setRadio(bool enabled){
   while(xQueueReceive(queue,&pendingIndex,0)==pdTRUE)xQueueSend(freeSlots,&pendingIndex,0);
   uint32_t now=millis();lastHop=lastAccounting=now;
   schedule.focus=trackedContact>=0&&contacts[trackedContact].ble?dragon::RadioSchedule::Bluetooth:channelLock?dragon::RadioSchedule::Wifi:dragon::RadioSchedule::Balanced;
-  blePhase=enabled&&reconRadio()!=1;schedule.begin(now,blePhase,wifiChannel);
+  blePhase=enabled&&(wardriveBusy()||reconRadio()!=1);schedule.begin(now,blePhase,wifiChannel);
   wifiSweep.begin(now,wifiChannel);
-  if(blePhase&&!scanCommand(ScanAction::Start,activeBle?1000:dragon::RadioSchedule::BleMs)){
+  if(blePhase&&!scanCommand(ScanAction::Start,configuredActive?1000:dragon::RadioSchedule::BleMs)){
     blePhase=false;schedule.begin(now,false,wifiChannel);addAlert("BLE scan failed","Wi-Fi listening resumed");
   }
   if(enabled&&!blePhase){
@@ -328,6 +339,17 @@ void setRadio(bool enabled){
     esp_wifi_set_promiscuous(true);
   }
 }
+#ifdef BOARD_AMOLED_175
+void radioWardrive(bool enabled){
+  static int previousTracked=-1;static uint8_t previousChannel=0;static bool previousRadio=true;
+  wardriveTransition=true;
+  if(enabled){previousTracked=trackedContact;previousChannel=channelLock;previousRadio=radioEnabled;}
+  setRadio(false);wardriveScanning=enabled;
+  trackedContact=enabled?-1:previousTracked;channelLock=enabled?0:previousChannel;
+  scanCommand(ScanAction::Configure,0,enabled?false:activeBle&&reconMode()==dragon::ReconMode::Radar);
+  setRadio(enabled||previousRadio);wardriveTransition=false;
+}
+#endif
 void radioLoop(){
   if(!queue)return;
   radioQueueHigh=std::max<uint16_t>(radioQueueHigh,uxQueueMessagesWaiting(queue)+uxQueueMessagesWaiting(priorityQueue));
@@ -343,17 +365,17 @@ void radioLoop(){
   uint32_t now=millis(),elapsed=now-lastAccounting;lastAccounting=now;
   if(!radioEnabled || !scanner)return;
   schedule.focus=trackedContact>=0&&contacts[trackedContact].ble?dragon::RadioSchedule::Bluetooth:channelLock?dragon::RadioSchedule::Wifi:dragon::RadioSchedule::Balanced;
-  if(reconRadio()){
+  if(!wardriveBusy()&&reconRadio()){
     if(reconRadio()==2){if(!scanner->isScanning())scanCommand(ScanAction::Start,10000);bleListenMs+=elapsed;return;}
     wifiListenMs+=elapsed;channelDwellMs[wifiChannel]+=elapsed;
     if(now-lastHop>=reconHopDwell()){lastHop=now;uint8_t c=channelLock?channelLock:reconNextChannel(wifiChannel);if(esp_wifi_set_channel(c,WIFI_SECOND_CHAN_NONE)==ESP_OK)wifiChannel=c;}
     return;
   }
-  if(blePhase && !schedule.due(now) && !scanner->isScanning())scanCommand(ScanAction::Start,activeBle?1000:dragon::RadioSchedule::BleMs);
+  if(blePhase && !schedule.due(now) && !scanner->isScanning())scanCommand(ScanAction::Start,configuredActive?1000:dragon::RadioSchedule::BleMs);
   if(blePhase)bleListenMs+=elapsed;else{wifiListenMs+=elapsed;channelDwellMs[wifiChannel]+=elapsed;}
   if(!blePhase && schedule.due(now) && wifiSweep.full()){
     esp_wifi_set_promiscuous(false);blePhase=true;schedule.begin(now,true,schedule.firstChannel);
-    if(!scanCommand(ScanAction::Start,activeBle?1000:dragon::RadioSchedule::BleMs)){blePhase=false;schedule.begin(now,false,wifiChannel);esp_wifi_set_promiscuous(true);addAlert("BLE scan failed","Wi-Fi listening resumed");}
+    if(!scanCommand(ScanAction::Start,configuredActive?1000:dragon::RadioSchedule::BleMs)){blePhase=false;schedule.begin(now,false,wifiChannel);esp_wifi_set_promiscuous(true);addAlert("BLE scan failed","Wi-Fi listening resumed");}
   }else if(blePhase && schedule.due(now)){
     scanCommand(ScanAction::Stop);blePhase=false;schedule.begin(now,false,(schedule.firstChannel%11)+1);
     wifiChannel=schedule.firstChannel;

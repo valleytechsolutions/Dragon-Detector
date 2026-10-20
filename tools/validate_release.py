@@ -9,12 +9,13 @@ for md in [ROOT/'README.md',ROOT/'CREDITS.md',*ROOT.glob('docs/*.md')]:
     for target in re.findall(r'!?\[[^\]]*\]\(([^\s)]+)',md.read_text(encoding='utf-8')):
         if '://' in target or target.startswith('#'):continue
         file=unquote(target.split('#')[0]);assert (md.parent/file).exists(),f'{md.name}: missing {file}'
-for board in ('spotpear','waveshare','stopwatch','xiao_round','waveshare_lite','waveshare_175','elecrow_21'):
+for board in ('spotpear','waveshare','stopwatch','xiao_round','waveshare_lite','waveshare_175','waveshare_175_gps','elecrow_21'):
     folder=ROOT/'web/firmware'/board
     records={name:sha for sha,name in (line.split() for line in (folder/'SHA256SUMS.txt').read_text().splitlines())}
     budget=json.loads((folder/'memory-budget.json').read_text(encoding='utf-8'))
     info=json.loads((folder/'build-info.json').read_text(encoding='utf-8'))
-    assert info['version']==VERSION and info['board']==board and info['memory']==budget
+    assert re.fullmatch(r'\d+\.\d+\.\d+',info['version']) and info['board']==board and info['memory']==budget
+    assert tuple(map(int,info['version'].split('.')))<=tuple(map(int,VERSION.split('.')))
     assert budget['app_bytes']==(folder/'firmware.bin').stat().st_size
     assert budget['reserve_percent']==RESERVE_PERCENT
     assert budget['app_slot_free_bytes']==budget['app_slot_bytes']-budget['app_bytes']
@@ -22,7 +23,7 @@ for board in ('spotpear','waveshare','stopwatch','xiao_round','waveshare_lite','
     assert budget['physical_flash_bytes']==info['flash_size']
     for mode in ('factory','update'):
         manifest=json.loads((folder/f'{mode}.json').read_text(encoding='utf-8'))
-        assert manifest['version']==VERSION
+        assert manifest['version']==info['version']
         parts=manifest['builds'][0]['parts'];end=0
         for part in parts:
             file=folder/part['path'];assert file.parent==folder and file.exists()

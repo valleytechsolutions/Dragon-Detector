@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include "app.h"
+#include "wardrive.h"
 #include "personal_theme.h"
 #include "notebook.h"
 #include "vendor_registry.h"
@@ -91,6 +92,10 @@ static void health(){
 }
 static uint32_t loopLastUs[6]{},loopMaxUs[6]{};
 static void command(const String& c){
+  if(wardriveCommand(c))return;
+  if(wardriveBusy()&&c!="status"&&c!="scan status"&&c!="memory status"&&c!="loop diagnostics"&&c!="screen wardrive"){
+    Serial.println("WARDRIVE_BUSY stop wardriving and wait for SD save first");return;
+  }
   if(personalThemeCommand(c))return;
   if(c=="system restart"){
     if(stopwatch.running||reconOwnsRadio()||bleLabOwnsRadio()||reconStorageBusy()){Serial.println("SYSTEM_ERROR stop timing and radio sessions first");return;}
@@ -188,11 +193,11 @@ void setup(){
 #ifndef BOARD_RADAR_LITE
   if(!dragon::vendorRegistryBegin())Serial.println("REGISTRY unavailable: PSRAM allocation or integrity check");
 #endif
-  radioBegin();bleLabBegin();reconBegin();Serial.println("DRAGON READY");health();
+  radioBegin();bleLabBegin();reconBegin();wardriveBegin();Serial.println("DRAGON READY");health();
 }
 void loop(){
   uint32_t stamp=micros();auto measured=[&](int i){uint32_t end=micros();loopLastUs[i]=end-stamp;loopMaxUs[i]=std::max(loopMaxUs[i],loopLastUs[i]);stamp=end;};
-  boardLoop();bleLabLoop();reconLoop();measured(0);radioLoop();measured(1);storageLoop();detectorLoop();measured(2);audioLoop();measured(3);uiLoop();measured(4);badgeLoop();measured(5);
+  boardLoop();wardriveLoop();bleLabLoop();reconLoop();measured(0);radioLoop();measured(1);storageLoop();detectorLoop();measured(2);audioLoop();measured(3);uiLoop();measured(4);badgeLoop();measured(5);
   while(Serial.available()){char c=Serial.read();if(c=='\n'){serialLine.trim();if(serialOverflow)Serial.println("COMMAND_ERROR too long");else command(serialLine);serialLine="";serialOverflow=false;}else if(serialLine.length()<1200)serialLine+=c;else serialOverflow=true;}
   if(millis()-lastHealth>10000){lastHealth=millis();health();}
   delay(2);

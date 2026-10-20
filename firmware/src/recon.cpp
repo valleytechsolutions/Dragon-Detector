@@ -1,12 +1,15 @@
 // Radio modes and bounded lab sessions. Original MIT adapter; packet builders
 // originate in Valleytech HackerPhone. Marauder MIT notice is retained.
 #include "recon_internal.h"
+#include "storage_replace.h"
 #include "background_radio.h"
 #include "portal.h"
 #include "csi_monitor.h"
 #include "network_tools.h"
 #include "missions.h"
 #include "recipes.h"
+#include "wardrive.h"
+#include "sd_records.h"
 #ifndef BOARD_RADAR_LITE
 #include "app.h"
 #include "ble_lab.h"
@@ -46,15 +49,16 @@ constexpr size_t CaptureCapacity=2*1024*1024;
 constexpr size_t CaptureCapacity=1024*1024;
 #endif
 static uint8_t* capture=nullptr;static bool captureDirty=false;
+static SdRecords cardCapture;static bool captureOnCard=false;
 static File saveFile;static String savePath;static size_t saveOffset=0;static uint32_t saveCrc=0xffffffffu;
 static char ssids[32][33]{};static unsigned ssidCount=0;
 void say(const char* s){strlcpy(status.message,s,sizeof(status.message));}
-static bool busy(){return status.active||status.saving||portalActive()||csiActive()||networkActive()||bleLabOwnsRadio();}
+static bool busy(){return wardriveBusy()||cardCapture.busy()||status.active||status.saving||portalActive()||csiActive()||networkActive()||bleLabOwnsRadio();}
 static bool saveList(){auto* fs=bleLabStorage();if(!fs||!bleLabStorageSpace(8192))return false;fs->mkdir("/lists");File f=fs->open("/lists/ssids.part",FILE_WRITE);if(!f)return false;bool ok=true;
  for(unsigned i=0;i<ssidCount&&ok;++i)ok=f.print(ssids[i])==strlen(ssids[i])&&f.write('\n')==1;
- f.flush();f.close();ok=ok&&fs->rename("/lists/ssids.part","/lists/ssids.txt");if(!ok)fs->remove("/lists/ssids.part");return ok;
+ f.flush();f.close();ok=ok&&dragon::replaceFile(*fs,String("/lists/ssids.part"),String("/lists/ssids.txt"));if(!ok)fs->remove("/lists/ssids.part");return ok;
 }
-static void loadList(){auto* fs=bleLabStorage();if(!fs)return;File f=fs->open("/lists/ssids.txt");if(!f)return;if(f.size()>32*33){f.close();say("Saved SSID list is invalid");return;}unsigned len=0;bool ok=true;
+static void loadList(){auto* fs=bleLabStorage();if(!fs||!dragon::recoverFile(*fs,String("/lists/ssids.txt")))return;File f=fs->open("/lists/ssids.txt");if(!f)return;if(f.size()>32*33){f.close();say("Saved SSID list is invalid");return;}unsigned len=0;bool ok=true;
  while(f.available()&&ok){int c=f.read();if(c=='\n'){if(!len||ssidCount>=32){ok=false;break;}ssids[ssidCount++][len]=0;len=0;}else if(c<32||c>126||len>=32||ssidCount>=32)ok=false;else ssids[ssidCount][len++]=char(c);}
  f.close();if(!ok||len){ssidCount=0;say("Saved SSID list is invalid");}
 }
@@ -93,17 +97,21 @@ static void prepareSae(void*){
 }
 static bool captureInit(bool ble,bool eapol){
  if(captureDirty){say("Unsaved capture: Save or Discard first");return false;}
- if(!capture)capture=(uint8_t*)ps_malloc(CaptureCapacity);if(!capture){say("Capture memory unavailable");return false;}
+ captureOnCard=bleLabStorageOnCard();
+ if(!captureOnCard&&!capture)capture=(uint8_t*)ps_malloc(CaptureCapacity);if(!captureOnCard&&!capture){say("Capture memory unavailable");return false;}
  status.bytes=0;status.records=0;captureEapol=eapol;recordingFilter=captureFilter;recordingSelected=captureSelected;memcpy(recordingAp,target.bssid,6);status.bleCapture=ble;
- if(ble){const char* header="uptime_ms,address,address_type,rssi,advertisement_length,payload_length,payload_hex\n";status.bytes=strlen(header);memcpy(capture,header,status.bytes);}else{pcapHeader(capture);status.bytes=24;}
- captureAt=millis();status.recording=true;wifiRecording=!ble;captureDirty=true;return true;
+ const char* csvHeader="uptime_ms,address,address_type,rssi,advertisement_length,payload_length,payload_hex\n";
+ uint8_t pcap[24];pcapHeader(pcap);const void* header=ble?(const void*)csvHeader:pcap;status.bytes=ble?strlen(csvHeader):24;
+ if(captureOnCard){if(!cardCapture.begin("/captures",ble?"ble":"wifi",ble?"csv":"pcap",header,status.bytes)){say(cardCapture.message);return false;}}
+ else memcpy(capture,header,status.bytes);
+ captureAt=millis();status.recording=true;wifiRecording=!ble;captureDirty=!captureOnCard;return true;
 }
 bool captureStart(bool ble,bool eapol){if(radioStandby()){say("Leave clock or timer to capture");return false;}if(busy()||status.recording||captureDirty){say("Stop and save or discard the current capture first");return false;}
  if(!ble&&captureSelected&&(!target.hasAp||!selected()||millis()-selected()->seen>=30000||selected()->channel!=target.channel)){say("Selected-AP capture requires a fresh selected network");return false;}
- if(!captureInit(ble,eapol))return false;capturePreviousMode=mode;capturePreviousLock=channelLock;captureModeOwned=true;mode=ble?ReconMode::BleCapture:ReconMode::WifiCapture;channelLock=!ble&&captureSelected?target.channel:0;trackedContact=-1;radioApplyMode();say("Recording to RAM; Stop, then Save to recon flash");return true;
+ if(!captureInit(ble,eapol))return false;capturePreviousMode=mode;capturePreviousLock=channelLock;captureModeOwned=true;mode=ble?ReconMode::BleCapture:ReconMode::WifiCapture;channelLock=!ble&&captureSelected?target.channel:0;trackedContact=-1;radioApplyMode();say(captureOnCard?"Recording to SD /dragon/captures; Stop to finalize":"Recording to RAM; Stop, then Save");return true;
 }
-void captureStop(){bool was=status.recording;status.recording=false;wifiRecording=false;if(captureModeOwned){captureModeOwned=false;mode=capturePreviousMode;channelLock=capturePreviousLock;radioApplyMode();}if(was)say("Capture stopped; Save to retain it across restart");}
-static bool appendCapture(const uint8_t* data,size_t n){if(n>CaptureCapacity-status.bytes){captureStop();say("Capture buffer full; stopped without overwriting");return false;}memcpy(capture+status.bytes,data,n);status.bytes+=n;++status.records;return true;}
+void captureStop(){bool was=status.recording;status.recording=false;wifiRecording=false;if(captureModeOwned){captureModeOwned=false;mode=capturePreviousMode;channelLock=capturePreviousLock;radioApplyMode();}if(was){if(captureOnCard){cardCapture.stop();status.saving=cardCapture.busy();say("Finalizing SD capture; keep card inserted");}else say("Capture stopped; Save to retain it across restart");}}
+static bool appendCapture(const uint8_t* data,size_t n){if(captureOnCard){if(!cardCapture.append(data,n))return false;status.bytes=uint32_t(std::min<uint64_t>(UINT32_MAX,uint64_t(status.bytes)+n));++status.records;return true;}if(n>CaptureCapacity-status.bytes){captureStop();say("Capture buffer full; stopped without overwriting");return false;}memcpy(capture+status.bytes,data,n);status.bytes+=n;++status.records;return true;}
 bool start(AttackMode m){
  char why[128];if(!available(m,why,sizeof(why))){if(!status.active&&unsigned(m)<unsigned(AttackMode::Count)){status.attack=m;status.accepted=status.errors=status.responses=status.eapol=0;status.error=0;}say(why);return false;}
  running=target;runSeconds=seconds;runRate=rate;beaconLength=0;if(auto* a=selected()){beaconLength=a->length;memcpy(beacon,a->beacon,beaconLength);}
@@ -146,23 +154,33 @@ static void tick(uint32_t now){
 }
 static bool safeFile(const char* p){size_t n=strlen(p);if(n<6||n>=48||strstr(p,".."))return false;for(size_t i=0;i<n;++i)if(!isalnum(uint8_t(p[i]))&&p[i]!='-'&&p[i]!='.'&&p[i]!='_')return false;return true;}
 static bool serialWrite(const char* p,size_t n){RadioTransfer transfer;uint32_t at=millis();while(n){size_t k=std::min<size_t>(128,std::min(n,size_t(Serial.availableForWrite())));if(k){k=Serial.write((const uint8_t*)p,k);p+=k;n-=k;at=millis();}else if(millis()-at>5000)return false;radioTransferTick();delay(1);}return true;}
-unsigned fileList(char names[][48],size_t* sizes,unsigned max){auto* fs=bleLabStorage();if(!fs||status.saving)return 0;File dir=fs->open("/captures");unsigned n=0;for(File f=dir.openNextFile();f&&n<max;f=dir.openNextFile()){String name=f.name();if(!f.isDirectory()&&(name.endsWith(".pcap")||name.endsWith(".csv"))){strlcpy(names[n],name.c_str(),48);sizes[n++]=f.size();}f.close();}dir.close();return n;}
-bool fileRemove(const char* name){auto* fs=bleLabStorage();return !busy()&&safeFile(name)&&fs&&fs->remove(String("/captures/")+name);}
-bool fileExport(const char* name){auto* fs=bleLabStorage();if(busy()||status.recording||!fs||!safeFile(name))return false;File f=fs->open(String("/captures/")+name);if(!f||f.size()>CaptureCapacity){f.close();return false;}
+static String capturePath(const char* name){return String(!strncmp(name,"wigle-",6)?"/wardrive/":"/captures/")+name;}
+unsigned fileList(char names[][48],size_t* sizes,unsigned max){auto* fs=bleLabStorage();if(!fs||status.saving||status.recording||wardriveBusy())return 0;unsigned n=0;
+ for(const char* folder:{"/wardrive","/captures"}){File dir=fs->open(folder);for(File f=dir.openNextFile();f&&n<max;f=dir.openNextFile()){String name=f.name();name=name.substring(name.lastIndexOf('/')+1);if(!f.isDirectory()&&(name.endsWith(".pcap")||name.endsWith(".csv"))){strlcpy(names[n],name.c_str(),48);sizes[n++]=f.size();}f.close();}dir.close();}return n;
+}
+bool fileRemove(const char* name){auto* fs=bleLabStorage();return !busy()&&safeFile(name)&&fs&&fs->remove(capturePath(name));}
+bool fileExport(const char* name){auto* fs=bleLabStorage();if(busy()||status.recording||!fs||!safeFile(name))return false;File f=fs->open(capturePath(name));if(!f||f.size()>(bleLabStorageOnCard()?32*1024*1024:CaptureCapacity)){f.close();return false;}
  RadioTransfer transfer;Serial.printf("RECON_FILE %u\n",unsigned(f.size()));uint8_t data[128];size_t offset=0;uint32_t crc=0xffffffffu;bool ok=true;
  while(f.available()){size_t n=f.read(data,sizeof(data));if(!n){ok=false;break;}char line[300];int k=snprintf(line,sizeof(line),"RECON_DATA %u ",unsigned(offset));for(size_t i=0;i<n;++i){snprintf(line+k,3,"%02x",data[i]);k+=2;}line[k++]='\n';if(!serialWrite(line,k)){ok=false;break;}crc=dragon::crc32(data,n,crc);offset+=n;}f.close();Serial.printf("RECON_END %u %08lx\n",unsigned(offset),crc^0xffffffffu);return ok;}
 bool captureSave(){
+ if(captureOnCard&&!cardCapture.busy()&&!cardCapture.failed()&&status.records){say("Capture already saved on SD /dragon/captures");return true;}
  if(busy()||status.recording||!captureDirty||!capture||!status.records){say("Stop a nonempty capture before saving");return false;}
- auto* fs=bleLabStorage();if(!fs){say("Recon flash unavailable; initialize it in BLE Lab");return false;}
+ auto* fs=bleLabStorage();if(!fs){say("Recon storage unavailable; check SD or BLE Lab");return false;}
  // FS capacity is checked by the storage adapter; no format or overwrite.
  if(!bleLabStorageSpace(status.bytes+65536)){say("Recon storage full; download and remove old captures");return false;}
  File dir=fs->open("/captures");unsigned saved=0;for(File f=dir.openNextFile();f;f=dir.openNextFile()){String name=f.name();if(!f.isDirectory()&&(name.endsWith(".pcap")||name.endsWith(".csv")))++saved;f.close();}dir.close();
  if(saved>=32){say("32 capture slots full; download and delete old files");return false;}
  fs->mkdir("/captures");char name[48];snprintf(name,sizeof(name),"/captures/%s-%08lx.%s",status.bleCapture?"ble":"wifi",esp_random(),status.bleCapture?"csv":"pcap");savePath=name;
  if(fs->exists(savePath)||fs->exists(savePath+".part")){say("Name collision; retry Save");return false;}saveFile=fs->open(savePath+".part",FILE_WRITE);if(!saveFile){say("Cannot create capture file");return false;}
- status.saving=true;saveOffset=0;saveCrc=0xffffffffu;say("Saving capture to recon flash...");return true;
+ status.saving=true;saveOffset=0;saveCrc=0xffffffffu;say("Saving capture...");return true;
 }
-static void saveTick(){if(!status.saving)return;size_t n=std::min<size_t>(4096,status.bytes-saveOffset);bool ok=saveFile.write(capture+saveOffset,n)==n;if(ok){saveCrc=dragon::crc32(capture+saveOffset,n,saveCrc);saveOffset+=n;}
+static void saveTick(){
+ if(captureOnCard){cardCapture.loop();
+  if(status.recording&&!cardCapture.active()){captureStop();say(cardCapture.message);}
+  if(status.saving&&!cardCapture.busy()){status.saving=false;snprintf(status.message,sizeof(status.message),"%s / dropped %lu",cardCapture.message,cardCapture.dropped);}
+  return;
+ }
+ if(!status.saving)return;size_t n=std::min<size_t>(4096,status.bytes-saveOffset);bool ok=saveFile.write(capture+saveOffset,n)==n;if(ok){saveCrc=dragon::crc32(capture+saveOffset,n,saveCrc);saveOffset+=n;}
  if(!ok||saveOffset==status.bytes){saveFile.flush();saveFile.close();auto* fs=bleLabStorage();ok=ok&&fs&&fs->rename(savePath+".part",savePath);if(ok){captureDirty=false;snprintf(status.message,sizeof(status.message),"Saved %s / CRC %08lx",savePath.c_str()+10,saveCrc^0xffffffffu);}else{if(fs)fs->remove(savePath+".part");say("Save failed; capture remains in RAM");}status.saving=false;}
 }
 }
@@ -172,17 +190,17 @@ ReconMode reconMode(){return mode;}
 uint8_t reconRadio(){return reconModes[unsigned(mode)].radio;}
 bool reconAll(){return reconModes[unsigned(mode)].all;}
 bool reconAccepts(Family family,bool ble){return modeAccepts(mode,family,ble);}
-bool reconStorageBusy(){return status.saving;}
-bool reconOwnsRadio(){return status.active||portalActive()||csiActive()||networkActive();}
+bool reconStorageBusy(){return status.saving||cardCapture.busy();}
+bool reconOwnsRadio(){return wardriveBusy()||status.active||portalActive()||csiActive()||networkActive();}
 bool reconRecording(){return wifiRecording.load();}
 bool reconSetMode(ReconMode next){if(!validMode(unsigned(next))||busy())return false;if(status.recording&&next!=mode)captureStop();mode=next;prefs.putUChar("mode",unsigned(mode));trackedContact=-1;channelLock=0;radioApplyMode();return true;}
-void reconStop(){networkStop();csiStop();portalStop();stop();captureStop();}
+void reconStop(){wardriveStop();networkStop();csiStop();portalStop();stop();captureStop();}
 uint16_t reconHopDwell(){return hopDwell;}
 uint8_t reconNextChannel(uint8_t current){return analysis::nextChannel(current,hopMask);}
 bool reconSetIBeacon(const dragon::ibeacon::Identity& value){if(busy()||status.recording)return false;beaconIdentity=value;return true;}
 const dragon::ibeacon::Identity& reconIBeacon(){return beaconIdentity;}
 void reconBegin(){networkBegin();prefs.begin("dd-recon",false);loadList();unsigned m=prefs.getUChar("mode",0);mode=validMode(m)?ReconMode(m):ReconMode::Radar;probes=(analysis::Probe*)ps_calloc(96,sizeof(analysis::Probe));aps=(Ap*)ps_calloc(ApCapacity,sizeof(Ap));clients=(dragon::toolkit::Client*)ps_calloc(ClientCapacity,sizeof(dragon::toolkit::Client));packet=(uint8_t*)ps_malloc(1200);beacon=(uint8_t*)ps_malloc(1024);radioApplyMode();}
-void reconLoop(){recipeLoop();missionLoop();networkLoop();csiLoop();portalLoop();tick(millis());saveTick();if(status.recording&&millis()-captureAt>=15*60*1000){captureStop();say("15-minute capture limit; Save to retain");}}
+void reconLoop(){recipeLoop();missionLoop();networkLoop();csiLoop();portalLoop();tick(millis());saveTick();if(status.recording&&!captureOnCard&&millis()-captureAt>=15*60*1000){captureStop();say("15-minute capture limit; Save to retain");}}
 void reconWifi(const uint8_t* p,size_t n,size_t original,uint64_t us,int rssi,uint8_t channel){
  if(status.saving)return;
  auto frame=dragon::parseWifi(p,n);bool eapol=frame.valid&&frame.eapol;missionWifi(frame,p,n,rssi,channel);

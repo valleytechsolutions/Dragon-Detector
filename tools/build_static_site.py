@@ -137,13 +137,17 @@ def build(output):
         (output / destination).write_text(page, encoding='utf-8')
     index = output / 'index.html'
     index.write_text(rewrite_links(index.read_text(encoding='utf-8'), ROOT / 'web/index.html', Path('index.html')), encoding='utf-8')
-    downloads = ['<h1>Firmware downloads</h1><p>Version ' + VERSION + '. These are board-specific images. Use the web flasher for automatic installation and clock verification. Compare downloaded files with the SHA-256 list for the same board.</p>']
+    downloads = ['<h1>Firmware downloads</h1><p>Versions are listed separately for each board; beta and stable packages may differ. Use the web flasher for automatic installation and clock verification. Compare downloaded files with the SHA-256 list for the same board.</p>']
     for folder in sorted((output / 'firmware').iterdir()):
         info = json.loads((folder / 'factory.json').read_text())
         downloads.append('<h2>' + html.escape(info['name'].removesuffix(' (factory)')) + '</h2>')
+        downloads.append('<p>Version ' + html.escape(info['version']) + '</p>')
         metadata = json.loads((folder / 'build-info.json').read_text(encoding='utf-8'))
-        if metadata.get('hardware_validation') == 'pending':
-            downloads.append('<p><strong>Experimental — physical hardware testing is pending.</strong> '
+        if metadata.get('board') == 'elecrow_21' and metadata.get('hardware_validation') == 'pending':
+            downloads.append('<p><strong>Experimental — physical testing in progress.</strong> '
+                             '<a href="ELECROW-ROTARY-21.html">Installation and rotary controls</a>.</p>')
+        elif metadata.get('hardware_validation') in ('pending','new-sd-gps-features-pending'):
+            downloads.append('<p><strong>Beta — new SD/GPS features await physical testing.</strong> '
                              '<a href="WAVESHARE-AMOLED-175.html">Installation and arrival checklist</a>.</p>')
         downloads.append('<ul>')
         for file in sorted(folder.iterdir()):

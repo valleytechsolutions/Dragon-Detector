@@ -1,4 +1,5 @@
 #include "app.h"
+#include "wardrive.h"
 #include "personal_theme.h"
 #include "notebook.h"
 #include "vendor_registry.h"
@@ -8,6 +9,7 @@
 #include "radar_colors.h"
 #include "board_pins.h"
 #include "radar_layout.h"
+#include "radar_interaction.h"
 #include "notifications.h"
 #include "ui_theme.h"
 #include "rotary_ui.h"
@@ -65,6 +67,8 @@ static lv_obj_t *root,*body,*statusLabel,*audioLabel,*audioMeter,*radar,*micBadg
 static bool openRadioTools=false;
 static int menuTab=0,filter=0,selected=-1,filePage=0,brightness=100,historyPage=0;
 static bool radarLabels=true;
+static dragon::RadarTapGesture radarGesture;
+static lv_obj_t* radarSummary=nullptr;
 static uint8_t radarTheme=1;
 static bool covert(){return radarTheme==9;}
 static bool lpu(){return radarTheme==28;}
@@ -116,6 +120,7 @@ static lv_obj_t* label(lv_obj_t* parent,const char* text,int x,int y,int w=0,con
   auto* o=lv_label_create(parent);lv_label_set_text(o,text);lv_obj_set_pos(o,S(x),S(y));if(w)lv_obj_set_width(o,S(w));lv_obj_set_style_text_font(o,uiFont(font),0);lv_obj_set_style_text_color(o,color(c),0);return o;
 }
 static void go(Page p){
+if(wardriveBusy()&&p!=Recon){wardriveStop();reconPage("wardrive");pending=Recon;return;}
 if(p==Radar){recipeStop();reconStop();bleLabStop();}
 #ifndef BOARD_RADAR_LITE
 if(page==Recon&&p!=Recon)reconLeave();
@@ -251,10 +256,10 @@ static void radarTap(lv_event_t*){lv_point_t p;lv_indev_get_point(lv_indev_get_a
   if(idx<0)for(int i=0;i<dotCount;++i)if(dots[i].labelSlot>=0&&contactKey(contacts[dots[i].index])==dots[i].key){auto b=dragon::radarLabelSlot(dots[i].labelSlot);if(p.x>=S(b.x)&&p.x<=S(b.x+b.w)&&p.y>=S(b.y)&&p.y<=S(b.y+b.h)){idx=dots[i].index;break;}}
   if(idx>=0){
     const auto key=contactKey(contacts[idx]);
-    bool open=radarHasSelection&&key==radarSelectedKey;
+    bool open=radarGesture.tap(key,millis());
     radarSelectedKey=key;radarHasSelection=true;radarSelectedAt=millis();
     if(open){selectContact(idx);go(Details);}else lv_obj_invalidate(radar);
-  }else{radarHasSelection=false;lv_obj_invalidate(radar);}}
+  }else{radarGesture.clear();radarHasSelection=false;lv_obj_invalidate(radar);}}
 #if BOARD_HAS_SD
 static void loadFiles(){
   fileCount=0;filesTruncated=false;if(!sdReady)return;
@@ -267,7 +272,7 @@ static void drawStartup(){showStartupLogo(root);}
 static void build(){
   // BLE Lab owns its complete screen and returns before the shared mic label
   // is rebuilt. Never retain a label from the page that is about to be freed.
-  micBadge=nullptr;
+  micBadge=nullptr;radarSummary=nullptr;radarGesture.clear();
   timerOrbit=nullptr;timerValue=timerState=timerLap=timerStartButton=timerSecondary=timerSplit=clockValue=clockDate=editValue=nullptr;
   badgeUnload();page=pending;pageAt=millis();statusLabel=audioLabel=audioMeter=radar=trackingLabel=huntValue=huntMeta=huntGauge=huntGraph=diagnosticsLabel=activityLabel=radarActivity=nullptr;radarPrepared=0;
   setRadioStandby(page==Clock||page==Stopwatch||page==Laps||page==ClockSettings||page==ClockWheels||page==ClockEdit);
@@ -286,6 +291,11 @@ static void build(){
     const auto& theme=radarPalette(radarTheme);
     statusLabel=label(root,"LISTENING",56,66,248,F12,theme.text);lv_obj_set_style_text_align(statusLabel,LV_TEXT_ALIGN_CENTER,0);legible(statusLabel);lv_obj_set_style_bg_color(statusLabel,color(theme.panel),0);lv_obj_set_style_bg_opa(statusLabel,LV_OPA_60,0);
     radarActivity=label(root,"",75,84,210,F12,0xffbc76);lv_obj_set_style_text_align(radarActivity,LV_TEXT_ALIGN_CENTER,0);legible(radarActivity);lv_obj_add_flag(radarActivity,LV_OBJ_FLAG_CLICKABLE);lv_obj_add_event_cb(radarActivity,action,LV_EVENT_CLICKED,(void*)116);
+    radarSummary=label(root,"",65,244,194,F12,theme.text);
+    lv_obj_set_height(radarSummary,S(34));lv_obj_set_style_text_align(radarSummary,LV_TEXT_ALIGN_CENTER,0);
+    lv_obj_set_style_bg_color(radarSummary,color(dragon::RadarLabelBackground),0);lv_obj_set_style_bg_opa(radarSummary,LV_OPA_COVER,0);
+    lv_obj_set_style_radius(radarSummary,S(5),0);lv_obj_add_flag(radarSummary,LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(radarSummary,LV_OBJ_FLAG_CLICKABLE);lv_obj_add_event_cb(radarSummary,action,LV_EVENT_CLICKED,(void*)159);
     trackingLabel=label(root,"TAP A SIGNAL",70,280,220,F12,theme.text);lv_obj_set_style_text_align(trackingLabel,LV_TEXT_ALIGN_CENTER,0);
     lv_obj_add_flag(trackingLabel,LV_OBJ_FLAG_CLICKABLE);lv_obj_add_event_cb(trackingLabel,action,LV_EVENT_CLICKED,(void*)152);
     auto* targets=button(root,"TARGETS",90,301,90,32,96);
@@ -324,16 +334,17 @@ static void build(){
     button(root,"<",68,274,40,31,114);char pages[30];snprintf(pages,sizeof(pages),"%d/%d",devicePage+1,std::max(1,(deviceTotal+9)/10));label(root,pages,118,280,60,F12);
     button(root,">",180,274,40,31,115);button(root,LV_SYMBOL_REFRESH,230,274,50,31,25);
   }else if(page==Details){
-    title("CONTACT EVIDENCE");body=scrollBody(88,169);if(selectionValid()){auto& c=contacts[selected];char mac[18];displayMac(c.mac,mac);
+    title("DEVICE DETAILS");body=scrollBody(88,169);if(selectionValid()){auto& c=contacts[selected];char mac[18];displayMac(c.mac,mac);
       String s=(*c.name?displayName(c.name):String(mac))+"\n"+mac+"\n\n"+dragon::familyName(c.match.family)+"\n"+dragon::confidenceName(c.match.confidence)+"\n"+(detector.privacy?"Evidence hidden by privacy mode":c.match.evidence)+"\n\n"+String(c.rssi)+" dBm  |  "+(c.ble?"BLE":String("CH ")+c.channel)+"\n"+c.signal.quality()+" / "+c.signal.direction()+"\nLast seen "+String((millis()-c.seen)/1000)+"s ago\nFrames: "+String(c.packets);
       if(trafficFresh(c,millis()))s+="\n\nTraffic: "+String(dragon::familyName(c.trafficFamily))+"\n"+(detector.privacy?String("Evidence hidden"):String(c.trafficEvidence))+"\nHunt follows this observed address, not a proven attacker.";
       if(c.drone.valid && !detector.privacy){if(c.drone.hasId)s+="\nRemote ID: "+String(c.drone.id);if(c.drone.hasLocation){s+="\nAircraft: "+String(c.drone.latitude,6)+", "+String(c.drone.longitude,6)+"\nPosition age: "+String((millis()-c.drone.locationAt)/1000)+"s";if(c.drone.altitude>-1000)s+="\nAltitude WGS84: "+String(c.drone.altitude,1)+" m";if(c.drone.speed<255)s+="\nSpeed: "+String(c.drone.speed,1)+" m/s";}if(c.drone.hasOperator)s+="\nOperator location: "+String(c.drone.operatorLatitude,6)+", "+String(c.drone.operatorLongitude,6)+"\nOperator position age: "+String((millis()-c.drone.operatorAt)/1000)+"s";s+="\nBroadcast data; not authenticated.";}
       s+="\n\nIdentity and activity unverified. Signal strength is not distance.";
       if(const char* vendor=dragon::registeredVendor(c.mac,c.ble,c.addressType))s+="\n\nIEEE address registrant:\n"+String(vendor)+"\nRegistry ownership is not product identification.";
-      auto* evidence=label(body,s.c_str(),8,0,240);
+      int evidenceY=0;
 #ifndef BOARD_RADAR_LITE
-      if(c.ble){lv_obj_update_layout(evidence);button(body,"OPEN BLE LAB",8,lv_obj_get_height(evidence)*360/SCREEN_RES+12,240,40,7001);}
+      if(c.ble){button(body,"BLE TOOLKIT",8,0,240,36,7001);button(body,"GATT CLONE TOOLS",8,44,240,36,7002);evidenceY=92;}
 #endif
+      label(body,s.c_str(),8,evidenceY,240);
       button(root,"Controls",52,263,124,37,56);
       button(root,"Hunt signal",184,263,124,37,52);
     }else label(body,"Contact expired. Return to the radar and select again.",8,0,240);
@@ -464,7 +475,11 @@ static void build(){
     row(body,"Saved captures","Internal flash files / USB download",n++,7104);
 #if BOARD_HAS_SD
     row(body,loggingEnabled&&sdReady?"SD event logging: ON":"SD event logging: OFF",sdReady?sessionPath.c_str():"Requires a mounted SD card",n++,43);
+#ifdef BOARD_AMOLED_175
+    row(body,"Capture studio",sdReady?"Wi-Fi + BLE / SD streaming / Stop saves":"RAM capture / Stop then Save",n++,7105);
+#else
     row(body,captureEnabled?"SD PCAP: recording":"SD PCAP: stopped",sdReady?"Raw 802.11 / 16 MB per capture":"Requires a mounted SD card",n++,24);
+#endif
 #endif
     row(body,"Boot to radar","Clear the saved badge startup choice",n++,55);
   }else if(page==Stopwatch){
@@ -526,7 +541,7 @@ static void build(){
     title("RADIO HEALTH","Live reception and resource counters");body=scrollBody();diagnosticsLabel=label(body,"Reading...",6,0,244,F12);
   }else if(page==About){
     title("SIGNATURES & LIMITS");body=scrollBody();
-    label(body,"DRAGON DETECTOR " DRAGON_VERSION "\nDetection / hunt edition\n\nGreen radar / signal proximity.\nAngles are decorative.\nNo distance or direction.\n\nAll contacts on one radar.\nAxon gets the primary tag.\nCameras / glasses / drones alert.\nTrackers stay silent as dots.\nTap a dot for its tag and signal.\nTap its tag for details / Hunt\nwith both radios listening.\n\nAirTag / Find My is a family\nmatch, not model or owner ID.\nBiscuit Pro / Ultra cannot be\ndistinguished from adverts.\nNo proof of malicious intent.\n\nHold badge: tools.\nAlways on at 100% by default.\nDisplay timeouts in Settings.\nUSB Badge Studio on GitHub.\n\nBy Your Pal Kal / Valleytech\nOriginal code: MIT.\nFlock Noir / Colonel Panic\nOUI Spy / Unified Blue\nMarauder: Just Call Me Koko\nSquachWatch feature reference\nOpenDroneID: Apache-2.0\nFull notices in CREDITS.md",5,0,244,F14);
+    label(body,"DRAGON DETECTOR " DRAGON_VERSION "\nDetection / hunt edition\n\nGreen radar / signal proximity.\nAngles are decorative.\nNo distance or direction.\n\nAll contacts on one radar.\nAxon gets the primary tag.\nCameras / glasses / drones alert.\nTrackers stay silent as dots.\nTap a dot for its summary.\nDouble-tap for details / BLE / Hunt\nwith both radios listening.\n\nAirTag / Find My is a family\nmatch, not model or owner ID.\nBiscuit Pro / Ultra cannot be\ndistinguished from adverts.\nNo proof of malicious intent.\n\nHold badge: tools.\nAlways on at 100% by default.\nDisplay timeouts in Settings.\nUSB Badge Studio on GitHub.\n\nBy Your Pal Kal / Valleytech\nOriginal code: MIT.\nFlock Noir / Colonel Panic\nOUI Spy / Unified Blue\nMarauder: Just Call Me Koko\nSquachWatch feature reference\nOpenDroneID: Apache-2.0\nFull notices in CREDITS.md",5,0,244,F14);
   }
   micBadge=label(root,"MIC REC",137,17,86,F12,0xff8585);lv_obj_set_style_text_align(micBadge,LV_TEXT_ALIGN_CENTER,0);legible(micBadge);lv_obj_add_flag(micBadge,LV_OBJ_FLAG_HIDDEN);
 }
@@ -553,7 +568,11 @@ static void action(lv_event_t* e){
   if(id==7100||id==7102){openRadioTools=id==7102;go(Recon);return;}
   if(id==7103){reconPage("attacks");go(Recon);return;}
   if(id==7000){go(BleLab);return;}
-  if(id==7001&&selectionValid()&&contacts[selected].ble){auto& c=contacts[selected];bleLabSelect(c.mac,c.addressType,c.name);go(BleLab);return;}
+  if(id==7001||id==7002){if(selectionValid()&&contacts[selected].ble){auto& c=contacts[selected];
+    if(millis()-c.seen>=30000)uiNotify("Device is stale","Return to radar and select a fresh signal before connecting.",nullptr,false);
+    else if(bleLabOpenDevice(c.mac,c.addressType,c.name,id==7002))go(BleLab);
+    else uiNotify("Radio tools busy","Stop the current session and wait for saving.",nullptr,false);
+  }else uiNotify("Device expired","Return to radar and select the device again.",nullptr,false);return;}
 #endif
   switch(id){
     case 150:go(FamilyColors);break;
@@ -653,6 +672,7 @@ static void action(lv_event_t* e){
     case 115:if((devicePage+1)*10<deviceTotal)++devicePage;go(Devices);page=Boot;break;
     case 116:go(Activity);break;
     case 117:go(RadarStyle);break;
+    case 159:if(radarHasSelection){int index=findContact(radarSelectedKey);if(index>=0){selectContact(index);go(Details);}}break;
     case 152:if(radarPrimary>=0&&contacts[radarPrimary].used){selectContact(radarPrimary);go(Details);}else if(trackedContact>=0)go(Hunt);break;
     case 121:radarLabels=!radarLabels;settings.putBool("radar-labels",radarLabels);go(RadarStyle);page=Boot;break;
     case 124:radarRecent=!radarRecent;settings.putBool("radar-recent",radarRecent);go(RadarStyle);page=Boot;break;
@@ -679,7 +699,7 @@ void uiShow(const String& name){if(name=="startup"){go(Startup);page=Boot;return
   if(name=="modes"||name=="tools"){openRadioTools=name=="tools";go(Recon);return;}
   if(name=="findmy-beeper"){bleLabBeeperPage();go(BleLab);return;}
   if(name=="lab"){go(BleLab);return;}
-  if(name=="ble-attacks"||name=="ibeacon"||name=="attacks"||name=="missions"||name=="recipes"||name=="network"||name=="csi"||name=="portal"||name=="analysis"||name=="probes"||name=="filters"||name=="captures"){reconPage(name);go(Recon);return;}
+  if(name=="wardrive"||name=="ble-attacks"||name=="ibeacon"||name=="attacks"||name=="missions"||name=="recipes"||name=="network"||name=="csi"||name=="portal"||name=="analysis"||name=="probes"||name=="filters"||name=="captures"){reconPage(name);go(Recon);return;}
 #endif
   if(name=="files"){
 #if BOARD_HAS_SD
@@ -736,6 +756,12 @@ void uiLoop(){
     if(page==ClockSettings)updateClockStatus();
     if(page==Radar && radar){
       radarFrameAt=millis();
+      if(radarSummary){int index=radarHasSelection&&millis()-radarSelectedAt<10000?findContact(radarSelectedKey):-1;
+        if(index>=0){const auto& c=contacts[index];char summary[140];
+          snprintf(summary,sizeof(summary),"%s\n%d dBm / double-tap: details",radarFamilyName(c.match.family),c.rssi);
+          lv_label_set_text(radarSummary,summary);lv_obj_set_style_text_color(radarSummary,color(familyColor(c.match.family)),0);lv_obj_clear_flag(radarSummary,LV_OBJ_FLAG_HIDDEN);
+        }else lv_obj_add_flag(radarSummary,LV_OBJ_FLAG_HIDDEN);
+      }
       bool deauth=detector.enabled(Family::Deauth)&&trafficStatus.disconnectActive(millis()),spam=detector.enabled(Family::BleSpam)&&trafficStatus.bleActive(millis());
       lv_label_set_text(radarActivity,deauth&&spam?"DEAUTH + BLE BURST  >":deauth?"DEAUTH ACTIVITY  >":spam?"BLE SPAM CANDIDATE  >":"");
       if(deauth||spam)lv_obj_clear_flag(radarActivity,LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(radarActivity,LV_OBJ_FLAG_HIDDEN);

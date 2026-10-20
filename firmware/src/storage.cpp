@@ -1,6 +1,9 @@
 #include "app.h"
 #include "background_radio.h"
 #include "board_pins.h"
+#ifdef BOARD_AMOLED_175
+#include "recon_internal.h"
+#endif
 #include <esp_timer.h>
 
 ContactStore contacts; Alert alerts[MAX_ALERTS];
@@ -25,14 +28,19 @@ static void mount(){
   extern bool boardMountCard();bool mounted=boardMountCard();
 #else
   CardFS.setPins(SD_MMC_CLK_PIN,SD_MMC_CMD_PIN,SD_MMC_D0_PIN);
-  bool mounted=CardFS.begin("/sdcard",true,false,SDMMC_FREQ_DEFAULT,8);
+  bool mounted=CardFS.begin("/sdcard",true,false,SDMMC_FREQ_DEFAULT,12);
 #endif
   if(!mounted){Serial.println("SD: not mounted; insert FAT32 card and restart");return;}
-  CardFS.mkdir("/dragon");CardFS.mkdir("/music");CardFS.mkdir("/recordings");
+  const char* dirs[]={"/dragon","/music","/recordings","/dragon/captures","/dragon/profiles","/dragon/events","/dragon/surveys","/dragon/missions","/dragon/wardrive"};
+  for(const char* path:dirs){if(!CardFS.exists(path)&&!CardFS.mkdir(path)){Serial.printf("SD: cannot create %s; storage disabled\n",path);return;}}
+
   char s[40];snprintf(s,sizeof(s),"/dragon/session-%08lx",(unsigned long)esp_random());sessionPath=s;
-  CardFS.mkdir(sessionPath);loggingEnabled=false;
+  if(CardFS.exists(sessionPath)||!CardFS.mkdir(sessionPath)){Serial.println("SD: cannot create unique session");return;}loggingEnabled=false;
   File info=CardFS.open(sessionPath+"/session.txt",FILE_WRITE);
-  info.println("Dragon Detector " DRAGON_VERSION "\nTimes are milliseconds since boot, not UTC. Wi-Fi channels 1-11 and BLE alternate. Radar angles are decorative. RSSI is not distance. Signatures can be spoofed. Recording state of detected devices is unknown.");info.close();
+  if(!info){Serial.println("SD: session not writable");return;}
+  const char* description="Dragon Detector " DRAGON_VERSION "\nTimes are milliseconds since boot, not UTC. Wi-Fi channels 1-11 and BLE alternate. Radar angles are decorative. RSSI is not distance. Signatures can be spoofed. Recording state of detected devices is unknown.\n";
+  bool writable=info.write((const uint8_t*)description,strlen(description))==strlen(description);info.close();
+  if(!writable){Serial.println("SD: session write failed");return;}
   Serial.printf("SD: %llu MB; session created\n",CardFS.cardSize()/1048576);
   sdReady=true;
 }
@@ -68,6 +76,10 @@ void addAlert(const char* title,const char* detail,const uint8_t* mac){
 }
 #if BOARD_HAS_SD
 bool setCapture(bool enabled){
+#ifdef BOARD_AMOLED_175
+  if(enabled)return dragon::toolkit::captureStart(false);
+  dragon::toolkit::captureStop();return false;
+#else
   if(enabled&&radioStandby())return false;
   if(!sdReady)return false;
   xSemaphoreTake(sdMutex,portMAX_DELAY);
@@ -79,6 +91,7 @@ bool setCapture(bool enabled){
     if(pcapFile)captureEnabled=pcapFile.write((const uint8_t*)h,sizeof(h))==sizeof(h);
   }
   xSemaphoreGive(sdMutex);return captureEnabled;
+#endif
 }
 void writePcap(const uint8_t* p,size_t n,size_t original,uint64_t us){
   if(!captureEnabled || !sdReady)return;
