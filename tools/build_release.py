@@ -33,7 +33,8 @@ def build(board,skip):
         shutil.copyfile(ROOT/'docs/licenses/Arduino-GFX-license.txt',out/'DISPLAY-LICENSE.txt')
         (out/'BOARD-STATUS.txt').write_text(
             'EXPERIMENTAL: Elecrow CrowPanel 2.1 Rotary, 480 x 480, 16 MB flash.\n'
-            'Compiled and automatically checked; physical hardware testing is pending.\n'
+            'Initial display, rotary, scan and clock/timer checks passed on one physical unit.\n'
+            'Extended touchscreen coverage and field testing remain.\n'
             'Use Fresh installation for the factory demo or another board profile.\n'
             'https://valleytech-dragon-detector.pages.dev/guides/ELECROW-ROTARY-21.html\n',encoding='utf-8')
     if board in ('waveshare_175','waveshare_175_gps'):
@@ -76,7 +77,7 @@ def build(board,skip):
         checks.append(f'{hashlib.sha256(data).hexdigest()}  {file.name}\n')
     (out/'SHA256SUMS.txt').write_text(''.join(checks),encoding='ascii')
     metadata={'version':VERSION,'board':board,'name':BOARDS[board][0],'source_commit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),'source_dirty':bool(subprocess.check_output(['git','status','--porcelain','--untracked-files=normal'],cwd=ROOT,text=True).strip()),'filesystem_offset':fs_offset,'filesystem_size':fs_size,'factory_resets_badges':True,'update_preserves_nvs_and_filesystem':True}
-    metadata['hardware_validation']='pending' if board=='elecrow_21' else 'new-sd-gps-features-pending' if board in ('waveshare_175','waveshare_175_gps') else 'existing-profile'
+    metadata['hardware_validation']='initial-unit-verified' if board=='elecrow_21' else 'new-sd-gps-features-pending' if board in ('waveshare_175','waveshare_175_gps') else 'existing-profile'
     metadata['flash_size']=0x2000000 if board=='waveshare' else 0x800000 if board=='xiao_round' else 0x1000000
     metadata['memory']=flash_report(entries,(build/'firmware.bin').stat().st_size,metadata['flash_size'])
     (out/'memory-budget.json').write_text(json.dumps(metadata['memory'],indent=2)+'\n',encoding='utf-8')

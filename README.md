@@ -14,7 +14,7 @@ Open **Attacks → BLE attacks → Find My Beeper** to select your tracker and r
 
 ## Elecrow CrowPanel 2.1 Rotary · experimental port
 
-A native 480 × 480 stationary profile with touch and rotary controls: turn to highlight, press to select, and hold to return home. Internal storage replaces SD functions; time synchronizes over USB or a saved Wi-Fi network. Physical hardware testing is pending. [Installation and controls](docs/ELECROW-ROTARY-21.md).
+A native 480 × 480 stationary profile with touch and rotary controls: turn to highlight, press to select, and hold to return home. Internal storage replaces SD functions; time synchronizes over USB or a saved Wi-Fi network. Display centering, ring navigation, scanning and clock/timer operation have passed initial hardware checks. [Installation and controls](docs/ELECROW-ROTARY-21.md).
 
 ## Waveshare AMOLED 1.75 / 1.75-G · 0.13.21 beta
 
@@ -57,7 +57,7 @@ DZ_AZ adds a crow-and-name emblem, rotating feather radar sweep, and short/long 
 | **Waveshare ESP32-S3-Touch-AMOLED-1.75C** | 466 × 466 AMOLED | Touch, BOOT/PWR, 32 MB flash |
 | **Waveshare ESP32-S3-Touch-AMOLED-1.75 · SD beta** | 466 × 466 AMOLED | Touch, BOOT/PWR, PCF85063 RTC, microSD, 16 MB flash; new SD features await field tests |
 | **M5Stack StopWatch C152** | 466 × 466 AMOLED | Touch, yellow/blue buttons, RTC, haptics, 16 MB flash |
-| **Elecrow CrowPanel 2.1 Rotary · Experimental** | 480 × 480 IPS | Touch, rotary ring and press, 16 MB flash; hardware testing pending |
+| **Elecrow CrowPanel 2.1 Rotary · Experimental** | 480 × 480 IPS | Touch, rotary ring and press, 16 MB flash; initial hardware checks passed |
 | **Spotpear / Guition JC3636W518** | 360 × 360 LCD | Touch, optional microSD, 16 MB flash |
 | **Seeed XIAO ESP32-S3 + Round Display** | 240 × 240 LCD | Touch, RTC, microSD, 8 MB flash |
 | **Waveshare ESP32-S3-LCD-1.28 Lite** | 240 × 240 LCD | BOOT button, 16 MB flash; no touch |

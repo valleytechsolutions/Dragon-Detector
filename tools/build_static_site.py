@@ -143,8 +143,9 @@ def build(output):
         downloads.append('<h2>' + html.escape(info['name'].removesuffix(' (factory)')) + '</h2>')
         downloads.append('<p>Version ' + html.escape(info['version']) + '</p>')
         metadata = json.loads((folder / 'build-info.json').read_text(encoding='utf-8'))
-        if metadata.get('board') == 'elecrow_21' and metadata.get('hardware_validation') == 'pending':
-            downloads.append('<p><strong>Experimental — physical testing in progress.</strong> '
+        if metadata.get('board') == 'elecrow_21':
+            status = 'initial hardware checks passed; wider field testing remains' if metadata.get('hardware_validation') == 'initial-unit-verified' else 'physical testing in progress'
+            downloads.append(f'<p><strong>Experimental — {status}.</strong> '
                              '<a href="ELECROW-ROTARY-21.html">Installation and rotary controls</a>.</p>')
         elif metadata.get('hardware_validation') in ('pending','new-sd-gps-features-pending'):
             downloads.append('<p><strong>Beta — new SD/GPS features await physical testing.</strong> '

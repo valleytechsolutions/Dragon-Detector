@@ -1,6 +1,6 @@
 # Elecrow CrowPanel 2.1 Rotary
 
-This experimental profile targets the **CrowPanel 2.1-inch HMI ESP32-S3 rotary display**, hardware V1.0, with a 480 × 480 IPS touchscreen, 16 MB flash and 8 MB PSRAM. It is intended for stationary USB-powered use. Startup, color order and ring navigation have been checked on a physical unit. Extended display stability and touchscreen validation are in progress.
+This experimental profile targets the **CrowPanel 2.1-inch HMI ESP32-S3 rotary display**, hardware V1.0, with a 480 × 480 IPS touchscreen, 16 MB flash and 8 MB PSRAM. It is intended for stationary USB-powered use. Startup, color order, stable centering and ring navigation have been checked on one physical unit. Extended field testing and touchscreen coverage remain.
 
 The profile includes the full radar interface, 35 built-in themes, logo watch faces, the optional personal theme, badge, clock, stopwatch and locksport timers, notebook and shared radio tools. It has no SD controls. Captures and profiles use internal storage and can be downloaded over USB. No speaker, haptic motor, battery gauge or external RTC is configured.
 
@@ -59,15 +59,15 @@ This profile builds Arduino 3.0.7 as an ESP-IDF 5.1.4 component using `hardware/
 
 ## Physical validation
 
-Initial checks on 2026-10-19 verified the 16 MB flash / 8 MB PSRAM identity, a full backup, startup, color order, ring navigation and USB clock readback. The earlier build developed intermittent display drift. On 2026-10-20, the revised ESP-IDF build passed 23 firmware self-tests and a five-minute passive scan with repeated settings saves, without a reset or display-buffer timeout. Free memory remained steady. These diagnostics do not establish physical centering; visual confirmation of the revised build is still required.
+Initial checks on 2026-10-19 verified the 16 MB flash / 8 MB PSRAM identity, a full backup, startup, color order, ring navigation and USB clock readback. The earlier build developed intermittent display drift. On 2026-10-20, the revised ESP-IDF build passed 23 firmware self-tests and a five-minute passive scan with repeated settings saves, without a reset or display-buffer timeout. Free memory remained steady. The owner confirmed that the revised image stays centered and clear while using the ring.
+
+USB screenshot export passed its checksum check. Hardware tests also verified clock advancement, timer start/lap/pause/reset, paused scanning on clock and timer pages, and resumed scanning on return to the radar.
 
 Extended checks remain:
 
-- Chip identity, 16 MB flash and PSRAM availability; save a private full flash backup.
-- Boot animation, color order, centering and stability while scanning.
 - Touch at the center and around the rim, including all four orientation settings.
-- Ring turns in both directions, short press, hold, wake, scrolling, value editing and confirmation dialogs.
-- Clock setup, timer operation and internal capture export.
+- Ring wake, value editing and confirmation dialogs across all tools.
+- Internal capture export under sustained load.
 - A longer powered run with no display drift, reset or memory allocation failure.
 
 Serial commands `rotary status` and `touch status` report input counts and I²C errors for troubleshooting. `rotary status` also reports completed display frames and buffer-wait timeouts. A successful compile or encoder unit test does not validate the physical wiring.
