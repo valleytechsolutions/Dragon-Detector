@@ -8,7 +8,7 @@ The coordinated [MITM theme](MITM-THEME.md) adds the owner-supplied photograph w
 
 **Hypnotic** adds a black-and-white cartoon spiral that turns once every 12 seconds. The clock has a fixed, high-contrast time/date window; the radar uses a muted spiral beneath device colors and labels. It is drawn directly in firmware, including Lite, without additional artwork files.
 
-This release retains the [0.13.25 RTC fixes](RELEASE-0.13.25.md) and all nine profiles, including the [LILYGO round 1.75 beta](LILYGO-AMOLED-175.md). Select **Update** for your exact matching board to preserve settings and files. No SD artwork pack is required.
+This release retains the [0.13.25 RTC fixes](RELEASE-0.13.25.md) and all nine profiles, including the [LILYGO round 1.75 beta](LILYGO-AMOLED-175.md). Select **Update** for your exact matching board to preserve settings and files. No SD artwork pack is required. XIAO RTC validation also rejects the PCF8563 factory-test control bit; clock setup clears test/stop modes before setting and verifying time.
 
 Choose **Ogg**, **XomBi**, **MITM**, or **Hypnotic** in Settings → Theme & radar labels, then open Clock. On full boards, USB commands are `radar theme ogg`, `radar theme xombi`, `radar theme mitm`, and `radar theme hypnotic`. Clock faces remain independently selectable.
 

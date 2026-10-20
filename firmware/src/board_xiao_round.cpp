@@ -1,4 +1,4 @@
-// Seeed XIAO ESP32-S3 + Round Display: GC9A01, CHSC6X, BM8563 and SPI microSD.
+// Seeed XIAO ESP32-S3 + Round Display: GC9A01, CHSC6X, PCF8563/BM8563 RTC and SPI microSD.
 // Pin/protocol reference: Seeed_Arduino_RoundDisplay (MIT); see CREDITS.md.
 #include "app.h"
 #include <TFT_eSPI.h>
@@ -114,7 +114,7 @@ void boardSensorsBegin(){
 }
 static int decodeBcd(uint8_t value){return (value&15)<=9&&(value>>4)<=9?(value>>4)*10+(value&15):-1;}
 bool boardReadRtc(uint32_t& epoch){
-  uint8_t control=0,b[7]{};if(!rtcAvailable||!rtcRead(0,&control,1)||(control&0xa0)||!rtcRead(2,b,7)||(b[0]&0x80))return false;
+  uint8_t control=0,b[7]{};if(!rtcAvailable||!rtcRead(0,&control,1)||(control&0xa8)||!rtcRead(2,b,7)||(b[0]&0x80))return false;
   dragon::Calendar date{2000+decodeBcd(b[6]),decodeBcd(b[5]&31),decodeBcd(b[3]&63),decodeBcd(b[2]&63),decodeBcd(b[1]&127),decodeBcd(b[0]&127)};
   epoch=dragon::dateEpoch(date);return epoch!=0;
 }

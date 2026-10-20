@@ -120,7 +120,7 @@ int main(){
   }
   auto epoch=dragon::dateEpoch({2028,2,29,12,34,56});assert(boardWriteRtc(epoch));
   Wire.registers[2]|=0x80;assert(!boardReadRtc(result));assert(boardWriteRtc(epoch));
-  Wire.registers[0]=0xa8;assert(!boardReadRtc(result));assert(boardWriteRtc(epoch)&&Wire.registers[0]==0);
+  for(uint8_t stopped:{0x08,0x20,0x80,0xa8}){Wire.registers[0]=stopped;assert(!boardReadRtc(result));assert(boardWriteRtc(epoch)&&Wire.registers[0]==0);}
   Wire.registers[2]=0x57;boardSensorsBegin();assert(boardReadRtc(result)&&result==epoch+1);
   Wire.registers[3]=0x6a;assert(!boardReadRtc(result));assert(boardWriteRtc(epoch));
   Wire.registers[8]=0x27;assert(!boardReadRtc(result));assert(boardWriteRtc(epoch));
@@ -133,7 +133,7 @@ int main(){
 }
 '''
 
-for board, fake, test in [('stopwatch', STOPWATCH, STOPWATCH_TEST), ('xiao_round', XIAO, XIAO_TEST), ('lilygo_175', XIAO, XIAO_TEST.replace('Wire.registers[0]=0xa8;', 'Wire.registers[0]=0x08;assert(!boardReadRtc(result));Wire.registers[0]=0xa8;'))]:
+for board, fake, test in [('stopwatch', STOPWATCH, STOPWATCH_TEST), ('xiao_round', XIAO, XIAO_TEST), ('lilygo_175', XIAO, XIAO_TEST)]:
     driver = (ROOT / f'firmware/src/board_{board}.cpp').read_text(encoding='utf-8')
     if board=='lilygo_175':driver=driver.rsplit('\n#endif',1)[0]
     source = WORK / f'{board}.cpp'
