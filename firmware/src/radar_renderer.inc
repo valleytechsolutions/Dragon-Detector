@@ -10,6 +10,16 @@ static dragon::DeviceKey radarSelectedKey;
 static bool radarHasSelection=false;
 static uint32_t radarSelectedAt=0;
 static int radarPrimary=-1;
+static uint32_t contactColor(Contact& c){
+  if(!c.radarColor||c.radarColorFamily!=c.match.family){
+    c.radarColor=dragon::uniqueRadarColor(c.match.family,contactHash(contactKey(c)),[&](uint16_t color){
+      for(auto& other:contacts)if(&other!=&c&&other.used&&other.radarColor==color)return true;
+      return false;
+    });
+    c.radarColorFamily=c.match.family;
+  }
+  return dragon::radarRgb888(c.radarColor);
+}
 static void line(lv_draw_ctx_t* ctx,int x1,int y1,int x2,int y2,uint32_t c,int width=1,int opa=255){
   lv_draw_line_dsc_t d;lv_draw_line_dsc_init(&d);d.color=color(c);d.width=width;d.opa=opa;lv_point_t a{(lv_coord_t)x1,(lv_coord_t)y1},b{(lv_coord_t)x2,(lv_coord_t)y2};lv_draw_line(ctx,&d,&a,&b);
 }
@@ -150,18 +160,19 @@ static void radarDraw(lv_event_t* e){
     std::sort(radarOrder,radarOrder+radarCount,[now](int a,int b){if(a==trackedContact||b==trackedContact)return a==trackedContact&&b!=trackedContact;
       return preferContact(contacts[a],contacts[b],now);});
   }
-  if(radarHasSelection&&uint32_t(now-radarSelectedAt)>=10000)radarHasSelection=false;
+  if(radarHasSelection&&dragon::radarSelectionExpired(now,radarSelectedAt))radarHasSelection=false;
   dotCount=0;
   for(unsigned k=0;k<unsigned(radarCount);++k){int i=radarOrder[k];auto& c=contacts[i];if(!radarVisible(c,now))continue;
-    float target=c.signal.count?dragon::radarRadius(c.signal.smooth):158.f;if(!c.plotRadius)c.plotRadius=target;else if(advancePlot)c.plotRadius+=(target-c.plotRadius)*.35f;
+    float target=c.signal.count?dragon::radarRadius(c.signal.smooth):158.f;if(!c.plotRadius)c.plotRadius=target;else if(advancePlot&&!(radarHasSelection&&contactKey(c)==radarSelectedKey))c.plotRadius+=(target-c.plotRadius)*.35f;
     auto plot=dragon::radarPlotPoint(c.plotRadius,c.radarX,c.radarY);dots[dotCount++]={S(plot.x),S(plot.y),i,contactKey(c)};
   }
   // Paint low-priority dots first so a coincident tracker cannot cover Axon.
-  for(int i=dotCount-1;i>=0;--i){auto& dot=dots[i];auto& c=contacts[dot.index];int x=dot.x,y=dot.y;uint32_t age=now-c.seen;uint8_t opacity=std::max<uint8_t>(205,dragon::radarOpacity(age));Family family=visibleFamily(c,now,detector.families);uint32_t deviceColor=radarTheme==31?0xffed48:dragon::familyColor(family);
+  for(int i=dotCount-1;i>=0;--i){auto& dot=dots[i];auto& c=contacts[dot.index];int x=dot.x,y=dot.y;uint32_t age=now-c.seen;uint8_t opacity=std::max<uint8_t>(205,dragon::radarOpacity(age));Family family=visibleFamily(c,now,detector.families);uint32_t deviceColor=contactColor(c);
     #ifndef BOARD_RADAR_LITE
     if(radarTheme==24){asciiMark(ctx,age>=30000?"?":dot.index==trackedContact?"@":"*",x*360/SCREEN_RES,y*360/SCREEN_RES,deviceColor);continue;}
 #endif
-    bool tracker=dragon::trackerFamily(family);disc(ctx,x,y,S(tracker?4:8),dragon::RadarLabelBackground);
+    bool tracker=dragon::trackerFamily(family);disc(ctx,x,y,S(tracker?5:8),dragon::RadarLabelBackground);
+    if(radarHasSelection&&dot.key==radarSelectedKey){auto selected=arc;selected.color=color(0xffffff);selected.width=std::max(1,S(2));selected.opa=255;lv_point_t point{(lv_coord_t)x,(lv_coord_t)y};lv_draw_arc(ctx,&selected,&point,S(12),0,359);}
     if(age>=30000){auto stale=arc;stale.color=color(deviceColor);stale.opa=opacity;stale.width=S(2);lv_point_t point{(lv_coord_t)x,(lv_coord_t)y};
       for(int a=0;a<360;a+=90)lv_draw_arc(ctx,&stale,&point,S(6),a,a+48);
     }else if(tracker){disc(ctx,x,y,S(3),deviceColor,opacity);}
@@ -181,11 +192,11 @@ static void radarDraw(lv_event_t* e){
   dragon::placeRadarLabels(points,labelCount,slots,preferred,RadarRenderLite);priorCount=labelCount;
   for(unsigned j=0;j<labelCount;++j){auto& dot=dots[labels[j]];labelKeys[j]=dot.key;dot.labelSlot=slots[j];auto& c=contacts[dot.index];uint32_t age=now-c.seen;
     char state[24],text[64];if(age>=10000)snprintf(state,sizeof(state),"%lus ago",(unsigned long)(age/1000));else snprintf(state,sizeof(state),"%d dBm",c.rssi);
-    Family family=c.match.family;snprintf(text,sizeof(text),"%s\n%s",radarFamilyName(family),state);callout(ctx,dot,slots[j],text,dragon::familyColor(family));
+    Family family=c.match.family;snprintf(text,sizeof(text),"%s\n%s",radarFamilyName(family),state);callout(ctx,dot,slots[j],text,contactColor(c));
     #ifndef BOARD_RADAR_LITE
-    if(radarTheme==24)asciiMark(ctx,"*",dot.x*360/SCREEN_RES,dot.y*360/SCREEN_RES,dragon::familyColor(family));else
+    if(radarTheme==24)asciiMark(ctx,"*",dot.x*360/SCREEN_RES,dot.y*360/SCREEN_RES,contactColor(c));else
 #endif
-    disc(ctx,dot.x,dot.y,S(5),radarTheme==31?0xffed48:dragon::familyColor(family));
+    disc(ctx,dot.x,dot.y,S(5),contactColor(c));
   }
   // Decorative center cursor, not a compass. Keep it above the sweep/labels.
   if(radarTheme==CanCommanderTheme)return;

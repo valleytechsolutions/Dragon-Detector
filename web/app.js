@@ -1,4 +1,4 @@
-import {hasBleTools,observedAddress,iBeaconCommand,parseIBeacon} from './ble-tools.js?v=0.13.20';
+import {hasRepeatingBeeper,hasBleTools,observedAddress,iBeaconCommand,parseIBeacon} from './ble-tools.js?v=0.13.22';
 import {maintainComputerClock} from './clock-maintenance.js?v=0.13.21';
 import {startRadarBackground} from './radar-background.js?v=0.13.12';
 import {finishInstallSession,syncInstalledClock} from './install-clock.js?v=0.13.21';
@@ -165,6 +165,8 @@ function controls(){
   document.querySelectorAll('[data-requires="0.11"]').forEach(b=>b.disabled=busy||!reconReady||!/^0\.(?:11|12|13)\.\d+$/.test(firmwareVersion));
   document.querySelectorAll('[data-requires="0.11.1"]').forEach(b=>b.disabled=busy||!reconReady||!hasNetworkTools(firmwareVersion));
   document.querySelectorAll('[data-requires="0.13"]').forEach(b=>b.disabled=busy||!serial||!hasSessionTools(deviceProfile,firmwareVersion));
+  for(const id of ['lab-beep-all','lab-beeper-status'])$(id).disabled=busy||!serial||!hasRepeatingBeeper(deviceProfile,firmwareVersion);
+  $('lab-sound').textContent=hasRepeatingBeeper(deviceProfile,firmwareVersion)?'Repeat selected tracker':'Find My sound · once';
   for(const id of ['ibeacon-save','ibeacon-read','lab-ibeacon'])$(id).disabled=busy||!serial||!hasBleTools(deviceProfile,firmwareVersion);
   $('lab-initialize').disabled=busy||!labReady||deviceProfile!=='waveshare';
   const lite=!!boardProfiles[deviceProfile]?.lite;
@@ -446,7 +448,9 @@ $('recon-hop-save').onclick=()=>reconAction(l=>reconDo(l,'recon hop '+$('recon-h
 
 $('lab-select').onclick=()=>labAction(l=>{const d=$('lab-device').value;if(!/^[0-9a-f:]{17} [0-3]$/i.test(d))throw new Error('Choose your observed device.');return labCommand(l,'lab select '+d);});
 $('lab-replay').onclick=()=>labAction(async l=>{const d=observedAddress($('lab-device').value);if(confirm(`Replay ${d.split(' ')[0]}'s legacy advertisement for up to 30 seconds? Radar pauses until Stop. Captured identity replay needs a random-static address.`)){await labCommand(l,'lab select '+d);await labCommand(l,'lab replay'+($('lab-replay-identity').checked?' identity':''));}});
-$('lab-sound').onclick=()=>labAction(async l=>{const direct=hasBleTools(deviceProfile,firmwareVersion),d=direct?observedAddress($('lab-device').value):'';if(confirm(`Send one sound request to ${direct?d.split(' ')[0]:'the connected tracker'}? The tracker decides whether to allow it.`)){if(d)await labCommand(l,'lab select '+d);await labCommand(l,'lab sound');$('lab-output').textContent+='\nUse Status for the result. An acknowledged request does not prove audible sound.';}});
+$('lab-sound').onclick=()=>labAction(async l=>{const repeat=hasRepeatingBeeper(deviceProfile,firmwareVersion),direct=hasBleTools(deviceProfile,firmwareVersion),d=direct?observedAddress($('lab-device').value):'';if(d)await labCommand(l,'lab select '+d);await labCommand(l,repeat?'lab sound repeat':'lab sound');$('lab-output').textContent+=repeat?'\nRepeating until Stop. Open the on-device beeper or use Beeper results. Acknowledged writes do not prove audible sound.':'\nUse Status for the result. An acknowledged request does not prove audible sound.';});
+$('lab-beep-all').onclick=()=>labAction(async l=>{await labCommand(l,'lab sound all');$('lab-output').textContent+='\nRepeating the fresh Find My / Find Hub candidates observed at Start, one at a time. Stop / resume radar ends the session.';});
+$('lab-beeper-status').onclick=()=>labAction(async l=>{$('lab-output').textContent=(await labLines(l,'lab beeper status')).join('\n');});
 $('lab-ibeacon').onclick=()=>labAction(async l=>{const d=observedAddress($('lab-device').value);await labCommand(l,'lab select '+d);await labCommand(l,'lab ibeacon');const value=parseIBeacon(await reconLines(l,'tool ibeacon'));for(const key of ['uuid','major','minor','power'])$('ibeacon-'+key).value=value[key];$('lab-output').textContent='iBeacon fields copied. Review them in Radio tools, choose Spoof iBeacon and start a timed test.';});
 $('ibeacon-save').onclick=()=>reconAction(l=>reconDo(l,iBeaconCommand($('ibeacon-uuid').value,$('ibeacon-major').value,$('ibeacon-minor').value,$('ibeacon-power').value)));
 $('ibeacon-read').onclick=()=>reconAction(async l=>{const value=parseIBeacon(await reconDo(l,'tool ibeacon'));for(const key of ['uuid','major','minor','power'])$('ibeacon-'+key).value=value[key];});

@@ -6,6 +6,7 @@
 #include "ble_insights.h"
 #include "hid_decoder.h"
 #include "tracker_sound.h"
+#include "beeper_session.h"
 #include "flash_budget.h"
 #include "recon_storage.h"
 #include "attack_frames.h"
@@ -35,6 +36,8 @@ std::atomic<dragon::tracker::Response> soundResponse{dragon::tracker::Response::
 std::atomic<uint16_t> soundResponseStatus{0};
 std::atomic<bool> soundActive{false};
 bool soundTemporary=false;
+dragon::tracker::BeeperSession<MAX_CONTACTS> beeps;
+std::atomic<dragon::tracker::AttemptResult> soundResult{dragon::tracker::AttemptResult::Unavailable};
 Job job=None;unsigned jobIndex=0;TaskHandle_t workerTask=nullptr;
 StaticSemaphore_t jobControl;SemaphoreHandle_t jobReady=nullptr;
 Profile* profile=nullptr;
@@ -184,7 +187,7 @@ void soundNotify(NimBLERemoteCharacteristic*,uint8_t* data,size_t length,bool){
 }
 void soundRequest(){
  using namespace dragon::tracker;
- soundResponse=Response::None;soundResponseStatus=0;soundActive=true;
+ soundResponse=Response::None;soundResponseStatus=0;soundActive=true;soundResult=AttemptResult::Unavailable;
  auto finish=[](const char* text){soundActive=false;say(text);if(soundTemporary)stopWorker();else state=Monitoring;};
  if(soundTemporary){
   char mac[18];macText(selectedMac,mac);client=NimBLEDevice::createClient();
@@ -196,7 +199,7 @@ void soundRequest(){
  const dragon::tracker::Sound* spec=nullptr;NimBLERemoteCharacteristic* characteristic=nullptr;
  for(const auto& candidate:sounds){if(cancelled||!client||!client->isConnected())break;auto* service=client->getService(candidate.service);if(!service)continue;auto* ch=service->getCharacteristic(candidate.characteristic);if(ch&&ch->canWrite()){spec=&candidate;characteristic=ch;break;}}
  if(cancelled){finish("Sound request cancelled");return;}
- if(!spec){finish("Sound: no supported writable AirTag / Find My / DULT service");return;}
+ if(!spec){if(client&&client->isConnected())soundResult=AttemptResult::Unsupported;finish("Sound: no supported writable AirTag / Find My / DULT service");return;}
  soundProtocol=spec->protocol;bool subscribed=false,restoreSubscription=false;
  for(unsigned i=0;!soundTemporary&&i<profile->count;++i)if(remote[i]==characteristic&&subscriptions[i])restoreSubscription=true;
  auto restore=[&](){if(subscribed&&client->isConnected()){if(restoreSubscription)characteristic->subscribe(characteristic->canNotify(),nullptr,true);else characteristic->unsubscribe();}};
@@ -210,17 +213,43 @@ void soundRequest(){
  uint32_t at=millis();while(spec->responses&&!cancelled&&client->isConnected()&&millis()-at<3000){if(soundResponse==Response::Rejected||soundResponse==Response::Completed)break;delay(10);}
  restore();
  auto response=soundResponse.load();char result[120];
+ soundResult=cancelled?AttemptResult::Cancelled:response==Response::Rejected?AttemptResult::Rejected:AttemptResult::Acknowledged;
  if(response==Response::Rejected)snprintf(result,sizeof(result),"%s sound rejected by tracker (status %u)",spec->name,soundResponseStatus.load());
  else if(response==Response::Completed)snprintf(result,sizeof(result),"%s reported sound completed; audibility not measured",spec->name);
  else snprintf(result,sizeof(result),"%s sound write acknowledged%s; listen for sound",spec->name,response==Response::Accepted?" / start accepted":response==Response::Received?" / response received":"");
  finish(cancelled?"Sound request cancelled after write; the tracker may still sound":result);
 }
 bool tagSound(){
- if(working()||finished||soundActive||reconOwnsRadio())return false;
+ if(beeps.active||working()||finished||soundActive||reconOwnsRadio())return false;
  soundTemporary=state==Idle;
  if(soundTemporary){if(!selectedAdvert())return false;}
  else if(state!=Monitoring||!client||!client->isConnected())return false;
  return start(Sound,0);
+}
+bool freshSoundTarget(const dragon::DeviceKey& key){
+ int i=findContact(key);return i>=0&&contacts[i].ble&&uint32_t(millis()-contacts[i].seen)<30000;
+}
+bool beginBeeps(bool all){
+ if(beeps.active||owned||working()||finished||!radioEnabled||radioStandby()||reconOwnsRadio()||reconStorageBusy()||!profile||!workerTask)return false;
+ uint32_t now=millis();beeps.reset(all,now);
+ if(all){
+  for(const auto& c:contacts)if(c.used&&c.ble&&uint32_t(now-c.seen)<30000&&
+      (c.match.family==dragon::Family::Tracker||c.match.family==dragon::Family::GoogleTag))
+    beeps.add(contactKey(c),now);
+ }else{
+  dragon::DeviceKey key{};key.radio=1;key.addressType=selectedType;memcpy(key.mac,selectedMac,6);
+  if(freshSoundTarget(key))beeps.add(key,now);
+ }
+ if(!beeps.begin()){say("No fresh tracker candidates. Keep scanning and try again.");return false;}
+ say(all?"Beep All started / repeat until Stop":"Repeating selected tracker / Stop or Home ends requests");return true;
+}
+void tickBeeps(){
+ if(!beeps.active||owned||working()||finished)return;
+ if(!radioEnabled||radioStandby()||reconOwnsRadio()||reconStorageBusy()){beeps.stop();say("Beeper stopped: another radio or storage task started");return;}
+ int next=beeps.ready(millis(),freshSoundTarget);if(next<0)return;
+ auto& key=beeps.targets[next].key;int i=findContact(key);if(i<0)return;
+ bleLabSelect(key.mac,key.addressType,contacts[i].name);soundTemporary=true;
+ if(start(Sound,0))beeps.started(unsigned(next));
 }
 void worker(void*){for(;;){xSemaphoreTake(jobReady,portMAX_DELAY);Job run=job;
  // NimBLE uses this task's notification slot internally. Jobs must use a
@@ -296,12 +325,12 @@ void bleLabBegin(){
  Serial.printf("LAB_MEDIUM %s\n",recon.medium());
  Serial.printf("LAB_STORAGE ready=%u total=%llu used=%llu profile_bytes=%u\n",storeReady,static_cast<unsigned long long>(storeReady?recon.totalBytes():0),static_cast<unsigned long long>(storeReady?recon.usedBytes():0),unsigned(sizeof(Profile)));
 }
-void bleLabStop(){if(!owned)return;cancelled=true;if(!working())start(Stop);}
+void bleLabStop(){bool wasRepeating=beeps.active;beeps.stop();if(!owned){if(wasRepeating)say("Beeper stopped. Radar listening.");return;}cancelled=true;if(!working())start(Stop);}
 void bleLabLoop(){
  if(bridgeActive&&millis()-bridgeStarted>=600000)bleLabStop();
  if(replayActive&&millis()-replayStarted>=30000)bleLabStop();
  if(pairRequest&&millis()-pairAt.load()>30000){pairRequest=0;cancelled=true;if(client)client->disconnect();say("Pairing prompt timed out; request cancelled");}
- if(finished.exchange(false)){if(rebind){radioRebindBle();rebind=false;}owned=false;cancelled=false;state=Idle;setRadio(resumeRadio);if(!strcmp(message,"Stopping lab / restoring radar..."))say("Lab stopped. Radar restored; workspace retained.");++revision;}
+ if(finished.exchange(false)){if(rebind){radioRebindBle();rebind=false;}if(beeps.current>=0)beeps.complete(cancelled?dragon::tracker::AttemptResult::Cancelled:soundResult.load(),millis());owned=false;cancelled=false;state=Idle;setRadio(resumeRadio);if(!strcmp(message,"Stopping lab / restoring radar..."))say("Lab stopped. Radar restored; workspace retained.");++revision;}
  if(cancelled&&owned&&!working())start(Stop);
  if((state==Monitoring||state==Bridging)&&client&&!client->isConnected()){say("Peripheral disconnected; returning radio to radar");start(Stop);}
  // Batch queued events into one append/close per application loop.
@@ -318,8 +347,16 @@ void bleLabLoop(){
   f.close();if(!logEnabled){++eventDrops;say("Event log stopped: storage write or reserve failure");}
  }
  if(bridgeActive&&state==Bridging&&!cancelled){Event pending;for(unsigned i=0;i<8&&state==Bridging&&xQueueReceive(bridgeQueue,&pending,0)==pdTRUE;++i){if(pending.index>=profile->count||!local[pending.index])continue;if(pending.kind==2){memcpy(writeData,pending.data,pending.length);writeLength=pending.length;if(!start(BridgeWrite,pending.index))++bridgeErrors;}else{auto& a=profile->attributes[pending.index];memcpy(a.value,pending.data,pending.length);a.length=pending.length;a.flags=0;local[pending.index]->setValue(pending.data,pending.length);if(a.properties&16)local[pending.index]->notify();else if(a.properties&32)local[pending.index]->indicate();}}}
+ tickBeeps();
 }
 bool bleLabCommand(const String& c){if(!c.startsWith("lab "))return false;if(!profile||!workerTask){Serial.println("LAB_ERROR unavailable");return true;}
+ if(beeps.active&&c!="lab stop"&&c!="lab status"&&c!="lab beeper status"&&c!="lab events"){Serial.println("LAB_ERROR stop the repeating beeper first");return true;}
+ if(c=="lab beeper status"){
+  Serial.printf("LAB_BEEPER active=%u all=%u targets=%u attempts=%u acknowledged=%u skipped=%u current=%d\n",beeps.active,beeps.all,beeps.count,beeps.attempts,beeps.acknowledged,beeps.skipped,beeps.current);
+  for(unsigned i=0;i<beeps.count;++i){auto& t=beeps.targets[i];char mac[18];macText(t.key.mac,mac);Serial.printf("LAB_BEEP_TARGET %s %u attempts=%u result=%s\n",mac,t.key.addressType,t.attempts,dragon::tracker::resultName(t.result));}
+  Serial.println("LAB_END");return true;
+ }
+ if(c=="lab sound repeat"||c=="lab sound all"){Serial.println(beginBeeps(c.endsWith("all"))?"LAB_OK repeating until lab stop":"LAB_ERROR no fresh targets or radio busy");return true;}
  if(c=="lab status"){Serial.printf("LAB_STATUS state=%s owned=%u storage=%u total=%llu used=%llu attributes=%u partial=%u events=%u drops=%lu logging=%u logged=%lu heap=%u\n",stateName(),owned.load(),storeReady,static_cast<unsigned long long>(storeReady?recon.totalBytes():0),static_cast<unsigned long long>(storeReady?recon.usedBytes():0),working()?0:profile->count,working()?0:profile->flags,eventCount,eventDrops.load(),logEnabled,loggedBytes,ESP.getFreeHeap());Serial.printf("LAB_MESSAGE %s\nLAB_END\n",working()?(soundActive?"Requesting tracker sound":"BLE operation in progress"):message);}
  else if(c=="lab stop"){bleLabStop();Serial.println("LAB_OK stopping");}
  else if(c=="lab demo"&&!owned){demo(*profile);selectedName[0]=0;say("Demo loaded: battery + read/write/notify loopback");Serial.println("LAB_OK demo");}
@@ -373,7 +410,7 @@ bool bleLabCommand(const String& c){if(!c.startsWith("lab "))return false;if(!pr
 
 // Touch UI is built on the app task only. BLE callbacks never touch LVGL.
 namespace {
-enum View {Overview,Nearby,AdvertisementView,Gatt,AttributeView,EventView,Saved,WriteView,BeeperDetails,ProfileGuide};View view=Overview;int devicePageRequested=0;bool beeperMode=false,beeperRequested=false,beeperAll=false;
+enum View {Overview,Nearby,AdvertisementView,Gatt,AttributeView,EventView,Saved,WriteView,BeeperDetails,ProfileGuide};View view=Overview;int devicePageRequested=0;bool beeperMode=false,beeperRequested=false,showAllBle=false;
 lv_obj_t* viewRoot=nullptr;lv_obj_t* viewBody=nullptr;lv_obj_t* viewStatus=nullptr;uint32_t drawn=0,lastView=0;unsigned attrIndex=0;bool redraw=true;lv_obj_t* hexInput=nullptr;bool writeNoResponse=false;char writeEditor[65]{};
 dragon::DeviceKey nearbyKeys[20]{};char savedNames[48][33]{};unsigned savedCount=0;
 void drawLab();
@@ -381,30 +418,31 @@ String props(uint8_t p){String s;if(p&2)s+="READ ";if(p&4)s+="WRITE-NR ";if(p&8)
 const char* valueState(uint8_t flags){return flags&ReadFailed?"Read unavailable / protected or rejected":flags&ValueTruncated?"Value truncated":flags&NotRead?"Not readable / no value captured":"Value available in workspace";}
 lv_obj_t* text(lv_obj_t* p,const String& s,int x,int y,int w,const lv_font_t* f=font18(),uint32_t c=uiColors().ink){auto* o=lv_label_create(p);lv_label_set_text(o,s.c_str());dragon::labui::pos(o,x,y);dragon::labui::width(o,w);lv_obj_set_style_text_font(o,uiFont(f),0);lv_obj_set_style_text_color(o,lv_color_hex(c),0);return o;}
 void tap(lv_event_t* e);
-void btn(lv_obj_t* p,const String& name,int x,int y,int w,int h,int id){auto* b=lv_btn_create(p);dragon::labui::pos(b,x,y);dragon::labui::size(b,w,h);lv_obj_set_style_bg_color(b,lv_color_hex(uiColors().surface),0);lv_obj_set_style_border_color(b,lv_color_hex(uiColors().border),0);lv_obj_set_style_border_width(b,1,0);lv_obj_set_style_radius(b,uiAscii()?0:12,0);lv_obj_add_event_cb(b,tap,LV_EVENT_CLICKED,(void*)(intptr_t)id);auto* l=text(b,name,0,0,w-12);lv_obj_center(l);lv_obj_set_style_text_align(l,LV_TEXT_ALIGN_CENTER,0);}
+void btn(lv_obj_t* p,const String& name,int x,int y,int w,int h,int id){auto* b=lv_btn_create(p);dragon::labui::pos(b,x,y);dragon::labui::size(b,w,h);lv_obj_set_style_bg_color(b,lv_color_hex(uiColors().surface),0);lv_obj_set_style_border_color(b,lv_color_hex(uiColors().border),0);lv_obj_set_style_border_width(b,1,0);lv_obj_set_style_radius(b,uiAscii()?0:12,0);lv_obj_add_event_cb(b,tap,(id==1||id==3)?LV_EVENT_PRESSED:LV_EVENT_CLICKED,(void*)(intptr_t)id);auto* l=text(b,name,0,0,w-12);lv_obj_center(l);lv_obj_set_style_text_align(l,LV_TEXT_ALIGN_CENTER,0);}
 void entry(const String& a,const String& b,unsigned row,int id){auto* button=lv_btn_create(viewBody);dragon::labui::pos(button,0,row*72);dragon::labui::size(button,334,66);lv_obj_set_style_bg_color(button,lv_color_hex(uiColors().surface),0);lv_obj_set_style_radius(button,uiAscii()?0:10,0);lv_obj_set_style_pad_all(button,px(9),0);lv_obj_add_event_cb(button,tap,LV_EVENT_CLICKED,(void*)(intptr_t)id);auto* top=text(button,a,0,0,312,font16());lv_label_set_long_mode(top,LV_LABEL_LONG_DOT);dragon::labui::height(top,21);auto* detail=text(button,b,0,27,312,font14(),uiColors().muted);lv_label_set_long_mode(detail,LV_LABEL_LONG_DOT);dragon::labui::height(detail,18);}
 void tap(lv_event_t* e){int id=(intptr_t)lv_event_get_user_data(e);if(id==1){bleLabStop();uiShow("radar");return;}if(id==2){if(beeperMode&&view==Nearby){bleLabStop();uiShow("ble-attacks");return;}view=beeperMode?Nearby:Overview;redraw=true;return;}if(id==3){bleLabStop();redraw=true;return;}
  if(id==4020||id==4021){bleLabCommand(id==4020?"lab confirm yes":"lab confirm no");redraw=true;return;}
  if(id>=4000&&id<4010&&hexInput){char c[2]={char('0'+id-4000),0};lv_textarea_add_text(hexInput,c);return;}
  if(id==4010&&hexInput){lv_textarea_del_char(hexInput);return;}
  if(id==4011&&hexInput){bleLabCommand(String("lab passkey ")+lv_textarea_get_text(hexInput));redraw=true;return;}
- if(working())return;
+ if(working()||beeps.active)return;
  if(view==ProfileGuide&&(id==11||id==16||id==17||id==18)&&(!profile->count||profile->addressType!=selectedType||memcmp(profile->mac,selectedMac,6))){say("Discover this selected device before using its profile");redraw=true;return;}
  if(id>=3000&&id<=3015&&hexInput){const char chars[]="0123456789ABCDEF";char c[2]={chars[id-3000],0};lv_textarea_add_text(hexInput,c);return;}
  if(id==3016&&hexInput){lv_textarea_del_char(hexInput);return;}
  if(id==3017&&hexInput){String command=String(writeNoResponse?"lab writenr ":"lab write ")+attrIndex+" "+lv_textarea_get_text(hexInput);bleLabCommand(command);view=AttributeView;redraw=true;return;}
  if(id==3018){if(hexInput)strlcpy(writeEditor,lv_textarea_get_text(hexInput),sizeof(writeEditor));writeNoResponse=!writeNoResponse;redraw=true;return;}
- if(id>=100&&id<120&&!owned){auto k=nearbyKeys[id-100];int i=findContact(k);if(i<0){say("Peripheral is no longer in the list; refresh nearby devices");redraw=true;return;}bleLabSelect(k.mac,k.addressType,contacts[i].name);if(beeperMode)say("Ready. Confirm this is your tracker before requesting a beep.");view=beeperMode?BeeperDetails:AdvertisementView;}
+ if(id>=100&&id<120&&!owned){auto k=nearbyKeys[id-100];int i=findContact(k);if(i<0){say("Peripheral is no longer in the list; refresh nearby devices");redraw=true;return;}bleLabSelect(k.mac,k.addressType,contacts[i].name);beeps.reset(false,millis());if(beeperMode)say("Start repeating requests, or choose Beep All. Stop ends the session.");view=beeperMode?BeeperDetails:AdvertisementView;}
  else if(id>=1000&&id<1000+int(profile->count)){attrIndex=id-1000;view=AttributeView;}
  else if(id>=2000&&id<2000+int(savedCount)&&!owned){if(readProfile(savedNames[id-2000],*profile)){say("Saved profile loaded");view=Gatt;}else say("Profile CRC/read failed");}
- else switch(id){case 31:view=Nearby;break;case 32:beeperMode=true;beeperAll=false;view=Nearby;break;case 33:beeperAll=!beeperAll;view=Nearby;break;case 10:view=Nearby;break;case 11:view=Gatt;break;case 12:view=EventView;break;case 13:view=Saved;break;case 14:if(!owned){demo(*profile);selectedName[0]=0;say("Demo profile ready");view=Gatt;}break;
+ else switch(id){case 31:view=Nearby;break;case 32:beeperMode=true;showAllBle=false;view=Nearby;break;case 33:showAllBle=!showAllBle;view=Nearby;break;case 10:view=Nearby;break;case 11:view=Gatt;break;case 12:view=EventView;break;case 13:view=Saved;break;case 14:if(!owned){demo(*profile);selectedName[0]=0;say("Demo profile ready");view=Gatt;}break;
  case 15:logEnabled=!logEnabled&&storeReady;break;case 16:{if(!owned){auto* box=uiMessageBox(viewRoot,"Emulate this profile?","Creates a connectable local BLE peripheral. Radar pauses until Stop or Home. Bond keys and original device behavior are not copied.",nullptr,true);dragon::labui::size(box,340,265);lv_obj_center(box);btn(box,"START EMULATION",25,175,270,45,17);}return;}
  case 17:start(Clone);view=Overview;break;case 18:{char n[33];snprintf(n,sizeof(n),"profile-%08lx",esp_random());save(n);break;}
  case 19:view=AdvertisementView;break;case 20:start(Discover);if(view!=ProfileGuide)view=Overview;break;case 21:{if(!owned){dragon::DeviceKey k{};k.radio=1;k.addressType=selectedType;memcpy(k.mac,selectedMac,6);if(huntDevice(k,0))uiShow("hunt");}return;}
  case 26:if(!owned){pairingEnabled=!pairingEnabled;pairingMitm=true;pairingBond=false;say(pairingEnabled?"Pairing enabled / authenticated / no stored bond":"Pairing disabled");}break;
  case 27:if(!owned){replayIdentity=false;start(Replay);view=Overview;}break;
  case 29:start(Bridge);view=Overview;break;
- case 28:{char mac[18];macText(selectedMac,mac);String prompt=String("Send one sound request to ")+mac+"? The tracker decides whether to allow it.";static const char* choices[]={"Cancel","Play sound",""};auto* box=uiMessageBox(viewRoot,"Find My Beeper",prompt.c_str(),choices,true);dragon::labui::width(box,340);lv_obj_center(box);lv_obj_add_event_cb(box,[](lv_event_t* e){auto* box=lv_event_get_current_target(e);if(lv_msgbox_get_active_btn(box)==1){if(!tagSound())say("Select a fresh tracker, or stop the active tool first");view=beeperMode?BeeperDetails:Overview;redraw=true;}lv_msgbox_close(box);},LV_EVENT_VALUE_CHANGED,nullptr);return;}
+ case 28:beeperMode=true;view=BeeperDetails;if(!beginBeeps(false))say("Select a fresh tracker and stop other tools first");break;
+ case 34:beeperMode=true;view=BeeperDetails;if(!beginBeeps(true))say("No fresh Find My / Find Hub candidates, or radio busy");break;
  case 30:if(prepareBeacon())uiShow("ibeacon");else say("Select a fresh iBeacon advertisement while idle");return;
  case 25:writeEditor[0]=0;writeNoResponse=!(profile->attributes[attrIndex].properties&8);view=WriteView;break;
  case 22:start(Read,attrIndex);break;case 23:start(subscriptions[attrIndex]?Unsubscribe:Subscribe,attrIndex);break;
@@ -415,13 +453,26 @@ void drawLab(){
  int scroll=!redraw&&viewBody?lv_obj_get_scroll_y(viewBody):0;
  lv_obj_clean(viewRoot);hexInput=nullptr;auto* heading=text(viewRoot,beeperMode?"FIND MY BEEPER":"BLE LAB",69,42,328,font26(),uiColors().accent);lv_obj_set_style_text_align(heading,LV_TEXT_ALIGN_CENTER,0);viewStatus=text(viewRoot,String(stateName())+" / "+(owned?"RADAR PAUSED":"RADAR LISTENING"),69,79,328,font16(),uiColors().muted);
  viewBody=lv_obj_create(viewRoot);dragon::labui::pos(viewBody,57,111);dragon::labui::size(viewBody,352,267);lv_obj_set_style_bg_opa(viewBody,LV_OPA_TRANSP,0);lv_obj_set_style_border_width(viewBody,0,0);lv_obj_set_style_pad_all(viewBody,0,0);
- btn(viewRoot,"HOME",123,397,102,42,1);btn(viewRoot,owned||view==Overview?"STOP":"BACK",239,397,102,42,owned||view==Overview?3:2);
+ btn(viewRoot,"HOME",123,397,102,42,1);btn(viewRoot,owned||beeps.active||view==Overview?"STOP":"BACK",239,397,102,42,owned||beeps.active||view==Overview?3:2);
  if(pairRequest){char pairingCode[7];snprintf(pairingCode,sizeof(pairingCode),"%06lu",pairCode.load());text(viewBody,pairRequest==2?String("Confirm matching code on BOTH devices\n\n")+String(pairingCode):String("Enter the six-digit code shown by your peripheral"),4,4,326);if(pairRequest==2){btn(viewBody,"MATCH",0,145,160,44,4020);btn(viewBody,"REJECT",174,145,160,44,4021);}else{hexInput=lv_textarea_create(viewBody);dragon::labui::pos(hexInput,4,80);dragon::labui::size(hexInput,326,48);lv_textarea_set_max_length(hexInput,6);lv_textarea_set_accepted_chars(hexInput,"0123456789");lv_textarea_set_one_line(hexInput,true);lv_textarea_set_text(hexInput,"");for(int i=0;i<10;++i){char label[2]={char('0'+i),0};btn(viewBody,label,(i%5)*67,142+(i/5)*46,61,40,4000+i);}btn(viewBody,"DELETE",0,242,160,44,4010);btn(viewBody,"SUBMIT",174,242,160,44,4011);}drawn=revision;redraw=false;return;}
+ if(beeps.active||beeps.current>=0||(view==BeeperDetails&&beeps.count)){
+  String status=String(beeps.active?(beeps.all?"BEEP ALL":"REPEAT TRACKER"):"STOPPED / RESULTS")+" / "+beeps.count+" targets\n"+beeps.attempts+" attempts / "+beeps.acknowledged+" writes acknowledged\n"+beeps.skipped+" unsupported or rejected";
+  text(viewBody,status,4,0,326,font16());
+  char mac[18]="";if(beeps.last>=0)macText(beeps.targets[beeps.last].key.mac,mac);
+  text(viewBody,String(mac)+"\n"+(working()?"Request in progress...":message),4,82,326,font16(),uiColors().accent);
+  text(viewBody,"Repeats until Stop. One tracker at a time. Stale addresses wait for a fresh signal. Listen to confirm sound.",4,166,326,font14());
+  int resultsY=248;
+  if(!beeps.active&&beeps.current<0){btn(viewBody,"REPEAT SELECTED",0,248,334,44,28);btn(viewBody,"BEEP ALL",0,302,334,44,34);resultsY=366;}
+  for(unsigned i=0;i<std::min(beeps.count,20u);++i){auto& t=beeps.targets[i];macText(t.key.mac,mac);text(viewBody,String(mac)+" / "+t.attempts+" attempts\n"+dragon::tracker::resultName(t.result),4,resultsY+i*52,326,font14());}
+  if(beeps.count>20)text(viewBody,String(beeps.count-20)+" more targets / all results available in USB Beeper results",4,resultsY+20*52,326,font14());
+  lv_obj_update_layout(viewBody);if(scroll)lv_obj_scroll_to_y(viewBody,scroll,LV_ANIM_OFF);
+  drawn=revision;redraw=false;return;
+ }
  if(working()){text(viewBody,"Working...\n\nThe interface remains responsive.\nStop or Home cancels after the current Bluetooth request.",5,5,322);drawn=revision;redraw=false;return;}
  if(view==Overview){unsigned n=0;text(viewBody,message,3,0,327,font16(),uiColors().accent);auto* panel=lv_obj_create(viewBody);lv_obj_remove_style_all(panel);dragon::labui::pos(panel,0,66);dragon::labui::size(panel,334,8*72);auto* original=viewBody;viewBody=panel;
-  if(*selectedName)entry("Selected peripheral",selectedName,n++,19);entry("Nearby BLE","Advertisement inspector / GATT",n++,10);entry(pairingEnabled?"Pairing enabled":"Pairing disabled","Toggle before connecting / no stored bonds",n++,26);entry("Find My Beeper","Select a tracker / request one beep",n++,32);entry("GATT workspace",String(profile->count)+" attributes / "+profile->name,n++,11);entry("Live events",String(eventCount)+" retained / "+eventDrops.load()+" dropped",n++,12);entry("Saved profiles",storeReady?String(recon.medium())+" / "+String(uint32_t((recon.totalBytes()-recon.usedBytes())/1048576))+" MB free":"Storage needs initialization",n++,13);if(state==Monitoring)entry("Start GATT bridge","Cached reads / forwards writes + notifications",n++,29);entry("Emulate profile","Local peripheral / explicit start",n++,16);entry("Save workspace","Unique filename; never overwrites",n++,18);entry(logEnabled?"Event logging: ON":"Event logging: OFF","CSV / two rotating CSV logs",n++,15);entry("Load demo profile","Battery + read/write/notify",n++,14);dragon::labui::height(panel,n*72);viewBody=original;
- }else if(view==BeeperDetails){char mac[18];macText(selectedMac,mac);auto* advert=selectedAdvert();String detail=String(mac)+"\n"+(advert?String(advert->rssi)+" dBm / observed "+((millis()-advert->at)/1000)+"s ago":"Refresh the tracker before requesting sound");text(viewBody,detail,4,0,326,font16());btn(viewBody,"REQUEST ONE BEEP",0,70,334,48,28);btn(viewBody,"CHOOSE TRACKER",0,128,334,42,31);text(viewBody,message,4,184,326,font16(),uiColors().accent);
- }else if(view==Nearby){unsigned n=0,slot=0;if(beeperMode){entry("Refresh nearby trackers","Choose your tracker by name or address",n++,31);entry(beeperAll?"Show tracker candidates":"Show all BLE devices",beeperAll?"Filter to Find My / Find Hub signals":"For accessories without a recognized advert",n++,33);}int order[MAX_CONTACTS];unsigned total=0;for(unsigned i=0;i<MAX_CONTACTS;++i)if(contacts[i].used&&contacts[i].ble&&(!beeperMode||beeperAll||contacts[i].match.family==dragon::Family::Tracker||contacts[i].match.family==dragon::Family::GoogleTag)&&millis()-contacts[i].seen<(beeperMode?30000:60000))order[total++]=i;std::sort(order,order+total,[](int a,int b){return contacts[a].rssi>contacts[b].rssi;});for(unsigned j=0;j<total&&slot<20;++j){auto& c=contacts[order[j]];nearbyKeys[slot]=contactKey(c);char mac[18];macText(c.mac,mac);entry(*c.name?String(c.name):String(mac),String(c.rssi)+" dBm / "+addressName(c.addressType,c.mac),n++,100+slot);++slot;}if(!slot)text(viewBody,"Waiting for advertisements.\nStop the connection to scan again.",4,beeperMode?158:15,326);
+  if(*selectedName)entry("Selected peripheral",selectedName,n++,19);entry("Nearby BLE","Advertisement inspector / GATT",n++,10);entry(pairingEnabled?"Pairing enabled":"Pairing disabled","Toggle before connecting / no stored bonds",n++,26);entry("Find My Beeper","Repeat one tracker / Beep All / Stop",n++,32);entry("GATT workspace",String(profile->count)+" attributes / "+profile->name,n++,11);entry("Live events",String(eventCount)+" retained / "+eventDrops.load()+" dropped",n++,12);entry("Saved profiles",storeReady?String(recon.medium())+" / "+String(uint32_t((recon.totalBytes()-recon.usedBytes())/1048576))+" MB free":"Storage needs initialization",n++,13);if(state==Monitoring)entry("Start GATT bridge","Cached reads / forwards writes + notifications",n++,29);entry("Emulate profile","Local peripheral / explicit start",n++,16);entry("Save workspace","Unique filename; never overwrites",n++,18);entry(logEnabled?"Event logging: ON":"Event logging: OFF","CSV / two rotating CSV logs",n++,15);entry("Load demo profile","Battery + read/write/notify",n++,14);dragon::labui::height(panel,n*72);viewBody=original;
+ }else if(view==BeeperDetails){char mac[18];macText(selectedMac,mac);auto* advert=selectedAdvert();String detail=String(mac)+"\n"+(advert?String(advert->rssi)+" dBm / observed "+((millis()-advert->at)/1000)+"s ago":"Refresh the tracker before requesting sound");text(viewBody,detail,4,0,326,font16());btn(viewBody,"START REPEATING BEEPS",0,70,334,48,28);btn(viewBody,"CHOOSE TRACKER",0,128,334,42,31);text(viewBody,message,4,184,326,font16(),uiColors().accent);
+ }else if(view==Nearby){unsigned n=0,slot=0;if(beeperMode){entry("BEEP ALL","Repeat fresh Find My / Find Hub candidates until Stop",n++,34);entry("Refresh nearby trackers","Choose your tracker by name or address",n++,31);entry(showAllBle?"Show tracker candidates":"Show all BLE devices",showAllBle?"Filter to Find My / Find Hub signals":"For accessories without a recognized advert",n++,33);}int order[MAX_CONTACTS];unsigned total=0;for(unsigned i=0;i<MAX_CONTACTS;++i)if(contacts[i].used&&contacts[i].ble&&(!beeperMode||showAllBle||contacts[i].match.family==dragon::Family::Tracker||contacts[i].match.family==dragon::Family::GoogleTag)&&millis()-contacts[i].seen<(beeperMode?30000:60000))order[total++]=i;std::sort(order,order+total,[](int a,int b){return contacts[a].rssi>contacts[b].rssi;});for(unsigned j=0;j<total&&slot<20;++j){auto& c=contacts[order[j]];nearbyKeys[slot]=contactKey(c);char mac[18];macText(c.mac,mac);entry(*c.name?String(c.name):String(mac),String(c.rssi)+" dBm / "+addressName(c.addressType,c.mac),n++,100+slot);++slot;}if(!slot)text(viewBody,"Waiting for advertisements.\nStop the connection to scan again.",4,n*72+15,326);
  }else if(view==ProfileGuide){
   char mac[18];macText(selectedMac,mac);bool same=!working()&&profile->count&&profile->addressType==selectedType&&!memcmp(profile->mac,selectedMac,6);
   String explanation=String(selectedName)+"\n"+mac+"\n\nDiscover the device's readable GATT services, save a profile, then stop the connection before emulating it. Protected values and original device behavior are not copied.\n\n"+(same?String(profile->count)+" attributes in this device's workspace.":"Discover this device to create its workspace.");
@@ -439,9 +490,9 @@ void drawLab(){
 }
 void bleLabBeeperPage(){beeperRequested=true;}
 bool bleLabOpenDevice(const uint8_t* mac,uint8_t type,const char* name,bool profileTools){
- if(owned||working()||!profile||reconOwnsRadio()||reconStorageBusy())return false;
+ if(beeps.active||owned||working()||!profile||reconOwnsRadio()||reconStorageBusy())return false;
  bleLabSelect(mac,type,name);devicePageRequested=profileTools?2:1;return true;
 }
-void bleLabView(void* parent){viewRoot=(lv_obj_t*)parent;viewBody=nullptr;beeperMode=beeperRequested;beeperRequested=false;beeperAll=false;view=beeperMode?Nearby:devicePageRequested==2?ProfileGuide:devicePageRequested==1?AdvertisementView:Overview;devicePageRequested=0;redraw=true;drawLab();}
+void bleLabView(void* parent){viewRoot=(lv_obj_t*)parent;viewBody=nullptr;beeperMode=beeperRequested||beeps.active;beeperRequested=false;showAllBle=false;view=beeps.active?BeeperDetails:beeperMode?Nearby:devicePageRequested==2?ProfileGuide:devicePageRequested==1?AdvertisementView:Overview;devicePageRequested=0;redraw=true;drawLab();}
 void bleLabViewLoop(){if(!viewRoot)return;uint32_t now=millis();if((redraw||(view!=WriteView&&drawn!=revision))&&now-lastView>500){lastView=now;drawLab();}}
 #endif

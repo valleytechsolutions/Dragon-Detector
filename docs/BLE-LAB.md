@@ -25,7 +25,7 @@ This is a GATT profile emulator, not a transparent relay or a complete replaceme
 
 ## Find My Beeper · 0.13.20
 
-**Attacks → BLE attacks → Find My Beeper** opens a dedicated tracker picker and result screen. BLE Lab also links to it. Select a recently observed tracker and confirm one sound request; full GATT discovery is no longer required. FMNA/DULT response subscriptions and direct-request cleanup are handled automatically. [Instructions, validation and iBeacon configuration](BLE-TOOLS-01320.md).
+**Attacks → BLE attacks → Find My Beeper** opens a dedicated tracker picker and result screen. BLE Lab also links to it. In 0.13.22, select a fresh tracker to repeat its sound request, or choose **Beep All**. **Stop** or **Home** ends the session; full GATT discovery is not required. [Repeating beeper instructions](RELEASE-0.13.22.md). FMNA/DULT response subscriptions and direct-request cleanup are handled automatically. [Instructions, validation and iBeacon configuration](BLE-TOOLS-01320.md).
 
 ## 0.11 expanded BLE tools
 
@@ -35,10 +35,10 @@ This is a GATT profile emulator, not a transparent relay or a complete replaceme
 - **Pairing:** RAM-only enable/MITM/bond policy, explicit secure connection, six-digit passkey and yes/no numeric comparison, status and individual bond removal. Device defaults use authenticated pairing without retaining a bond. Neither keys nor protected access are cloned. Existing unrelated bonds are not cleared.
 - **HID report layouts:** parse captured Report Map bytes into report IDs and input/output/feature bit lengths. Invalid or unsupported maps are marked. This is layout inspection, not a semantic keyboard logger or keystroke injector.
 - **Legacy advertisement replay:** select an observed owned peripheral, then replay its captured advertising/scan-response bytes for at most 30 seconds. Default uses the detector's address. Optional identity replay accepts only a captured random-static address; rotating private/public addresses are rejected. It does not clone keys or reproduce a Find My identity's cryptography. Stop/Home and timeout restore radar.
-- **Tracker sound request:** a selected AirTag/Find My/DULT peripheral can receive its known sound command directly in 0.13.20, or through an existing discovered connection. Firmware permissions may reject it; a successful write does not prove an audible sound. The tool does not search for and connect to arbitrary tags automatically.
+- **Tracker sound request:** a selected AirTag/Find My/DULT peripheral can receive its known sound command directly in 0.13.20, or through an existing discovered connection. Firmware permissions may reject it; a successful write does not prove an audible sound. In 0.13.22, explicitly starting Beep All snapshots fresh Find My / Find Hub candidates and attempts them sequentially until Stop; unsupported or explicitly rejecting trackers are skipped.
 - **Library:** remove one selected saved profile; original DDG1 profiles and CRC import/export remain compatible.
 
-Additional USB commands: `lab fingerprints`, `lab select MAC TYPE`, `lab replay`, `lab replay identity`, `lab sound`, `lab write INDEX HEX`, `lab writenr INDEX HEX`, `lab unsubscribe INDEX`, `lab subscriptions`, `lab mtu 247`, `lab hid`, `lab delete NAME`, `lab pairing ENABLE MITM BOND`, `lab secure`, `lab security`, `lab passkey 123456`, `lab confirm yes|no`, `lab bonds`, `lab forget MAC TYPE`. Inspect `lab status` after pending operations; the immediate acknowledgement only means the request was queued.
+Additional USB commands: `lab fingerprints`, `lab select MAC TYPE`, `lab replay`, `lab replay identity`, `lab sound`, `lab sound repeat`, `lab sound all`, `lab beeper status`, `lab write INDEX HEX`, `lab writenr INDEX HEX`, `lab unsubscribe INDEX`, `lab subscriptions`, `lab mtu 247`, `lab hid`, `lab delete NAME`, `lab pairing ENABLE MITM BOND`, `lab secure`, `lab security`, `lab passkey 123456`, `lab confirm yes|no`, `lab bonds`, `lab forget MAC TYPE`. Inspect `lab status` after pending operations; the immediate acknowledgement only means the request was queued.
 
 ## Storage and update safety
 

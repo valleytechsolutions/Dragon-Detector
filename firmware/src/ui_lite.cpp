@@ -1,4 +1,5 @@
 #include "app.h"
+#include "radar_interaction.h"
 #include "radar_colors.h"
 #include "radar_layout.h"
 #include <lvgl.h>

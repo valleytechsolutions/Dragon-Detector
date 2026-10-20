@@ -12,7 +12,7 @@ static void wardriveTests(){
   assert(!gesture.tap(second,1300));assert(gesture.tap(second,1450)); // same cache index cannot substitute a different identity
   gesture.clear();assert(!gesture.tap(first,2000));gesture.clear();assert(!gesture.tap(first,2100));
   gesture.clear();assert(!gesture.tap(first,0xfffffff0));assert(gesture.tap(first,100));
-  gesture.clear();assert(!gesture.tap(first,0));assert(!gesture.tap(first,5)); // touch bounce is not a double tap
+  gesture.clear();assert(!gesture.tap(first,0));assert(gesture.tap(first,0)); // queued clicks in the same LVGL frame
 
   auto send=[](Nmea& parser,const std::string& body,uint32_t now){
     uint8_t sum=0;for(char c:body)sum^=uint8_t(c);

@@ -16,3 +16,12 @@ test('iBeacon identity validates complete UUID and signed measured power',()=>{
  assert.deepEqual(parseIBeacon([`RECON_IBEACON uuid=${uuid} major=8 minor=9 power=-59`]),{uuid,major:'8',minor:'9',power:'-59'});
  assert.throws(()=>parseIBeacon(['RECON_OK']));
 });
+
+import {hasRepeatingBeeper} from '../web/ble-tools.js';
+test('repeat beeper is available only on full boards with 0.13.22+',()=>{
+ for(const board of ['waveshare','waveshare_175','waveshare_175_gps','stopwatch','spotpear','xiao_round']){
+  assert.ok(hasRepeatingBeeper(board,'0.13.22'));assert.ok(hasRepeatingBeeper(board,'0.13.100'));
+  for(const version of ['0.13.20','0.13.21','0.12.22','invalid',null])assert.equal(hasRepeatingBeeper(board,version),false);
+ }
+ assert.equal(hasRepeatingBeeper('waveshare_lite','0.13.22'),false);
+});
