@@ -84,7 +84,7 @@ static void oggWatch(lv_draw_ctx_t* ctx,const dragon::Calendar& date,bool valid)
   capsuleText(ctx,"OGG",120,80,120,GreenTitle,0x62c774);
   capsuleText(ctx,"12",157,27,46,GreenTitle,0xd8eddb);
   capsuleText(ctx,"3",303,172,32,GreenTitle,0xd8eddb);
-  capsuleText(ctx,"6",164,312,32,GreenTitle,0xd8eddb);
+  capsuleText(ctx,"6",164,305,32,GreenTitle,0xd8eddb);
   capsuleText(ctx,"9",25,172,32,GreenTitle,0xd8eddb);
   char text[40];
   if(valid)snprintf(text,sizeof(text),"%02d:%02d",date.hour,date.minute);else strcpy(text,"--:--");
