@@ -76,8 +76,10 @@ async def run(args):
         raise AssertionError('Own random service UUID was not observed')
 
     try:
-        assert '0.13.20 ' in await cmd('badge info', 'BADGE_INFO')
-        before = await cmd('badge checksum', 'BADGE_CHECKSUM')
+        info=await cmd('badge info', 'BADGE_INFO')
+        assert 'BADGE_INFO 0.13.' in info and ('M5Stack StopWatch' in info or 'Waveshare' in info), info
+        if args.repeat: assert 'BADGE_INFO 0.13.22 ' in info, info
+        before = next(line for line in (await cmd('badge checksum', 'BADGE_CHECKSUM')).splitlines() if line.startswith('BADGE_CHECKSUM '))
         board.port.write(b'screen radar\n')
         await asyncio.sleep(1)
         assert 'owned=0 ' in await cmd('lab status', 'LAB_END')
@@ -137,6 +139,34 @@ async def run(args):
         marker_provider = result.service_provider
         ad.is_discoverable = True
         marker_provider.start_advertising_with_parameters(ad)
+        if args.repeat:
+            await select(marker)
+            await cmd('lab sound repeat')
+            deadline=time.monotonic()+90
+            while time.monotonic()<deadline:
+                await asyncio.sleep(1)
+                if len(log['writes'])>=2:
+                    status=await cmd('lab status','LAB_END')
+                    if 'state=IDLE owned=0' in status:break
+            assert len(log['writes'])>=2, log
+            assert not errors, errors
+            status=await cmd('lab beeper status','LAB_END')
+            assert 'active=1 all=0 targets=1' in status, status
+            if args.touch_stop:
+                board.port.write(b'screen findmy-beeper\n');await asyncio.sleep(.6)
+                await cmd('touch inject 290 418 1','TOUCH_INJECT_OK')
+                await asyncio.sleep(.1)
+                await cmd('touch inject 290 418 0','TOUCH_INJECT_OK')
+            else: await cmd('lab stop')
+            await idle()
+            count=len(log['writes'])
+            await asyncio.sleep(15)
+            assert len(log['writes'])==count, 'New sound write after Stop'
+            status=await cmd('lab beeper status','LAB_END')
+            assert 'active=0' in status and 'current=-1' in status, status
+            assert before.strip() in await cmd('badge checksum','BADGE_CHECKSUM')
+            print('PASS repeated synthetic', args.protocol, '/ sequential writes / Stop prevents another attempt / badge retained', flush=True)
+            log['result']='PASS';return
         cases = [args.case] if args.protocol == 'dult' else ['acknowledged']
         for case in cases:
             count = len(log['writes'])
@@ -178,6 +208,8 @@ async def run(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--port', required=True)
+    parser.add_argument('--touch-stop', action='store_true', help='Exercise the StopWatch Stop button through its LVGL input driver')
+    parser.add_argument('--repeat', action='store_true', help='Verify two repeating requests and cancellation on 0.13.22')
     parser.add_argument('--protocol', choices=PROTOCOLS, required=True)
     parser.add_argument('--case', choices=['accepted', 'rejected', 'completed'], default='accepted')
     parser.add_argument('--output', type=Path, required=True)

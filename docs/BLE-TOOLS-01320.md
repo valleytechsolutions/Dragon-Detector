@@ -1,5 +1,7 @@
 # Find My Beep and iBeacon · 0.13.20
 
+For repeating requests, Beep All and improved radar taps, see the [0.13.22 instructions](RELEASE-0.13.22.md). The single-request behavior below describes 0.13.20.
+
 Find My Beep sends one sound request to a tracker you select. It is available as **Find My Beeper** in BLE Lab on the five full board profiles. The Lite profile remains passive and does not include active BLE tools.
 
 ![Find My Beeper in the Bluetooth attacks menu, captured from Waveshare 1.75C](../web/assets/ble-attacks-01320.png)

@@ -11,6 +11,8 @@ struct Contact {
   dragon::Family trafficFamily=dragon::Family::Deauth;
   char trafficEvidence[128]{};
   float radarX=0,radarY=0,plotRadius=0;
+  uint16_t radarColor=0;
+  dragon::Family radarColorFamily=dragon::Family::Count;
   dragon::AlertGate gate;dragon::DroneInfo drone;dragon::SignalHistory trace;
   uint32_t historyAt=0;dragon::Family historyFamily=dragon::Family::Count;
 };

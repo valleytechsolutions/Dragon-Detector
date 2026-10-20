@@ -68,6 +68,8 @@ static bool openRadioTools=false;
 static int menuTab=0,filter=0,selected=-1,filePage=0,brightness=100,historyPage=0;
 static bool radarLabels=true;
 static dragon::RadarTapGesture radarGesture;
+static dragon::RadarPress radarPress;
+static uint32_t radarTouches=0,radarHits=0;
 static lv_obj_t* radarSummary=nullptr;
 static uint8_t radarTheme=1;
 static bool covert(){return radarTheme==9;}
@@ -252,14 +254,37 @@ static void huntDraw(lv_event_t* e){
     line(ctx,area.x1+S((i-1)*240/47),area.y1+S(a),area.x1+S(i*240/47),area.y1+S(b),uiColors().accent,2);
   }
 }
-static void radarTap(lv_event_t*){lv_point_t p;lv_indev_get_point(lv_indev_get_act(),&p);int nearest=S(18)*S(18),idx=-1;for(int i=0;i<dotCount;++i){int d=(dots[i].x-p.x)*(dots[i].x-p.x)+(dots[i].y-p.y)*(dots[i].y-p.y);if(d<nearest && contactKey(contacts[dots[i].index])==dots[i].key){nearest=d;idx=dots[i].index;}}
-  if(idx<0)for(int i=0;i<dotCount;++i)if(dots[i].labelSlot>=0&&contactKey(contacts[dots[i].index])==dots[i].key){auto b=dragon::radarLabelSlot(dots[i].labelSlot);if(p.x>=S(b.x)&&p.x<=S(b.x+b.w)&&p.y>=S(b.y)&&p.y<=S(b.y+b.h)){idx=dots[i].index;break;}}
+static void updateRadarSummary(){
+  if(!radarSummary)return;
+  int index=radarHasSelection&&uint32_t(millis()-radarSelectedAt)<10000?findContact(radarSelectedKey):-1;
+  if(index<0){lv_obj_add_flag(radarSummary,LV_OBJ_FLAG_HIDDEN);return;}
+  auto& c=contacts[index];char summary[160];
+  snprintf(summary,sizeof(summary),"%s / %02X:%02X\n%d dBm / tap here for details",radarFamilyName(c.match.family),c.mac[4],c.mac[5],c.rssi);
+  lv_label_set_text(radarSummary,summary);lv_obj_set_style_text_color(radarSummary,color(contactColor(c)),0);lv_obj_clear_flag(radarSummary,LV_OBJ_FLAG_HIDDEN);
+}
+static void radarTap(lv_event_t* event){
+  auto code=lv_event_get_code(event);
+  if(code==LV_EVENT_PRESS_LOST){radarPress.clear();return;}
+  if(code==LV_EVENT_CLICKED){
+    dragon::DeviceKey key;if(!radarPress.take(key))return;
+    int index=findContact(key);if(index<0){radarGesture.clear();return;}
+    radarSelectedKey=key;radarHasSelection=true;radarSelectedAt=millis();updateRadarSummary();
+    if(radarGesture.tap(key,millis())){selectContact(index);go(Details);}
+    return;
+  }
+  if(code!=LV_EVENT_PRESSED)return;
+  ++radarTouches;radarPress.clear();
+  auto* input=lv_indev_get_act();if(!input)return;lv_point_t p;lv_indev_get_point(input,&p);
+  int nearest=INT32_MAX,idx=-1;
+  for(int i=0;i<dotCount;++i){auto& dot=dots[i];if(!contacts[dot.index].used||!(contactKey(contacts[dot.index])==dot.key))continue;
+    if(dragon::radarHit(dot.x,dot.y,p.x,p.y,S(24),nearest))idx=dot.index;
+  }
+  if(idx<0)for(int i=0;i<dotCount;++i)if(dots[i].labelSlot>=0&&contacts[dots[i].index].used&&contactKey(contacts[dots[i].index])==dots[i].key){auto box=dragon::radarLabelSlot(dots[i].labelSlot);if(p.x>=S(box.x)&&p.x<=S(box.x+box.w)&&p.y>=S(box.y)&&p.y<=S(box.y+box.h)){idx=dots[i].index;break;}}
   if(idx>=0){
-    const auto key=contactKey(contacts[idx]);
-    bool open=radarGesture.tap(key,millis());
-    radarSelectedKey=key;radarHasSelection=true;radarSelectedAt=millis();
-    if(open){selectContact(idx);go(Details);}else lv_obj_invalidate(radar);
-  }else{radarGesture.clear();radarHasSelection=false;lv_obj_invalidate(radar);}}
+    ++radarHits;radarSelectedKey=contactKey(contacts[idx]);radarHasSelection=true;radarSelectedAt=millis();radarPress.begin(radarSelectedKey);
+  }else{radarGesture.clear();radarHasSelection=false;}
+  updateRadarSummary();lv_obj_invalidate(radar);
+}
 #if BOARD_HAS_SD
 static void loadFiles(){
   fileCount=0;filesTruncated=false;if(!sdReady)return;
@@ -272,7 +297,7 @@ static void drawStartup(){showStartupLogo(root);}
 static void build(){
   // BLE Lab owns its complete screen and returns before the shared mic label
   // is rebuilt. Never retain a label from the page that is about to be freed.
-  micBadge=nullptr;radarSummary=nullptr;radarGesture.clear();
+  micBadge=nullptr;radarSummary=nullptr;radarGesture.clear();radarPress.clear();
   timerOrbit=nullptr;timerValue=timerState=timerLap=timerStartButton=timerSecondary=timerSplit=clockValue=clockDate=editValue=nullptr;
   badgeUnload();page=pending;pageAt=millis();statusLabel=audioLabel=audioMeter=radar=trackingLabel=huntValue=huntMeta=huntGauge=huntGraph=diagnosticsLabel=activityLabel=radarActivity=nullptr;radarPrepared=0;
   setRadioStandby(page==Clock||page==Stopwatch||page==Laps||page==ClockSettings||page==ClockWheels||page==ClockEdit);
@@ -284,10 +309,10 @@ static void build(){
   if(page==Startup){dismissNotice();drawStartup();return;}
   else if(page==Badge){lv_obj_set_style_bg_color(root,color(0x000000),0);badgeView(root);
   }else if(page==Radar){
-    radar=lv_obj_create(root);lv_obj_remove_style_all(radar);lv_obj_set_pos(radar,0,0);lv_obj_set_size(radar,SCREEN_RES,SCREEN_RES);lv_obj_clear_flag(radar,LV_OBJ_FLAG_SCROLLABLE);lv_obj_add_flag(radar,LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_add_event_cb(radar,radarDraw,LV_EVENT_DRAW_MAIN,nullptr);lv_obj_add_event_cb(radar,radarTap,LV_EVENT_CLICKED,nullptr);
+    radar=lv_obj_create(root);lv_obj_remove_style_all(radar);lv_obj_set_pos(radar,0,0);lv_obj_set_size(radar,SCREEN_RES,SCREEN_RES);lv_obj_clear_flag(radar,LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN);lv_obj_add_flag(radar,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_PRESS_LOCK);
+    lv_obj_add_event_cb(radar,radarDraw,LV_EVENT_DRAW_MAIN,nullptr);lv_obj_add_event_cb(radar,radarTap,LV_EVENT_PRESSED,nullptr);lv_obj_add_event_cb(radar,radarTap,LV_EVENT_CLICKED,nullptr);lv_obj_add_event_cb(radar,radarTap,LV_EVENT_PRESS_LOST,nullptr);
     if(radarTheme==8||radarTheme==14||dmac()||radarTheme==22||radarTheme==23)circleLogo(root,radarLogo(radarTheme),17);
-    else if(radarTheme!=13&&radarTheme!=24&&radarTheme!=32&&radarTheme!=CanCommanderTheme){auto* logo=lv_img_create(root);lv_img_set_src(logo,radarLogo(radarTheme));lv_obj_align(logo,LV_ALIGN_TOP_MID,0,S(17));lv_obj_clear_flag(logo,LV_OBJ_FLAG_CLICKABLE);if(radarTheme==10||radarTheme==3){lv_obj_set_style_img_recolor(logo,color(radarTheme==3?0xe1e8ec:0xffffff),0);lv_obj_set_style_img_recolor_opa(logo,LV_OPA_COVER,0);}}
+    else if(radarTheme!=13&&radarTheme!=24&&radarTheme!=32&&radarTheme!=CanCommanderTheme&&!greenArtTheme(radarTheme)){auto* logo=lv_img_create(root);lv_img_set_src(logo,radarLogo(radarTheme));lv_obj_align(logo,LV_ALIGN_TOP_MID,0,S(17));lv_obj_clear_flag(logo,LV_OBJ_FLAG_CLICKABLE);if(radarTheme==10||radarTheme==3){lv_obj_set_style_img_recolor(logo,color(radarTheme==3?0xe1e8ec:0xffffff),0);lv_obj_set_style_img_recolor_opa(logo,LV_OPA_COVER,0);}}
     const auto& theme=radarPalette(radarTheme);
     statusLabel=label(root,"LISTENING",56,66,248,F12,theme.text);lv_obj_set_style_text_align(statusLabel,LV_TEXT_ALIGN_CENTER,0);legible(statusLabel);lv_obj_set_style_bg_color(statusLabel,color(theme.panel),0);lv_obj_set_style_bg_opa(statusLabel,LV_OPA_60,0);
     radarActivity=label(root,"",75,84,210,F12,0xffbc76);lv_obj_set_style_text_align(radarActivity,LV_TEXT_ALIGN_CENTER,0);legible(radarActivity);lv_obj_add_flag(radarActivity,LV_OBJ_FLAG_CLICKABLE);lv_obj_add_event_cb(radarActivity,action,LV_EVENT_CLICKED,(void*)116);
@@ -522,8 +547,8 @@ static void build(){
     title("ORIENTATION","Saved angle / touch follows the display");body=scrollBody();int n=0;
     for(int r=0;r<4;++r){char text[50];snprintf(text,sizeof(text),"%s%d degrees",((4-displayRotation)&3)==r?LV_SYMBOL_OK "  ":"",r*90);row(body,text,"Clockwise / retained after restart",n++,144+r);}
   }else if(page==FamilyColors){
-    title("DEVICE COLORS","Same family color in every theme");body=scrollBody();
-    for(unsigned i=0;i<unsigned(Family::Count);++i)row(body,dragon::familyName(Family(i)),"Dot, leader and label",i,0,dragon::familyColor(Family(i)));
+    title("DEVICE COLORS","Type colors / individual device shades");body=scrollBody();
+    for(unsigned i=0;i<unsigned(Family::Count);++i)row(body,dragon::familyName(Family(i)),"Each device gets its own shade",i,0,dragon::familyColor(Family(i)));
   }else if(page==RadarStyle){
     title("THEME & RADAR","Menus / utilities / radar");body=scrollBody();int n=0;
     for(unsigned i=0;i<RadarThemeCount;++i){if(i==dragon::PersonalThemeId&&!personalThemeReady())continue;String name=String(radarTheme==i?LV_SYMBOL_OK "  ":"")+radarThemeNames[i];row(body,name.c_str(),radarThemeDescriptions[i],n++,9000+i);}
@@ -756,12 +781,7 @@ void uiLoop(){
     if(page==ClockSettings)updateClockStatus();
     if(page==Radar && radar){
       radarFrameAt=millis();
-      if(radarSummary){int index=radarHasSelection&&millis()-radarSelectedAt<10000?findContact(radarSelectedKey):-1;
-        if(index>=0){const auto& c=contacts[index];char summary[140];
-          snprintf(summary,sizeof(summary),"%s\n%d dBm / double-tap: details",radarFamilyName(c.match.family),c.rssi);
-          lv_label_set_text(radarSummary,summary);lv_obj_set_style_text_color(radarSummary,color(familyColor(c.match.family)),0);lv_obj_clear_flag(radarSummary,LV_OBJ_FLAG_HIDDEN);
-        }else lv_obj_add_flag(radarSummary,LV_OBJ_FLAG_HIDDEN);
-      }
+      updateRadarSummary();
       bool deauth=detector.enabled(Family::Deauth)&&trafficStatus.disconnectActive(millis()),spam=detector.enabled(Family::BleSpam)&&trafficStatus.bleActive(millis());
       lv_label_set_text(radarActivity,deauth&&spam?"DEAUTH + BLE BURST  >":deauth?"DEAUTH ACTIVITY  >":spam?"BLE SPAM CANDIDATE  >":"");
       if(deauth||spam)lv_obj_clear_flag(radarActivity,LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(radarActivity,LV_OBJ_FLAG_HIDDEN);
@@ -822,7 +842,8 @@ bool uiCommand(const String& cmd){
   if(cmd=="ui layout"){lv_obj_update_layout(root);Serial.printf("UI_LAYOUT count=%lu page=%u\n",lv_obj_get_child_cnt(root),unsigned(page));for(unsigned i=0;i<lv_obj_get_child_cnt(root);++i){auto* o=lv_obj_get_child(root,i);lv_area_t a;lv_obj_get_coords(o,&a);Serial.printf("UI_WIDGET %u x=%d y=%d w=%d h=%d hidden=%u opa=%u children=%lu type=%s\n",i,a.x1,a.y1,a.x2-a.x1+1,a.y2-a.y1+1,lv_obj_has_flag(o,LV_OBJ_FLAG_HIDDEN),lv_obj_get_style_opa(o,0),lv_obj_get_child_cnt(o),lv_obj_check_type(o,&lv_label_class)?"label":lv_obj_check_type(o,&lv_btn_class)?"button":"object");}Serial.println("UI_LAYOUT_END");return true;}
 
   if(cmd=="ui status"){Serial.printf("UI_STATUS page=%u actions=%lu last_action=%d\n",unsigned(page),inputActions,lastInputAction);return true;}
-  if(cmd=="radar status"){Serial.printf("RADAR_SETTINGS theme=%u labels=%u recent=%u pages=1 plotted=%u primary=%d\n",radarTheme,radarLabels,radarRecent,dotCount,radarPrimary);return true;}
+  if(cmd=="radar status"){Serial.printf("RADAR_SETTINGS theme=%u labels=%u recent=%u pages=1 plotted=%u primary=%d touches=%lu hits=%lu selected=%u\n",radarTheme,radarLabels,radarRecent,dotCount,radarPrimary,radarTouches,radarHits,radarHasSelection);return true;}
+  if(cmd=="radar dots"){for(int i=0;i<dotCount;++i)Serial.printf("RADAR_DOT %d x=%d y=%d color=%06lx selected=%u\n",i,dots[i].x,dots[i].y,contactColor(contacts[dots[i].index]),radarHasSelection&&dots[i].key==radarSelectedKey);Serial.println("RADAR_DOTS_END");return true;}
   if(cmd=="radar scope all"||cmd=="radar scope candidates"){candidatesOnly=cmd.endsWith("candidates");settings.putBool("candidates",candidatesOnly);radarPrepared=0;Serial.printf("RADAR_SCOPE %s\n",candidatesOnly?"candidates":"all");return true;}
   if(cmd=="radar labels on"||cmd=="radar labels off"){radarLabels=cmd.endsWith("on");settings.putBool("radar-labels",radarLabels);Serial.printf("RADAR_LABELS %u\n",radarLabels);return true;}
   if(cmd=="radar recent on"||cmd=="radar recent off"){radarRecent=cmd.endsWith("on");settings.putBool("radar-recent",radarRecent);Serial.printf("RADAR_RECENT %u\n",radarRecent);return true;}

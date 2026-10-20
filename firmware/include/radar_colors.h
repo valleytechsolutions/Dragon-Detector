@@ -35,4 +35,20 @@ constexpr uint32_t FamilyColors[]={
 };
 static_assert(sizeof(FamilyColors)/sizeof(FamilyColors[0])==unsigned(Family::Count),"Every family needs its own radar color");
 inline uint32_t familyColor(Family family){return unsigned(family)<unsigned(Family::Count)?FamilyColors[unsigned(family)]:0xffffff;}
+inline uint16_t radarRgb565(uint32_t c){return uint16_t(((c>>8)&0xf800)|((c>>5)&0x7e0)|((c>>3)&31));}
+inline uint32_t radarRgb888(uint16_t c){
+  unsigned r=(c>>11)&31,g=(c>>5)&63,b=c&31;
+  return ((r*255/31)<<16)|((g*255/63)<<8)|(b*255/31);
+}
+// 1,024 shades around each family's base color, checked in the panel's actual
+// RGB565 space. Allocate only when a contact/family changes, never per frame.
+template<class Used> uint16_t uniqueRadarColor(Family family,uint32_t hash,Used used){
+  const uint16_t base=radarRgb565(familyColor(family));
+  for(unsigned n=0;n<1024;++n){
+    unsigned v=(hash+n*373)&1023;
+    uint16_t c=base^uint16_t(((v&7)<<11)|(((v>>3)&15)<<5)|((v>>7)&7));
+    if(!used(c))return c;
+  }
+  return base; // Contact capacity is below the shade count.
+}
 }

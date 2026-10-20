@@ -2,7 +2,7 @@
 
 This experimental profile targets the **CrowPanel 2.1-inch HMI ESP32-S3 rotary display**, hardware V1.0, with a 480 × 480 IPS touchscreen, 16 MB flash and 8 MB PSRAM. It is intended for stationary USB-powered use. Startup, color order, stable centering and ring navigation have been checked on one physical unit. Extended field testing and touchscreen coverage remain.
 
-The profile includes the full radar interface, 35 built-in themes, logo watch faces, the optional personal theme, badge, clock, stopwatch and locksport timers, notebook and shared radio tools. It has no SD controls. Captures and profiles use internal storage and can be downloaded over USB. No speaker, haptic motor, battery gauge or external RTC is configured.
+The profile includes the full radar interface, 37 built-in themes, logo watch faces, the optional personal theme, badge, clock, stopwatch and locksport timers, notebook and shared radio tools. It has no SD controls. Captures and profiles use internal storage and can be downloaded over USB. No speaker, haptic motor, battery gauge or external RTC is configured.
 
 ## Controls
 

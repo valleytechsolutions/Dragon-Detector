@@ -6,11 +6,22 @@ Wi-Fi and Bluetooth detection, signal tracking, and logo watch faces for ESP32-S
 
 **Web flasher available:** [Install from the independent host](https://valleytech-dragon-detector.pages.dev/). The original GitHub Pages address and GitHub-hosted images are temporarily unavailable. Source, artwork and release files are intact; existing devices are unaffected. [Hosting status](docs/HOSTING-STATUS.md).
 
-[**Install firmware**](https://valleytech-dragon-detector.pages.dev/#install) · [Latest release](docs/RELEASE-0.13.20.md) · [User guides](docs/GUI.md) · [Clock setup](https://git.churchofmalware.org/Valleytech/Dragon-Detector/wiki/Clock-Setup)
+[**Install firmware**](https://valleytech-dragon-detector.pages.dev/#install) · [Latest release](docs/RELEASE-0.13.23.md) · [User guides](docs/GUI.md) · [Clock setup](https://git.churchofmalware.org/Valleytech/Dragon-Detector/wiki/Clock-Setup)
 
-## Find My Beeper · 0.13.20
+## Ogg and XomBi · 0.13.23
 
-Open **Attacks → BLE attacks → Find My Beeper** to select your tracker and request one beep. Tested on an owned AirTag with audible confirmation. This release also adds configurable iBeacon fields and fixes browser replay selection. [Instructions and compatibility](docs/BLE-TOOLS-01320.md).
+**Ogg** pairs the supplied eye emblem with a simple green-and-black radar and
+digital clock. **XomBi** uses the zombie hacker portrait, moss-green surfaces
+and phosphor accents. Both theme the menus and utilities, with the original
+artwork retained. [Previews and selection instructions](docs/RELEASE-0.13.23.md).
+
+## Radar controls and repeating Find My Beeper · 0.13.22
+
+Press a dot for immediate selection, then tap its summary or double-tap for details.
+Device shades are distinct within their type's color range; AirTags stay low priority.
+Find My Beeper can repeat one selected tracker or **Beep All**, with a visible **Stop**
+control, sequential requests and per-device results. [Instructions](docs/RELEASE-0.13.22.md)
+· [Validation](docs/VALIDATION-0.13.22.md).
 
 ## Elecrow CrowPanel 2.1 Rotary · experimental port
 

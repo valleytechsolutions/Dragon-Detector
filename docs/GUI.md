@@ -1,5 +1,7 @@
 # GUI tour
 
+For immediate dot selection, unique device shades, and repeating Find My Beeper / Beep All, see [0.13.22](RELEASE-0.13.22.md).
+
 In **0.13.21 beta**, tap a radar dot for a color-coded family/RSSI summary.
 Double-tap the same dot within 450 ms, or tap its summary, for Device Details.
 Details offers Hunt, controls and, for BLE contacts, BLE Toolkit and GATT profile
