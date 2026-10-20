@@ -31,7 +31,11 @@
 // Official non-C schematic/BSP reference: docs/WAVESHARE-AMOLED-175.md.
 
 #ifdef BOARD_AMOLED_175
+#ifdef BOARD_GPS_LC76G
+#define BOARD_NAME "Waveshare ESP32-S3-Touch-AMOLED-1.75-G"
+#else
 #define BOARD_NAME "Waveshare ESP32-S3-Touch-AMOLED-1.75"
+#endif
 #define LCD_RESET 39
 #define TP_RESET 40
 #define AUDIO_I2S_MCK_IO 42

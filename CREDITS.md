@@ -223,3 +223,15 @@ Hardware mapping was checked against Waveshare's official schematic, hardware re
 ## Find My Beeper / 0.13.20
 
 [JustCallMeKoko / ESP32 Marauder](https://github.com/justcallmekoko/ESP32Marauder/tree/d3ceb28afeda1196ca27c13adeaa69ada52383f3) supplied the AirTag/FMNA/DULT service and command references and the Find My Sound workflow. Its MIT notices remain in the repository. The direct-request worker, response handling, tracker selection UI, iBeacon configuration/parser and tests are original Dragon Detector code. DULT response distinctions follow the [accessory protocol draft](https://datatracker.ietf.org/doc/html/draft-ledvina-dult-accessory-protocol-00), a work in progress.
+
+## AMOLED SD/GPS workflow references · 0.13.21 beta
+
+- **Waveshare**: [hardware reference](https://github.com/waveshareteam/ESP32-S3-Touch-AMOLED-1.75/blob/main/HARDWARE_REFERENCE.md) and [LC76G I²C protocol demonstration](https://github.com/waveshareteam/ESP32-S3-Touch-AMOLED-1.75/blob/main/examples/arduino/09_LC76G_I2C/09_LC76G_I2C.ino). The shared bus/pin/address and command-byte facts inform an independently written bounded cooperative adapter. Vendor application code is not bundled.
+- **LC76G transport review**: [Quectel forum field reports](https://forums.quectel.com/t/lc76g-pa-i2c-firmware/26743) and [fuzzybear62's implementation for this board](https://github.com/fuzzybear62/esphome-lc76g) informed FIFO backlog and shared-bus error review. No source was copied. Their field results do not validate this firmware's independent driver.
+- **JustCallMeKoko / ESP32 Marauder**: [WiGLE format definitions](https://github.com/justcallmekoko/ESP32Marauder/blob/master/esp32_marauder/WigleFormat.h) and SD/capture workflows informed interoperability and storage review. Existing MIT notice remains above. The new writer, NMEA parser and CSV serializer are original implementations.
+- **WiGLE**: [Android wardriving application and format history](https://github.com/wiglenet/wigle-wifi-wardriving). WiGLE 1.6 UTF-8 CSV is the interchange target; no WiGLE app code or credentials are included, and successful service ingestion is not yet field-verified.
+- **Matthew Kukanich / ChimeraBLE**: [Cardputer storage guide](https://github.com/MatthewKuKanich/ChimeraBLE/blob/main/CARDPUTER_GUIDE.md), automatic data-directory creation and optional lookup assets. Dragon Detector retains its independently implemented BLE Lab and DDG1 profile format.
+- **JimGat / Cheap Yellow Monster (CYM)**: [README](https://github.com/JimGat/CYM/blob/main/README.md), optional SD lookup/dictionary assets and storage provisioning workflow. No CYM source, assets or key dictionaries are copied. An SD pack is not required to boot Dragon Detector.
+
+These are feature/workflow references, not claims of complete parity, endorsement,
+or tested GPS hardware compatibility. Review date: 2026-10-19.

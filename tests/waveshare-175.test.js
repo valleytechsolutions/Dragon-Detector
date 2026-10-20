@@ -42,3 +42,17 @@ test('non-C USB clock verification rejects missing, stale and stopped RTCs',asyn
     else await assert.rejects(verifyClock(link,board,'0.13.19',options),/RTC/);
   }
 });
+test('GPS target has a distinct firmware identity and rejects base/C/old manifests',()=>{
+  const gps=boardProfiles.waveshare_175_gps;
+  assert.equal(gps.filesystemOffset,0x810000);
+  assert.equal(connectedProfile({board:gps.firmwareName,size:466}),'waveshare_175_gps');
+  for(const mode of ['factory','update']){
+    const value=manifest(mode);
+    value.name=`Dragon Detector — ${gps.firmwareName} (${mode})`;value.version='0.13.21';
+    assert.equal(validateManifest(value,'waveshare_175_gps',mode),value);
+    for(const board of ['waveshare','waveshare_175'])assert.throws(()=>validateManifest(value,board,mode));
+    for(const version of ['0.13.20','0.13.021'])assert.throws(()=>validateManifest({...value,version},'waveshare_175_gps',mode));
+  }
+  assert.ok(hasFullLab('waveshare_175_gps','0.13.21')&&hasFullRecon('waveshare_175_gps','0.13.21'));
+  assert.ok(hasWifiClock('waveshare_175_gps','0.13.21'));
+});

@@ -12,6 +12,7 @@ void bleLabView(void*);
 void bleLabBeeperPage();
 void bleLabViewLoop();
 void bleLabSelect(const uint8_t*,uint8_t,const char*);
+bool bleLabOpenDevice(const uint8_t*,uint8_t,const char*,bool profileTools);
 void radioRebindBle();
 #else
 inline void bleLabBegin(){}

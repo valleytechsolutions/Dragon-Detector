@@ -1,5 +1,14 @@
 # GUI tour
 
+In **0.13.21 beta**, tap a radar dot for a color-coded family/RSSI summary.
+Double-tap the same dot within 450 ms, or tap its summary, for Device Details.
+Details offers Hunt, controls and, for BLE contacts, BLE Toolkit and GATT profile
+tools. The selected identity is checked before opening a tool.
+
+The **non-C 1.75 / 1.75-G** beta also adds SD capture streaming and a GPS-only
+Wardrive screen. These differ from the older 1.75C screens below.
+See the [current beta guide](WAVESHARE-AMOLED-175.md).
+
 These are CRC-verified logical display captures from the firmware on the connected Waveshare AMOLED. They show the pixels sent to the display, not photographs of the physical panel. The storage screens below are from **0.13.2**; unchanged radar and Attacks examples retain their original version labels.
 
 | Utilities · 0.13.2 | Settings · 0.13.2 | Capture studio · 0.13.2 |

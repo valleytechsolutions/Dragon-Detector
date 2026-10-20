@@ -1,31 +1,31 @@
 import {hasBleTools,observedAddress,iBeaconCommand,parseIBeacon} from './ble-tools.js?v=0.13.20';
-import {maintainComputerClock} from './clock-maintenance.js?v=0.13.19';
+import {maintainComputerClock} from './clock-maintenance.js?v=0.13.21';
 import {startRadarBackground} from './radar-background.js?v=0.13.12';
-import {finishInstallSession,syncInstalledClock} from './install-clock.js?v=0.13.19';
+import {finishInstallSession,syncInstalledClock} from './install-clock.js?v=0.13.21';
 import {updateVisitCounter} from './visit-counter.js?v=2026-10-18';
-import {hasFullLab,hasFullRecon,hasSessionTools} from './lab-capabilities.js?v=0.13.19';
-import {sessionName,downloadMission,recipePutCommand,sourceMacCommand} from './mission-tools.js?v=0.13.3';
+import {hasFullLab,hasFullRecon,hasSessionTools} from './lab-capabilities.js?v=0.13.21';
+import {sessionName,downloadMission,recipePutCommand,sourceMacCommand} from './mission-tools.js?v=0.13.21';
 import {hasNetworkTools,networkProfileCommand,networkResultsCsv} from './network-tools.js?v=0.13.3';
 import {normalizeHex,probeRows,probeCsv} from './recon-analysis.js?v=0.13.3';
-import {hasReconTools,reconLines,exportCapture,exportReconFile,captureName,importPortalHtml} from './recon-transfer.js?v=0.13.3';
-import {decodeProfile,exportProfile,exportLog,importProfile,labLines,safeProfileName} from './ble-lab.js?v=0.13.3';
+import {hasReconTools,reconLines,exportCapture,exportReconFile,captureName,importPortalHtml} from './recon-transfer.js?v=0.13.21';
+import {decodeProfile,exportProfile,exportLog,importProfile,labLines,safeProfileName} from './ble-lab.js?v=0.13.21';
 import {localClockEpoch,setClock,readWearable,setOrientation} from './wearable-transfer.js?v=0.13.12';
-import {syncVerifiedClock,clockResultText} from './clock-verification.js?v=0.13.19';
+import {syncVerifiedClock,clockResultText} from './clock-verification.js?v=0.13.21';
 import {clockInstallDialogClass} from './clock-install-dialog.js?v=0.13.17';
 import {deviceQuery} from './device-query.js';
 import {BadgeSerial} from './serial.js?v=0.13.3';
 import {encodeBadge} from './badge-codec.js';
 import {uploadBadge} from './badge-transfer.js?v=0.13.3';
 import {readHistory} from './detector-transfer.js';
-import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasBrandedThemes,hasCommunityThemes,hasRunnerThemes,hasCapsuleSparrowsThemes,hasCanCommanderTheme,hasLplTheme,hasWearableTools,hasClockTools,hasWifiClock,hasRetainedClock} from './firmware-compat.js?v=0.13.19';
+import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasBrandedThemes,hasCommunityThemes,hasRunnerThemes,hasCapsuleSparrowsThemes,hasCanCommanderTheme,hasLplTheme,hasWearableTools,hasClockTools,hasWifiClock,hasRetainedClock} from './firmware-compat.js?v=0.13.21';
 import {readRadarSettings,saveRadarSettings} from './radar-transfer.js?v=0.13.18';
-import {boardProfiles,connectedProfile,validateManifest,supportsBadge} from './board-profiles.js?v=0.13.19';
+import {boardProfiles,connectedProfile,validateManifest,supportsBadge} from './board-profiles.js?v=0.13.21';
 import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan,drawBadgeText} from './badge-editor.js?v=0.13.3';
 import {hasNotebook,readNotebook,customAdvertCommand} from './notebook.js?v=0.13.3';
 import {revealLocation} from './navigation.js?v=0.13.14';
 import {createThemeStudio} from './theme-studio.js?v=0.13.17';
 import {setupWorkspaceTabs} from './workspace-tabs.js?v=0.13.17';
-import {installPersonalTheme} from './theme-install.js?v=0.13.19';
+import {installPersonalTheme} from './theme-install.js?v=0.13.21';
 import {hasPersonalThemes} from './theme-transfer.js?v=0.13.17';
 setupWorkspaceTabs();
 revealLocation();
@@ -61,6 +61,7 @@ async function chooseBoard(next) {
   $('selected-board').textContent = models[board];
   $('board-storage').textContent = boardProfiles[board].storage;
   $('board-features').textContent = boardProfiles[board].features;
+  $('board-sd-setup').hidden = !['waveshare_175','waveshare_175_gps'].includes(board);
   $('auto-clock-label').hidden=false;
   $('finish-clock').hidden=true;
   $('clock-setup-status').textContent='Keep USB connected: local date, time and timezone will be set and verified automatically after flashing.';
@@ -72,7 +73,7 @@ async function chooseBoard(next) {
     const data = validateManifest(await response.json(),board,mode);
     if(revision !== request)return;
     $('installer').setAttribute('manifest', manifest); releaseReady = true;
-    $('board-status').textContent = `${data.version}${boardProfiles[board].experimental?' · EXPERIMENTAL — hardware testing pending':''} · ${mode==='factory'?'Fresh installation replaces saved history, badges and BLE profiles.':board==='waveshare'?'32 MB update preserves badge, history, settings and BLE profiles. When upgrading older firmware, initialize new BLE storage once in the lab.':board==='waveshare_175'?'Update requires this exact non-C 1.75 profile, version 0.13.19 or newer. Use Fresh installation for the factory demo or another firmware.':board==='waveshare_lite'?'Update requires this exact Lite profile’s 0.9.4+ layout. For an older third-party port, choose Fresh installation unless its partitions have been verified.':board==='xiao_round'?'Update preserves files; requires this XIAO + Round Display profile’s 0.9.2 or newer 8 MB layout.':'Update preserves history, badges and settings; requires this board’s existing 0.3.x–0.13.x layout.'}`;
+    $('board-status').textContent = `${data.version}${boardProfiles[board].experimental?' · BETA — new SD/GPS features await field testing':''} · ${mode==='factory'?'Fresh installation replaces saved history, badges and BLE profiles.':board==='waveshare'?'32 MB update preserves badge, history, settings and BLE profiles. When upgrading older firmware, initialize new BLE storage once in the lab.':['waveshare_175','waveshare_175_gps'].includes(board)?'Update requires the exact selected non-C profile (1.75: 0.13.19+; 1.75-G GPS: 0.13.21+). Use Fresh installation for the factory demo or another firmware.':board==='waveshare_lite'?'Update requires this exact Lite profile’s 0.9.4+ layout. For an older third-party port, choose Fresh installation unless its partitions have been verified.':board==='xiao_round'?'Update preserves files; requires this XIAO + Round Display profile’s 0.9.2 or newer 8 MB layout.':'Update preserves history, badges and settings; requires this board’s existing 0.3.x–0.13.x layout.'}`;
     $('download').href = `firmware/${board}/SHA256SUMS.txt`; $('download').textContent='Firmware file checksums'; $('download').hidden=false;
     $('install-message').textContent='Confirm your board, then connect its USB port.';
   } catch(error) {
@@ -160,6 +161,7 @@ function controls(){
   const labReady=!!serial&&hasFullLab(deviceProfile,firmwareVersion),reconReady=!!serial&&hasFullRecon(deviceProfile,firmwareVersion);
   document.querySelectorAll('#ble-lab button').forEach(b=>b.disabled=busy||!labReady);
   document.querySelectorAll('#radio-tools button').forEach(b=>b.disabled=busy||!reconReady);
+  for(const id of ['wardrive-open','wardrive-start','wardrive-status','wardrive-stop'])$(id).disabled=busy||!reconReady||deviceProfile!=='waveshare_175_gps'||!/^0\.13\.(?:2[1-9]|[3-9]\d|[1-9]\d{2,})$/.test(firmwareVersion);
   document.querySelectorAll('[data-requires="0.11"]').forEach(b=>b.disabled=busy||!reconReady||!/^0\.(?:11|12|13)\.\d+$/.test(firmwareVersion));
   document.querySelectorAll('[data-requires="0.11.1"]').forEach(b=>b.disabled=busy||!reconReady||!hasNetworkTools(firmwareVersion));
   document.querySelectorAll('[data-requires="0.13"]').forEach(b=>b.disabled=busy||!serial||!hasSessionTools(deviceProfile,firmwareVersion));
@@ -395,6 +397,13 @@ $('lab-initialize').onclick=()=>{if(confirm('Initialize the new upper 16 MB BLE 
 $('lab-log-download').onclick=()=>labAction(async l=>{const csv=await exportLog(l,$('lab-log-file').value==='previous'),url=URL.createObjectURL(new Blob([csv],{type:'text/csv'})),a=document.createElement('a');a.href=url;a.download='dragon-ble-events.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);$('lab-output').textContent='Saved event log downloaded.';});
 
 async function reconAction(fn){if(!serial||busy||!hasFullRecon(deviceProfile,firmwareVersion))return;busy=true;controls();try{await fn(serial);}catch(e){$('recon-output').textContent=e.message;}finally{busy=false;controls();}}
+for(const [id,command] of Object.entries({'wardrive-start':'wardrive start','wardrive-stop':'wardrive stop','wardrive-status':'wardrive status','wardrive-open':'screen wardrive'}))$(id).onclick=()=>reconAction(async l=>{
+  l.lines=[];const rows=[];const off=l.onLine(line=>{if(line!==null)rows.push(line);});
+  try{await l.write(command);if(command.startsWith('screen '))return;
+    await l.wait(line=>/^(WARDRIVE_(OK|ERROR|END))/.test(line),12000);
+    $('recon-output').textContent=rows.join('\n');
+  }finally{off();}
+});
 async function reconDo(link,command){const rows=await reconLines(link,command);$('recon-output').textContent=rows.join('\n');return rows;}
 for(const [id,command] of Object.entries({'recon-open':'screen modes','recon-status':'tool status','recon-stop':'tool stop','recon-record-wifi':'recon capture wifi','recon-record-ble':'recon capture ble','recon-record-stop':'recon capture stop','recon-save':'recon capture save'}))$(id).onclick=()=>reconAction(async l=>{if(command.startsWith('screen ')){await l.write(command);$('recon-output').textContent='Modes opened on the display.';}else await reconDo(l,command);});
 $('recon-mode-save').onclick=()=>reconAction(l=>reconDo(l,'mode set '+Number($('recon-mode').value)));

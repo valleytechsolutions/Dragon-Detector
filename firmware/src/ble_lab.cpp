@@ -7,6 +7,7 @@
 #include "hid_decoder.h"
 #include "tracker_sound.h"
 #include "flash_budget.h"
+#include "recon_storage.h"
 #include "attack_frames.h"
 #ifndef BOARD_RADAR_LITE
 #include "app.h"
@@ -38,11 +39,7 @@ Job job=None;unsigned jobIndex=0;TaskHandle_t workerTask=nullptr;
 StaticSemaphore_t jobControl;SemaphoreHandle_t jobReady=nullptr;
 Profile* profile=nullptr;
 dragon::hid::Map* hidMap=nullptr;
-#ifdef BOARD_AMOLED_175C
-fs::LittleFSFS recon;
-#else
-fs::LittleFSFS& recon=LittleFS;
-#endif
+ReconFS recon;
 char message[120]="Select an owned BLE peripheral to inspect",selectedName[48]{};
 uint8_t selectedMac[6]{},selectedType=0;
 NimBLEClient* client=nullptr;
@@ -247,7 +244,7 @@ bool start(Job next,unsigned index=0){if((radioStandby()&&next!=Stop)||!profile|
  job=next;jobIndex=index;state=Working;say(next==Discover?"Connecting...":next==Clone?"Building local GATT peripheral...":next==Stop?"Stopping lab / restoring radar...":"Request pending...");xSemaphoreGive(jobReady);return true;}
 String path(const char* name){return String("/profiles/")+name+".ddg";}
 bool save(const char* name){if(!storeReady||working()||!safeName(name)||!valid(*profile,bytes(*profile))||!profile->count)return false;String p=path(name);if(recon.exists(p)){say("Name exists. Choose a new name in the web lab.");return false;}
- size_t length=bytes(*profile);if(!dragon::storageFits(recon.totalBytes(),recon.usedBytes(),length+16384))return false;recon.remove(p+".part");File f=recon.open(p+".part",FILE_WRITE);if(!f)return false;uint32_t crc=checksum((uint8_t*)profile,length);bool ok=f.write((uint8_t*)profile,length)==length&&f.write((uint8_t*)&crc,4)==4;f.flush();f.close();if(ok)ok=recon.rename(p+".part",p);if(!ok)recon.remove(p+".part");say(ok?"Profile saved to recon storage":"Profile save failed");return ok;}
+ size_t length=bytes(*profile);if(!recon.fits(length+16384))return false;recon.remove(p+".part");File f=recon.open(p+".part",FILE_WRITE);if(!f)return false;uint32_t crc=checksum((uint8_t*)profile,length);bool ok=f.write((uint8_t*)profile,length)==length&&f.write((uint8_t*)&crc,4)==4;f.flush();f.close();if(ok)ok=recon.rename(p+".part",p);if(!ok)recon.remove(p+".part");say(ok?"Profile saved to recon storage":"Profile save failed");return ok;}
 bool readProfile(const char* name,Profile& p){if(!storeReady||!safeName(name))return false;File f=recon.open(path(name));size_t n=f?f.size():0;if(n<HeaderSize+4||n>sizeof(Profile)+4){f.close();return false;}memset(&p,0,sizeof(p));uint32_t crc=0;bool ok=f.read((uint8_t*)&p,n-4)==n-4&&f.read((uint8_t*)&crc,4)==4;f.close();return ok&&checksum((uint8_t*)&p,n-4)==crc&&valid(p,n-4);}
 bool hidEvent(const Event& e,char* output,size_t capacity){
  if(!hidMap||working()||e.index>=profile->count||e.kind>2)return false;const auto& a=profile->attributes[e.index];
@@ -272,8 +269,10 @@ String hex(const uint8_t* p,size_t n,size_t limit=32){String s;char b[4];for(siz
 const char* stateName(){switch(state.load()){case Working:return "BUSY";case Monitoring:return "CONNECTED";case Emulating:return "EMULATING";case Bridging:return "BRIDGING";case Failed:return "ERROR";default:return "IDLE";}}
 }
 bool bleLabOwnsRadio(){return owned.load();}
+bool bleLabStorageOnCard(){return storeReady&&recon.onCard();}
+const char* bleLabStorageName(){return storeReady?recon.medium():"unavailable";}
 fs::FS* bleLabStorage(){return storeReady&&!owned?&recon:nullptr;}
-bool bleLabStorageSpace(size_t n){return storeReady&&!owned&&dragon::storageFits(recon.totalBytes(),recon.usedBytes(),n);}
+bool bleLabStorageSpace(size_t n){return storeReady&&!owned&&recon.fits(n);}
 void bleLabSelect(const uint8_t* mac,uint8_t type,const char* name){if(owned)return;memcpy(selectedMac,mac,6);selectedType=type;strlcpy(selectedName,name,sizeof(selectedName));++revision;}
 void bleLabObserve(const uint8_t* mac,uint8_t type,int rssi,const uint8_t* data,size_t len,size_t boundary,uint32_t at){if(!advertisements||owned||len>MaxAdvertisement||boundary>len)return;
  if(!advertisementValid(data,boundary)||!advertisementValid(data+boundary,len-boundary))return;
@@ -291,10 +290,11 @@ void bleLabBegin(){
  if(p&&p->address==0x1000000&&p->size==0x1000000&&ESP.getFlashChipSize()>=0x2000000)storeReady=recon.begin(false,"/recon",4,"recon");
 #else
  // Reuse the already-mounted badge filesystem. Never format or repartition.
- storeReady=recon.totalBytes()>0;
+ storeReady=recon.select();
 #endif
  if(storeReady){recon.mkdir("/profiles");recon.mkdir("/events");}
- Serial.printf("LAB_STORAGE ready=%u total=%u used=%u profile_bytes=%u\n",storeReady,storeReady?recon.totalBytes():0,storeReady?recon.usedBytes():0,unsigned(sizeof(Profile)));
+ Serial.printf("LAB_MEDIUM %s\n",recon.medium());
+ Serial.printf("LAB_STORAGE ready=%u total=%llu used=%llu profile_bytes=%u\n",storeReady,static_cast<unsigned long long>(storeReady?recon.totalBytes():0),static_cast<unsigned long long>(storeReady?recon.usedBytes():0),unsigned(sizeof(Profile)));
 }
 void bleLabStop(){if(!owned)return;cancelled=true;if(!working())start(Stop);}
 void bleLabLoop(){
@@ -304,14 +304,23 @@ void bleLabLoop(){
  if(finished.exchange(false)){if(rebind){radioRebindBle();rebind=false;}owned=false;cancelled=false;state=Idle;setRadio(resumeRadio);if(!strcmp(message,"Stopping lab / restoring radar..."))say("Lab stopped. Radar restored; workspace retained.");++revision;}
  if(cancelled&&owned&&!working())start(Stop);
  if((state==Monitoring||state==Bridging)&&client&&!client->isConnected()){say("Peripheral disconnected; returning radio to radar");start(Stop);}
+ // Batch queued events into one append/close per application loop.
+ String eventBatch;if(logEnabled)eventBatch.reserve(8192);
  Event e;for(unsigned i=0;eventQueue&&i<8&&xQueueReceive(eventQueue,&e,0)==pdTRUE;++i){if(bridgeActive){if(e.kind==4)cancelled=true;else if(e.kind<=2&&xQueueSend(bridgeQueue,&e,0)!=pdTRUE)++bridgeErrors;}
   events[eventHead]=e;eventHead=(eventHead+1)%64;eventCount=std::min(64u,eventCount+1);++revision;
-  if(logEnabled&&storeReady){String line=String(e.at)+","+e.kind+","+e.index+","+e.length+","+hex(e.data,e.length,MaxValue)+"\n";File f=recon.open("/events/current.csv",FILE_APPEND);if(f){if(f.size()+line.length()>1024*1024){f.close();recon.remove("/events/previous.csv");recon.rename("/events/current.csv","/events/previous.csv");f=recon.open("/events/current.csv",FILE_WRITE);}if(f&&dragon::storageFits(recon.totalBytes(),recon.usedBytes(),32768)){size_t n=f.print(line);loggedBytes+=n;if(n!=line.length())logEnabled=false;}else logEnabled=false;f.close();}}
+  if(logEnabled&&storeReady)eventBatch+=String(e.at)+","+e.kind+","+e.index+","+e.length+","+hex(e.data,e.length,MaxValue)+"\n";
+ }
+ if(eventBatch.length()){
+  File f=recon.open("/events/current.csv",FILE_APPEND);
+  const size_t limit=recon.onCard()?16*1024*1024:1024*1024;
+  if(f&&f.size()+eventBatch.length()>limit){f.close();if(recon.exists("/events/previous.csv"))recon.remove("/events/previous.csv");if(!recon.rename("/events/current.csv","/events/previous.csv"))logEnabled=false;else f=recon.open("/events/current.csv",FILE_WRITE);}
+  if(logEnabled&&f&&recon.fits(eventBatch.length()+32768)){size_t n=f.print(eventBatch);loggedBytes+=n;if(n!=eventBatch.length())logEnabled=false;}else logEnabled=false;
+  f.close();if(!logEnabled){++eventDrops;say("Event log stopped: storage write or reserve failure");}
  }
  if(bridgeActive&&state==Bridging&&!cancelled){Event pending;for(unsigned i=0;i<8&&state==Bridging&&xQueueReceive(bridgeQueue,&pending,0)==pdTRUE;++i){if(pending.index>=profile->count||!local[pending.index])continue;if(pending.kind==2){memcpy(writeData,pending.data,pending.length);writeLength=pending.length;if(!start(BridgeWrite,pending.index))++bridgeErrors;}else{auto& a=profile->attributes[pending.index];memcpy(a.value,pending.data,pending.length);a.length=pending.length;a.flags=0;local[pending.index]->setValue(pending.data,pending.length);if(a.properties&16)local[pending.index]->notify();else if(a.properties&32)local[pending.index]->indicate();}}}
 }
 bool bleLabCommand(const String& c){if(!c.startsWith("lab "))return false;if(!profile||!workerTask){Serial.println("LAB_ERROR unavailable");return true;}
- if(c=="lab status"){Serial.printf("LAB_STATUS state=%s owned=%u storage=%u total=%u used=%u attributes=%u partial=%u events=%u drops=%lu logging=%u logged=%lu heap=%u\n",stateName(),owned.load(),storeReady,storeReady?recon.totalBytes():0,storeReady?recon.usedBytes():0,working()?0:profile->count,working()?0:profile->flags,eventCount,eventDrops.load(),logEnabled,loggedBytes,ESP.getFreeHeap());Serial.printf("LAB_MESSAGE %s\nLAB_END\n",working()?(soundActive?"Requesting tracker sound":"BLE operation in progress"):message);}
+ if(c=="lab status"){Serial.printf("LAB_STATUS state=%s owned=%u storage=%u total=%llu used=%llu attributes=%u partial=%u events=%u drops=%lu logging=%u logged=%lu heap=%u\n",stateName(),owned.load(),storeReady,static_cast<unsigned long long>(storeReady?recon.totalBytes():0),static_cast<unsigned long long>(storeReady?recon.usedBytes():0),working()?0:profile->count,working()?0:profile->flags,eventCount,eventDrops.load(),logEnabled,loggedBytes,ESP.getFreeHeap());Serial.printf("LAB_MESSAGE %s\nLAB_END\n",working()?(soundActive?"Requesting tracker sound":"BLE operation in progress"):message);}
  else if(c=="lab stop"){bleLabStop();Serial.println("LAB_OK stopping");}
  else if(c=="lab demo"&&!owned){demo(*profile);selectedName[0]=0;say("Demo loaded: battery + read/write/notify loopback");Serial.println("LAB_OK demo");}
  else if(c=="lab bridge"){Serial.println(start(Bridge)?"LAB_OK bridge starting / cached reads / local write acknowledgements":"LAB_ERROR connect and discover first");}
@@ -364,7 +373,7 @@ bool bleLabCommand(const String& c){if(!c.startsWith("lab "))return false;if(!pr
 
 // Touch UI is built on the app task only. BLE callbacks never touch LVGL.
 namespace {
-enum View {Overview,Nearby,AdvertisementView,Gatt,AttributeView,EventView,Saved,WriteView,BeeperDetails};View view=Overview;bool beeperMode=false,beeperRequested=false,beeperAll=false;
+enum View {Overview,Nearby,AdvertisementView,Gatt,AttributeView,EventView,Saved,WriteView,BeeperDetails,ProfileGuide};View view=Overview;int devicePageRequested=0;bool beeperMode=false,beeperRequested=false,beeperAll=false;
 lv_obj_t* viewRoot=nullptr;lv_obj_t* viewBody=nullptr;lv_obj_t* viewStatus=nullptr;uint32_t drawn=0,lastView=0;unsigned attrIndex=0;bool redraw=true;lv_obj_t* hexInput=nullptr;bool writeNoResponse=false;char writeEditor[65]{};
 dragon::DeviceKey nearbyKeys[20]{};char savedNames[48][33]{};unsigned savedCount=0;
 void drawLab();
@@ -380,6 +389,7 @@ void tap(lv_event_t* e){int id=(intptr_t)lv_event_get_user_data(e);if(id==1){ble
  if(id==4010&&hexInput){lv_textarea_del_char(hexInput);return;}
  if(id==4011&&hexInput){bleLabCommand(String("lab passkey ")+lv_textarea_get_text(hexInput));redraw=true;return;}
  if(working())return;
+ if(view==ProfileGuide&&(id==11||id==16||id==17||id==18)&&(!profile->count||profile->addressType!=selectedType||memcmp(profile->mac,selectedMac,6))){say("Discover this selected device before using its profile");redraw=true;return;}
  if(id>=3000&&id<=3015&&hexInput){const char chars[]="0123456789ABCDEF";char c[2]={chars[id-3000],0};lv_textarea_add_text(hexInput,c);return;}
  if(id==3016&&hexInput){lv_textarea_del_char(hexInput);return;}
  if(id==3017&&hexInput){String command=String(writeNoResponse?"lab writenr ":"lab write ")+attrIndex+" "+lv_textarea_get_text(hexInput);bleLabCommand(command);view=AttributeView;redraw=true;return;}
@@ -390,7 +400,7 @@ void tap(lv_event_t* e){int id=(intptr_t)lv_event_get_user_data(e);if(id==1){ble
  else switch(id){case 31:view=Nearby;break;case 32:beeperMode=true;beeperAll=false;view=Nearby;break;case 33:beeperAll=!beeperAll;view=Nearby;break;case 10:view=Nearby;break;case 11:view=Gatt;break;case 12:view=EventView;break;case 13:view=Saved;break;case 14:if(!owned){demo(*profile);selectedName[0]=0;say("Demo profile ready");view=Gatt;}break;
  case 15:logEnabled=!logEnabled&&storeReady;break;case 16:{if(!owned){auto* box=uiMessageBox(viewRoot,"Emulate this profile?","Creates a connectable local BLE peripheral. Radar pauses until Stop or Home. Bond keys and original device behavior are not copied.",nullptr,true);dragon::labui::size(box,340,265);lv_obj_center(box);btn(box,"START EMULATION",25,175,270,45,17);}return;}
  case 17:start(Clone);view=Overview;break;case 18:{char n[33];snprintf(n,sizeof(n),"profile-%08lx",esp_random());save(n);break;}
- case 19:view=AdvertisementView;break;case 20:start(Discover);view=Overview;break;case 21:{if(!owned){dragon::DeviceKey k{};k.radio=1;k.addressType=selectedType;memcpy(k.mac,selectedMac,6);if(huntDevice(k,0))uiShow("hunt");}return;}
+ case 19:view=AdvertisementView;break;case 20:start(Discover);if(view!=ProfileGuide)view=Overview;break;case 21:{if(!owned){dragon::DeviceKey k{};k.radio=1;k.addressType=selectedType;memcpy(k.mac,selectedMac,6);if(huntDevice(k,0))uiShow("hunt");}return;}
  case 26:if(!owned){pairingEnabled=!pairingEnabled;pairingMitm=true;pairingBond=false;say(pairingEnabled?"Pairing enabled / authenticated / no stored bond":"Pairing disabled");}break;
  case 27:if(!owned){replayIdentity=false;start(Replay);view=Overview;}break;
  case 29:start(Bridge);view=Overview;break;
@@ -409,9 +419,15 @@ void drawLab(){
  if(pairRequest){char pairingCode[7];snprintf(pairingCode,sizeof(pairingCode),"%06lu",pairCode.load());text(viewBody,pairRequest==2?String("Confirm matching code on BOTH devices\n\n")+String(pairingCode):String("Enter the six-digit code shown by your peripheral"),4,4,326);if(pairRequest==2){btn(viewBody,"MATCH",0,145,160,44,4020);btn(viewBody,"REJECT",174,145,160,44,4021);}else{hexInput=lv_textarea_create(viewBody);dragon::labui::pos(hexInput,4,80);dragon::labui::size(hexInput,326,48);lv_textarea_set_max_length(hexInput,6);lv_textarea_set_accepted_chars(hexInput,"0123456789");lv_textarea_set_one_line(hexInput,true);lv_textarea_set_text(hexInput,"");for(int i=0;i<10;++i){char label[2]={char('0'+i),0};btn(viewBody,label,(i%5)*67,142+(i/5)*46,61,40,4000+i);}btn(viewBody,"DELETE",0,242,160,44,4010);btn(viewBody,"SUBMIT",174,242,160,44,4011);}drawn=revision;redraw=false;return;}
  if(working()){text(viewBody,"Working...\n\nThe interface remains responsive.\nStop or Home cancels after the current Bluetooth request.",5,5,322);drawn=revision;redraw=false;return;}
  if(view==Overview){unsigned n=0;text(viewBody,message,3,0,327,font16(),uiColors().accent);auto* panel=lv_obj_create(viewBody);lv_obj_remove_style_all(panel);dragon::labui::pos(panel,0,66);dragon::labui::size(panel,334,8*72);auto* original=viewBody;viewBody=panel;
-  if(*selectedName)entry("Selected peripheral",selectedName,n++,19);entry("Nearby BLE","Advertisement inspector / GATT",n++,10);entry(pairingEnabled?"Pairing enabled":"Pairing disabled","Toggle before connecting / no stored bonds",n++,26);entry("Find My Beeper","Select a tracker / request one beep",n++,32);entry("GATT workspace",String(profile->count)+" attributes / "+profile->name,n++,11);entry("Live events",String(eventCount)+" retained / "+eventDrops.load()+" dropped",n++,12);entry("Saved profiles",storeReady?String(recon.usedBytes()/1024)+" / "+String(recon.totalBytes()/1024)+" KB flash used":"Storage needs initialization",n++,13);if(state==Monitoring)entry("Start GATT bridge","Cached reads / forwards writes + notifications",n++,29);entry("Emulate profile","Local peripheral / explicit start",n++,16);entry("Save workspace","Unique filename; never overwrites",n++,18);entry(logEnabled?"Event logging: ON":"Event logging: OFF","CSV / two rotating CSV logs",n++,15);entry("Load demo profile","Battery + read/write/notify",n++,14);dragon::labui::height(panel,n*72);viewBody=original;
+  if(*selectedName)entry("Selected peripheral",selectedName,n++,19);entry("Nearby BLE","Advertisement inspector / GATT",n++,10);entry(pairingEnabled?"Pairing enabled":"Pairing disabled","Toggle before connecting / no stored bonds",n++,26);entry("Find My Beeper","Select a tracker / request one beep",n++,32);entry("GATT workspace",String(profile->count)+" attributes / "+profile->name,n++,11);entry("Live events",String(eventCount)+" retained / "+eventDrops.load()+" dropped",n++,12);entry("Saved profiles",storeReady?String(recon.medium())+" / "+String(uint32_t((recon.totalBytes()-recon.usedBytes())/1048576))+" MB free":"Storage needs initialization",n++,13);if(state==Monitoring)entry("Start GATT bridge","Cached reads / forwards writes + notifications",n++,29);entry("Emulate profile","Local peripheral / explicit start",n++,16);entry("Save workspace","Unique filename; never overwrites",n++,18);entry(logEnabled?"Event logging: ON":"Event logging: OFF","CSV / two rotating CSV logs",n++,15);entry("Load demo profile","Battery + read/write/notify",n++,14);dragon::labui::height(panel,n*72);viewBody=original;
  }else if(view==BeeperDetails){char mac[18];macText(selectedMac,mac);auto* advert=selectedAdvert();String detail=String(mac)+"\n"+(advert?String(advert->rssi)+" dBm / observed "+((millis()-advert->at)/1000)+"s ago":"Refresh the tracker before requesting sound");text(viewBody,detail,4,0,326,font16());btn(viewBody,"REQUEST ONE BEEP",0,70,334,48,28);btn(viewBody,"CHOOSE TRACKER",0,128,334,42,31);text(viewBody,message,4,184,326,font16(),uiColors().accent);
  }else if(view==Nearby){unsigned n=0,slot=0;if(beeperMode){entry("Refresh nearby trackers","Choose your tracker by name or address",n++,31);entry(beeperAll?"Show tracker candidates":"Show all BLE devices",beeperAll?"Filter to Find My / Find Hub signals":"For accessories without a recognized advert",n++,33);}int order[MAX_CONTACTS];unsigned total=0;for(unsigned i=0;i<MAX_CONTACTS;++i)if(contacts[i].used&&contacts[i].ble&&(!beeperMode||beeperAll||contacts[i].match.family==dragon::Family::Tracker||contacts[i].match.family==dragon::Family::GoogleTag)&&millis()-contacts[i].seen<(beeperMode?30000:60000))order[total++]=i;std::sort(order,order+total,[](int a,int b){return contacts[a].rssi>contacts[b].rssi;});for(unsigned j=0;j<total&&slot<20;++j){auto& c=contacts[order[j]];nearbyKeys[slot]=contactKey(c);char mac[18];macText(c.mac,mac);entry(*c.name?String(c.name):String(mac),String(c.rssi)+" dBm / "+addressName(c.addressType,c.mac),n++,100+slot);++slot;}if(!slot)text(viewBody,"Waiting for advertisements.\nStop the connection to scan again.",4,beeperMode?158:15,326);
+ }else if(view==ProfileGuide){
+  char mac[18];macText(selectedMac,mac);bool same=!working()&&profile->count&&profile->addressType==selectedType&&!memcmp(profile->mac,selectedMac,6);
+  String explanation=String(selectedName)+"\n"+mac+"\n\nDiscover the device's readable GATT services, save a profile, then stop the connection before emulating it. Protected values and original device behavior are not copied.\n\n"+(same?String(profile->count)+" attributes in this device's workspace.":"Discover this device to create its workspace.");
+  auto* detail=text(viewBody,explanation,4,0,326,font16());lv_obj_update_layout(detail);int y=logical(lv_obj_get_height(detail))+14;
+  if(!owned)btn(viewBody,"CONNECT + DISCOVER",0,y,334,44,20);
+  if(same){btn(viewBody,"VIEW GATT WORKSPACE",0,y+54,334,44,11);btn(viewBody,"SAVE DEVICE PROFILE",0,y+108,334,44,18);if(!owned)btn(viewBody,"EMULATE THIS PROFILE",0,y+162,334,44,16);}
  }else if(view==AdvertisementView){char mac[18];macText(selectedMac,mac);String s=String(selectedName)+"\n"+mac+"\n"+addressName(selectedType,selectedMac)+"\n";for(unsigned i=0;i<CacheCount;++i){auto& a=advertisements[i];if(a.used&&a.type==selectedType&&!memcmp(a.mac,selectedMac,6)){s+=String(a.rssi)+" dBm / "+((millis()-a.at)/1000)+"s ago\n";auto insight=inspectAdvertisement(a.data,a.length,a.boundary);s+=String(insight.protocol)+"\n"+companyName(insight.company)+" / CID "+String(insight.company,HEX)+"\nAppearance "+insight.appearance+"\n";if(insight.hasPower)s+="TX power "+String(insight.power)+" dBm (not distance)\n";for(size_t off=0;off<a.length;){if(off==a.boundary)s+="SCAN RESPONSE\n";uint8_t n=a.data[off++];if(!n){off=off<=a.boundary?a.boundary:a.length;continue;}uint8_t type=a.data[off++];s+="AD 0x"+String(type,HEX)+" / "+String(n-1)+" bytes\n"+hex(a.data+off,n-1)+"\n";off+=n-1;}break;}}auto* l=text(viewBody,s,4,0,326,font16());lv_obj_update_layout(l);int y=logical(lv_obj_get_height(l))+18;btn(viewBody,"CONNECT + DISCOVER",0,y,334,48,20);btn(viewBody,"HUNT THIS SIGNAL",0,y+59,334,48,21);btn(viewBody,"REPLAY ADVERT / 30s",0,y+118,334,48,27);btn(viewBody,"FIND MY BEEPER",0,y+177,334,48,28);btn(viewBody,"USE IBEACON",0,y+236,334,48,30);
  }else if(view==Gatt){unsigned n=0;for(unsigned i=0;i<profile->count;++i){auto& a=profile->attributes[i];String top=String(a.kind==Service?"SERVICE ":a.kind==Characteristic?"CHAR ":"DESC ")+(uuidName(a.uuid)?uuidName(a.uuid):a.uuid);entry(top,a.kind==Service?"Primary service":a.kind==Characteristic?props(a.properties):String(a.length)+" bytes / "+valueState(a.flags),n++,1000+i);}if(!n)text(viewBody,"Connect to a peripheral, load a saved profile, or load the demo.",4,16,326);
  }else if(view==AttributeView&&attrIndex<profile->count){auto& a=profile->attributes[attrIndex];String s=String(uuidName(a.uuid)?uuidName(a.uuid):"Custom attribute")+"\n"+a.uuid+"\nIndex "+attrIndex+" / handle "+a.handle+"\n"+props(a.properties)+"\n"+valueState(a.flags)+"\nLength "+a.length+" bytes\n\n"+hex(a.value,a.length,128);auto* l=text(viewBody,s,4,0,326,font16());lv_obj_update_layout(l);int y=logical(lv_obj_get_height(l))+16;if(uuidEqual(a.uuid,"2a4b")&&!a.flags){auto h=parseHidMap(a.value,a.length);String layout=String("HID map: ")+h.error;for(unsigned i=0;h.valid&&i<h.count;++i){auto& r=h.reports[i];layout+="\nID "+String(r.id)+" / bits I:"+r.bits[0]+" O:"+r.bits[1]+" F:"+r.bits[2];}auto* report=text(viewBody,layout,4,y,326,font16());lv_obj_update_layout(report);y+=logical(lv_obj_get_height(report))+14;}if(a.kind==Characteristic){if(state==Monitoring){if(a.properties&2)btn(viewBody,"READ VALUE",0,y,334,46,22);if(a.properties&12)btn(viewBody,"WRITE HEX VALUE",0,y+112,334,46,25);if(a.properties&48)btn(viewBody,subscriptions[attrIndex]?"UNSUBSCRIBE":"SUBSCRIBE",0,y+56,334,46,23);}if(state==Emulating&&(a.properties&48))btn(viewBody,"SEND CURRENT VALUE",0,y,334,46,24);}
@@ -422,6 +438,10 @@ void drawLab(){
 }
 }
 void bleLabBeeperPage(){beeperRequested=true;}
-void bleLabView(void* parent){viewRoot=(lv_obj_t*)parent;viewBody=nullptr;beeperMode=beeperRequested;beeperRequested=false;beeperAll=false;view=beeperMode?Nearby:Overview;redraw=true;drawLab();}
+bool bleLabOpenDevice(const uint8_t* mac,uint8_t type,const char* name,bool profileTools){
+ if(owned||working()||!profile||reconOwnsRadio()||reconStorageBusy())return false;
+ bleLabSelect(mac,type,name);devicePageRequested=profileTools?2:1;return true;
+}
+void bleLabView(void* parent){viewRoot=(lv_obj_t*)parent;viewBody=nullptr;beeperMode=beeperRequested;beeperRequested=false;beeperAll=false;view=beeperMode?Nearby:devicePageRequested==2?ProfileGuide:devicePageRequested==1?AdvertisementView:Overview;devicePageRequested=0;redraw=true;drawLab();}
 void bleLabViewLoop(){if(!viewRoot)return;uint32_t now=millis();if((redraw||(view!=WriteView&&drawn!=revision))&&now-lastView>500){lastView=now;drawLab();}}
 #endif

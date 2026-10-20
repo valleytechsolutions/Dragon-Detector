@@ -1,6 +1,10 @@
 # Reference feature comparison · 0.13.17
 
-**Experimental addition (0.13.19):** the non-C Waveshare AMOLED 1.75 includes the full 466 px interface and shared tools, PCF85063 RTC verification, microSD, 2 MiB captures/sessions and 7.94 MiB shared file storage. Physical testing is pending. [Port details](WAVESHARE-AMOLED-175.md).
+**0.13.21 beta:** the non-C Waveshare AMOLED 1.75 adds SD-first recon storage,
+32 MiB capture streaming, larger surveys and 8-hour / 64 MiB SD recon sessions.
+The separate 1.75-G LC76G build adds exclusive passive Wi-Fi/BLE wardriving and
+WiGLE CSV. The owner reports the prior base profile worked; new behavior awaits
+physical tests. [Capabilities and limits](WAVESHARE-AMOLED-175.md).
 
 This is a feature audit, not a claim that Dragon Detector is an official port or has identical behavior. The original application remains MIT. Reference firmware is not silently linked into it. [Credits and exact source revisions](../CREDITS.md) · [Measured hardware checks](VALIDATION.md).
 
@@ -10,7 +14,9 @@ The v0.13.17 source audit confirms that Waveshare AMOLED, M5Stack StopWatch, Spo
 
 | Profile | Capture buffer | Recon session limit |
 |---|---:|---:|
-| Waveshare AMOLED | 2 MiB | 2 MiB |
+| Waveshare 1.75C | 2 MiB | 2 MiB |
+| Waveshare 1.75 / 1.75-G beta with SD | 64 KiB queue / 32 MiB segments | 64 MiB / 8 hours |
+| Waveshare 1.75 / 1.75-G without SD | 2 MiB RAM | 2 MiB |
 | M5Stack StopWatch | 2 MiB | 2 MiB |
 | Spotpear | 1 MiB | 256 KiB |
 | Seeed XIAO Round | 512 KiB | 256 KiB |
@@ -42,7 +48,7 @@ All five also accept one optional [personal logo theme](CUSTOM-THEME.md) from th
 | Join / saved network profiles / IP ping scan | Connected network: eight explicit profiles, DHCP/IP/gateway/DNS, gateway ping, at most 254 local-subnet addresses, CSV; optional saved-Wi-Fi clock recovery; ordinary reconnection remains explicit |
 | Save/load AP lists, arbitrary source-MAC configuration, command scripts | Historical AP CSV save/load/export, volatile source-MAC configuration and reviewed bounded recipes. Archives cannot be loaded as fresh target observations |
 | USB BadUSB / DuckyScript | Not implemented in this USB-CDC stopwatch build |
-| GPS wardriving / WiGLE / NMEA | No supported local GPS in this board profile; broadcast Remote ID coordinates are different data |
+| GPS wardriving / WiGLE / NMEA | 1.75-G beta only: LC76G, exclusive passive Wi-Fi/BLE, checked fixes, SD WiGLE CSV. Physical validation pending; Remote ID coordinates remain separate data |
 | 5/6 GHz, Bluetooth Classic, external NRF24 | Not provided by the ESP32-S3 radio / current board profile |
 
 ## ChimeraBLE: independently implemented BLE Lab

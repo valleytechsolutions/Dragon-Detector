@@ -47,9 +47,9 @@ export async function importProfile(link,file,onProgress=()=>{}){
 export async function labLines(link,command){link.lines=[];const lines=[];const off=link.onLine(line=>{if(line?.startsWith('LAB_'))lines.push(line);});try{await link.write(command);await link.wait(line=>line==='LAB_END'||line.startsWith('LAB_ERROR'),10000);if(lines.some(l=>l.startsWith('LAB_ERROR')))throw new Error(lines.join('\n'));return lines;}finally{off();}}
 export async function exportLog(link,previous=false){
  let expected=-1,body='',header=false;
- return receiveTransfer(link,'lab log export '+(previous?'previous':'current'),60000,line=>{
+ return receiveTransfer(link,'lab log export '+(previous?'previous':'current'),900000,line=>{
   const m=/^LAB_LOG_BEGIN (\d+)$/.exec(line);
-  if(m){if(expected>=0)throw new Error('Duplicate log header.');expected=Number(m[1]);if(expected>1024*1024)throw new Error('Log exceeds size limit.');}
+  if(m){if(expected>=0)throw new Error('Duplicate log header.');expected=Number(m[1]);if(expected>16*1024*1024)throw new Error('Log exceeds size limit.');}
   else if(line==='uptime_ms,kind,attribute,length,hex')header=true;
   else if(expected>=0&&/^\d+,\d+,\d+,\d+,(?:[a-f0-9]{2}(?: |$))*$/.test(line)){body+=line+'\n';if(body.length>expected)throw new Error('Invalid log size.');}
   else if(line==='LAB_LOG_END'){if(expected!==body.length||!header)throw new Error('Incomplete log transfer.');return 'uptime_ms,kind,attribute,length,hex\n'+body;}

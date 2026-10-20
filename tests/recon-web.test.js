@@ -11,8 +11,23 @@ test('0.10 contracts enable supported hardware and keep unknown protocols closed
 });
 function fake(lines){let cb,removed=false;return {get removed(){return removed;},onLine(fn){cb=fn;return()=>removed=true;},async write(c){assert.equal(c,'recon get wifi-0123abcd.pcap');for(const line of lines)cb(line);}};}
 test('Capture USB checks offsets, lengths and CRC; ignores health output',async()=>{const data=Uint8Array.from({length:2000},(_,i)=>i%256),lines=[`RECON_FILE ${data.length}`,'HEALTH unrelated'];for(let i=0;i<data.length;i+=128)lines.push(`RECON_DATA ${i} ${Buffer.from(data.slice(i,i+128)).toString('hex')}`);lines.push(`RECON_END ${data.length} ${crc32(data).toString(16).padStart(8,'0')}`);const link=fake(lines);assert.deepEqual(await exportCapture(link,'wifi-0123abcd.pcap'),data);assert.ok(link.removed);});
-test('Capture export rejects corruption, gaps, huge files, disconnect and write failure',async()=>{for(const lines of [[null],['RECON_FILE 2097153'],['RECON_FILE 1','RECON_DATA 1 00'],['RECON_FILE 1','RECON_DATA 0 0001'],['RECON_FILE 1','RECON_DATA 0 00','RECON_END 1 00000000'],['RECON_ERROR unavailable']]){const link=fake(lines);await assert.rejects(exportCapture(link,'wifi-0123abcd.pcap'));assert.ok(link.removed);}let removed=false;await assert.rejects(exportCapture({onLine(){return()=>removed=true;},async write(){throw Error('write failed');}},'wifi-0123abcd.pcap'),/write failed/);assert.ok(removed);});
+test('Capture export rejects corruption, gaps, huge files, disconnect and write failure',async()=>{for(const lines of [[null],['RECON_FILE 67108865'],['RECON_FILE 1','RECON_DATA 1 00'],['RECON_FILE 1','RECON_DATA 0 0001'],['RECON_FILE 1','RECON_DATA 0 00','RECON_END 1 00000000'],['RECON_ERROR unavailable']]){const link=fake(lines);await assert.rejects(exportCapture(link,'wifi-0123abcd.pcap'));assert.ok(link.removed);}let removed=false;await assert.rejects(exportCapture({onLine(){return()=>removed=true;},async write(){throw Error('write failed');}},'wifi-0123abcd.pcap'),/write failed/);assert.ok(removed);});
 test('Only bounded generated capture filenames can be downloaded or removed',()=>{assert.equal(captureName('ble-0123abcd.csv'),'ble-0123abcd.csv');for(const name of ['../profiles/a.ddg','/captures/a.pcap','wifi-test.pcap','wifi-0123abcd.pcap\nmode set 0','ble-0123abcd.csv.part'])assert.throws(()=>captureName(name));});
+test('SD segment and WiGLE names are accepted; partial/path-injected names are rejected',()=>{
+ for(const name of ['wifi-0123abcd-0000.pcap','ble-0123abcd-0123.csv','wigle-0123abcd-0000.csv'])assert.equal(captureName(name),name);
+ for(const name of ['wigle-0123abcd-0000.csv.part','../wardrive/wigle-0123abcd-0000.csv','wigle-0123abcd-0000.csv\nsystem restart'])assert.throws(()=>captureName(name));
+});
+test('SD downloads exceed the old 2 MiB limit and still verify every chunk and CRC',async()=>{
+ const data=Uint8Array.from({length:3*1024*1024},(_,i)=>i%251);let cb,closed=false;
+ const link={onLine(fn){cb=fn;return()=>closed=true;},async write(command){
+  assert.equal(command,'recon get wifi-0123abcd-0000.pcap');cb(`RECON_FILE ${data.length}`);
+  for(let at=0;at<data.length;at+=128)cb(`RECON_DATA ${at} ${Buffer.from(data.subarray(at,at+128)).toString('hex')}`);
+  cb(`RECON_END ${data.length} ${crc32(data).toString(16).padStart(8,'0')}`);
+ }};
+ assert.deepEqual(await exportCapture(link,'wifi-0123abcd-0000.pcap'),data);assert.ok(closed);
+ const busy=fake(['WARDRIVE_BUSY stop wardriving first']);
+ await assert.rejects(exportCapture(busy,'wifi-0123abcd.pcap'),/WARDRIVE_BUSY/);assert.ok(busy.removed);
+});
 
 import {normalizeHex,probeRows,probeCsv} from '../web/recon-analysis.js';
 test('recon analysis validates hex and preserves raw probe SSIDs without spreadsheet formulas',()=>{assert.equal(normalizeHex('01:02-03 04'),'01020304');for(const bad of ['0','0 1','01 g2','gg','00'.repeat(513)])assert.throws(()=>normalizeHex(bad));const rows=['RECON_PROBE 10:11:12:13:14:15 ch=6 rssi=-50 age=1 count=4 ssid_hex=3d317fff'];assert.equal(probeRows(rows)[0].hex,'3d317fff');assert.ok(probeCsv(rows).includes("'"+'=1'));assert.ok(hasReconTools('0.11.0'));});

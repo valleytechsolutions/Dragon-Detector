@@ -28,6 +28,8 @@ void reconLeave();
 void radioApplyMode();
 uint16_t reconHopDwell();uint8_t reconNextChannel(uint8_t);
 fs::FS* bleLabStorage();
+bool bleLabStorageOnCard();
+const char* bleLabStorageName();
 bool bleLabStorageSpace(size_t);
 #else
 inline uint16_t reconHopDwell(){return 180;}inline uint8_t reconNextChannel(uint8_t c){return c%11+1;}
