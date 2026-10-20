@@ -63,6 +63,7 @@ source = r'''
 #ifdef _WIN32
 static tm* gmtime_r(const time_t* value, tm* result){*result=*gmtime(value);return result;}
 #endif
+struct {template<class... T> void printf(const char*,T...) {}} Serial;
 bool rtcAvailable=false;
 void delay(unsigned){}
 struct FakeWire {
@@ -92,10 +93,13 @@ int main(){
     auto epoch=dragon::dateEpoch(date);assert(boardWriteRtc(epoch));assert(boardReadRtc(result)&&result==epoch);
     assert((Wire.registers[0]&0x22)==0);
   }
-  auto epoch=dragon::dateEpoch({2028,2,29,12,34,56});assert(boardWriteRtc(epoch));
+  auto epoch=dragon::dateEpoch({2028,2,29,12,34,56});Wire.registers[0]=5;assert(boardWriteRtc(epoch));assert(Wire.registers[0]==5);
   Wire.registers[4]|=0x80;assert(!boardReadRtc(result)); // oscillator-stop flag
   assert(boardWriteRtc(epoch));Wire.registers[0]|=0x20;assert(!boardReadRtc(result));
   assert(boardWriteRtc(epoch));Wire.registers[0]|=2;assert(!boardReadRtc(result));
+  assert(boardWriteRtc(epoch));Wire.registers[0]|=0x80;assert(!boardReadRtc(result));
+  assert(boardWriteRtc(epoch));assert(!(Wire.registers[0]&0xa2));
+  assert(!boardWriteRtc(0)&&!boardWriteRtc(4102444800u));
   assert(boardWriteRtc(epoch));Wire.registers[5]=0x6a;assert(!boardReadRtc(result));
   assert(boardWriteRtc(epoch));Wire.registers[10]=0x27;assert(!boardReadRtc(result)); // Feb 29 in a non-leap year
   assert(boardWriteRtc(epoch));Wire.shortRead=true;assert(!boardReadRtc(result)&&!boardWriteRtc(epoch));Wire.shortRead=false;

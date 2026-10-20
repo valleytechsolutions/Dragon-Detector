@@ -31,6 +31,7 @@ jobs:
       - run: node --test tests/*.test.js
       - run: python tools/test_flash_budget.py
       - run: python tools/test_amoled175.py --cxx g++
+      - run: python tools/test_rtc.py --cxx g++
       - run: python tools/test_sd_records.py --cxx g++
       - run: python tools/test_gps_transport.py --cxx g++
       - run: python tools/test_core.py --cxx g++

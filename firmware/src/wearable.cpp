@@ -51,11 +51,19 @@ void wearableBegin(){
   rotationBuffer=(lv_color_t*)heap_caps_malloc(driver->draw_buf->size*sizeof(lv_color_t),rotationCaps);
   if(rotationBuffer){physicalFlush=driver->flush_cb;driver->flush_cb=rotatedFlush;driver->sw_rotate=0;applyRotation();}
   else {displayRotation=0;Serial.println("ORIENTATION_ERROR memory; upright retained");}
-  uint32_t epoch=0;if(rtcAvailable&&boardReadRtc(epoch))setWallTime(epoch);
+  uint32_t epoch=0;
+  for(unsigned attempt=0;attempt<3;++attempt){
+    if(!rtcAvailable)boardSensorsBegin();
+    if(rtcAvailable&&boardReadRtc(epoch)){setWallTime(epoch);break;}
+    delay(10);
+  }
   Serial.printf("WEARABLE_READY rtc=%u rotation=%u manual=1\n",rtcAvailable,displayRotation);
 }
 bool configureClock(uint32_t epoch){
   if(!dragon::validEpoch(epoch))return false;
+  // A transient startup bus failure must not disable hardware saves until the
+  // next reboot. Re-probe without resetting the retained calendar.
+  if(!rtcAvailable)boardSensorsBegin();
 #if defined(BOARD_STOPWATCH) || defined(BOARD_XIAO_ROUND) || defined(BOARD_AMOLED_175)
   // These profiles promise a hardware clock. Never silently report a volatile
   // software-only write as successful if their RTC is disconnected or failed.
@@ -83,6 +91,14 @@ static void reply(const char* format,...){
   if(n%64==0)Serial.write('\n');
 }
 bool wearableCommand(const String& c){
+  if(c=="clock diagnostics"){
+#if defined(BOARD_STOPWATCH) || defined(BOARD_XIAO_ROUND) || defined(BOARD_AMOLED_175) || defined(BOARD_AMOLED_175C)
+    boardRtcDiagnostics();
+#else
+    Serial.println("CLOCK_DIAGNOSTICS chip=none");
+#endif
+    return true;
+  }
   if(c=="clock hardware"){
     uint32_t epoch=0;bool valid=rtcAvailable&&boardReadRtc(epoch);
     reply("CLOCK_HARDWARE detected=%u valid=%u epoch=%lu\n",rtcAvailable,valid,valid?epoch:0);return true;

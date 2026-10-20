@@ -126,16 +126,21 @@ void boardSensorsBegin(){
 }
 static int decodeBcd(uint8_t v){return (v&15)<=9&&(v>>4)<=9?(v>>4)*10+(v&15):-1;}
 bool boardReadRtc(uint32_t& epoch){
-  uint8_t ctrl=0,b[7]{};if(!rtcAvailable||!rtcRead(0,&ctrl,1)||(ctrl&0x22)||!rtcRead(4,b,7)||(b[0]&0x80))return false;
+  uint8_t ctrl=0,b[7]{};if(!rtcAvailable||!rtcRead(0,&ctrl,1)||(ctrl&0xa2)||!rtcRead(4,b,7)||(b[0]&0x80))return false;
   dragon::Calendar d{2000+decodeBcd(b[6]),decodeBcd(b[5]&31),decodeBcd(b[3]&63),decodeBcd(b[2]&63),decodeBcd(b[1]&127),decodeBcd(b[0]&127)};
   epoch=dragon::dateEpoch(d);return epoch!=0;
 }
 bool boardWriteRtc(uint32_t epoch){
-  if(!rtcAvailable)return false;time_t value=epoch;struct tm t{};gmtime_r(&value,&t);
+  if(!rtcAvailable||!dragon::validEpoch(epoch))return false;time_t value=epoch;struct tm t{};gmtime_r(&value,&t);
   auto bcd=[](int v){return uint8_t((v/10)*16+v%10);};
-  uint8_t ctrl=0;if(!rtcRead(0,&ctrl,1))return false;ctrl=(ctrl&~2)|0x20;
+  // Exit external-clock test/12h mode; preserve oscillator load calibration.
+  uint8_t ctrl=0;if(!rtcRead(0,&ctrl,1))return false;ctrl=(ctrl&0x05)|0x20;
   if(!rtcWrite(0,&ctrl,1))return false;
   uint8_t b[]={bcd(t.tm_sec),bcd(t.tm_min),bcd(t.tm_hour),bcd(t.tm_mday),uint8_t(t.tm_wday),bcd(t.tm_mon+1),bcd(t.tm_year%100)};
   bool written=rtcWrite(4,b,7);ctrl&=~0x20;bool restarted=rtcWrite(0,&ctrl,1);
   uint32_t readback=0;return written&&restarted&&boardReadRtc(readback)&&readback>=epoch&&readback-epoch<=1;
+}
+void boardRtcDiagnostics(){
+  uint8_t control=0,seconds=0;bool ok=rtcRead(0,&control,1)&&rtcRead(4,&seconds,1);
+  Serial.printf("CLOCK_DIAGNOSTICS chip=PCF85063 io=%u control=%02x lost=%u\n",ok,control,(seconds&0x80)!=0);
 }

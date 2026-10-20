@@ -36,6 +36,9 @@ void stopwatchTouchStatus(){
 bool alertSound=true,alertVibration=true;
 void boardBegin(){
   auto cfg=M5.config();cfg.internal_spk=true;cfg.internal_mic=false;cfg.internal_imu=false;
+  // Read RX8130 validity ourselves before importing UTC. M5Unified's automatic
+  // clock import ignores VLF and its getVoltLow() reports VBLF instead.
+  cfg.internal_rtc=false;cfg.external_rtc=false;
   cfg.fallback_board=m5::board_t::board_M5StopWatch;M5.begin(cfg);
   // CO5300's M5 driver exposes a 468x468 transfer canvas around the 466px panel.
   if(M5.getBoard()!=m5::board_t::board_M5StopWatch || M5.Display.width()<466 || M5.Display.width()>468){
@@ -92,17 +95,64 @@ void boardLoop(){
 int batteryPercent(){static uint32_t at=0;static int value=-1;if(!at || millis()-at>5000){at=millis();value=M5.Power.getBatteryLevel();}return value;}
 bool batteryCharging(){return M5.Power.isCharging();}
 
-void boardSensorsBegin(){rtcAvailable=M5.Rtc.isEnabled();}
+static bool rtcRead(uint8_t reg,uint8_t* data,size_t count){return M5.In_I2C.readRegister(0x32,reg,data,count,400000);}
+static bool rtcWrite(uint8_t reg,const uint8_t* data,size_t count){return M5.In_I2C.writeRegister(0x32,reg,data,count,400000);}
+static bool rtcPowerHold(){
+  // C152's RX8130 VDD is 3V3_L1; VBAT has only a 10 uF capacitor.
+  // M5PM1 HOLD_CFG.LDO (0x07 bit 5) keeps L1 alive on button shutdown.
+  // Preserve all other rail/GPIO settings; verify both enable and hold.
+  uint8_t power=0,hold=0;
+  if(!M5.In_I2C.readRegister(0x6e,0x06,&power,1,100000)||
+     !M5.In_I2C.readRegister(0x6e,0x07,&hold,1,100000))return false;
+  if(!(power&4)&&!M5.In_I2C.writeRegister8(0x6e,0x06,power|4,100000))return false;
+  if(!(hold&0x20)&&!M5.In_I2C.writeRegister8(0x6e,0x07,hold|0x20,100000))return false;
+  return M5.In_I2C.readRegister(0x6e,0x06,&power,1,100000)&&
+    M5.In_I2C.readRegister(0x6e,0x07,&hold,1,100000)&&(power&4)&&(hold&0x20);
+}
+static bool rtcBackupBegin(){
+  uint8_t control=0;
+  if(!rtcRead(0x1f,&control,1))return false;
+  // Initialize switchover and charge the board's backup capacitor. Do not
+  // reset calendar/control/flags: a stopped clock must still require a sync.
+  if((control&0x30)!=0x30){control|=0x30;if(!rtcWrite(0x1f,&control,1))return false;}
+  return rtcRead(0x1f,&control,1)&&(control&0x30)==0x30;
+}
+void boardSensorsBegin(){
+  bool held=false;rtcAvailable=false;
+  for(unsigned attempt=0;attempt<3;++attempt){
+    held=rtcPowerHold();uint8_t flags=0;
+    rtcAvailable=rtcRead(0x1d,&flags,1);
+    if(held&&rtcAvailable&&rtcBackupBegin())break;
+    delay(10);
+  }
+  if(!held)Serial.println("RTC_WARNING power hold unavailable; off-time retention unverified");
+}
+static int decodeBcd(uint8_t v){return (v&15)<=9&&(v>>4)<=9?(v>>4)*10+(v&15):-1;}
 bool boardReadRtc(uint32_t& epoch){
-  if(!rtcAvailable||M5.Rtc.getVoltLow())return false;
-  m5::rtc_datetime_t d;if(!M5.Rtc.getDateTime(&d))return false;
-  dragon::Calendar date{d.date.year,d.date.month,d.date.date,d.time.hours,d.time.minutes,d.time.seconds};
+  uint8_t state[2]{},b[7]{};
+  // VLF (bit 1) means the oscillator stopped. VBLF (bit 7) is only a
+  // backup-voltage warning and must not discard an otherwise valid clock.
+  if(!rtcAvailable||!rtcRead(0x1d,state,2)||(state[0]&2)||(state[1]&0xc0)||!rtcRead(0x10,b,7))return false;
+  if(!b[3]||(b[3]&0x80)||(b[3]&(b[3]-1)))return false;
+  dragon::Calendar date{2000+decodeBcd(b[6]),decodeBcd(b[5]&31),decodeBcd(b[4]&63),decodeBcd(b[2]&63),decodeBcd(b[1]&127),decodeBcd(b[0]&127)};
   epoch=dragon::dateEpoch(date);return epoch!=0;
 }
 bool boardWriteRtc(uint32_t epoch){
-  time_t value=epoch;struct tm t{};gmtime_r(&value,&t);m5::rtc_datetime_t d(t);
-  if(!rtcAvailable||!M5.Rtc.getRtcInstancePtr()->setDateTime(&d.date,&d.time))return false;
-  // Clear the latched low-voltage indication after an explicit time setting.
-  if(!M5.In_I2C.bitOff(0x32,0x1D,0x80,400000))return false;
-  uint32_t readback=0;return boardReadRtc(readback)&&readback>=epoch&&readback-epoch<=1;
+  if(!rtcAvailable||!dragon::validEpoch(epoch)||!rtcPowerHold()||!rtcBackupBegin())return false;
+  time_t value=epoch;struct tm t{};gmtime_r(&value,&t);
+  auto bcd=[](int v){return uint8_t((v/10)*16+v%10);};uint8_t control=0;
+  if(!rtcRead(0x1e,&control,1))return false;
+  control=(control&~0x80)|0x40;if(!rtcWrite(0x1e,&control,1))return false;
+  uint8_t b[]={bcd(t.tm_sec),bcd(t.tm_min),bcd(t.tm_hour),uint8_t(1u<<t.tm_wday),bcd(t.tm_mday),bcd(t.tm_mon+1),bcd(t.tm_year%100)};
+  bool written=rtcWrite(0x10,b,7);
+  // Flags are write-zero-to-clear. Clear VLF/VBLF only after a complete
+  // explicit date write; preserve any concurrently raised interrupt flags.
+  uint8_t flags=0x3d;bool cleared=written&&rtcWrite(0x1d,&flags,1);
+  control&=~0x40;bool restarted=rtcWrite(0x1e,&control,1);
+  uint32_t readback=0;return written&&cleared&&restarted&&boardReadRtc(readback)&&readback>=epoch&&readback-epoch<=1;
+}
+void boardRtcDiagnostics(){
+  uint8_t s[3]{},p[2]{};
+  bool ok=rtcRead(0x1d,s,3),power=M5.In_I2C.readRegister(0x6e,0x06,p,2,100000);
+  Serial.printf("CLOCK_DIAGNOSTICS chip=RX8130 io=%u flags=%02x control=%02x backup=%02x power_io=%u ldo=%u hold=%u\n",ok,s[0],s[1],s[2],power,(p[0]&4)!=0,(p[1]&0x20)!=0);
 }

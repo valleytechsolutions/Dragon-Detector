@@ -108,7 +108,10 @@ static bool rtcWrite(uint8_t reg,const uint8_t* data,size_t size){
   if(xSemaphoreTake(i2cMutex,pdMS_TO_TICKS(30))!=pdTRUE)return false;
   Wire.beginTransmission(0x51);Wire.write(reg);Wire.write(data,size);bool ok=Wire.endTransmission()==0;xSemaphoreGive(i2cMutex);return ok;
 }
-void boardSensorsBegin(){uint8_t control=0;rtcAvailable=rtcRead(0,&control,1);}
+void boardSensorsBegin(){
+  uint8_t control=0;rtcAvailable=false;
+  for(unsigned attempt=0;attempt<3&&!rtcAvailable;++attempt){rtcAvailable=rtcRead(0,&control,1);if(!rtcAvailable)delay(10);}
+}
 static int decodeBcd(uint8_t value){return (value&15)<=9&&(value>>4)<=9?(value>>4)*10+(value&15):-1;}
 bool boardReadRtc(uint32_t& epoch){
   uint8_t control=0,b[7]{};if(!rtcAvailable||!rtcRead(0,&control,1)||(control&0xa0)||!rtcRead(2,b,7)||(b[0]&0x80))return false;
@@ -118,8 +121,14 @@ bool boardReadRtc(uint32_t& epoch){
 bool boardWriteRtc(uint32_t epoch){
   if(!rtcAvailable||!dragon::validEpoch(epoch))return false;time_t value=epoch;struct tm date{};gmtime_r(&value,&date);
   auto bcd=[](int v){return uint8_t((v/10)*16+v%10);};uint8_t control=0;
-  if(!rtcRead(0,&control,1))return false;control=(control&~0x80)|0x20;if(!rtcWrite(0,&control,1))return false;
+  if(!rtcRead(0,&control,1))return false;
+  // Normal mode: TEST1/TESTC and reserved bits zero; stop only for the write.
+  control=0x20;if(!rtcWrite(0,&control,1))return false;
   uint8_t b[]={bcd(date.tm_sec),bcd(date.tm_min),bcd(date.tm_hour),bcd(date.tm_mday),uint8_t(date.tm_wday),bcd(date.tm_mon+1),bcd(date.tm_year%100)};
   bool written=rtcWrite(2,b,7);control&=~0x20;bool restarted=rtcWrite(0,&control,1);
   uint32_t readback=0;return written&&restarted&&boardReadRtc(readback)&&readback>=epoch&&readback-epoch<=1;
+}
+void boardRtcDiagnostics(){
+  uint8_t control=0,seconds=0;bool ok=rtcRead(0,&control,1)&&rtcRead(2,&seconds,1);
+  Serial.printf("CLOCK_DIAGNOSTICS chip=BM8563 io=%u control=%02x lost=%u\n",ok,control,(seconds&0x80)!=0);
 }

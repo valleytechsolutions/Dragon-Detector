@@ -145,4 +145,5 @@ bool configureOrientation(int degrees); // saved clockwise angle
 void boardSensorsBegin();
 bool boardReadRtc(uint32_t& epoch);
 bool boardWriteRtc(uint32_t epoch);
+void boardRtcDiagnostics();
 bool uiStopwatchKey(bool start,uint64_t at=0);
