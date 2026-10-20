@@ -3,7 +3,32 @@
 
 #define BTN_PIN 0
 
-#if defined(BOARD_CROWPANEL_21)
+#if defined(BOARD_LILYGO_175)
+// H0175Y003AM round panel. Pins/geometry match the owner's tested 0.13.20 BIN.
+#define BOARD_NAME "LilyGo T-Display-S3-AMOLED-1.75"
+#define SCREEN_RES 466
+#define BOARD_HAS_AUDIO 0
+#define BOARD_HAS_SD 1
+#define BOARD_SD_SPI 1
+#define LCD_SDIO0 11
+#define LCD_SDIO1 13
+#define LCD_SDIO2 14
+#define LCD_SDIO3 15
+#define LCD_SCLK 12
+#define LCD_CS 10
+#define LCD_RESET 17
+#define LCD_ENABLE 16
+#define LCD_COL_OFFSET 6
+#define IIC_SDA 7
+#define IIC_SCL 6
+#define TP_RESET -1
+#define TP_INT 9
+#define TP_I2C_ADDR 0x5A
+#define LILY_SD_CS 38
+#define LILY_SD_MOSI 39
+#define LILY_SD_MISO 40
+#define LILY_SD_SCLK 41
+#elif defined(BOARD_CROWPANEL_21)
 #define BOARD_NAME "Elecrow CrowPanel 2.1 Rotary"
 #define SCREEN_RES 480
 #define BOARD_HAS_AUDIO 0

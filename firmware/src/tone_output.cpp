@@ -1,7 +1,7 @@
 // Original MIT PCM generator; ES8311 driver is separately Apache-2.0.
 #include "app.h"
 #include "board_pins.h"
-#if defined(BOARD_XIAO_ROUND) || defined(BOARD_CROWPANEL_21)
+#if defined(BOARD_LILYGO_175) || defined(BOARD_XIAO_ROUND) || defined(BOARD_CROWPANEL_21)
 // These boards have no configured speaker, codec or buzzer.
 bool toneOutputBegin(){return false;}
 void toneOutput(uint16_t,uint16_t,uint8_t){}

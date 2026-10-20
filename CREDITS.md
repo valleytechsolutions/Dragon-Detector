@@ -234,6 +234,10 @@ Hardware mapping was checked against Waveshare's official schematic, hardware re
 
 [JustCallMeKoko / ESP32 Marauder](https://github.com/justcallmekoko/ESP32Marauder/tree/d3ceb28afeda1196ca27c13adeaa69ada52383f3) supplied the AirTag/FMNA/DULT service and command references and the Find My Sound workflow. Its MIT notices remain in the repository. The direct-request worker, response handling, tracker selection UI, iBeacon configuration/parser and tests are original Dragon Detector code. DULT response distinctions follow the [accessory protocol draft](https://datatracker.ietf.org/doc/html/draft-ledvina-dult-accessory-protocol-00), a work in progress.
 
+## LILYGO T-Display-S3 AMOLED 1.75 port
+
+Hardware pin and protocol facts follow [LILYGO's 1.43/1.75 hardware repository](https://github.com/Xinyuan-LilyGO/T-Display-S3-AMOLED-1.43-1.75), reviewed at `87aabe888eea6a7c0f95ce1991ca75fa98c2a172`, and NXP's PCF8563 datasheet. The supplied working 0.13.20 binary was checked for display/touch configuration and flash layout. The adapter uses the project's existing CO5300 driver and pinned SensorLib CST9217 driver, whose notices remain included. Vendor example applications are not bundled. See the [hardware and clock guide](docs/LILYGO-AMOLED-175.md).
+
 ## Elecrow CrowPanel 2.1 Rotary port
 
 The board pin mapping, ST7701 initialization selection, RGB timings and PCF8574 reset sequence follow Elecrow’s official hardware examples at revision `52c772195033bf0c08568fa21cfc8606bac75df0`. The touch, encoder and LVGL integration are project code. [Hardware sources](docs/ELECROW-ROTARY-21.md#sources).

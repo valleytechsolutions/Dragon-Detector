@@ -33,6 +33,7 @@ No firmware can know how long an unpowered clock was off without an independent 
 
 | Device | Time source | After shutdown |
 |---|---|---|
+| LILYGO AMOLED **1.75 H0175Y003AM** · beta | PCF8563 hardware RTC | Requires its fitted RTC backup supply; new off-time retention checks await physical testing |
 | Waveshare AMOLED **1.75 non-C / -G** · beta | PCF85063 hardware RTC | Requires a powered RTC supply; battery-backed retention awaits hardware testing |
 | M5Stack StopWatch C152 | RX8130CE hardware RTC | 0.13.25 enables L1 power hold to keep the RTC supplied during normal button shutdown while the main battery is charged |
 | Seeed XIAO + Round Display | BM8563/PCF8563-compatible hardware RTC | Install a healthy CR927 backup coin cell for timekeeping when the display supply is off |

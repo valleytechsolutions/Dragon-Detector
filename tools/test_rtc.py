@@ -133,8 +133,9 @@ int main(){
 }
 '''
 
-for board, fake, test in [('stopwatch', STOPWATCH, STOPWATCH_TEST), ('xiao_round', XIAO, XIAO_TEST)]:
+for board, fake, test in [('stopwatch', STOPWATCH, STOPWATCH_TEST), ('xiao_round', XIAO, XIAO_TEST), ('lilygo_175', XIAO, XIAO_TEST.replace('Wire.registers[0]=0xa8;', 'Wire.registers[0]=0x08;assert(!boardReadRtc(result));Wire.registers[0]=0xa8;'))]:
     driver = (ROOT / f'firmware/src/board_{board}.cpp').read_text(encoding='utf-8')
+    if board=='lilygo_175':driver=driver.rsplit('\n#endif',1)[0]
     source = WORK / f'{board}.cpp'
     source.write_text(PRELUDE + fake + driver[driver.index('static bool rtcRead('):] + test, encoding='utf-8')
     exe = WORK / (board + ('.exe' if sys.platform == 'win32' else ''))

@@ -1,5 +1,5 @@
 export function hasRepeatingBeeper(board,version){const m=/^(\d+)\.(\d+)\.(\d+)$/.exec(version||'');return hasBleTools(board,version)&&!!m&&Number(m[3])>=22;}
-export function hasBleTools(board,version){return ['waveshare','waveshare_175','waveshare_175_gps','stopwatch','spotpear','xiao_round'].includes(board)&&/^0\.13\.(?:2\d|[3-9]\d|[1-9]\d{2,})$/.test(version);}
+export function hasBleTools(board,version){return ['lilygo_175','waveshare','waveshare_175','waveshare_175_gps','stopwatch','spotpear','xiao_round'].includes(board)&&/^0\.13\.(?:2\d|[3-9]\d|[1-9]\d{2,})$/.test(version);}
 export function observedAddress(value){if(!/^[0-9a-f]{2}(?::[0-9a-f]{2}){5} [0-3]$/i.test(value))throw new Error('Refresh nearby devices and choose your peripheral.');return value;}
 export function iBeaconCommand(uuid,major,minor,power){
  uuid=String(uuid).trim().toLowerCase();if(!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(uuid))throw new Error('Enter a UUID in 8-4-4-4-12 format.');

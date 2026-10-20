@@ -49,7 +49,7 @@ def build(output):
     for source in (ROOT / 'web').rglob('*'):
         if not source.is_file() or source.is_symlink():
             continue
-        if source.name == 'factory-0x0.bin' and source.parent.name != 'stopwatch':
+        if source.name == 'factory-0x0.bin' and source.parent.name not in ('stopwatch','lilygo_175'):
             continue
         relative = source.relative_to(ROOT / 'web')
         if any(part.startswith('.') for part in relative.parts):
@@ -58,7 +58,7 @@ def build(output):
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, target)
 
-    # USB installation uses split images. Keep the C152 merged image for M5Burner.
+    # USB installation uses split images. Keep combined C152/LILYGO images too.
     for folder in (output / 'firmware').iterdir():
         records = {}
         for line in (folder / 'SHA256SUMS.txt').read_text().splitlines():
@@ -143,7 +143,9 @@ def build(output):
         downloads.append('<h2>' + html.escape(info['name'].removesuffix(' (factory)')) + '</h2>')
         downloads.append('<p>Version ' + html.escape(info['version']) + '</p>')
         metadata = json.loads((folder / 'build-info.json').read_text(encoding='utf-8'))
-        if metadata.get('board') == 'elecrow_21':
+        if metadata.get('board') == 'lilygo_175':
+            downloads.append('<p><strong>Beta — working display/touch baseline reported; new RTC/SD checks await hardware testing.</strong> <a href="LILYGO-AMOLED-175.html">Installation, RTC and SD</a>.</p>')
+        elif metadata.get('board') == 'elecrow_21':
             status = 'initial hardware checks passed; wider field testing remains' if metadata.get('hardware_validation') == 'initial-unit-verified' else 'physical testing in progress'
             downloads.append(f'<p><strong>Experimental — {status}.</strong> '
                              '<a href="ELECROW-ROTARY-21.html">Installation and rotary controls</a>.</p>')

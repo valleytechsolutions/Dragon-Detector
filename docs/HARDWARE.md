@@ -1,6 +1,6 @@
 # Exact board profiles
 
-Current firmware: **0.13.23**. Another display on the same ESP32-S3 needs different firmware.
+Current firmware: **0.13.25**. Another display on the same ESP32-S3 needs different firmware.
 
 [Device purchase links and exact model choices](../README.md#supported-hardware) · [Shop from the web flasher](https://valleytech-dragon-detector.pages.dev/#buy-hardware). The XIAO setup needs both the ESP32-S3 board and Round Display. Waveshare 1.75C, 1.75 and 1.75-G use separate installer profiles.
 
@@ -24,6 +24,10 @@ Current firmware: **0.13.23**. Another display on the same ESP32-S3 needs differ
 | Capture files / profiles download | USB web tools | USB web tools | USB web tools; separate SD logs | USB web tools; separate SD logs | None |
 
 All four full boards use the same classifiers and lab workflows; Waveshare's advantage is dedicated recon storage, not different radio bands or extra processing power. Builds and new writes check available space; existing files are never deleted automatically. [Exact budgets](FLASH-BUDGET.md) · [Feature limits](FEATURE-MATRIX.md) · [GUI tour](GUI.md).
+
+## LILYGO round AMOLED 1.75
+
+The `lilygo_175` beta profile covers the **H0175Y003AM** round 466 × 466 CO5300/CST9217 panel, 16 MB flash, 8 MB PSRAM, PCF8563 RTC and SPI microSD. The full radar, themes, badge, clocks, radio tools and BLE Lab use 7.94 MiB shared internal storage and a 2 MiB capture buffer. There is no configured speaker, GPS or haptic motor. The owner's supplied 0.13.20 baseline was reported working; the new RTC/SD behavior requires physical testing. [Installation, backup supply and SD setup](LILYGO-AMOLED-175.md). This is not a profile for the rectangular 1.64-inch display.
 
 ## Experimental non-C AMOLED 1.75
 
