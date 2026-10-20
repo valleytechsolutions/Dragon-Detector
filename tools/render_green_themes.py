@@ -29,18 +29,18 @@ zig = [sys.executable, "-m", "ziglang"]
 includes = ["-I"+str(stub), "-I"+str(lv), "-I"+str(root/"firmware/include"), "-DLV_CONF_INCLUDE_SIMPLE"]
 lib = stub / "lvgl.lib"
 shared = root / ".work/can-commander/native"
-if (shared/"lv_conf.h").is_file() and (shared/"lv_conf.h").read_text() == config and (shared/"lvgl.lib").is_file():
+if (shared/"lv_conf.h").is_file() and (shared/"lv_conf.h").read_text(encoding='utf-8') == config and (shared/"lvgl.lib").is_file():
     lib = shared / "lvgl.lib"
 if not lib.exists():
     sources = [str(p) for p in (lv/"src").rglob("*.c") if "demos" not in p.parts]
     args = ["-lc","-O","ReleaseFast","--name","lvgl",*includes,"-femit-bin="+str(lib),"-cflags","-std=c99","--",*sources]
     (stub/"lvgl.rsp").write_text(" ".join('"'+a.replace("\\","/")+'"' for a in args))
     subprocess.run(zig+["build-lib","@"+str(stub/"lvgl.rsp")], check=True, cwd=root)
-renderer = (root/"firmware/src/radar_renderer.inc").read_text()
+renderer = (root/"firmware/src/radar_renderer.inc").read_text(encoding='utf-8')
 helpers = renderer[renderer.index("static void line("):renderer.index('#include "lpl_radar.inc"')]
-art = (root/"firmware/src/cyber_runner.inc").read_text()
+art = (root/"firmware/src/cyber_runner.inc").read_text(encoding='utf-8')
 art = art[art.index("static void themeStroke"):art.index("static void boneSweep")]
-panel = (root/"firmware/src/capsule_theme.inc").read_text()
+panel = (root/"firmware/src/capsule_theme.inc").read_text(encoding='utf-8')
 panel = panel[panel.index("static void capsulePanel"):panel.index("static void capsuleShell")]
 source = """#include <lvgl.h>
 #include <algorithm>
@@ -88,7 +88,7 @@ int main(int argc,char** argv){
 }
 """
 (stub/"render.cpp").write_text(source)
-for size,flag in [(240,"BOARD_RADAR_LITE"),(360,None),(466,"BOARD_STOPWATCH")]:
+for size,flag in [(240,"BOARD_RADAR_LITE"),(360,None),(466,"BOARD_STOPWATCH"),(480,"BOARD_CROWPANEL_21")]:
     exe=stub/f"render-{size}.exe"
     subprocess.run(zig+["c++","-std=c++17","-O2",*includes,*(["-D"+flag] if flag else []),str(stub/"render.cpp"),str(root/"firmware/src/radar_logo.cpp"),str(lib),"-o",str(exe)],check=True,cwd=root)
     subprocess.run([str(exe),str(work)],check=True,cwd=root)
