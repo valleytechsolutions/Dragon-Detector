@@ -62,6 +62,7 @@ async function chooseBoard(next) {
   $('board-storage').textContent = boardProfiles[board].storage;
   $('board-features').textContent = boardProfiles[board].features;
   $('board-sd-setup').hidden = !['waveshare_175','waveshare_175_gps'].includes(board);
+  $('board-rotary-setup').hidden = board!=='elecrow_21';
   $('auto-clock-label').hidden=false;
   $('finish-clock').hidden=true;
   $('clock-setup-status').textContent='Keep USB connected: local date, time and timezone will be set and verified automatically after flashing.';

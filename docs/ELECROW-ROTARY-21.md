@@ -1,6 +1,6 @@
 # Elecrow CrowPanel 2.1 Rotary
 
-This experimental profile targets the **CrowPanel 2.1-inch HMI ESP32-S3 rotary display**, hardware V1.0, with a 480 × 480 IPS touchscreen, 16 MB flash and 8 MB PSRAM. It is intended for stationary USB-powered use. Display, touch and rotary operation still need physical validation.
+This experimental profile targets the **CrowPanel 2.1-inch HMI ESP32-S3 rotary display**, hardware V1.0, with a 480 × 480 IPS touchscreen, 16 MB flash and 8 MB PSRAM. It is intended for stationary USB-powered use. Boot, display alignment and color order have been verified on a physical unit. Rotary and touchscreen validation is in progress.
 
 The profile includes the full radar interface, 35 built-in themes, logo watch faces, the optional personal theme, badge, clock, stopwatch and locksport timers, notebook and shared radio tools. It has no SD controls. Captures and profiles use internal storage and can be downloaded over USB. No speaker, haptic motor, battery gauge or external RTC is configured.
 
@@ -16,6 +16,8 @@ The profile includes the full radar interface, 35 built-in themes, logo watch fa
 | Touch | Use the normal touchscreen interface, including gestures and the keyboard |
 
 The rear **BOOT** and **RESET** buttons are for startup and recovery. The ring's press switch is separate from BOOT. Clock and timer pages pause background scanning, as on the other boards.
+
+Navigation advances one control at a time, at most once every 180 ms. Fast turns are coalesced so a burst cannot skip through a whole menu or keep scrolling after you stop. A press selects the currently highlighted control.
 
 ## Installation
 
@@ -41,7 +43,7 @@ There is no external RTC configured. The clock keeps running while powered, but 
 | ST7701 command bus | Software SPI: CS 16, SCK 2, MOSI 1 |
 | RGB timing signals | DE 40, VSYNC 7, HSYNC 15, PCLK 41 |
 | RGB data | R: 46/3/8/18/17; G: 14/13/12/11/10/9; B: 5/45/48/47/21 |
-| RGB timing | 12 MHz; horizontal and vertical front porch 10, pulse 4, back porch 20; 20-line bounce buffer |
+| RGB timing | 8 MHz; horizontal and vertical front porch 10, pulse 4, back porch 20; 20-line bounce buffer |
 | Shared I²C | SDA 38, SCL 39 |
 | PCF8574 at 0x21 | P0 touch reset, P2 touch interrupt line, P3 LCD power, P4 LCD reset, P5 active-low ring press |
 | CST826 at 0x15 | Touch coordinates; chip identifier 0x11 |
@@ -51,11 +53,11 @@ There is no external RTC configured. The clock keeps running while powered, but 
 | Internal files | 0x810000, 7.94 MiB shared filesystem |
 | Capture limits | 1 MiB RAM capture buffer; 256 KiB per recon session |
 
-The display dependency is pinned to Arduino_GFX 1.5.6. This profile retains the project's Arduino 3.0.7 framework and supplies the compatible ESP-IDF 5.1 name for the SPI interrupt selector. Other board profiles keep their own display drivers.
+Panel commands use Arduino_GFX 1.5.6. RGB output uses the ESP-IDF driver directly, with two complete frame buffers, 20-line DMA bounce buffers and periodic VSYNC recovery after flash/cache stalls. LVGL draws a complete frame before it is submitted. The old frame buffer is reused only after two frame-boundary callbacks, including a callback that could race with submission. The flush path converts LVGL byte order and the panel's BGR channels without modifying the LVGL drawing buffer. This profile retains the project's Arduino 3.0.7 framework and supplies the compatible ESP-IDF 5.1 name for the SPI interrupt selector. Other board profiles keep their own display drivers.
 
 ## Physical validation
 
-Before treating this as a tested board, verify:
+Initial checks on 2026-10-19 verified the 16 MB flash / 8 MB PSRAM identity, a full backup, startup, 23 firmware self-tests, passive scanning, centered output, color order and USB clock readback. Extended checks remain:
 
 - Chip identity, 16 MB flash and PSRAM availability; save a private full flash backup.
 - Boot animation, color order, centering and stability while scanning.
@@ -64,7 +66,7 @@ Before treating this as a tested board, verify:
 - Clock setup, timer operation and internal capture export.
 - A longer powered run with no display drift, reset or memory allocation failure.
 
-Serial commands `rotary status` and `touch status` report input counts and I²C errors for troubleshooting. A successful compile or encoder unit test does not validate the physical wiring.
+Serial commands `rotary status` and `touch status` report input counts and I²C errors for troubleshooting. `rotary status` also reports completed display frames and buffer-wait timeouts. A successful compile or encoder unit test does not validate the physical wiring.
 
 ## Sources
 

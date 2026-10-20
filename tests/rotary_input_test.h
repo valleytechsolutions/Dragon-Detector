@@ -39,5 +39,19 @@ static void rotaryInputTests(){
   RotaryButton bootHeld;bootHeld.update(true,0);bootHeld.update(true,40);
   assert(bootHeld.update(true,1000)==Event::None);bootHeld.update(false,1100);
   assert(bootHeld.update(false,1140)==Event::None);
+  RotaryNavigation navigation;
+  navigation.push(12,0);assert(navigation.take(0)==1);
+  for(uint32_t t=10;t<180;t+=10){
+    navigation.push(48,t);assert(navigation.take(t)==0);
+  }
+  assert(navigation.take(180)==1);assert(navigation.take(400)==0);
+  navigation.push(48,410);navigation.push(-48,420);
+  assert(navigation.take(420)==-1); // most recent direction wins, no backlog
+  navigation.push(1,450);navigation.clear();assert(navigation.take(700)==0);
+  navigation.push(1,710);assert(navigation.take(911)==0); // stale input expires
+  RotaryNavigation navWrap;navWrap.push(1,0xfffffff0u);
+  assert(navWrap.take(0xfffffff0u)==1);navWrap.push(-1,40);
+  assert(navWrap.take(40)==0);assert(navWrap.take(164)==-1);
   puts("PASS: rotary detents, reversal, bounce, missed edges, short/held presses, rollover and boot-held button");
+  puts("PASS: rotary navigation burst limiting, direction changes, cancel, expiry and rollover");
 }

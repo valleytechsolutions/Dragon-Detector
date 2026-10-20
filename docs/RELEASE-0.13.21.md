@@ -1,9 +1,15 @@
-# Dragon Detector 0.13.21 — AMOLED 1.75 SD/GPS beta
+# Dragon Detector 0.13.21 — Elecrow rotary port and AMOLED SD/GPS beta
 
 This beta extends the owner-tested **16 MB non-C Waveshare
 ESP32-S3-Touch-AMOLED-1.75** baseline. It adds a separate build for the
 **1.75-G with onboard LC76G GPS**. The new SD, GPS and touch behavior has not
 been tested on physical hardware. The existing 1.75C is a different, 32 MB board.
+
+## Elecrow CrowPanel 2.1 Rotary
+
+Adds a separate 480 × 480 IPS profile with touch, rotary navigation and press-to-select. It includes the shared themes, watch faces and timers, USB clock setup and internal storage, with no SD controls. The RGB driver corrects the panel color order and recovers display synchronization after flash/cache stalls. Initial display and startup checks passed on hardware; extended validation is ongoing. See the [Elecrow setup guide](ELECROW-ROTARY-21.md).
+
+Existing board downloads retain their separately listed versions.
 
 ## Device interaction
 
@@ -68,7 +74,7 @@ Native checks cover GNSS parsing, CSV escaping, queue pressure, production SD
 writer fault injection/32 MiB rollover, production GPS transport simulation,
 FAT32 replacement recovery, tap identity/timing, board pin isolation and RTC
 failure handling. Existing detector and protocol regression fixtures are included.
-The browser suite passes 99 tests, including larger capture downloads and GPS
+The browser suite passes 103 tests, including larger capture downloads and GPS
 manifest identity checks.
 
 Release packaging records the exact source commit, verifies merged-image offsets

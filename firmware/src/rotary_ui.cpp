@@ -1,13 +1,14 @@
 #ifdef BOARD_CROWPANEL_21
 #include "app.h"
 #include "rotary_ui.h"
+#include "rotary_input.h"
 #include "ui_theme.h"
 
 namespace {
 lv_group_t* group=nullptr;
 lv_obj_t* members[160]{};
 unsigned memberCount=0;
-int pendingSteps=0;
+dragon::RotaryNavigation navigation;
 unsigned pendingClicks=0;
 bool releasing=false;
 
@@ -32,12 +33,8 @@ void collect(lv_obj_t* obj,lv_obj_t** found,unsigned& count){
 void readEncoder(lv_indev_drv_t*,lv_indev_data_t* data){
   data->key=LV_KEY_ENTER;data->enc_diff=0;
   if(releasing){releasing=false;data->state=LV_INDEV_STATE_REL;}
-  else if(pendingSteps){
-    data->enc_diff=constrain(pendingSteps,-12,12);pendingSteps-=data->enc_diff;
-    data->state=LV_INDEV_STATE_REL;
-  }
   else if(pendingClicks){--pendingClicks;releasing=true;data->state=LV_INDEV_STATE_PR;}
-  else data->state=LV_INDEV_STATE_REL;
+  else {data->enc_diff=navigation.take(millis());data->state=LV_INDEV_STATE_REL;}
 }
 }
 void rotaryUiBegin(){
@@ -48,10 +45,10 @@ void rotaryUiBegin(){
 }
 void rotaryUiInput(int steps,bool click,bool back){
   if(!group||(!steps&&!click&&!back))return;
-  if(uiRotaryWake())return;
-  if(back){pendingSteps=0;pendingClicks=0;releasing=false;lv_group_set_editing(group,false);uiKey(true);return;}
-  pendingSteps=constrain(pendingSteps+steps,-48,48);
-  if(click)pendingClicks=std::min(4u,pendingClicks+1);
+  if(uiRotaryWake()){navigation.clear();return;}
+  if(back){navigation.clear();pendingClicks=0;releasing=false;lv_group_set_editing(group,false);uiKey(true);return;}
+  if(click){navigation.clear();pendingClicks=1;}
+  else if(!pendingClicks&&!releasing)navigation.push(steps,millis());
 }
 void rotaryUiLoop(){
   if(!group)return;
@@ -62,6 +59,7 @@ void rotaryUiLoop(){
   bool changed=count!=memberCount||lv_group_get_obj_count(group)!=count;
   for(unsigned i=0;i<count&&!changed;++i)changed=found[i]!=members[i];
   if(!changed)return;
+  navigation.clear();
   auto* focused=lv_group_get_focused(group);bool keep=false;
   for(unsigned i=0;i<count;++i)if(found[i]==focused)keep=true;
   bool editing=keep&&lv_group_get_editing(group);

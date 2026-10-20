@@ -19,6 +19,24 @@ public:
 };
 
 enum class RotaryPress {None,Click,Back};
+class RotaryNavigation {
+  int pending=0;
+  bool stepped=false;
+  uint32_t receivedAt=0,steppedAt=0;
+public:
+  void clear(){pending=0;}
+  void push(int steps,uint32_t now){
+    if(!steps)return;
+    pending=steps>0?1:-1;receivedAt=now;
+  }
+  int take(uint32_t now){
+    if(!pending)return 0;
+    if(uint32_t(now-receivedAt)>200){pending=0;return 0;}
+    if(stepped&&uint32_t(now-steppedAt)<180)return 0;
+    int step=pending;pending=0;stepped=true;steppedAt=now;return step;
+  }
+};
+
 class RotaryButton {
   bool raw=false,stable=false,held=false,armed=false;
   uint32_t changedAt=0,pressedAt=0;

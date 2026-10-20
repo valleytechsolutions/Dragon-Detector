@@ -7,15 +7,21 @@
 #include <lvgl.h>
 #include <hal/gpio_ll.h>
 #include <soc/gpio_struct.h>
+#include <esp_lcd_panel_rgb.h>
+#include <esp_lcd_panel_ops.h>
+#include <freertos/semphr.h>
 
 extern bool uiTouch(bool,int,int);
 namespace {
 // Elecrow Board21.h, hardware revision V1.0; see docs/ELECROW-ROTARY-21.md.
 Arduino_SWSPI initBus(GFX_NOT_DEFINED,16,2,1,GFX_NOT_DEFINED);
-Arduino_ESP32RGBPanel rgb(40,7,15,41,46,3,8,18,17,14,13,12,11,10,9,
-  5,45,48,47,21,1,10,4,20,1,10,4,20,0,12000000,false,0,0,480*20);
-Arduino_RGB_Display panel(480,480,&rgb,0,true,&initBus,GFX_NOT_DEFINED,
-  st7701_type5_init_operations,sizeof(st7701_type5_init_operations));
+esp_lcd_panel_handle_t panel=nullptr;
+uint16_t* framebuffers[2]{};
+SemaphoreHandle_t frameFinished=nullptr;
+volatile uint32_t frameBoundaries=0;
+uint32_t submittedAt=0,frameWaitTimeouts=0;
+unsigned drawIndex=1;
+bool framePending=false;
 lv_disp_draw_buf_t drawBuffer;
 lv_disp_drv_t displayDriver;
 uint8_t expander=0xff;
@@ -29,6 +35,58 @@ uint32_t clicks=0,holds=0,touchPresses=0,touchSamples=0,i2cErrors=0;
 int lastX=0,lastY=0,position=0;
 bool injected=false,injectedPress=false;
 int injectedX=0,injectedY=0;
+
+bool IRAM_ATTR frameComplete(esp_lcd_panel_handle_t,const esp_lcd_rgb_panel_event_data_t*,void*){
+  ++frameBoundaries;
+  BaseType_t wake=pdFALSE;
+  xSemaphoreGiveFromISR(frameFinished,&wake);
+  return wake==pdTRUE;
+}
+bool drawingBufferAvailable(){
+  if(!framePending)return true;
+  uint32_t started=millis();
+  // IDF selects the bounce buffer source just before its frame-finish callback.
+  // Two boundaries also cover a callback racing with draw_bitmap().
+  while(uint32_t(frameBoundaries-submittedAt)<2){
+    if(millis()-started>=150){++frameWaitTimeouts;esp_lcd_rgb_panel_restart(panel);return false;}
+    xSemaphoreTake(frameFinished,pdMS_TO_TICKS(15));
+  }
+  framePending=false;return true;
+}
+void beginPanel(){
+  if(!initBus.begin()){Serial.println("FATAL CrowPanel command bus");abort();}
+  initBus.sendCommand(0x01);delay(120);
+  initBus.batchOperation(st7701_type5_init_operations,sizeof(st7701_type5_init_operations));
+  initBus.beginWrite();initBus.writeCommand(0x36);initBus.write(0x08);initBus.endWrite();
+  esp_lcd_rgb_panel_config_t config{};
+  config.clk_src=LCD_CLK_SRC_DEFAULT;
+  // 8 MHz leaves bandwidth for radio activity and flash writes on the shared bus.
+  config.timings.pclk_hz=8000000;
+  config.timings.h_res=480;config.timings.v_res=480;
+  config.timings.hsync_pulse_width=4;config.timings.hsync_back_porch=20;config.timings.hsync_front_porch=10;
+  config.timings.vsync_pulse_width=4;config.timings.vsync_back_porch=20;config.timings.vsync_front_porch=10;
+  config.data_width=16;config.bits_per_pixel=16;config.num_fbs=2;
+  config.bounce_buffer_size_px=480*20;
+  config.sram_trans_align=8;config.psram_trans_align=64;
+  config.hsync_gpio_num=15;config.vsync_gpio_num=7;config.de_gpio_num=40;
+  config.pclk_gpio_num=41;config.disp_gpio_num=-1;
+  const int pins[]={5,45,48,47,21,14,13,12,11,10,9,46,3,8,18,17};
+  for(unsigned i=0;i<16;++i)config.data_gpio_nums[i]=pins[i];
+  config.flags.fb_in_psram=true;
+  frameFinished=xSemaphoreCreateBinary();
+  if(!frameFinished){Serial.println("FATAL CrowPanel frame semaphore");abort();}
+  ESP_ERROR_CHECK(esp_lcd_new_rgb_panel(&config,&panel));
+  esp_lcd_rgb_panel_event_callbacks_t callbacks{};
+  callbacks.on_bounce_frame_finish=frameComplete;
+  ESP_ERROR_CHECK(esp_lcd_rgb_panel_register_event_callbacks(panel,&callbacks,nullptr));
+  ESP_ERROR_CHECK(esp_lcd_panel_reset(panel));
+  void* first=nullptr;void* second=nullptr;
+  ESP_ERROR_CHECK(esp_lcd_rgb_panel_get_frame_buffer(panel,2,&first,&second));
+  framebuffers[0]=static_cast<uint16_t*>(first);
+  framebuffers[1]=static_cast<uint16_t*>(second);
+  for(auto* framebuffer:framebuffers)memset(framebuffer,0,480*480*2);
+  ESP_ERROR_CHECK(esp_lcd_panel_init(panel));
+}
 
 bool writeExpander(uint8_t value){
   Wire.beginTransmission(CROW_EXPANDER_ADDR);Wire.write(value);
@@ -76,9 +134,7 @@ void boardBegin(){
   expanderPin(4,false);delay(120);expanderPin(4,true);delay(120);
   expanderPin(0,false);delay(120);expanderPin(0,true);delay(120);
   expanderPin(2,true);delay(120);
-  if(!panel.begin()){Serial.println("FATAL CrowPanel RGB panel");while(true)delay(100);}
-  initBus.beginWrite();initBus.writeCommand(0x36);initBus.write(0x08);initBus.endWrite();
-  panel.fillScreen(0);
+  beginPanel();
   uint8_t id=0;touchReady=readTouchRegs(0xaa,&id,1)&&id==0x11;
   ledcAttach(CROW_BACKLIGHT,5000,8);ledcWrite(CROW_BACKLIGHT,204);
   pinMode(CROW_ENCODER_A,INPUT_PULLUP);pinMode(CROW_ENCODER_B,INPUT_PULLUP);
@@ -94,8 +150,24 @@ void scr_lvgl_init(){
   if(!pixels){Serial.println("FATAL CrowPanel LVGL buffer");abort();}
   lv_disp_draw_buf_init(&drawBuffer,pixels,nullptr,480*480);
   lv_disp_drv_init(&displayDriver);displayDriver.hor_res=480;displayDriver.ver_res=480;displayDriver.draw_buf=&drawBuffer;
+  displayDriver.full_refresh=1;
   displayDriver.flush_cb=[](lv_disp_drv_t* drv,const lv_area_t* area,lv_color_t* data){
-    panel.draw16bitBeRGBBitmap(area->x1,area->y1,(uint16_t*)data,area->x2-area->x1+1,area->y2-area->y1+1);
+    if(!drawingBufferAvailable()){lv_disp_flush_ready(drv);return;}
+    auto* framebuffer=framebuffers[drawIndex];
+    for(int y=area->y1;y<=area->y2;++y){
+      auto* dest=framebuffer+y*480+area->x1;
+      for(int x=area->x1;x<=area->x2;++x){
+        uint16_t pixel=(data++)->full;
+#if LV_COLOR_16_SWAP
+        pixel=__builtin_bswap16(pixel);
+#endif
+        // The ST7701 RGB interface uses BGR with the vendor's MADCTL setting.
+        *dest++=(pixel&0x07e0)|((pixel&0x001f)<<11)|((pixel&0xf800)>>11);
+      }
+    }
+    // Bounce buffers read through the CPU cache; no PSRAM writeback is needed.
+    ESP_ERROR_CHECK(esp_lcd_panel_draw_bitmap(panel,0,0,480,480,framebuffer));
+    submittedAt=frameBoundaries;framePending=true;drawIndex^=1;
     lv_disp_flush_ready(drv);
   };
   lv_disp_drv_register(&displayDriver);
@@ -103,6 +175,8 @@ void scr_lvgl_init(){
   rotaryUiBegin();
 }
 void boardLoop(){
+  static uint32_t refreshed=0;
+  if(millis()-refreshed>=100){refreshed=millis();esp_lcd_rgb_panel_restart(panel);}
   portENTER_CRITICAL(&encoderMux);int steps=detents;detents=0;portEXIT_CRITICAL(&encoderMux);
   position+=steps;bool click=false,back=false;
   static uint32_t polled=0;
@@ -119,6 +193,7 @@ void boardLoop(){
 void crowInputStatus(){
   Serial.printf("ROTARY_STATUS position=%d edges=%lu clicks=%lu holds=%lu errors=%lu\n",position,edges,clicks,holds,i2cErrors);
   Serial.printf("TOUCH_STATUS enabled=%u presses=%lu samples=%lu xy=%d,%d\n",touchReady,touchPresses,touchSamples,lastX,lastY);
+  Serial.printf("DISPLAY_STATUS frames=%lu wait_timeouts=%lu buffers=2 pclk=8000000\n",frameBoundaries,frameWaitTimeouts);
 }
 int batteryPercent(){return -1;}
 bool batteryCharging(){return false;}
