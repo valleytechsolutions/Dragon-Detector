@@ -37,6 +37,11 @@ test('wrong manifest is rejected before requesting binaries',async()=>{
   await assert.rejects(checkRelease('waveshare','factory',r),/does not match/);assert.equal(r.requests.length,1);
 });
 
+test('CDN HEAD responses may omit content length without making the release unavailable',async()=>{
+  const data=await checkRelease('waveshare','factory',rig('waveshare','factory',{headers:new Headers({'content-type':'application/octet-stream'})}));
+  assert.equal(data.version,'0.13.26');
+});
+
 test('network errors, timeouts and cancellation have bounded recovery messages',async()=>{
   await assert.rejects(checkRelease('waveshare','factory',{fetchImpl:async()=>{throw new TypeError('Failed to fetch');}}),/internet connection/);
   const fetchImpl=async(url,{signal})=>new Promise((resolve,reject)=>{

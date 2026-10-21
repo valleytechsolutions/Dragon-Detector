@@ -17,11 +17,13 @@ export async function checkRelease(board,mode,{fetchImpl=fetch,signal,timeoutMs=
     await Promise.all(manifest.builds[0].parts.map(async part=>{
       const file=await fetchImpl(base+part.path,{...options,method:'HEAD'});
       if(!file.ok)throw new Error(`${part.path} is unavailable (HTTP ${file.status}). No installation was started.`);
-      const size=Number(file.headers.get('content-length'));
-      if(!Number.isSafeInteger(size)||size<=0||/text\/html/i.test(file.headers.get('content-type')||''))
+      // Cloudflare can omit Content-Length on HTTP/2 HEAD responses. Absence
+      // is not an empty file; validate a declared size when one is provided.
+      const length=file.headers.get('content-length'),size=length===null?null:Number(length);
+      if((size!==null&&(!Number.isSafeInteger(size)||size<=0))||/text\/html/i.test(file.headers.get('content-type')||''))
         throw new Error(`${part.path} did not return a valid firmware file. Retry or report this release.`);
       const capacity=(board==='waveshare'?32:board==='xiao_round'?8:16)*1024*1024;
-      if(part.offset+size>capacity)throw new Error(`${part.path} exceeds this board's flash capacity.`);
+      if(size!==null&&part.offset+size>capacity)throw new Error(`${part.path} exceeds this board's flash capacity.`);
     }));
     return manifest;
   }catch(error){

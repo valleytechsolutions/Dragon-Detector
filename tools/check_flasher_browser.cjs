@@ -43,7 +43,8 @@ const http=require('node:http');
     async function select(board,mode='factory'){
       await page.locator(`[data-board="${board}"]`).click();
       await page.locator('#install-mode').selectOption(mode);
-      await page.waitForFunction(()=>!document.getElementById('download').hidden);
+      await page.waitForFunction(()=>!document.getElementById('download').hidden||!document.getElementById('retry-release').hidden);
+      assert.equal(await page.locator('#retry-release').isHidden(),true,`${board}/${mode}: ${await page.locator('#board-status').innerText()}`);
       assert.equal(await page.locator('#hardware-confirm').isChecked(),false);
       assert.equal(await page.locator('#install-button').isDisabled(),true);
       await page.locator('#hardware-confirm').check();
