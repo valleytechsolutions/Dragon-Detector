@@ -119,6 +119,8 @@ def build(output):
         else:
             return html.escape(original, quote=True)
         result = posixpath.relpath(target.as_posix(), destination.parent.as_posix())
+        if parsed.query:
+            result += '?' + parsed.query
         if parsed.fragment:
             result += '#' + parsed.fragment
         return html.escape(result, quote=True)

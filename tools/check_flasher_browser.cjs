@@ -36,6 +36,7 @@ const http=require('node:http');
       return route.continue();
     });
     await page.goto(base);
+    assert.equal(await page.locator('script[src^="app.js"]').getAttribute('src'),'app.js?v=2026-10-21-flasher','site packaging must preserve cache-busting versions');
     await page.waitForFunction(()=>customElements.get('dragon-clock-install-dialog'));
     const boards=await page.locator('[data-board]').evaluateAll(items=>items.map(e=>e.dataset.board));
     assert.equal(boards.length,9);

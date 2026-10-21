@@ -69,6 +69,13 @@ test('every board is installable; only full boards have badge preview controls',
   }
 });
 
+test('publishing workflow downloads an independent artifact for every selectable board',()=>{
+  const workflow=readFileSync(new URL('../.github/workflows/pages.yml',import.meta.url),'utf8');
+  const artifacts=[...workflow.matchAll(/name: dragon-detector-(\w+)\s+path: web\/firmware\/(\w+)/g)];
+  assert.deepEqual(artifacts.map(m=>m[1]).sort(),Object.keys(boardProfiles).sort());
+  for(const item of artifacts)assert.equal(item[1],item[2]);
+});
+
 test('badge chunks stay bounded and terminate with a short USB packet',()=>{
   assert.ok(BADGE_CHUNK_SIZE>64&&BADGE_CHUNK_SIZE<256);
   assert.notEqual(BADGE_CHUNK_SIZE%64,0);

@@ -59,6 +59,24 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
           name: dragon-detector-waveshare_175
           path: web/firmware/waveshare_175
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+          name: dragon-detector-waveshare_175_gps
+          path: web/firmware/waveshare_175_gps
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+          name: dragon-detector-elecrow_21
+          path: web/firmware/elecrow_21
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+          name: dragon-detector-lilygo_175
+          path: web/firmware/lilygo_175
       - name: Verify published manifests and images
         run: python tools/validate_release.py
       - name: Verify browser accepts every generated manifest
