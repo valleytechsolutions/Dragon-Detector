@@ -109,6 +109,9 @@ static void updateLitePage(){
     snprintf(value,sizeof(value),"%s / %lu %s",stopwatch.running?"RUNNING":stopwatch.finished?"OPEN":timerFrame?"PAUSED":"READY",stopwatch.lapCount,liteLocksport()?"SPLITS":"LAPS");lv_label_set_text(pageSub,value);
     lv_label_set_text(pageHint,stopwatch.running?(liteLocksport()?"TAP PAUSE / 2x OPEN":"TAP PAUSE / 2x LAP"):"TAP START / 2x RESET");
   }else if(litePage==LitePage::Signals){
+#ifdef BOARD_M5DIAL
+    dialSignalUpdate();return;
+#endif
     unsigned count=0;for(auto& c:contacts)if(radarVisible(c,millis()))++count;
     Contact* chosen=nullptr;unsigned target=count?signalIndex%count:0,index=0;
     for(auto& c:contacts)if(radarVisible(c,millis())&&index++==target){chosen=&c;break;}
@@ -124,6 +127,9 @@ static void updateLitePage(){
 }
 void liteButtonEvent(dragon::LitePress event){
   if(!root)return;
+#ifdef BOARD_M5DIAL
+  dialButton(event);return;
+#endif
   if(event==dragon::LitePress::Hold){setLitePage(LitePage((unsigned(litePage)+1)%5));return;}
   if(litePage==LitePage::Timer){if(event==dragon::LitePress::Tap)stopwatch.toggle(stopwatchNow());else if(event==dragon::LitePress::Double){if(stopwatch.running){if(liteLocksport())stopwatch.finish(stopwatchNow());else stopwatch.lap(stopwatchNow());}else stopwatch.reset();}}
   else if(litePage==LitePage::Signals)++signalIndex;

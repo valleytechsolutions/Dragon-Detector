@@ -133,9 +133,9 @@ int main(){
 }
 '''
 
-for board, fake, test in [('stopwatch', STOPWATCH, STOPWATCH_TEST), ('xiao_round', XIAO, XIAO_TEST), ('lilygo_175', XIAO, XIAO_TEST)]:
+for board, fake, test in [('stopwatch', STOPWATCH, STOPWATCH_TEST), ('xiao_round', XIAO, XIAO_TEST), ('lilygo_175', XIAO, XIAO_TEST), ('m5dial', XIAO, XIAO_TEST)]:
     driver = (ROOT / f'firmware/src/board_{board}.cpp').read_text(encoding='utf-8')
-    if board=='lilygo_175':driver=driver.rsplit('\n#endif',1)[0]
+    if board in ('lilygo_175','m5dial'):driver=driver.rsplit('\n#endif',1)[0]
     source = WORK / f'{board}.cpp'
     source.write_text(PRELUDE + fake + driver[driver.index('static bool rtcRead('):] + test, encoding='utf-8')
     exe = WORK / (board + ('.exe' if sys.platform == 'win32' else ''))

@@ -46,8 +46,13 @@ uint8_t wifiChannel=1,channelLock=0;
 struct Observation { uint32_t at; uint64_t us; uint16_t len,original,advLength; int8_t rssi; uint8_t channel,kind,addressType,mac[6]; uint8_t data[1024]; };
 static std::atomic<bool> wardriveScanning{false};
 static std::atomic<uint32_t> drops{0},axonDrops{0},axonQueued{0};
+#ifdef BOARD_M5DIAL
+static constexpr unsigned QUEUE_SIZE=16;
+static constexpr unsigned AXON_RESERVE=4;
+#else
 static constexpr unsigned QUEUE_SIZE=96;
 static constexpr unsigned AXON_RESERVE=24;
+#endif
 static QueueHandle_t queue,priorityQueue,freeSlots;
 static Observation* observations;
 // Free/ready queues carry one-byte pool indexes. Only received bytes are copied
@@ -289,7 +294,12 @@ static void process(const Observation& o){
   }
 }
 void radioBegin(){
-  observations=(Observation*)ps_malloc(QUEUE_SIZE*sizeof(Observation));
+  observations=(Observation*)
+#ifdef BOARD_M5DIAL
+    malloc(QUEUE_SIZE*sizeof(Observation));
+#else
+    ps_malloc(QUEUE_SIZE*sizeof(Observation));
+#endif
   static StaticQueue_t readyControl,priorityControl,freeControl;static uint8_t readyMemory[QUEUE_SIZE],priorityMemory[QUEUE_SIZE],freeMemory[QUEUE_SIZE];
   if(!observations){radioEnabled=false;addAlert("Radio memory error","Could not allocate packet pool");return;}
   queue=xQueueCreateStatic(QUEUE_SIZE,1,readyMemory,&readyControl);
@@ -303,6 +313,10 @@ void radioBegin(){
   if(eventResult!=ESP_OK&&eventResult!=ESP_ERR_INVALID_STATE){radioEnabled=false;addAlert("Wi-Fi event loop failed",esp_err_to_name(eventResult));return;}
 #endif
   wifi_init_config_t cfg=WIFI_INIT_CONFIG_DEFAULT();
+#ifdef BOARD_M5DIAL
+  cfg.static_rx_buf_num=4;cfg.dynamic_rx_buf_num=8;cfg.tx_buf_type=1;
+  cfg.dynamic_tx_buf_num=8;cfg.cache_tx_buf_num=8;cfg.rx_ba_win=4;
+#endif
   esp_err_t result=esp_wifi_init(&cfg);
   if(result==ESP_OK)result=esp_wifi_set_storage(WIFI_STORAGE_RAM);
   if(result==ESP_OK)result=esp_wifi_set_mode(WIFI_MODE_NULL);

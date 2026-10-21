@@ -6,6 +6,14 @@
 #include "flash_budget.h"
 #include <LittleFS.h>
 
+#ifdef BOARD_M5DIAL
+bool personalThemeReady(){return false;}
+const dragon::PersonalTheme& personalTheme(){static dragon::PersonalTheme value;return value;}
+const dragon::UiPalette& themeUiColors(unsigned i){return dragon::UiPalettes[i<dragon::UiPaletteCount?i:1];}
+const lv_img_dsc_t* personalThemeLogo(bool){return nullptr;}
+void personalThemeBegin(){LittleFS.begin(false,"/littlefs",2,"spiffs");}
+bool personalThemeCommand(const String& c){if(!c.startsWith("theme "))return false;Serial.println("THEME_ERROR personal uploads unavailable on Dial beta");return true;}
+#else
 namespace {
 constexpr const char* Active="/personal/active.ddtheme";
 constexpr const char* Previous="/personal/previous.ddtheme";
@@ -116,3 +124,5 @@ bool personalThemeCommand(const String& c){
   else LittleFS.remove(Staging);
   Serial.println(ok?"\nTHEME_OK\n":"\nTHEME_ERROR transfer, format or checksum\n");return true;
 }
+
+#endif

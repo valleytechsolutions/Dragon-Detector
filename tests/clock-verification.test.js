@@ -35,7 +35,7 @@ test('hardware clock must store the correct epoch and actually tick',async()=>{
   }
 });
 test('RTC boards reject missing chips; software boards clearly explain shutdown recovery',async()=>{
-  for(const board of ['stopwatch','xiao_round','waveshare_175']){
+  for(const board of ['m5dial','stopwatch','xiao_round','waveshare_175']){
     const r=rig({detected:0});await assert.rejects(verifyClock(r.link,board,'0.13.10',r.options),/not detected/);
   }
   for(const board of ['waveshare','spotpear','waveshare_lite']){

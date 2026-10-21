@@ -62,7 +62,10 @@ void detectorBegin(){
   // Fixed passive radar. Never import old full-UI filters, ignore rules or
   // display timers. No persistent history allocation or flash writes on Lite.
   detector=dragon::DetectorSettings{};detector.history=false;
-  activeBle=false;axonPriority=true;alertSound=alertVibration=false;
+  activeBle=false;axonPriority=true;
+#ifndef BOARD_M5DIAL
+  alertSound=alertVibration=false;
+#endif
   Serial.println("LITE detectors=all axon_priority=1 passive=1 history=off");
   return;
 #else

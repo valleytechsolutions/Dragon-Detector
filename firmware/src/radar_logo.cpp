@@ -26329,7 +26329,11 @@ static const uint8_t watch_logo_mitm_pixels[]={
 };
  lv_img_dsc_t watch_logo_mitm = {{LV_IMG_CF_INDEXED_8BIT,0,0,240,240},58624,nullptr};
 #endif
-struct PackedThemeLogo {lv_img_dsc_t* image; const uint8_t* bytes; size_t length;};
+struct PackedThemeLogo {lv_img_dsc_t* image; const uint8_t* bytes; size_t length;
+#ifdef BOARD_M5DIAL
+unsigned format=image->header.cf;
+#endif
+};
 static const PackedThemeLogo packedThemeLogos[]={
 {&radar_logo_valleytech,radar_logo_valleytech_pixels,sizeof(radar_logo_valleytech_pixels)},
 {&radar_logo_biscuit,radar_logo_biscuit_pixels,sizeof(radar_logo_biscuit_pixels)},
@@ -26439,6 +26443,9 @@ static const PackedThemeLogo packedThemeLogos[]={
 {&watch_logo_muldersrevenge,watch_logo_muldersrevenge_pixels,sizeof(watch_logo_muldersrevenge_pixels)},
 {&watch_logo_mitm,watch_logo_mitm_pixels,sizeof(watch_logo_mitm_pixels)},
 };
+#ifdef BOARD_M5DIAL
+#include "dial_art_decoder.inc"
+#else
 // Decode once into PSRAM, retaining the exact indexed pixels and palette.
 // No per-frame allocations and no internal-RAM fallback on the 2 MB Lite.
 bool prepareThemeLogos(){
@@ -26450,3 +26457,5 @@ bool prepareThemeLogos(){
  }
  return ok;
 }
+
+#endif

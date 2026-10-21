@@ -154,13 +154,16 @@ for name,path in logos:
         lines.extend(['};',f'{declaration} lv_img_dsc_t {name} = {{{{{fmt},0,0,{width},{height}}},{raw_size},{data}}};'])
     lines.append('#endif')
     if name.startswith('watch_') and name not in ('watch_logo_hackazillarex','watch_logo_m33k','watch_logo_capsule','watch_logo_sparrows','watch_logo_dzaz','watch_logo_can_commander','watch_logo_ogg','watch_logo_xombi','watch_logo_muldersrevenge','watch_logo_mitm'):lines.append('#endif')
-lines += ['struct PackedThemeLogo {lv_img_dsc_t* image; const uint8_t* bytes; size_t length;};','static const PackedThemeLogo packedThemeLogos[]={']
+lines += ['struct PackedThemeLogo {lv_img_dsc_t* image; const uint8_t* bytes; size_t length;\n#ifdef BOARD_M5DIAL\nunsigned format=image->header.cf;\n#endif\n};','static const PackedThemeLogo packedThemeLogos[]={']
 for name,_ in logos:
     if name=='radar_logo':continue
     if name.startswith('watch_') and name not in ('watch_logo_hackazillarex','watch_logo_m33k','watch_logo_capsule','watch_logo_sparrows','watch_logo_dzaz','watch_logo_can_commander','watch_logo_ogg','watch_logo_xombi','watch_logo_muldersrevenge','watch_logo_mitm'):lines.append('#ifndef BOARD_RADAR_LITE')
     lines.append(f'{{&{name},{name}_pixels,sizeof({name}_pixels)}},')
     if name.startswith('watch_') and name not in ('watch_logo_hackazillarex','watch_logo_m33k','watch_logo_capsule','watch_logo_sparrows','watch_logo_dzaz','watch_logo_can_commander','watch_logo_ogg','watch_logo_xombi','watch_logo_muldersrevenge','watch_logo_mitm'):lines.append('#endif')
-lines += ['};', '''// Decode once into PSRAM, retaining the exact indexed pixels and palette.
+lines += ['};', '''#ifdef BOARD_M5DIAL
+#include "dial_art_decoder.inc"
+#else
+// Decode once into PSRAM, retaining the exact indexed pixels and palette.
 // No per-frame allocations and no internal-RAM fallback on the 2 MB Lite.
 bool prepareThemeLogos(){
  static bool attempted=false,ok=true;if(attempted)return ok;attempted=true;
@@ -170,6 +173,7 @@ bool prepareThemeLogos(){
   else{free(bytes);*item.image=radar_logo;ok=false;}
  }
  return ok;
-}''']
+}
+#endif''']
 (root/'firmware/src/radar_logo.cpp').write_text('\n'.join(lines)+'\n',encoding='utf8')
 print(f'Encoded {len(logos)} logo assets at 240/360/466 panel sizes; original artwork retained unchanged.')

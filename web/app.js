@@ -1,8 +1,8 @@
 import {hasRepeatingBeeper,hasBleTools,observedAddress,iBeaconCommand,parseIBeacon} from './ble-tools.js?v=0.13.25-lilygo';
-import {maintainComputerClock} from './clock-maintenance.js?v=0.13.25-lilygo';
+import {maintainComputerClock} from './clock-maintenance.js?v=2026-10-21-dial-beta1';
 import {startRadarBackground} from './radar-background.js?v=0.13.12';
-import {completeInstallSession,syncInstalledClock} from './install-clock.js?v=2026-10-21-flasher';
-import {checkRelease,usbErrorText,installDiagnostics} from './install-checks.js?v=2026-10-21-flasher';
+import {completeInstallSession,syncInstalledClock} from './install-clock.js?v=2026-10-21-dial-beta1';
+import {checkRelease,usbErrorText,installDiagnostics} from './install-checks.js?v=2026-10-21-dial-beta1';
 import {updateVisitCounter} from './visit-counter.js?v=2026-10-18';
 import {hasFullLab,hasFullRecon,hasSessionTools} from './lab-capabilities.js?v=0.13.25-lilygo';
 import {sessionName,downloadMission,recipePutCommand,sourceMacCommand} from './mission-tools.js?v=0.13.21';
@@ -11,22 +11,22 @@ import {normalizeHex,probeRows,probeCsv} from './recon-analysis.js?v=0.13.3';
 import {hasReconTools,reconLines,exportCapture,exportReconFile,captureName,importPortalHtml} from './recon-transfer.js?v=0.13.21';
 import {decodeProfile,exportProfile,exportLog,importProfile,labLines,safeProfileName} from './ble-lab.js?v=0.13.21';
 import {localClockEpoch,setClock,readWearable,setOrientation} from './wearable-transfer.js?v=0.13.12';
-import {syncVerifiedClock,clockResultText} from './clock-verification.js?v=0.13.25-lilygo';
+import {syncVerifiedClock,clockResultText} from './clock-verification.js?v=2026-10-21-dial-beta1';
 import {clockInstallDialogClass} from './clock-install-dialog.js?v=2026-10-21-flasher';
 import {deviceQuery} from './device-query.js';
 import {BadgeSerial} from './serial.js?v=0.13.3';
 import {encodeBadge} from './badge-codec.js';
 import {uploadBadge} from './badge-transfer.js?v=0.13.3';
 import {readHistory} from './detector-transfer.js';
-import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasBrandedThemes,hasCommunityThemes,hasRunnerThemes,hasCapsuleSparrowsThemes,hasCanCommanderTheme,hasGreenArtThemes,hasMuldersRevengeTheme,hasMitmTheme,hasHypnoticTheme,hasLplTheme,hasWearableTools,hasClockTools,hasWifiClock,hasRetainedClock} from './firmware-compat.js?v=0.13.26';
+import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasBrandedThemes,hasCommunityThemes,hasRunnerThemes,hasCapsuleSparrowsThemes,hasCanCommanderTheme,hasGreenArtThemes,hasMuldersRevengeTheme,hasMitmTheme,hasHypnoticTheme,hasLplTheme,hasWearableTools,hasClockTools,hasWifiClock,hasRetainedClock} from './firmware-compat.js?v=2026-10-21-dial-beta1';
 import {readRadarSettings,saveRadarSettings} from './radar-transfer.js?v=0.13.26';
-import {boardProfiles,connectedProfile,supportsBadge} from './board-profiles.js?v=2026-10-21-flasher';
+import {boardProfiles,connectedProfile,supportsBadge} from './board-profiles.js?v=2026-10-21-dial-beta1';
 import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan,drawBadgeText} from './badge-editor.js?v=0.13.3';
 import {hasNotebook,readNotebook,customAdvertCommand} from './notebook.js?v=0.13.3';
 import {revealLocation} from './navigation.js?v=0.13.14';
-import {createThemeStudio} from './theme-studio.js?v=0.13.17';
+import {createThemeStudio} from './theme-studio.js?v=2026-10-21-dial-beta1';
 import {setupWorkspaceTabs} from './workspace-tabs.js?v=0.13.17';
-import {installPersonalTheme} from './theme-install.js?v=0.13.21';
+import {installPersonalTheme} from './theme-install.js?v=2026-10-21-dial-beta1';
 import {hasPersonalThemes} from './theme-transfer.js?v=0.13.17';
 setupWorkspaceTabs();
 revealLocation();
@@ -66,6 +66,7 @@ async function chooseBoard(next) {
   $('board-storage').textContent = boardProfiles[board].storage;
   $('board-features').textContent = boardProfiles[board].features;
   $('board-sd-setup').hidden = !['waveshare_175','waveshare_175_gps'].includes(board);
+  $('board-dial-setup').hidden = board!=='m5dial';
   $('board-rotary-setup').hidden = board!=='elecrow_21';
   $('board-lilygo-setup').hidden = board!=='lilygo_175';
   $('auto-clock-label').hidden=false;
@@ -77,7 +78,7 @@ async function chooseBoard(next) {
     const data = await checkRelease(board,mode,{signal:releaseController.signal});
     if(revision !== request)return;
     $('installer').setAttribute('manifest', manifest); releaseReady = true;releaseVersion=data.version;
-    $('board-status').textContent = `${data.version}${board==='elecrow_21'?' · EXPERIMENTAL — initial hardware checks passed':board==='lilygo_175'?' · BETA — working baseline reported; new RTC/SD checks await hardware testing':boardProfiles[board].experimental?' · BETA — new SD/GPS features await field testing':''} · ${mode==='factory'?'Fresh installation replaces saved history, badges and BLE profiles.':board==='waveshare'?'32 MB update preserves badge, history, settings and BLE profiles. When upgrading older firmware, initialize new BLE storage once in the lab.':['waveshare_175','waveshare_175_gps'].includes(board)?'Update requires the exact selected non-C profile (1.75: 0.13.19+; 1.75-G GPS: 0.13.21+). Use Fresh installation for the factory demo or another firmware.':board==='elecrow_21'?'Update requires this exact Elecrow 2.1 rotary profile, version 0.13.20 or newer. Use Fresh installation for the factory demo or another firmware.':board==='lilygo_175'?'Update matches the provided 0.13.20 LILYGO 1.75 layout and this profile’s 0.13.25+ builds. Other firmware or another LILYGO size requires Fresh installation with its correct profile.':board==='waveshare_lite'?'Update requires this exact Lite profile’s 0.9.4+ layout. For an older third-party port, choose Fresh installation unless its partitions have been verified.':board==='xiao_round'?'Update preserves files; requires this XIAO + Round Display profile’s 0.9.2 or newer 8 MB layout.':'Update preserves history, badges and settings; requires this board’s existing 0.3.x–0.13.x layout.'}`;
+    $('board-status').textContent = `${data.version}${board==='m5dial'?' · BETA 1 — no physical testing yet':board==='elecrow_21'?' · EXPERIMENTAL — initial hardware checks passed':board==='lilygo_175'?' · BETA — working baseline reported; new RTC/SD checks await hardware testing':boardProfiles[board].experimental?' · BETA — new SD/GPS features await field testing':''} · ${mode==='factory'?'Fresh installation replaces saved history, badges and BLE profiles.':board==='waveshare'?'32 MB update preserves badge, history, settings and BLE profiles. When upgrading older firmware, initialize new BLE storage once in the lab.':['waveshare_175','waveshare_175_gps'].includes(board)?'Update requires the exact selected non-C profile (1.75: 0.13.19+; 1.75-G GPS: 0.13.21+). Use Fresh installation for the factory demo or another firmware.':board==='elecrow_21'?'Update requires this exact Elecrow 2.1 rotary profile, version 0.13.20 or newer. Use Fresh installation for the factory demo or another firmware.':board==='lilygo_175'?'Update matches the provided 0.13.20 LILYGO 1.75 layout and this profile’s 0.13.25+ builds. Other firmware or another LILYGO size requires Fresh installation with its correct profile.':board==='m5dial'?'Update requires this exact Dial beta partition layout. Use Fresh installation for the factory demo or any other firmware.':board==='waveshare_lite'?'Update requires this exact Lite profile’s 0.9.4+ layout. For an older third-party port, choose Fresh installation unless its partitions have been verified.':board==='xiao_round'?'Update preserves files; requires this XIAO + Round Display profile’s 0.9.2 or newer 8 MB layout.':'Update preserves history, badges and settings; requires this board’s existing 0.3.x–0.13.x layout.'}`;
     $('download').href = `firmware/${board}/SHA256SUMS.txt`; $('download').textContent='Firmware file checksums'; $('download').hidden=false;
     $('install-message').textContent='Confirm your board, then connect its USB port.';
   } catch(error) {
@@ -105,7 +106,7 @@ const canvas=$('preview'), ctx=canvas.getContext('2d',{willReadFrequently:true})
 const guideCanvas=$('preview-guides'),guideCtx=guideCanvas.getContext('2d');
 let photo=null,size=466,zoom=1,offsetX=0,offsetY=0,turns=0,mirror=false,busy=false,firmwareVersion='',deviceProfile='',badgeProfile='stopwatch',photoName='',imageRequest=0;
 
-const themeStudio=createThemeStudio({state:()=>({serial,busy,version:firmwareVersion,board:models[deviceProfile]||'Device'}),connect:()=>$('connect').onclick(),disconnect,run:detectorAction});
+const themeStudio=createThemeStudio({state:()=>({serial,busy,version:firmwareVersion,board:models[deviceProfile]||'Device',profile:deviceProfile}),connect:()=>$('connect').onclick(),disconnect,run:detectorAction});
 let lastInstallBoard='';
 function installLock(active){
   installActive=active;busy=active;controls();installEnabled();
@@ -122,7 +123,7 @@ function clockSetupFailure(error){
 }
 $('install-button').onclick=async()=>{
   if($('install-button').disabled||busy||serial)return;
-  let customTheme;try{customTheme=themeStudio.installation();}catch(error){$('clock-setup-status').textContent=error.message;location.hash='theme-studio';return;}
+  let customTheme;try{if(board==='m5dial'&&$('custom-enabled').checked)throw new Error('Dial beta supports built-in themes only. Turn off Install this personal theme before flashing.');customTheme=themeStudio.installation();}catch(error){$('clock-setup-status').textContent=error.message;location.hash='theme-studio';return;}
   const selected=board,autoClock=$('auto-clock').checked;
   lastInstallBoard=selected;installLock(true);$('finish-clock').hidden=true;
   let port;
@@ -293,7 +294,7 @@ $('connect').onclick=async()=>{
     $('device-label').textContent=`${match.size} × ${match.size} · ${boardProfiles[profile].lite?'LITE':'CONNECTED'}`;$('disconnect').hidden=false;
     if(boardProfiles[profile].lite){
       if(hasClockTools(profile,firmwareVersion)){await syncVerifiedClock(link,deviceProfile,firmwareVersion);await loadWearable(link);}
-      $('studio-status').textContent=$('detector-status').textContent=hasClockTools(profile,firmwareVersion)?'Lite connected and local time set. Hold BOOT to cycle radar, clock, timer, signals and status. Tap changes themes or starts/pauses the timer; double tap records a lap/open or resets a paused timer.':'Older Lite radar firmware connected. Update to 0.13.9 for clock, timer, signal and status pages.';
+      $('studio-status').textContent=$('detector-status').textContent=profile==='m5dial'?'Dial beta connected and hardware time verified. Turn the ring to change screens; press for the screen action; hold to return to radar. Tap a dot, then tap its summary or double-tap for details. See the Dial beta guide for controls and limits.':hasClockTools(profile,firmwareVersion)?'Lite connected and local time set. Hold BOOT to cycle radar, clock, timer, signals and status. Tap changes themes or starts/pauses the timer; double tap records a lap/open or resets a paused timer.':'Older Lite radar firmware connected. Update to 0.13.9 for clock, timer, signal and status pages.';
       return;
     }
     $('studio-status').textContent=`${match.board} is ready. Choose and position your image.`;draw();

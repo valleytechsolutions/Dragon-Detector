@@ -16,8 +16,13 @@ struct Contact {
   dragon::AlertGate gate;dragon::DroneInfo drone;dragon::SignalHistory trace;
   uint32_t historyAt=0;dragon::Family historyFamily=dragon::Family::Count;
 };
+#ifdef BOARD_M5DIAL
+constexpr size_t MAX_CONTACTS=32;
+#else
 constexpr size_t MAX_CONTACTS=384;
-// Storage lives in PSRAM on all supported boards, leaving internal RAM for radio,
+#endif
+// Full profiles use PSRAM; Dial keeps a bounded 32-contact internal pool.
+// This leaves internal RAM for radio,
 // USB, LVGL and DMA. Constructed during setup after PSRAM is initialized.
 struct ContactStore {
   Contact* data=nullptr;

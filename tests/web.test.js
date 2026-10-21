@@ -286,3 +286,11 @@ test('Hypnotic theme requires its first supported firmware version',async()=>{
   for(const v of ['0.13.26','0.13.27'])assert.equal(hasHypnoticTheme(v),true);
   for(const v of ['0.13.25','0.13.026','0.13.26junk',''])assert.equal(hasHypnoticTheme(v),false);
 });
+
+
+test('Dial beta has an exact compact USB identity and cannot masquerade as a full board',()=>{
+ const info=parseBadgeInfo('BADGE_INFO 0.13.26 240 LITE M5Stack Dial Beta');
+ assert.equal(connectedProfile(info),'m5dial');assert.equal(supportsBadge('m5dial'),false);
+ for(const line of ['BADGE_INFO 0.13.26 240 READY M5Stack Dial Beta','BADGE_INFO 0.13.25 240 LITE M5Stack Dial Beta','BADGE_INFO 0.13.26 466 LITE M5Stack Dial Beta'])assert.equal(parseBadgeInfo(line),null);
+ assert.equal(boardProfiles.m5dial.filesystemOffset,0x610000);assert.equal(boardProfiles.m5dial.experimental,true);
+});

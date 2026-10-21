@@ -261,3 +261,7 @@ or tested GPS hardware compatibility. Review date: 2026-10-19.
 The project owner supplied `media/theme-logos/muldersrevenge-source.png` for the MuldersreVenge firmware theme. The original file is retained unchanged; native display copies use resizing and palette encoding only. Artwork rights remain with its original owner.
 
 MITM clock photograph: `media/theme-logos/mitm-source.jpg`, supplied by the project owner as `channels4_profile.jpg`. Original preserved; embedded at native dial resolutions. No ownership or affiliation is implied.
+
+## M5Stack Dial beta hardware references
+
+The [official Dial documentation](https://docs.m5stack.com/en/core/Dial), schematic and [M5Dial reference at 533c9d0](https://github.com/m5stack/M5Dial/tree/533c9d0198e72621d55a4d35f726d3d53a7e1431) informed the K130 pin map, RTC, encoder and power-hold implementation. The beta uses the existing pinned TFT_eSPI and LVGL dependencies; all physical validation remains pending. See [Dial setup](docs/M5STACK-DIAL.md).

@@ -2,6 +2,9 @@
 
 # Dragon Detector
 
+**New beta:** [M5Stack Dial K130](docs/M5STACK-DIAL.md) — compact 8 MB/no-PSRAM profile with touch, encoder, buzzer and checked RTC support. Beta 1 awaits all physical testing; see its feature limits and installation checklist.
+
+
 Wi-Fi and Bluetooth detection, signal tracking, and logo watch faces for ESP32-S3 displays.
 
 **Web flasher available:** [Install from the independent host](https://valleytech-dragon-detector.pages.dev/). The original GitHub Pages address and GitHub-hosted images are temporarily unavailable. Source, artwork and release files are intact; existing devices are unaffected. [Hosting status](docs/HOSTING-STATUS.md).

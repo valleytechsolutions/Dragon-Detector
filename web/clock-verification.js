@@ -1,5 +1,5 @@
 import {readWearable,syncComputerClock} from './wearable-transfer.js?v=0.13.10';
-import {hasHardwareClockCheck} from './firmware-compat.js?v=0.13.25-lilygo';
+import {hasHardwareClockCheck} from './firmware-compat.js?v=2026-10-21-dial-beta1';
 import {deviceQuery} from './device-query.js?v=0.13.10';
 
 export async function readHardwareClock(link){
@@ -16,7 +16,7 @@ export async function verifyClock(link,board,version,{
   const clock=await readWearable(link),current=now();
   if(!clock.valid||clock.offset!==-current.getTimezoneOffset()||Math.abs(clock.epoch-current.getTime()/1000)>10)
     throw new Error('Clock readback did not match this computer.');
-  const expected=['lilygo_175','stopwatch','xiao_round','waveshare_175','waveshare_175_gps'].includes(board);
+  const expected=['m5dial','lilygo_175','stopwatch','xiao_round','waveshare_175','waveshare_175_gps'].includes(board);
   if(expected&&!clock.rtc)throw new Error('This board requires an RTC, but it was not detected. Clock setup is incomplete.');
   let rtcVerified=false;
   if(hasHardwareClockCheck(version)){

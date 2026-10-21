@@ -3,7 +3,20 @@
 
 #define BTN_PIN 0
 
-#if defined(BOARD_LILYGO_175)
+#if defined(BOARD_M5DIAL)
+#define BOARD_NAME "M5Stack Dial Beta"
+#define SCREEN_RES 240
+#define BOARD_HAS_AUDIO 1
+#define BOARD_HAS_SD 0
+#define DIAL_SDA 11
+#define DIAL_SCL 12
+#define DIAL_BACKLIGHT 9
+#define DIAL_HOLD 46
+#define DIAL_BUTTON 42
+#define DIAL_ENCODER_A 41
+#define DIAL_ENCODER_B 40
+#define DIAL_BUZZER 3
+#elif defined(BOARD_LILYGO_175)
 // H0175Y003AM round panel. Pins/geometry match the owner's tested 0.13.20 BIN.
 #define BOARD_NAME "LilyGo T-Display-S3-AMOLED-1.75"
 #define SCREEN_RES 466

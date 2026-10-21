@@ -110,7 +110,12 @@ static void command(const String& c){
   const bool allowed=c=="badge info"||c=="status"||c=="contacts"||c=="selftest"||c=="screenshot"||c=="ui status"||c=="radar status"||c=="display status"||c=="axon status"||c=="traffic status"||c=="detector status";
   const bool timing=c.startsWith("time ")||c=="clock status"||c=="clock hardware"||c.startsWith("clock offset ")||c=="orientation status"||c=="stopwatch status"||c=="stopwatch laps"||c=="stopwatch start"||c=="stopwatch pause"||c=="stopwatch reset"||c=="stopwatch lap"||c=="stopwatch finish";
   const bool page=c=="screen radar"||c=="screen clock"||c=="screen stopwatch"||c=="screen signals"||c=="screen diagnostics"||c=="screen startup";
-  if(!allowed&&!timing&&!page){Serial.println("LITE_LIMITED no touch menus, badge, audio or radio controls");return;}
+#ifdef BOARD_M5DIAL
+  const bool dial=c.startsWith("dial ")||c.startsWith("radar theme ")||c=="clock diagnostics"||c=="touch status"||c=="rotary status";
+#else
+  const bool dial=false;
+#endif
+  if(!allowed&&!timing&&!page&&!dial){Serial.println("LITE_LIMITED no touch menus, badge, audio or radio controls");return;}
 #endif
   if(c.startsWith("vendor ")){uint8_t mac[6];unsigned v[6];char tail;if(sscanf(c.c_str(),"vendor %2x:%2x:%2x:%2x:%2x:%2x %c",&v[0],&v[1],&v[2],&v[3],&v[4],&v[5],&tail)==6){for(unsigned i=0;i<6;++i)mac[i]=v[i];auto* name=dragon::registeredVendor(mac);Serial.printf("REGISTRY_VENDOR %s\n",name?name:"No universal MA-L match");}else Serial.println("REGISTRY_ERROR address");return;}
   if(c=="registry status"){Serial.printf("REGISTRY entries=%u bits=24 source=IEEE_MA_L\n",dragon::vendorRegistryCount());return;}
@@ -173,19 +178,30 @@ static void command(const String& c){
 void setup(){
   // The native USB CDC default is only 256 bytes. Reserve room before begin()
   // so flash writes cannot overflow incoming, acknowledged image chunks.
+  // Assert the Dial power latch before startup delays or allocations.
+#ifdef BOARD_M5DIAL
+  pinMode(DIAL_HOLD,OUTPUT);digitalWrite(DIAL_HOLD,HIGH);
+#endif
   Serial.setRxBufferSize(4096);
   Serial.setTxBufferSize(2048);
   Serial.begin(115200);delay(500);Serial.println("DRAGON DETECTOR " DRAGON_VERSION " / " BOARD_NAME " / boot");
   previousCaptureStage=captureTrace[0]==CAPTURE_TRACE_MAGIC?captureTrace[1]:0;
   Serial.printf("PREVIOUS_CAPTURE stage=%lu reset=%d\n",previousCaptureStage,esp_reset_reason());captureStage(0);
   Serial.printf("Flash=%u PSRAM=%u reset=%d\n",ESP.getFlashChipSize(),ESP.getPsramSize(),esp_reset_reason());
-#ifdef BOARD_RADAR_LITE
+#if defined(BOARD_M5DIAL)
+  constexpr unsigned minimumPsram=0;
+#elif defined(BOARD_RADAR_LITE)
   constexpr unsigned minimumPsram=2*1024*1024;
 #else
   constexpr unsigned minimumPsram=4*1024*1024;
 #endif
   if(ESP.getPsramSize()<minimumPsram){Serial.println("FATAL: insufficient PSRAM for board profile");while(true)delay(100);}
-  contacts.data=(Contact*)ps_malloc(MAX_CONTACTS*sizeof(Contact));
+  contacts.data=(Contact*)
+#ifdef BOARD_M5DIAL
+    malloc(MAX_CONTACTS*sizeof(Contact));
+#else
+    ps_malloc(MAX_CONTACTS*sizeof(Contact));
+#endif
   if(!contacts.data){Serial.println("FATAL: contact storage allocation failed");while(true)delay(100);}
   for(size_t i=0;i<MAX_CONTACTS;++i)new(&contacts[i]) Contact{};
   runSelfTests();boardBegin();personalThemeBegin();uiBegin();wearableBegin();

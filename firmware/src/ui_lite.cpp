@@ -26,6 +26,9 @@ static lv_img_dsc_t liteBackdrop;
 // Repaint instrument geometry only at startup or theme changes. Keep the internal display tile free
 // for moving content; this cache costs 115 KB of the otherwise idle PSRAM.
 static void prepareLiteBackdrop(lv_obj_t* root){
+#ifdef BOARD_M5DIAL
+  return; // Draw geometry directly; no 115KB backdrop on a board without PSRAM.
+#endif
   static auto* pixels=(lv_color_t*)heap_caps_malloc(SCREEN_RES*SCREEN_RES*sizeof(lv_color_t),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);
   if(!pixels){Serial.println("LITE_BACKGROUND cache unavailable");return;}
   const auto& theme=radarPalette(radarTheme);
@@ -71,12 +74,27 @@ static lv_obj_t* text(const char* value,int y,int width,const lv_font_t* font,ui
   lv_obj_set_style_text_font(o,font,0);lv_obj_set_style_text_color(o,color(rgb),0);lv_obj_set_style_text_align(o,LV_TEXT_ALIGN_CENTER,0);
   lv_label_set_long_mode(o,LV_LABEL_LONG_DOT);return o;
 }
+#ifdef BOARD_M5DIAL
+#include "lite_button.h"
+static void dialButton(dragon::LitePress);
+static void dialSignalUpdate();
+static void refreshLiteTheme();
+#endif
 #include "lite_pages.inc"
+#ifdef BOARD_M5DIAL
+#include "dial_ui.inc"
+#endif
 void uiBegin(){
+  #ifndef BOARD_M5DIAL
   if(!prepareThemeLogos())Serial.println("THEME_LOGOS PSRAM allocation failed / fallback logos");
+  #endif
   prefsReady=litePrefs.begin("lite-ui",false);
   if(prefsReady){unsigned saved=litePrefs.getUChar("theme",1);radarTheme=saved<RadarThemeCount&&(saved!=dragon::PersonalThemeId||personalThemeReady())?saved:1;}
-  candidatesOnly=true;radarRecent=true;scr_lvgl_init();root=lv_scr_act();lv_obj_clear_flag(root,LV_OBJ_FLAG_SCROLLABLE);lv_obj_set_style_bg_color(root,color(radarPalette(radarTheme).bottom),0);
+  candidatesOnly=true;radarRecent=true;scr_lvgl_init();
+#ifdef BOARD_M5DIAL
+  prepareThemeLogos();
+#endif
+  root=lv_scr_act();lv_obj_clear_flag(root,LV_OBJ_FLAG_SCROLLABLE);lv_obj_set_style_bg_color(root,color(radarPalette(radarTheme).bottom),0);
   prepareLiteBackdrop(root);
   radar=lv_obj_create(root);lv_obj_remove_style_all(radar);lv_obj_set_pos(radar,0,0);lv_obj_set_size(radar,SCREEN_RES,SCREEN_RES);lv_obj_clear_flag(radar,LV_OBJ_FLAG_SCROLLABLE);lv_obj_clear_flag(radar,LV_OBJ_FLAG_CLICKABLE);
   lv_obj_add_event_cb(radar,radarDraw,LV_EVENT_DRAW_MAIN,nullptr);
@@ -87,6 +105,9 @@ void uiBegin(){
   notice=text("",207,132,&lv_font_montserrat_10,themeUiColors(radarTheme).ink);
   lv_obj_set_height(notice,13);lv_obj_add_flag(activity,LV_OBJ_FLAG_HIDDEN);lv_obj_add_flag(notice,LV_OBJ_FLAG_HIDDEN);
   createLitePages();
+#ifdef BOARD_M5DIAL
+  dialUiBegin();
+#endif
   startLiteSplash();
 }
 void uiLoop(){
@@ -107,6 +128,9 @@ void uiLoop(){
     lv_label_set_text(pageLabel,value);
     }
     updateLitePage();
+#ifdef BOARD_M5DIAL
+    dialUiUpdate();
+#endif
     if(!noticeAt||uint32_t(now-noticeAt)>5000)lv_obj_add_flag(notice,LV_OBJ_FLAG_HIDDEN);
   }
   lv_timer_handler();
@@ -132,6 +156,9 @@ void uiPersonalThemeChanged(){radarTheme=dragon::PersonalThemeId;refreshLiteThem
 void uiPersonalThemeRemoved(){if(radarTheme==dragon::PersonalThemeId)radarTheme=1;refreshLiteTheme();if(prefsReady)litePrefs.putUChar("theme",radarTheme);themeDirty=false;setLitePage(LitePage::Radar);}
 bool uiStopwatchKey(bool,uint64_t){return false;}
 bool uiCommand(const String& c){
+#ifdef BOARD_M5DIAL
+  if(dialUiCommand(c))return true;
+#endif
   if(c=="ui status"){Serial.printf("UI_STATUS page=%s lite=1 frames=%lu backdrop=%u frame_ms=83\n",litePageNames[unsigned(litePage)],frames,liteBackdrop.data?1:0);return true;}
   if(c=="radar status"){Serial.printf("RADAR_SETTINGS theme=%u labels=1 recent=1 pages=1 plotted=%u primary=%d\n",radarTheme,dotCount,radarPrimary);return true;}
   if(c=="display status"){Serial.println("DISPLAY_SETTINGS brightness=100 output=100 dim=0 off=0 dim_level=0 wake=0");return true;}

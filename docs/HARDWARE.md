@@ -1,6 +1,6 @@
 # Exact board profiles
 
-Current firmware: **0.13.25**. Another display on the same ESP32-S3 needs different firmware.
+Current firmware: **0.13.26**. Another display on the same ESP32-S3 needs different firmware.
 
 [Device purchase links and exact model choices](../README.md#supported-hardware) · [Shop from the web flasher](https://valleytech-dragon-detector.pages.dev/#buy-hardware). The XIAO setup needs both the ESP32-S3 board and Round Display. Waveshare 1.75C, 1.75 and 1.75-G use separate installer profiles.
 
@@ -24,6 +24,10 @@ Current firmware: **0.13.25**. Another display on the same ESP32-S3 needs differ
 | Capture files / profiles download | USB web tools | USB web tools | USB web tools; separate SD logs | USB web tools; separate SD logs | None |
 
 All four full boards use the same classifiers and lab workflows; Waveshare's advantage is dedicated recon storage, not different radio bands or extra processing power. Builds and new writes check available space; existing files are never deleted automatically. [Exact budgets](FLASH-BUDGET.md) · [Feature limits](FEATURE-MATRIX.md) · [GUI tour](GUI.md).
+
+## M5Stack Dial K130 — Beta 1
+
+The `m5dial` profile targets the 240×240 GC9A01/FT3267 Dial with 8 MB flash and **no PSRAM**. It adds buffered touch, rotary/front-button controls, a buzzer and checked BM8563 RTC reads/writes to the compact detector. It has 32 contact slots, built-in themes, clock/stopwatch and RSSI hunting. No badge/personal uploads, active labs, saved captures, SD/GPS or RFID operations in Beta 1. All physical tests, including RTC retention, remain pending. [Installation, controls and validation checklist](M5STACK-DIAL.md).
 
 ## LILYGO round AMOLED 1.75
 

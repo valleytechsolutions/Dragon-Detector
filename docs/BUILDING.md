@@ -8,7 +8,7 @@ python -m platformio run -e spotpear -e waveshare -e stopwatch -e xiao_round -e 
 python tools/build_release.py --skip-build
 ```
 
-The pinned pioarduino platform provides Arduino ESP32 and ESP-IDF. Each board requires 8 MB octal PSRAM. Waveshare AMOLED 1.75C uses 32 MB flash, XIAO uses 8 MB, and the other profiles use 16 MB. Firmware uses one shared application in `firmware/`; display/power and speaker-output adapters vary.
+The pinned pioarduino platform provides Arduino ESP32 and ESP-IDF. Full profiles use octal PSRAM; Waveshare Lite has 2 MB QSPI PSRAM. The M5Stack Dial beta has no PSRAM and uses a separate compact memory configuration. Waveshare AMOLED 1.75C uses 32 MB flash, XIAO uses 8 MB, and the other profiles use 16 MB. Firmware uses one shared application in `firmware/`; display/power and speaker-output adapters vary.
 
 `tools/build_release.py` builds a blank badge filesystem, checks image/partition sizes, generates split factory/update manifests, merges a factory image, verifies every merged segment, rejects embedded workstation paths, and writes SHA-256 checksums plus source-commit metadata. Do not publish manually renamed binaries from a different board.
 
@@ -39,3 +39,7 @@ The current original application/web/tooling is MIT. Vendored drivers/libraries 
 ## Non-C AMOLED 1.75 experimental build
 
 Run `pio run -e waveshare_175` and `python tools/build_release.py --board waveshare_175`. This uses the shared AMOLED adapter with a separate 16 MB partition table. It does not use the `waveshare` C-variant environment. See [port status](WAVESHARE-AMOLED-175.md).
+
+## M5Stack Dial beta
+
+Build and package only this board with `python tools/build_release.py --board m5dial`. The profile uses 8 MB flash, two 3 MiB app slots and a 1.94 MiB internal filesystem. Do not rename another board image. Run `python tools/test_m5dial.py` and `python tools/test_rtc.py` for native checks; `python tools/render_m5dial.py` checks actual LVGL output against the normal indexed-image renderer. These do not substitute for the [first-unit hardware checklist](M5STACK-DIAL.md).

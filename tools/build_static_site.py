@@ -49,7 +49,7 @@ def build(output):
     for source in (ROOT / 'web').rglob('*'):
         if not source.is_file() or source.is_symlink():
             continue
-        if source.name == 'factory-0x0.bin' and source.parent.name not in ('stopwatch','lilygo_175'):
+        if source.name == 'factory-0x0.bin' and source.parent.name not in ('stopwatch','lilygo_175','m5dial'):
             continue
         relative = source.relative_to(ROOT / 'web')
         if any(part.startswith('.') for part in relative.parts):
@@ -145,7 +145,9 @@ def build(output):
         downloads.append('<h2>' + html.escape(info['name'].removesuffix(' (factory)')) + '</h2>')
         downloads.append('<p>Version ' + html.escape(info['version']) + '</p>')
         metadata = json.loads((folder / 'build-info.json').read_text(encoding='utf-8'))
-        if metadata.get('board') == 'lilygo_175':
+        if metadata.get('board') == 'm5dial':
+            downloads.append('<p><strong>Beta 1 — build/native checks only; all physical validation pending.</strong> <a href="M5STACK-DIAL.html">Dial installation, controls and RTC</a>.</p>')
+        elif metadata.get('board') == 'lilygo_175':
             downloads.append('<p><strong>Beta — working display/touch baseline reported; new RTC/SD checks await hardware testing.</strong> <a href="LILYGO-AMOLED-175.html">Installation, RTC and SD</a>.</p>')
         elif metadata.get('board') == 'elecrow_21':
             status = 'initial hardware checks passed; wider field testing remains' if metadata.get('hardware_validation') == 'initial-unit-verified' else 'physical testing in progress'

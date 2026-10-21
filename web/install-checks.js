@@ -1,4 +1,4 @@
-import {validateManifest} from './board-profiles.js?v=2026-10-21-flasher';
+import {validateManifest} from './board-profiles.js?v=2026-10-21-dial-beta1';
 
 // Check availability before asking for USB access. The installer downloads the
 // binaries itself before erasing; these HEAD requests do not verify their hash.
@@ -22,7 +22,7 @@ export async function checkRelease(board,mode,{fetchImpl=fetch,signal,timeoutMs=
       const length=file.headers.get('content-length'),size=length===null?null:Number(length);
       if((size!==null&&(!Number.isSafeInteger(size)||size<=0))||/text\/html/i.test(file.headers.get('content-type')||''))
         throw new Error(`${part.path} did not return a valid firmware file. Retry or report this release.`);
-      const capacity=(board==='waveshare'?32:board==='xiao_round'?8:16)*1024*1024;
+      const capacity=(board==='waveshare'?32:['m5dial','xiao_round'].includes(board)?8:16)*1024*1024;
       if(size!==null&&part.offset+size>capacity)throw new Error(`${part.path} exceeds this board's flash capacity.`);
     }));
     return manifest;
