@@ -1,0 +1,582 @@
+{
+  "elecrow_21": {
+    "factory": {
+      "name": "Dragon Detector \u2014 Elecrow CrowPanel 2.1 Rotary (factory)",
+      "version": "0.13.26",
+      "new_install_prompt_erase": true,
+      "new_install_improv_wait_time": 0,
+      "builds": [
+        {
+          "chipFamily": "ESP32-S3",
+          "parts": [
+            {
+              "path": "bootloader.bin",
+              "offset": 0
+            },
+            {
+              "path": "partitions.bin",
+              "offset": 32768
+            },
+            {
+              "path": "boot_app0.bin",
+              "offset": 57344
+            },
+            {
+              "path": "firmware.bin",
+              "offset": 65536
+            },
+            {
+              "path": "littlefs.bin",
+              "offset": 8454144
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "name": "Dragon Detector \u2014 Elecrow CrowPanel 2.1 Rotary (update)",
+      "version": "0.13.26",
+      "new_install_prompt_erase": true,
+      "new_install_improv_wait_time": 0,
+      "builds": [
+        {
+          "chipFamily": "ESP32-S3",
+          "parts": [
+            {
+              "path": "bootloader.bin",
+              "offset": 0
+            },
+            {
+              "path": "partitions.bin",
+              "offset": 32768
+            },
+            {
+              "path": "boot_app0.bin",
+              "offset": 57344
+            },
+            {
+              "path": "firmware.bin",
+              "offset": 65536
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "lilygo_175": {
+    "factory": {
+      "name": "Dragon Detector \u2014 LilyGo T-Display-S3-AMOLED-1.75 (factory)",
+      "version": "0.13.26",
+      "new_install_prompt_erase": true,
+      "new_install_improv_wait_time": 0,
+      "builds": [
+        {
+          "chipFamily": "ESP32-S3",
+          "parts": [
+            {
+              "path": "bootloader.bin",
+              "offset": 0
+            },
+            {
+              "path": "partitions.bin",
+              "offset": 32768
+            },
+            {
+              "path": "boot_app0.bin",
+              "offset": 57344
+            },
+            {
+              "path": "firmware.bin",
+              "offset": 65536
+            },
+            {
+              "path": "littlefs.bin",
+              "offset": 8454144
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "name": "Dragon Detector \u2014 LilyGo T-Display-S3-AMOLED-1.75 (update)",
+      "version": "0.13.26",
+      "new_install_prompt_erase": true,
+      "new_install_improv_wait_time": 0,
+      "builds": [
+        {
+          "chipFamily": "ESP32-S3",
+          "parts": [
+            {
+              "path": "bootloader.bin",
+              "offset": 0
+            },
+            {
+              "path": "partitions.bin",
+              "offset": 32768
+            },
+            {
+              "path": "boot_app0.bin",
+              "offset": 57344
+            },
+            {
+              "path": "firmware.bin",
+              "offset": 65536
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "spotpear": {
+    "factory": {
+      "name": "Dragon Detector \u2014 Spotpear JC3636W518 (factory)",
+      "version": "0.13.26",
+      "new_install_prompt_erase": true,
+      "new_install_improv_wait_time": 0,
+      "builds": [
+        {
+          "chipFamily": "ESP32-S3",
+          "parts": [
+            {
+              "path": "bootloader.bin",
+              "offset": 0
+            },
+            {
+              "path": "partitions.bin",
+              "offset": 32768
+            },
+            {
+              "path": "boot_app0.bin",
+              "offset": 57344
+            },
+            {
+              "path": "firmware.bin",
+              "offset": 65536
+            },
+            {
+              "path": "littlefs.bin",
+              "offset": 12648448
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "name": "Dragon Detector \u2014 Spotpear JC3636W518 (update)",
+      "version": "0.13.26",
+      "new_install_prompt_erase": true,
+      "new_install_improv_wait_time": 0,
+      "builds": [
+        {
+          "chipFamily": "ESP32-S3",
+          "parts": [
+            {
+              "path": "bootloader.bin",
+              "offset": 0
+            },
+            {
+              "path": "partitions.bin",
+              "offset": 32768
+            },
+            {
+              "path": "boot_app0.bin",
+              "offset": 57344
+            },
+            {
+              "path": "firmware.bin",
+              "offset": 65536
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "stopwatch": {
+    "factory": {
+      "name": "Dragon Detector \u2014 M5Stack StopWatch C152 (factory)",
+      "version": "0.13.26",
+      "new_install_prompt_erase": true,
+      "new_install_improv_wait_time": 0,
+      "builds": [
+        {
+          "chipFamily": "ESP32-S3",
+          "parts": [
+            {
+              "path": "bootloader.bin",
+              "offset": 0
+            },
+            {
+              "path": "partitions.bin",
+              "offset": 32768
+            },
+            {
+              "path": "boot_app0.bin",
+              "offset": 57344
+            },
+            {
+              "path": "firmware.bin",
+              "offset": 65536
+            },
+            {
+              "path": "littlefs.bin",
+              "offset": 8454144
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "name": "Dragon Detector \u2014 M5Stack StopWatch C152 (update)",
+      "version": "0.13.26",
+      "new_install_prompt_erase": true,
+      "new_install_improv_wait_time": 0,
+      "builds": [
+        {
+          "chipFamily": "ESP32-S3",
+          "parts": [
+            {
+              "path": "bootloader.bin",
+              "offset": 0
+            },
+            {
+              "path": "partitions.bin",
+              "offset": 32768
+            },
+            {
+              "path": "boot_app0.bin",
+              "offset": 57344
+            },
+            {
+              "path": "firmware.bin",
+              "offset": 65536
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "waveshare": {
+    "factory": {
+      "name": "Dragon Detector \u2014 Waveshare ESP32-S3-Touch-AMOLED-1.75C (factory)",
+      "version": "0.13.26",
+      "new_install_prompt_erase": true,
+      "new_install_improv_wait_time": 0,
+      "builds": [
+        {
+          "chipFamily": "ESP32-S3",
+          "parts": [
+            {
+              "path": "bootloader.bin",
+              "offset": 0
+            },
+            {
+              "path": "partitions.bin",
+              "offset": 32768
+            },
+            {
+              "path": "boot_app0.bin",
+              "offset": 57344
+            },
+            {
+              "path": "firmware.bin",
+              "offset": 65536
+            },
+            {
+              "path": "littlefs.bin",
+              "offset": 12648448
+            },
+            {
+              "path": "reconfs.bin",
+              "offset": 16777216
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "name": "Dragon Detector \u2014 Waveshare ESP32-S3-Touch-AMOLED-1.75C (update)",
+      "version": "0.13.26",
+      "new_install_prompt_erase": true,
+      "new_install_improv_wait_time": 0,
+      "builds": [
+        {
+          "chipFamily": "ESP32-S3",
+          "parts": [
+            {
+              "path": "bootloader.bin",
+              "offset": 0
+            },
+            {
+              "path": "partitions.bin",
+              "offset": 32768
+            },
+            {
+              "path": "boot_app0.bin",
+              "offset": 57344
+            },
+            {
+              "path": "firmware.bin",
+              "offset": 65536
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "waveshare_175": {
+    "factory": {
+      "name": "Dragon Detector \u2014 Waveshare ESP32-S3-Touch-AMOLED-1.75 (factory)",
+      "version": "0.13.26",
+      "new_install_prompt_erase": true,
+      "new_install_improv_wait_time": 0,
+      "builds": [
+        {
+          "chipFamily": "ESP32-S3",
+          "parts": [
+            {
+              "path": "bootloader.bin",
+              "offset": 0
+            },
+            {
+              "path": "partitions.bin",
+              "offset": 32768
+            },
+            {
+              "path": "boot_app0.bin",
+              "offset": 57344
+            },
+            {
+              "path": "firmware.bin",
+              "offset": 65536
+            },
+            {
+              "path": "littlefs.bin",
+              "offset": 8454144
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "name": "Dragon Detector \u2014 Waveshare ESP32-S3-Touch-AMOLED-1.75 (update)",
+      "version": "0.13.26",
+      "new_install_prompt_erase": true,
+      "new_install_improv_wait_time": 0,
+      "builds": [
+        {
+          "chipFamily": "ESP32-S3",
+          "parts": [
+            {
+              "path": "bootloader.bin",
+              "offset": 0
+            },
+            {
+              "path": "partitions.bin",
+              "offset": 32768
+            },
+            {
+              "path": "boot_app0.bin",
+              "offset": 57344
+            },
+            {
+              "path": "firmware.bin",
+              "offset": 65536
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "waveshare_175_gps": {
+    "factory": {
+      "name": "Dragon Detector \u2014 Waveshare ESP32-S3-Touch-AMOLED-1.75-G (factory)",
+      "version": "0.13.26",
+      "new_install_prompt_erase": true,
+      "new_install_improv_wait_time": 0,
+      "builds": [
+        {
+          "chipFamily": "ESP32-S3",
+          "parts": [
+            {
+              "path": "bootloader.bin",
+              "offset": 0
+            },
+            {
+              "path": "partitions.bin",
+              "offset": 32768
+            },
+            {
+              "path": "boot_app0.bin",
+              "offset": 57344
+            },
+            {
+              "path": "firmware.bin",
+              "offset": 65536
+            },
+            {
+              "path": "littlefs.bin",
+              "offset": 8454144
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "name": "Dragon Detector \u2014 Waveshare ESP32-S3-Touch-AMOLED-1.75-G (update)",
+      "version": "0.13.26",
+      "new_install_prompt_erase": true,
+      "new_install_improv_wait_time": 0,
+      "builds": [
+        {
+          "chipFamily": "ESP32-S3",
+          "parts": [
+            {
+              "path": "bootloader.bin",
+              "offset": 0
+            },
+            {
+              "path": "partitions.bin",
+              "offset": 32768
+            },
+            {
+              "path": "boot_app0.bin",
+              "offset": 57344
+            },
+            {
+              "path": "firmware.bin",
+              "offset": 65536
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "waveshare_lite": {
+    "factory": {
+      "name": "Dragon Detector \u2014 Waveshare ESP32-S3-LCD-1.28 Lite (factory)",
+      "version": "0.13.26",
+      "new_install_prompt_erase": true,
+      "new_install_improv_wait_time": 0,
+      "builds": [
+        {
+          "chipFamily": "ESP32-S3",
+          "parts": [
+            {
+              "path": "bootloader.bin",
+              "offset": 0
+            },
+            {
+              "path": "partitions.bin",
+              "offset": 32768
+            },
+            {
+              "path": "boot_app0.bin",
+              "offset": 57344
+            },
+            {
+              "path": "firmware.bin",
+              "offset": 65536
+            },
+            {
+              "path": "littlefs.bin",
+              "offset": 12648448
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "name": "Dragon Detector \u2014 Waveshare ESP32-S3-LCD-1.28 Lite (update)",
+      "version": "0.13.26",
+      "new_install_prompt_erase": true,
+      "new_install_improv_wait_time": 0,
+      "builds": [
+        {
+          "chipFamily": "ESP32-S3",
+          "parts": [
+            {
+              "path": "bootloader.bin",
+              "offset": 0
+            },
+            {
+              "path": "partitions.bin",
+              "offset": 32768
+            },
+            {
+              "path": "boot_app0.bin",
+              "offset": 57344
+            },
+            {
+              "path": "firmware.bin",
+              "offset": 65536
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "xiao_round": {
+    "factory": {
+      "name": "Dragon Detector \u2014 Seeed XIAO ESP32-S3 + Round Display (factory)",
+      "version": "0.13.26",
+      "new_install_prompt_erase": true,
+      "new_install_improv_wait_time": 0,
+      "builds": [
+        {
+          "chipFamily": "ESP32-S3",
+          "parts": [
+            {
+              "path": "bootloader.bin",
+              "offset": 0
+            },
+            {
+              "path": "partitions.bin",
+              "offset": 32768
+            },
+            {
+              "path": "boot_app0.bin",
+              "offset": 57344
+            },
+            {
+              "path": "firmware.bin",
+              "offset": 65536
+            },
+            {
+              "path": "littlefs.bin",
+              "offset": 6356992
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "name": "Dragon Detector \u2014 Seeed XIAO ESP32-S3 + Round Display (update)",
+      "version": "0.13.26",
+      "new_install_prompt_erase": true,
+      "new_install_improv_wait_time": 0,
+      "builds": [
+        {
+          "chipFamily": "ESP32-S3",
+          "parts": [
+            {
+              "path": "bootloader.bin",
+              "offset": 0
+            },
+            {
+              "path": "partitions.bin",
+              "offset": 32768
+            },
+            {
+              "path": "boot_app0.bin",
+              "offset": 57344
+            },
+            {
+              "path": "firmware.bin",
+              "offset": 65536
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

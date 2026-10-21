@@ -106,3 +106,14 @@ header nav{gap:22px;font-size:12px}
 #buy-hardware tbody th{width:32%}
 #buy-hardware td:last-child{min-width:170px}
 .purchase-disclosure{font-size:14px;line-height:1.7;color:var(--text);margin:0 0 20px}
+/* Installation guidance stays readable beside the hardware chooser. */
+.install-help{margin:24px 0;padding:20px 24px;background:var(--panel);border:1px solid var(--line);border-radius:8px;font-size:14px;line-height:1.75;scroll-margin-top:24px}
+.install-help p{margin:10px 0}.install-help a,.waveshare-model-help a,#connection-help a{text-decoration:underline;text-underline-offset:3px}
+.waveshare-model-help{margin:20px 0;font-size:14px;line-height:1.75}.waveshare-model-help summary{font-size:16px}
+.waveshare-model-help dt,.recovery-list dt{font-weight:650;color:var(--text);margin-top:20px;overflow-wrap:anywhere}
+.waveshare-model-help dd,.recovery-list dd{margin:5px 0 14px;color:var(--muted)}
+.recovery-list{line-height:1.8;font-size:14px}.driver-links{list-style:none;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.driver-links li{padding:14px 16px;border:1px solid var(--line);border-radius:6px}.driver-links a{display:block;font-weight:600}.driver-links span{display:block;font-size:12px;color:var(--muted);margin-top:7px}
+.install-report{margin:24px 0}.install-report p{font-size:12px;line-height:1.7;color:var(--muted)}.install-report textarea{margin-top:12px}
+#board-status,#clock-setup-status{overflow-wrap:anywhere}#retry-release{font-size:12px}.install-panel>div{min-width:0}#install-mode{max-width:100%}
+@media(max-width:700px){.driver-links{grid-template-columns:1fr;gap:10px}.install-help{padding:18px}.install-report .button{max-width:100%;white-space:normal}}

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {syncInstalledClock,finishInstallSession} from '../web/install-clock.js';
+import {syncInstalledClock,finishInstallSession,completeInstallSession} from '../web/install-clock.js';
 import {boardProfiles} from '../web/board-profiles.js';
 function rig(board='waveshare',{rtc=1,offset=345,valid=1,identity,drift=0,openFails=0,version='0.13.7'}={}){
   const events=[],writes=[],now=new Date('2026-10-16T20:10:30Z');now.getTimezoneOffset=()=>-offset;
@@ -19,6 +19,26 @@ function rig(board='waveshare',{rtc=1,offset=345,valid=1,identity,drift=0,openFa
   })};
   return {events,writes,options,epoch};
 }
+
+test('cancelled and failed installations close USB without any clock or identity commands',async()=>{
+  for(const autoClock of [false,true])for(const alreadyClosed of [false,true]){
+    const r=rig();const port={async close(){r.events.push('installer-close');if(alreadyClosed)throw new Error('Already closed');}};
+    assert.deepEqual(await completeInstallSession(port,'waveshare',{succeeded:false,autoClock},r.options),{cancelled:true});
+    assert.deepEqual(r.writes,[]);assert.deepEqual(r.events,['installer-close']);
+  }
+});
+
+test('successful flash with USB already closed can retry clock handoff',async()=>{
+  const r=rig();const port={readable:null,writable:null,async close(){throw new Error('Already closed');}};
+  const result=await completeInstallSession(port,'waveshare',{succeeded:true,autoClock:true},r.options);
+  assert.equal(result.board,'waveshare');assert.deepEqual(r.events,['open','close']);
+});
+
+test('successful flash with locked USB cannot start a competing clock connection',async()=>{
+  const r=rig();const port={readable:{},writable:{},async close(){throw new Error('Locked');}};
+  await assert.rejects(completeInstallSession(port,'waveshare',{succeeded:true,autoClock:true},r.options),/Locked/);
+  assert.deepEqual(r.writes,[]);
+});
 test('post-install clock verifies each full board, current offset and RTC state',async()=>{
   for(const board of Object.keys(boardProfiles).filter(k=>!boardProfiles[k].lite)){
     for(const offset of [-720,-240,0,330,345,840]){

@@ -37,3 +37,18 @@ export async function finishInstallSession(port,board,autoClock,options){
   if(!autoClock)return {skipped:true};
   return syncInstalledClock(port,board,options);
 }
+
+// Cancelling the dialog must never send setup commands to existing firmware.
+// A closed/disconnected port is fine on cancellation; a locked port on a
+// completed install must still fail before another USB reader is created.
+export async function completeInstallSession(port,board,{succeeded,autoClock},options){
+  if(!succeeded){
+    try{await port.close();}catch{}
+    return {cancelled:true};
+  }
+  if(port.readable===null&&port.writable===null){
+    if(!autoClock)return {skipped:true};
+    return syncInstalledClock(port,board,options);
+  }
+  return finishInstallSession(port,board,autoClock,options);
+}

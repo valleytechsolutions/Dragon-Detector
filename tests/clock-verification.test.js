@@ -55,8 +55,8 @@ test('older firmware remains syncable but cannot claim direct RTC verification',
 function dialogRig(){
   const events=[];
   class Base{
-    _state='INSTALL';_installState={state:'finished'};updateComplete=Promise.resolve();
-    async _initialize(value){events.push(['initialize',value]);await Promise.resolve();events.push('USB released by loader');}
+    _state='INSTALL';_installState=undefined;updateComplete=Promise.resolve();
+    async _initialize(value){events.push(['initialize',value]);if(value&&!this._installState)this._installState={state:'finished'};await Promise.resolve();events.push('USB released by loader');}
     _startInstall(erase){events.push(['erase',erase]);}
     _closeDialog(){events.push('normal close');}
   }
@@ -83,5 +83,14 @@ test('personal-theme handoff requires a completed install even without clock syn
     assert.equal(events.includes('normal close'),finished);
   }
   const {dialog,events}=dialogRig();dialog.autoTheme=true;dialog._state='ERROR';
-  await dialog._initialize(true);assert.equal(dialog.installSucceeded,false);assert.ok(!events.includes('normal close'));
+  await dialog._initialize(true);assert.equal(dialog.installSucceeded,true);assert.ok(!events.includes('normal close'));
+});
+
+test('completed flash stays successful when USB cannot reopen; failed writes do not',()=>{
+  const {dialog}=dialogRig();
+  assert.equal(dialog.installSucceeded,false);
+  dialog._installState={state:'finished'};dialog._state='ERROR';dialog._error='USB disappeared';
+  assert.equal(dialog.installSucceeded,true);assert.equal(dialog.installError,'USB disappeared');
+  dialog._installState={state:'error',message:'Writing stopped'};
+  assert.equal(dialog.installSucceeded,false);assert.equal(dialog.installError,'Writing stopped');
 });

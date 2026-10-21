@@ -9,7 +9,10 @@ export function clockInstallDialogClass(Base){
     installMode='update';
     autoClock=true;
     autoTheme=false;
-    installSucceeded=false;
+    // Writing completion remains true even if the subsequent USB reopen fails.
+    // That is a clock handoff problem, not a failed firmware write.
+    get installSucceeded(){return this._installState?.state==='finished';}
+    get installError(){return this._installState?.state==='error'?this._installState.message:this._state==='ERROR'?this._error:'';}
     _startInstall(){super._startInstall(this.installMode==='factory');}
     async _initialize(justInstalled=false){
       await super._initialize(justInstalled);
@@ -17,8 +20,7 @@ export function clockInstallDialogClass(Base){
       // contradictory second erase chooser; _startInstall enforces that mode.
       // Published manifests still ask when opened in a generic installer.
       if(this._manifest)this._manifest.new_install_prompt_erase=false;
-      if(justInstalled&&this._state!=='ERROR'&&this._installState?.state==='finished')this.installSucceeded=true;
-      if(this.installSucceeded&&(this.autoClock||this.autoTheme)){
+      if(justInstalled&&this._state!=='ERROR'&&this.installSucceeded&&(this.autoClock||this.autoTheme)){
         await this.updateComplete;
         this._closeDialog();
       }

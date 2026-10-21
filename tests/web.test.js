@@ -56,7 +56,8 @@ test('badge text is drawn into the exported canvas with a readable outline',()=>
 
 test('firmware release updates preserve the independently pinned installer dependency',()=>{
   const html=readFileSync(new URL('../web/index.html',import.meta.url),'utf8');
-  assert.match(html,/https:\/\/unpkg\.com\/esp-web-tools@10\.4\.0\/dist\/web\/install-dialog-im156JnI\.js\?module/);
+  assert.match(html,/vendor\/esp-web-tools-10\.4\.0\/install-dialog-im156JnI\.js/);
+  assert.doesNotMatch(html,/<script[^>]+src="https:\/\//);
 });
 
 test('every board is installable; only full boards have badge preview controls',()=>{

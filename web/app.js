@@ -1,7 +1,8 @@
 import {hasRepeatingBeeper,hasBleTools,observedAddress,iBeaconCommand,parseIBeacon} from './ble-tools.js?v=0.13.25-lilygo';
 import {maintainComputerClock} from './clock-maintenance.js?v=0.13.25-lilygo';
 import {startRadarBackground} from './radar-background.js?v=0.13.12';
-import {finishInstallSession,syncInstalledClock} from './install-clock.js?v=0.13.25-lilygo';
+import {completeInstallSession,syncInstalledClock} from './install-clock.js?v=2026-10-21-flasher';
+import {checkRelease,usbErrorText,installDiagnostics} from './install-checks.js?v=2026-10-21-flasher';
 import {updateVisitCounter} from './visit-counter.js?v=2026-10-18';
 import {hasFullLab,hasFullRecon,hasSessionTools} from './lab-capabilities.js?v=0.13.25-lilygo';
 import {sessionName,downloadMission,recipePutCommand,sourceMacCommand} from './mission-tools.js?v=0.13.21';
@@ -11,7 +12,7 @@ import {hasReconTools,reconLines,exportCapture,exportReconFile,captureName,impor
 import {decodeProfile,exportProfile,exportLog,importProfile,labLines,safeProfileName} from './ble-lab.js?v=0.13.21';
 import {localClockEpoch,setClock,readWearable,setOrientation} from './wearable-transfer.js?v=0.13.12';
 import {syncVerifiedClock,clockResultText} from './clock-verification.js?v=0.13.25-lilygo';
-import {clockInstallDialogClass} from './clock-install-dialog.js?v=0.13.17';
+import {clockInstallDialogClass} from './clock-install-dialog.js?v=2026-10-21-flasher';
 import {deviceQuery} from './device-query.js';
 import {BadgeSerial} from './serial.js?v=0.13.3';
 import {encodeBadge} from './badge-codec.js';
@@ -19,7 +20,7 @@ import {uploadBadge} from './badge-transfer.js?v=0.13.3';
 import {readHistory} from './detector-transfer.js';
 import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasBrandedThemes,hasCommunityThemes,hasRunnerThemes,hasCapsuleSparrowsThemes,hasCanCommanderTheme,hasGreenArtThemes,hasMuldersRevengeTheme,hasMitmTheme,hasHypnoticTheme,hasLplTheme,hasWearableTools,hasClockTools,hasWifiClock,hasRetainedClock} from './firmware-compat.js?v=0.13.26';
 import {readRadarSettings,saveRadarSettings} from './radar-transfer.js?v=0.13.26';
-import {boardProfiles,connectedProfile,validateManifest,supportsBadge} from './board-profiles.js?v=0.13.25-lilygo';
+import {boardProfiles,connectedProfile,supportsBadge} from './board-profiles.js?v=2026-10-21-flasher';
 import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan,drawBadgeText} from './badge-editor.js?v=0.13.3';
 import {hasNotebook,readNotebook,customAdvertCommand} from './notebook.js?v=0.13.3';
 import {revealLocation} from './navigation.js?v=0.13.14';
@@ -35,12 +36,13 @@ startRadarBackground($('radar-background'),$('radar-motion'));
 const models = Object.fromEntries(Object.entries(boardProfiles).map(([id,p])=>[id,p.name]));
 let serial=null;
 let board = '', releaseReady = false, request = 0;
+let releaseController,releaseVersion='';
 let installerReady=false,installerFailed=false,installActive=false;
 function installEnabled(){
   const supported=!!navigator.serial && window.isSecureContext;
   $('install-button').disabled = installActive || !!serial || !board || !releaseReady || !$('hardware-confirm').checked || !installerReady || !supported;
   if(!supported)$('install-message').textContent='Use desktop Chrome or Edge over HTTPS or localhost for USB installation.';
-  else if(!installerReady)$('install-message').textContent=installerFailed?'The USB installer could not load. Check your connection and reload this page.':'Loading the USB installer…';
+  else if(!installerReady)$('install-message').textContent=installerFailed?'The USB installer could not load. Check your connection and reload this page. See connection help below.':'Loading the USB installer…';
   else if(serial)$('install-message').textContent='Disconnect Detector tools / Badge Studio before opening the installer.';
   else if(installActive)$('install-message').textContent='USB is in use by the installer or clock setup.';
   else if(!board)$('install-message').textContent='Select a board to load its release.';
@@ -54,7 +56,9 @@ customElements.whenDefined('ewt-install-dialog').then(()=>{
 installEnabled();
 async function chooseBoard(next) {
   if(installActive)return;
-  board = next; releaseReady = false; const revision = ++request;
+  releaseController?.abort();releaseController=new AbortController();
+  board = next; releaseReady = false; releaseVersion='';const revision = ++request;
+  $('retry-release').hidden=true;
   if(!serial)setBadgeProfile(next);
   $('hardware-confirm').checked = false; $('download').hidden = true; installEnabled();
   document.querySelectorAll('[data-board]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.board===board)));
@@ -70,17 +74,16 @@ async function chooseBoard(next) {
   $('board-status').textContent = 'Checking the matching firmware release…';
   const mode = $('install-mode').value, manifest = `firmware/${board}/${mode}.json`;
   try {
-    const response = await fetch(manifest, {cache:'no-cache'});
-    if(!response.ok)throw new Error('The release is not published at this location yet.');
-    const data = validateManifest(await response.json(),board,mode);
+    const data = await checkRelease(board,mode,{signal:releaseController.signal});
     if(revision !== request)return;
-    $('installer').setAttribute('manifest', manifest); releaseReady = true;
+    $('installer').setAttribute('manifest', manifest); releaseReady = true;releaseVersion=data.version;
     $('board-status').textContent = `${data.version}${board==='elecrow_21'?' · EXPERIMENTAL — initial hardware checks passed':board==='lilygo_175'?' · BETA — working baseline reported; new RTC/SD checks await hardware testing':boardProfiles[board].experimental?' · BETA — new SD/GPS features await field testing':''} · ${mode==='factory'?'Fresh installation replaces saved history, badges and BLE profiles.':board==='waveshare'?'32 MB update preserves badge, history, settings and BLE profiles. When upgrading older firmware, initialize new BLE storage once in the lab.':['waveshare_175','waveshare_175_gps'].includes(board)?'Update requires the exact selected non-C profile (1.75: 0.13.19+; 1.75-G GPS: 0.13.21+). Use Fresh installation for the factory demo or another firmware.':board==='elecrow_21'?'Update requires this exact Elecrow 2.1 rotary profile, version 0.13.20 or newer. Use Fresh installation for the factory demo or another firmware.':board==='lilygo_175'?'Update matches the provided 0.13.20 LILYGO 1.75 layout and this profile’s 0.13.25+ builds. Other firmware or another LILYGO size requires Fresh installation with its correct profile.':board==='waveshare_lite'?'Update requires this exact Lite profile’s 0.9.4+ layout. For an older third-party port, choose Fresh installation unless its partitions have been verified.':board==='xiao_round'?'Update preserves files; requires this XIAO + Round Display profile’s 0.9.2 or newer 8 MB layout.':'Update preserves history, badges and settings; requires this board’s existing 0.3.x–0.13.x layout.'}`;
     $('download').href = `firmware/${board}/SHA256SUMS.txt`; $('download').textContent='Firmware file checksums'; $('download').hidden=false;
     $('install-message').textContent='Confirm your board, then connect its USB port.';
   } catch(error) {
     if(revision!==request)return;
     $('board-status').textContent=error.message;
+    $('retry-release').hidden=false;
     $('install-message').textContent='Installation stays disabled until matching build files are available.';
   }
   installEnabled();
@@ -88,6 +91,15 @@ async function chooseBoard(next) {
 document.querySelectorAll('[data-board]').forEach(b=>b.onclick=()=>chooseBoard(b.dataset.board));
 $('hardware-confirm').onchange=installEnabled;
 $('install-mode').onchange=()=>{if(board)chooseBoard(board);};
+$('retry-release').onclick=()=>{if(board)chooseBoard(board);};
+$('copy-install-details').onclick=async()=>{
+  const report=installDiagnostics({board:models[board],mode:$('install-mode').value,version:releaseVersion,
+    installerReady,serialSupported:!!navigator.serial&&window.isSecureContext,userAgent:navigator.userAgent,
+    status:[$('board-status').textContent,$('install-message').textContent,$('clock-setup-status').textContent].join('\n')});
+  const output=$('install-details');output.hidden=false;output.value=report;
+  try{await navigator.clipboard.writeText(report);$('copy-details-status').textContent='Copied. Add the exact board model and installer error when reporting a problem.';}
+  catch{output.focus();output.select();$('copy-details-status').textContent='Select and copy the details below.';}
+};
 
 const canvas=$('preview'), ctx=canvas.getContext('2d',{willReadFrequently:true});
 const guideCanvas=$('preview-guides'),guideCtx=guideCanvas.getContext('2d');
@@ -97,7 +109,7 @@ const themeStudio=createThemeStudio({state:()=>({serial,busy,version:firmwareVer
 let lastInstallBoard='';
 function installLock(active){
   installActive=active;busy=active;controls();installEnabled();
-  for(const element of document.querySelectorAll('[data-board],#install-mode,#hardware-confirm,#auto-clock'))element.disabled=active;
+  for(const element of document.querySelectorAll('[data-board],#install-mode,#hardware-confirm,#auto-clock,#retry-release'))element.disabled=active;
 }
 function clockSetupResult(result){
   $('clock-setup-status').textContent=clockResultText(result);
@@ -105,7 +117,7 @@ function clockSetupResult(result){
 }
 function clockSetupFailure(error){
   const recovery=lastInstallBoard==='stopwatch'?' If the StopWatch display is blank, close any serial monitor, unplug USB, double-press power to turn it off, wait five seconds, then press power once and reconnect USB.':' If USB changed after flashing, reconnect the running board.';
-  $('clock-setup-status').textContent=`Local time was not confirmed: ${error.message}${recovery} Use Finish clock setup to set and verify its clock.`;
+  $('clock-setup-status').textContent=`Firmware installed. Local time was not confirmed: ${error.message}${recovery} Use Finish clock setup; you do not need to erase or reinstall the firmware.`;
   $('finish-clock').hidden=false;
 }
 $('install-button').onclick=async()=>{
@@ -121,14 +133,21 @@ $('install-button').onclick=async()=>{
     dialog.port=port;dialog.manifestPath=$('installer').getAttribute('manifest');
     dialog.addEventListener('closed',async()=>{
       let themePhase=false;
-      $('clock-setup-status').textContent=autoClock?'Step 2 of 2: setting date, time and timezone; verifying the clock…':'Closing installer USB connection…';
+      const succeeded=dialog.installSucceeded;
+      $('clock-setup-status').textContent=succeeded&&autoClock?'Step 2 of 2: setting date, time and timezone; verifying the clock…':'Closing installer USB connection…';
       try{
-        const result=await finishInstallSession(port,selected,autoClock);clockSetupResult(result);
-        if(customTheme&&dialog.installSucceeded){
+        const result=await completeInstallSession(port,selected,{succeeded,autoClock});
+        if(result.cancelled){
+          $('clock-setup-status').textContent=dialog.installError?`Installation did not complete: ${dialog.installError} See connection help below, then retry.`:'Installer closed without completing an installation. Clock and personal-theme setup were skipped.';
+          return;
+        }
+        clockSetupResult(result);
+        if(!autoClock)$('clock-setup-status').textContent='Firmware installed. Automatic clock setup was turned off. Reset the board if it remains in download mode.';
+        if(customTheme){
           themePhase=true;
           await installPersonalTheme(port,selected,customTheme,p=>$('clock-setup-status').textContent=`Installing your personal theme · ${p}%`);
           $('clock-setup-status').textContent='Firmware and personal theme installed and verified.'+(autoClock?' Local date and time verified.':'');themeStudio.installed();
-        }else if(customTheme)$('clock-setup-status').textContent='Installation was not completed. Your personal theme was not sent.';
+        }
       }
       catch(error){if(themePhase)$('clock-setup-status').textContent=`Firmware installed, but the personal theme was not confirmed: ${error.message} Open Custom theme, connect the running device, and install your design there.`;else if(autoClock)clockSetupFailure(error);else $('clock-setup-status').textContent='Installer closed. USB may need reconnecting.';}
       finally{installLock(false);$('install-button').focus();}
@@ -137,7 +156,7 @@ $('install-button').onclick=async()=>{
     $('clock-setup-status').textContent=autoClock?'Step 1 of 2: installing firmware. Keep USB connected for automatic clock setup and verification.':'Close the installer window when finished.';
   }catch(error){
     if(port)try{await port.close();}catch{}
-    $('clock-setup-status').textContent=error.name==='NotFoundError'?'No USB port selected.':`Unable to open installer: ${error.message}`;
+    $('clock-setup-status').textContent=usbErrorText(error);
     installLock(false);
   }
 };
