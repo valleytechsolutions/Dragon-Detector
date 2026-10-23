@@ -25,6 +25,7 @@ for board in boards:
 for name in ['SD-RESOURCES.md','WARDRIVE-UPLOAD-DESIGN.md','sd-resource-manifest.json']:
     shutil.copy2(root/'docs'/name,a.output/name)
 subprocess.run(['git','archive','--format=zip','--prefix=Dragon-Detector/','-o',str(a.output/'Dragon-Detector-0.13.28-SD-Beta-source.zip'),'HEAD'],cwd=root,check=True)
+(a.output/'START-HERE.txt').write_text('Dragon Detector 0.13.28 — OPTIONAL SD RESOURCE BETA\n\nHardware validation is pending. Choose ONLY the ZIP matching your exact board.\nFive supported SD profiles: spotpear, waveshare_175, waveshare_175_gps, xiao_round, lilygo_175.\nThe non-GPS 1.75, GPS 1.75-G and no-SD 1.75C are different profiles.\n\nExtract the companion resource ZIP so the FAT32 SD card contains /dragon/resources/vendors.ddr.\nInsert before boot; restart after changing the pack. Firmware remains usable without this optional pack.\nVerify downloads against SHA256SUMS.txt. Each firmware ZIP includes flashing offsets and its own checksums.\nRead SD-RESOURCES.md for capability limits, provenance and required hardware checks.\n\nAutomatic WiGLE / WDG uploads are NOT enabled. WARDRIVE-UPLOAD-DESIGN.md contains the investigation and proposed opt-in policy.\nProduction hosting and existing non-SD/T5-E1 releases were not changed.\n',encoding='utf-8')
 checks=[]
 for f in sorted(a.output.iterdir()):
     if f.is_file() and f.name!='SHA256SUMS.txt':checks.append(f'{hashlib.sha256(f.read_bytes()).hexdigest()}  {f.name}\n')

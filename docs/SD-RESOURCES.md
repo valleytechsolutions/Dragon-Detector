@@ -30,11 +30,11 @@ The matrix follows the current board drivers and manufacturer references already
 
 The pack adds IEEE MA-M (28-bit) and MA-S (36-bit) assignments to MA-L (24-bit). Its 54,282 records occupy **1,270,072 bytes**, including a sorted 10-byte index and deduplicated names. More specific prefixes win. Public/universal addresses only: randomized BLE, locally administered Wi-Fi and multicast addresses do not produce vendor claims. Registry labels never change detector confidence or infer product identity.
 
-The independent DDR1 reader accepts at most 3 MiB / 100,000 records, validates lengths, CRC32, sorted unique keys, permitted prefix widths, string boundaries and label lengths. Snapshots before 2026-10-15 are rejected. It does not claim authenticity: CRC detects accidental corruption, and trusted distribution SHA-256 checks remain important.
+The independent DDR1 reader accepts at most 3 MiB / 100,000 records, validates lengths, whole-file CRC32 (checksum field zeroed), sorted unique keys, permitted prefix widths, string boundaries and label lengths. Snapshots before 2026-10-15 are rejected. It does not claim authenticity: CRC detects accidental corruption, and trusted distribution SHA-256 checks remain important.
 
 The card is read sequentially in 4 KiB chunks before radio startup. A complete validated index is retained in PSRAM; lookups perform at most three binary searches with **zero SD calls**, no allocation and no pointer eviction. At least 2 MiB free PSRAM is required beyond the allocation at load time. The existing 709,215-byte decoded internal registry remains available as fallback. This trades about 1.27 MB extra PSRAM and startup cost for predictable steady-state lookup. A sector cache would save RAM but introduce card stalls and cache-pointer lifetimes into UI lookup; it is not justified without hardware measurements. No-SD full profiles retain their existing compact flash registry; Lite profiles retain their existing detector tables.
 
-One Windows host run validated the full pack in 4,875 microseconds and performed 100,000 lookups in 7,002 microseconds (`-O2`, assertions enabled). These are parser/CPU observations, **not ESP32 timing, filesystem throughput, or evidence of faster scanning**. Reproduce with `tools/test_sd_resources.py`; timings vary. Device counters provide the missing measurements.
+One Windows host run validated the full pack in 5,110 microseconds and performed 100,000 lookups in 7,211 microseconds (`-O2`, assertions enabled). These are parser/CPU observations, **not ESP32 timing, filesystem throughput, or evidence of faster scanning**. Reproduce with `tools/test_sd_resources.py`; timings vary. Device counters provide the missing measurements.
 
 ## Hardware acceptance still required
 

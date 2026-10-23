@@ -23,7 +23,9 @@ def build(inputs,snapshot):
         offset[name]=len(pool);pool+=encoded+b'\0'
     records=b''.join(bytes([bits])+key.to_bytes(5,'big')+struct.pack('<I',offset[name]) for (bits,key),name in sorted(rows.items()))
     payload=records+pool
-    data=b'DDR1'+struct.pack('<7I',1,len(rows),len(pool),zlib.crc32(payload),snapshot,10,0)+payload
+    data=bytearray(b'DDR1'+struct.pack('<7I',1,len(rows),len(pool),0,snapshot,10,0)+payload)
+    data[16:20]=struct.pack('<I',zlib.crc32(data))
+    data=bytes(data)
     if len(data)>3*1024*1024:raise ValueError('pack exceeds firmware bound')
     metadata=dict(schema=1,minimum_firmware='0.13.28',snapshot=snapshot,entries=len(rows),bytes=len(data),sha256=hashlib.sha256(data).hexdigest(),sources=provenance)
     return data,metadata

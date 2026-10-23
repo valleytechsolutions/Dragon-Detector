@@ -22,7 +22,7 @@ public:
   if(!count||count>100000||!names||Header+uint64_t(count)*Record+names!=n||u32(p+24)!=Record)return false;
   error="outdated snapshot";if(date<MinimumSnapshot||date>20991231)return false;
   uint32_t crc=0xffffffff;
-  for(size_t i=Header;i<n;++i){crc^=p[i];for(unsigned j=0;j<8;++j)crc=(crc>>1)^((crc&1)?0xedb88320u:0);}
+  for(size_t i=0;i<n;++i){crc^=(i>=16&&i<20)?0:p[i];for(unsigned j=0;j<8;++j)crc=(crc>>1)^((crc&1)?0xedb88320u:0);}
   error="corrupt checksum";if((crc^0xffffffff)!=u32(p+16))return false;
   const uint8_t* pool=p+Header+count*Record;
   error="invalid labels";

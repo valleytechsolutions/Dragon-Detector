@@ -12,9 +12,9 @@ data,meta=build({24:fixture(24,[('001122','Broad')]),28:fixture(28,[('0011223','
 (work/'valid.ddr').write_bytes(data)
 archive(work/'first.zip',data,meta);archive(work/'second.zip',data,meta)
 assert (work/'first.zip').read_bytes()==(work/'second.zip').read_bytes()
-cases={'truncated':data[:-1],'future-schema':data[:4]+struct.pack('<I',2)+data[8:],'crc':data[:-1]+bytes([data[-1]^1]),'old':data[:20]+struct.pack('<I',20200101)+data[24:],'huge-count':data[:8]+struct.pack('<I',0xffffffff)+data[12:]}
+cases={'truncated':data[:-1],'future-schema':data[:4]+struct.pack('<I',2)+data[8:],'crc':data[:-1]+bytes([data[-1]^1]),'old':data[:20]+struct.pack('<I',20200101)+data[24:],'header-bitflip':data[:20]+struct.pack('<I',20261024)+data[24:],'huge-count':data[:8]+struct.pack('<I',0xffffffff)+data[12:]}
 def corrupt_record(offset,value):
-    p=bytearray(data);p[offset]=value;p[16:20]=struct.pack('<I',zlib.crc32(p[32:]));return p
+    p=bytearray(data);p[offset]=value;p[16:20]=bytes(4);p[16:20]=struct.pack('<I',zlib.crc32(p));return p
 cases.update({'bad-width':corrupt_record(32,25),'name-offset':corrupt_record(38,255),'unsorted':corrupt_record(42,24),'bad-label':corrupt_record(len(data)-2,10)})
 for name,value in cases.items():(work/f'{name}.ddr').write_bytes(value)
 source=r'''
