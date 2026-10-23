@@ -724,7 +724,11 @@ void uiShow(const String& name){if(name=="startup"){go(Startup);page=Boot;return
   if(name=="modes"||name=="tools"){openRadioTools=name=="tools";go(Recon);return;}
   if(name=="findmy-beeper"){bleLabBeeperPage();go(BleLab);return;}
   if(name=="lab"){go(BleLab);return;}
-  if(name=="wardrive"||name=="ble-attacks"||name=="ibeacon"||name=="attacks"||name=="missions"||name=="recipes"||name=="network"||name=="csi"||name=="portal"||name=="analysis"||name=="probes"||name=="filters"||name=="captures"){reconPage(name);go(Recon);return;}
+  if(
+#if BOARD_HAS_GPS
+     name=="wardrive"||
+#endif
+     name=="ble-attacks"||name=="ibeacon"||name=="attacks"||name=="missions"||name=="recipes"||name=="network"||name=="csi"||name=="portal"||name=="analysis"||name=="probes"||name=="filters"||name=="captures"){reconPage(name);go(Recon);return;}
 #endif
   if(name=="files"){
 #if BOARD_HAS_SD

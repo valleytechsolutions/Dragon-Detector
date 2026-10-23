@@ -23,3 +23,8 @@ web/firmware/
 managed_components/
 *.obj
 *.lib
+
+# Generated site imports and private future SD configuration.
+web/betas/
+web/guides/
+/config.txt

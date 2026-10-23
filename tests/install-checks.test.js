@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {checkRelease,usbErrorText,installDiagnostics} from '../web/install-checks.js';
 import {boardProfiles} from '../web/board-profiles.js';
+import {resourcePack} from '../web/sd-resources.js';
 const published=JSON.parse(readFileSync(new URL('./fixtures/release-0.13.26-manifests.json',import.meta.url)));
 published.m5dial=JSON.parse(readFileSync(new URL('./fixtures/dial-0.13.27-manifests.json',import.meta.url)));
 
@@ -15,6 +16,14 @@ function rig(board='waveshare',mode='factory',badFile){
     return {ok:true,headers:new Headers({'content-length':'4096','content-type':'application/octet-stream'}),...badFile};
   }};
 }
+
+test('SD-required manifests check their pack before USB; optional packs do not prevent boot',async()=>{
+  const r=rig('waveshare_175');r.manifest.version='0.13.28';r.manifest.sdResources={...resourcePack,required:true};
+  const fetchBase=r.fetchImpl;r.fetchImpl=async(url,opts)=>url===resourcePack.path?{ok:false,status:404}:fetchBase(url,opts);
+  await assert.rejects(checkRelease('waveshare_175','factory',r),/Required SD resource pack/);
+  r.manifest.sdResources.required=false;
+  assert.equal((await checkRelease('waveshare_175','factory',r)).version,'0.13.28');
+});
 
 test('all board profiles and both modes check every required file before allowing USB',async()=>{
   for(const board of Object.keys(boardProfiles))for(const mode of ['factory','update']){

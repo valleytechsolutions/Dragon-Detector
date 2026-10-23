@@ -1,0 +1,51 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>WARDRIVE-UPLOAD-DESIGN · Dragon Detector</title><style>body{max-width:960px;margin:2rem auto;padding:1rem;background:#111820;color:#e8f2ee;font:16px/1.65 system-ui}pre{padding:1rem;background:#061b13;overflow:auto}code{overflow-wrap:anywhere}a{color:#81e1b2}table{border-collapse:collapse;width:100%;font-size:.9rem}td,th{padding:.6rem;border:1px solid #365047;text-align:left}h1,h2{line-height:1.2}</style></head><body><a href="../index.html#install">Back to installer</a><h1>GPS + SD upload investigation — 2026-10-23</h1>
+<p>Status: researched contract and tested configuration/retry policy only. <strong>This resource beta does not read credentials or send wardrive uploads.</strong> No upload controls or config download appear on non-GPS boards. Live TLS, radio ownership and real-device cancellation must be implemented and validated before enabling a transport. No real or synthetic observations were uploaded during development.</p>
+<h2>Verified official contracts</h2>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Official endpoint</th>
+<th>Authentication</th>
+<th>Body</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>WiGLE v2</td>
+<td><code>https://api.wigle.net/api/v2/file/upload</code></td>
+<td>HTTP Basic API Name + API Token</td>
+<td>multipart <code>file</code>, including filename; omit <code>donate</code> unless separately opted in</td>
+</tr>
+<tr>
+<td>WiGLE v3</td>
+<td><code>https://api.wigle.net/api/v3/upload</code></td>
+<td>HTTP Basic API Name + API Token</td>
+<td>multipart <code>file</code>, optional <code>fileSize</code></td>
+</tr>
+<tr>
+<td>WDGWars</td>
+<td><code>https://wdgwars.pl/api/upload-csv</code></td>
+<td><code>X-API-Key</code>, 64-character key from profile</td>
+<td>multipart <code>file</code>, WiGLE/Bruce CSV/LOG</td>
+</tr>
+</tbody>
+</table>
+<p>Source: <a href="https://api.wigle.net/swagger.json">WiGLE official Swagger</a>, <a href="https://api.wigle.net/csvFormat.html">WiGLE CSV format</a>, <a href="https://www.wdgwars.pl/press">WDGWars developer section</a>. WiGLE v2 explicitly documents WiGLE CSV and a 180 MiB maximum; v3 documents 429 daily upload limits and requires Basic auth. Prefer the documented v2 file contract for the existing WiGLE-1.6 logger; verify account support before any future production rollout. WDGWars' public page says 40 MB for CSV; third-party reports disagree on operational caps/routes. Do not silently switch to undocumented paths or assume those limits are permanently reliable.</p>
+<p>Review <a href="https://wdgwars.pl/terms">WDGWars terms</a>, version 1.2 effective 2026-10-16: only personally collected broadcast observations; no fabricated/copied data or GPS spoofing; uploads grant processing/presentation rights. The <a href="https://wigle.net/eula.html">WiGLE EULA</a> governs non-commercial database use and forbids credential sharing. The firmware must not accept terms on a user's behalf. Link these pages beside an opt-in and let the account holder decide. Commercial donation is a separate choice and defaults off. No upload fixture should ever be sent to these production services.</p>
+<h2>Proposed private SD-root config.txt</h2>
+<p>Only a profile with <code>BOARD_HAS_SD &amp;&amp; BOARD_HAS_GPS</code> may load this file. Missing/invalid/duplicate/unknown keys fail closed; all destinations default off. Parse a maximum of 2 KiB into bounded fixed fields. The reference policy in <code>upload_policy.h</code> is host-tested and deliberately not wired to the firmware startup or a network sender.</p>
+<pre><code class="language-ini">config_version=1
+uploads_enabled=false
+terms_reviewed=false
+wigle_enabled=false
+wdgwars_enabled=false
+wigle_api_name=
+wigle_api_token=
+wdgwars_api_key=
+</code></pre>
+<p>Do not put credentials in the downloadable pack, web page, source tree, console commands, diagnostic dumps, or request URLs. Production integration must block <code>/config.txt</code> from the generic USB <code>get</code> path and all file browser/export paths, suppress framework HTTP debug output, and never print response bodies that might echo credentials. Use an explicit private network configuration flow; do not reuse arbitrary captured credentials. Separate destination opt-ins are required. File permissions on removable FAT do not provide confidentiality; users must keep their card private.</p>
+<h2>Queue and radio design</h2>
+<p>Use only finalized WiGLE CSV segments in <code>/dragon/wardrive</code>, never <code>.part</code>, captures, arbitrary paths or another user's logs. Persist one job per immutable file hash and destination, with separate accepted receipts. Enqueue new sessions after opt-in; existing logs require explicit selection. Keep originals and separate pending/accepted/rejected/uncertain states. Power loss after server acceptance but before receipt persistence is an uncertain outcome, not proof of failure. Do not blindly resend ambiguous jobs; WiGLE returns a transaction identifier whose processing result should be tracked.</p>
+<p>Automatic upload may run only while the user has paused scanning, no recording is finalizing and the network task has exclusive radio ownership. Association and TLS on ESP32 share resources with scanning; merely launching a FreeRTOS task does not guarantee noninterference. Resuming radar must cancel upload, close TLS, release SD/network ownership and restore scanning before reporting success. Stream bounded chunks with backpressure and deadlines. Require certificate/hostname verification and valid time; never use <code>setInsecure()</code>.</p>
+<p>The tested policy yields: 401/403 =&gt; blocked until config changes; malformed/permanent 4xx =&gt; rejected; 429 =&gt; bounded retry respecting numeric Retry-After; 5xx =&gt; exponential backoff; network loss after transmission =&gt; uncertain/manual reconciliation. A successful HTTP status alone is insufficient: require the service's success field and retain its transaction/receipt before marking accepted. Cap retries and daily attempts; preserve the queue across reboot. Integrate and test filesystem journals, transport, cancellation, certificate failures and radio ownership before changing the status above.</p></body></html>

@@ -1,3 +1,4 @@
+#include "sd_resources.h"
 #include <Arduino.h>
 #include "app.h"
 #include "wardrive.h"
@@ -117,7 +118,10 @@ static void command(const String& c){
 #endif
   if(!allowed&&!timing&&!page&&!dial){Serial.println("LITE_LIMITED no touch menus, badge, audio or radio controls");return;}
 #endif
-  if(c.startsWith("vendor ")){uint8_t mac[6];unsigned v[6];char tail;if(sscanf(c.c_str(),"vendor %2x:%2x:%2x:%2x:%2x:%2x %c",&v[0],&v[1],&v[2],&v[3],&v[4],&v[5],&tail)==6){for(unsigned i=0;i<6;++i)mac[i]=v[i];auto* name=dragon::registeredVendor(mac);Serial.printf("REGISTRY_VENDOR %s\n",name?name:"No universal MA-L match");}else Serial.println("REGISTRY_ERROR address");return;}
+  if(c.startsWith("vendor ")){uint8_t mac[6];unsigned v[6];char tail;if(sscanf(c.c_str(),"vendor %2x:%2x:%2x:%2x:%2x:%2x %c",&v[0],&v[1],&v[2],&v[3],&v[4],&v[5],&tail)==6){for(unsigned i=0;i<6;++i)mac[i]=v[i];auto* name=dragon::registeredVendor(mac);Serial.printf("REGISTRY_VENDOR %s\n",name?name:"No universal registry match");}else Serial.println("REGISTRY_ERROR address");return;}
+#if BOARD_HAS_SD
+  if(c=="resources status"){sdResourcesStatus();return;}
+#endif
   if(c=="registry status"){Serial.printf("REGISTRY entries=%u bits=24 source=IEEE_MA_L\n",dragon::vendorRegistryCount());return;}
 #ifndef BOARD_RADAR_LITE
   if(notebookCommand(c))return;
@@ -206,7 +210,7 @@ void setup(){
   for(size_t i=0;i<MAX_CONTACTS;++i)new(&contacts[i]) Contact{};
   runSelfTests();boardBegin();personalThemeBegin();uiBegin();wearableBegin();
   uint32_t at=millis();while(millis()-at<1600){uiLoop();delay(5);}
-  storageBegin();badgeInit();audioBegin();detectorBegin();notebookBegin();
+  storageBegin();sdResourcesBegin();badgeInit();audioBegin();detectorBegin();notebookBegin();
 #ifndef BOARD_RADAR_LITE
   if(!dragon::vendorRegistryBegin())Serial.println("REGISTRY unavailable: PSRAM allocation or integrity check");
 #endif

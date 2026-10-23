@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "minimum_firmware": "0.13.28",
+  "snapshot": 20261023,
+  "entries": 54282,
+  "bytes": 1270072,
+  "sha256": "5d2ec344a1ea29ad44bb70e904159d01d05f5a852dcf1b2eb680246bc4be1d0a",
+  "sources": [
+    {
+      "source": "https://standards-oui.ieee.org/oui/oui.csv",
+      "sha256": "3691462a2f79b5a079ed3064922b08a33b00d9abdf55dcf66a189ef729d218d1",
+      "bits": 24
+    },
+    {
+      "source": "https://standards-oui.ieee.org/oui28/mam.csv",
+      "sha256": "44c1fe2fdbec4416b1bd74c06f8679d0c1cbd1f6e8c1e5686c74a1a1170e4bbf",
+      "bits": 28
+    },
+    {
+      "source": "https://standards-oui.ieee.org/oui36/oui36.csv",
+      "sha256": "73e550a9f0be2de871558945231950a75faa6f23b1264cc43b53ef3eb8db75d6",
+      "bits": 36
+    }
+  ]
+}

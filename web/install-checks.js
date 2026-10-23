@@ -1,4 +1,4 @@
-import {validateManifest} from './board-profiles.js?v=2026-10-23-dial-v11';
+import {validateManifest} from './board-profiles.js?v=2026-10-23-sd-resources';
 
 // Check availability before asking for USB access. The installer downloads the
 // binaries itself before erasing; these HEAD requests do not verify their hash.
@@ -14,6 +14,11 @@ export async function checkRelease(board,mode,{fetchImpl=fetch,signal,timeoutMs=
     const response=await fetchImpl(`${base}${mode}.json`,options);
     if(!response.ok)throw new Error(`Firmware list unavailable (HTTP ${response.status}). Retry the release check.`);
     const manifest=validateManifest(await response.json(),board,mode);
+    if(manifest.sdResources?.required){
+      const pack=await fetchImpl(manifest.sdResources.path,{...options,method:'HEAD'});
+      if(!pack.ok||/text\/html/i.test(pack.headers.get('content-type')||'')||pack.headers.get('content-length')==='0')
+        throw new Error('Required SD resource pack is unavailable. No installation was started.');
+    }
     await Promise.all(manifest.builds[0].parts.map(async part=>{
       const file=await fetchImpl(base+part.path,{...options,method:'HEAD'});
       if(!file.ok)throw new Error(`${part.path} is unavailable (HTTP ${file.status}). No installation was started.`);

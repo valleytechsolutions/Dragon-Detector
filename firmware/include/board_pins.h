@@ -164,4 +164,10 @@
 
 #endif
 
+#if defined(BOARD_AMOLED_175) && defined(BOARD_GPS_LC76G) && BOARD_HAS_SD
+#define BOARD_HAS_GPS 1
+#else
+#define BOARD_HAS_GPS 0
+#endif
+
 #endif

@@ -1,5 +1,5 @@
 #include "wardrive.h"
-#ifdef BOARD_AMOLED_175
+#if BOARD_HAS_GPS
 #include "app.h"
 #include "recon_internal.h"
 #include "ble_lab.h"

@@ -68,6 +68,8 @@ def build(board,skip):
     for mode in ('factory','update'):
         selected=segments+(filesystem_segments if mode=='factory' else [])
         manifest={'name':f'Dragon Detector — {BOARDS[board][0]} ({mode})','version':VERSION,'new_install_prompt_erase':True,'new_install_improv_wait_time':0,'builds':[{'chipFamily':'ESP32-S3','parts':[{'path':name,'offset':offset} for name,offset in selected]}]}
+        if board in ('spotpear','waveshare_175','waveshare_175_gps','xiao_round','lilygo_175'):
+            manifest['sdResources']={'schema':1,'required':False,'path':'resources/dragon-resources-v1-20261023.zip','placement':'/dragon/resources/vendors.ddr'}
         (out/f'{mode}.json').write_text(json.dumps(manifest,indent=2)+'\n',encoding='utf-8')
     # A merged factory image is also provided for esptool/M5Burner-style tools.
     args=['-m','esptool','--chip','esp32s3','merge-bin','-o',str(out/'factory-0x0.bin')]
@@ -86,6 +88,9 @@ def build(board,skip):
     (out/'SHA256SUMS.txt').write_text(''.join(checks),encoding='ascii')
     metadata={'version':VERSION,'board':board,'name':BOARDS[board][0],'source_commit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),'source_dirty':bool(subprocess.check_output(['git','status','--porcelain','--untracked-files=normal'],cwd=ROOT,text=True).strip()),'filesystem_offset':fs_offset,'filesystem_size':fs_size,'factory_resets_badges':True,'update_preserves_nvs_and_filesystem':True}
     metadata['hardware_validation']='dial-v11-display-controls-rtc-restart-verified' if board=='m5dial' else 'lilygo-baseline-reported-rtc-sd-pending' if board=='lilygo_175' else 'initial-unit-verified' if board=='elecrow_21' else 'new-sd-gps-features-pending' if board in ('waveshare_175','waveshare_175_gps') else 'existing-profile'
+    if board in ('spotpear','waveshare_175','waveshare_175_gps','xiao_round','lilygo_175'):
+        metadata['hardware_validation']='sd-resource-beta-unverified'
+        metadata['sd_resources']={'schema':1,'required':False,'snapshot':20261023}
     metadata['flash_size']=0x2000000 if board=='waveshare' else 0x800000 if board in ('m5dial','xiao_round') else 0x1000000
     metadata['memory']=flash_report(entries,(build/'firmware.bin').stat().st_size,metadata['flash_size'])
     (out/'memory-budget.json').write_text(json.dumps(metadata['memory'],indent=2)+'\n',encoding='utf-8')

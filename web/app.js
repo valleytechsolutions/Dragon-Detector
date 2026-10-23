@@ -1,8 +1,9 @@
+import {resourceSetup} from "./sd-resources.js?v=0.13.28";
 import {hasRepeatingBeeper,hasBleTools,observedAddress,iBeaconCommand,parseIBeacon} from './ble-tools.js?v=0.13.25-lilygo';
 import {maintainComputerClock} from './clock-maintenance.js?v=2026-10-23-dial-v11';
 import {startRadarBackground} from './radar-background.js?v=0.13.12';
 import {completeInstallSession,syncInstalledClock} from './install-clock.js?v=2026-10-23-dial-v11';
-import {checkRelease,usbErrorText,installDiagnostics} from './install-checks.js?v=2026-10-23-dial-v11';
+import {checkRelease,usbErrorText,installDiagnostics} from './install-checks.js?v=2026-10-23-sd-resources';
 import {updateVisitCounter} from './visit-counter.js?v=2026-10-18';
 import {hasFullLab,hasFullRecon,hasSessionTools} from './lab-capabilities.js?v=0.13.25-lilygo';
 import {sessionName,downloadMission,recipePutCommand,sourceMacCommand} from './mission-tools.js?v=0.13.21';
@@ -20,7 +21,7 @@ import {uploadBadge} from './badge-transfer.js?v=0.13.3';
 import {readHistory} from './detector-transfer.js';
 import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasBrandedThemes,hasCommunityThemes,hasRunnerThemes,hasCapsuleSparrowsThemes,hasCanCommanderTheme,hasGreenArtThemes,hasMuldersRevengeTheme,hasMitmTheme,hasHypnoticTheme,hasLplTheme,hasWearableTools,hasClockTools,hasWifiClock,hasRetainedClock} from './firmware-compat.js?v=2026-10-23-dial-v11';
 import {readRadarSettings,saveRadarSettings} from './radar-transfer.js?v=0.13.26';
-import {boardProfiles,connectedProfile,supportsBadge} from './board-profiles.js?v=2026-10-23-dial-v11';
+import {boardProfiles,connectedProfile,supportsBadge} from './board-profiles.js?v=2026-10-23-sd-resources';
 import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan,drawBadgeText} from './badge-editor.js?v=0.13.3';
 import {hasNotebook,readNotebook,customAdvertCommand} from './notebook.js?v=0.13.3';
 import {revealLocation} from './navigation.js?v=0.13.14';
@@ -65,9 +66,11 @@ async function chooseBoard(next) {
   $('selected-board').textContent = models[board];
   $('board-storage').textContent = boardProfiles[board].storage;
   $('board-features').textContent = boardProfiles[board].features;
+  $('board-gps-guide').hidden=board!=='waveshare_175_gps';
   $('board-sd-setup').hidden = !['waveshare_175','waveshare_175_gps'].includes(board);
   $('board-dial-setup').hidden = board!=='m5dial';
   $('board-rotary-setup').hidden = board!=='elecrow_21';
+  $('board-resource-setup').hidden=true;
   $('board-lilygo-setup').hidden = board!=='lilygo_175';
   $('auto-clock-label').hidden=false;
   $('finish-clock').hidden=true;
@@ -78,7 +81,10 @@ async function chooseBoard(next) {
     const data = await checkRelease(board,mode,{signal:releaseController.signal});
     if(revision !== request)return;
     $('installer').setAttribute('manifest', manifest); releaseReady = true;releaseVersion=data.version;
-    $('board-status').textContent = `${data.version}${board==='m5dial'?' · Dial v1.1 verified':board==='elecrow_21'?' · EXPERIMENTAL — initial hardware checks passed':board==='lilygo_175'?' · BETA — working baseline reported; new RTC/SD checks await hardware testing':boardProfiles[board].experimental?' · BETA — new SD/GPS features await field testing':''} · ${mode==='factory'?'Fresh installation replaces saved history, badges and BLE profiles.':board==='waveshare'?'32 MB update preserves badge, history, settings and BLE profiles. When upgrading older firmware, initialize new BLE storage once in the lab.':['waveshare_175','waveshare_175_gps'].includes(board)?'Update requires the exact selected non-C profile (1.75: 0.13.19+; 1.75-G GPS: 0.13.21+). Use Fresh installation for the factory demo or another firmware.':board==='elecrow_21'?'Update requires this exact Elecrow 2.1 rotary profile, version 0.13.20 or newer. Use Fresh installation for the factory demo or another firmware.':board==='lilygo_175'?'Update matches the provided 0.13.20 LILYGO 1.75 layout and this profile’s 0.13.25+ builds. Other firmware or another LILYGO size requires Fresh installation with its correct profile.':board==='m5dial'?'Update requires this Dial profile’s 0.13.26 or newer partition layout. Use Fresh installation for the factory demo or any other firmware.':board==='waveshare_lite'?'Update requires this exact Lite profile’s 0.9.4+ layout. For an older third-party port, choose Fresh installation unless its partitions have been verified.':board==='xiao_round'?'Update preserves files; requires this XIAO + Round Display profile’s 0.9.2 or newer 8 MB layout.':'Update preserves history, badges and settings; requires this board’s existing 0.3.x–0.13.x layout.'}`;
+    const pack=resourceSetup(board,data);
+    $('board-resource-setup').hidden=!pack;
+    if(pack){$('resource-title').textContent=pack.title;$('resource-instructions').textContent=pack.instructions;$('resource-download').href=pack.path;}
+    $('board-status').textContent = `${data.version}${data.sdResources?' · SD RESOURCE BETA — hardware validation pending':board==='m5dial'?' · Dial v1.1 verified':board==='elecrow_21'?' · EXPERIMENTAL — initial hardware checks passed':board==='lilygo_175'?' · BETA — working baseline reported; new RTC/SD checks await hardware testing':boardProfiles[board].experimental?' · BETA — new SD/GPS features await field testing':''} · ${mode==='factory'?'Fresh installation replaces saved history, badges and BLE profiles.':board==='waveshare'?'32 MB update preserves badge, history, settings and BLE profiles. When upgrading older firmware, initialize new BLE storage once in the lab.':['waveshare_175','waveshare_175_gps'].includes(board)?'Update requires the exact selected non-C profile (1.75: 0.13.19+; 1.75-G GPS: 0.13.21+). Use Fresh installation for the factory demo or another firmware.':board==='elecrow_21'?'Update requires this exact Elecrow 2.1 rotary profile, version 0.13.20 or newer. Use Fresh installation for the factory demo or another firmware.':board==='lilygo_175'?'Update matches the provided 0.13.20 LILYGO 1.75 layout and this profile’s 0.13.25+ builds. Other firmware or another LILYGO size requires Fresh installation with its correct profile.':board==='m5dial'?'Update requires this Dial profile’s 0.13.26 or newer partition layout. Use Fresh installation for the factory demo or any other firmware.':board==='waveshare_lite'?'Update requires this exact Lite profile’s 0.9.4+ layout. For an older third-party port, choose Fresh installation unless its partitions have been verified.':board==='xiao_round'?'Update preserves files; requires this XIAO + Round Display profile’s 0.9.2 or newer 8 MB layout.':'Update preserves history, badges and settings; requires this board’s existing 0.3.x–0.13.x layout.'}`;
     $('download').href = `firmware/${board}/SHA256SUMS.txt`; $('download').textContent='Firmware file checksums'; $('download').hidden=false;
     $('install-message').textContent='Confirm your board, then connect its USB port.';
   } catch(error) {

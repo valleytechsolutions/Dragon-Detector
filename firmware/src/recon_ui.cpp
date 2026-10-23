@@ -40,7 +40,7 @@ void draw(){
  if(view==Modes){for(unsigned i=0;i<unsigned(ReconMode::Count);++i)row(reconModes[i].name,reconModes[i].detail,n++,100+i);row("Foxhunt a target","Choose a radar contact / live signal graph",n++,12);row("BLE Lab","GATT discovery / profile emulation",n++,13);row("Radio toolkit","Wi-Fi + BLE tests / capture files",n++,14);}
  else if(view==Attacks){row("Wi-Fi attacks","Select network / client / timed session",n++,20);row("BLE attacks","Pairing advertisements / timed session",n++,21);row("Radio toolkit","Capture / recon sessions / network tools",n++,14);}
  else if(view==Tools){
-#ifdef BOARD_AMOLED_175
+#if BOARD_HAS_GPS
  row("GPS wardrive","Exclusive passive Wi-Fi + BLE / SD / WiGLE",n++,70);
 #endif
  row("Recon recipes","Reviewed steps / timed runs / web editor",n++,67);row("Recon sessions","Persistent observations / RCN1 export",n++,63);row("Connected network","Saved profiles / IP tools / local ping scan",n++,55);row("CSI signal monitor","Passive / selected AP / calibrate first",n++,51);row("Portal / KARMA lab","Local AP / captured probe SSID / timed",n++,47);row("Wi-Fi statistics","Frames / EAPOL / PMKID / SAE",n++,40);row("Probe-request inventory","Requested SSIDs / signal / age",n++,41);row("Wi-Fi attacks","Select target, rate and duration",n++,20);row("BLE attacks","Timed pairing-advertisement tests",n++,21);row("Survey / select network","Passive AP + associated-client inventory",n++,22);row("Capture studio","Wi-Fi PCAP / raw BLE advertisement CSV",n++,23);row("Saved captures","Inspect files / download over USB",n++,24);row("Channel monitor","Channel activity and manual channel lock",n++,25);row("BLE Lab","Discover, save, compare and emulate GATT",n++,13);}
@@ -62,7 +62,9 @@ void draw(){
  else if(view==Portal){info=text(body,"",3,0,327,uiColors().ink,font16());updateStatus();btn(body,"START 30 SECONDS",0,200,334,44,48);btn(body,"STOP PORTAL",0,252,334,44,49);btn(body,"SAVE SESSION LOG",0,304,334,44,50);text(body,"Choose the AP name, captured probe or custom HTML in web Radio tools. Default: Dragon-Lab, a clearly labeled test page.",4,366,326,uiColors().muted,font16());}
  else if(view==Csi){info=text(body,"",3,0,327,uiColors().ink,font16());updateStatus();btn(body,"START SELECTED AP",0,280,334,42,52);btn(body,"RECALIBRATE",0,330,334,42,53);btn(body,"STOP CSI",0,380,334,42,54);}
  else if(view==Recipes){info=text(body,"",3,0,327,uiColors().ink,font16());updateStatus();text(body,"Create and review recipes in the web Radio tools. No automatic startup. Home cancels a running recipe and restores the previous radio mode.",3,180,327,uiColors().muted,font16());btn(body,"STOP RECIPE",0,342,334,44,68);}
+#if BOARD_HAS_GPS
  else if(view==Wardrive){info=text(body,"",3,0,327,uiColors().ink,font16());updateStatus();btn(body,"START WARDRIVE",0,330,334,44,71);btn(body,"STOP + SAVE",0,384,334,44,72);}
+#endif
  else if(view==Missions){info=text(body,"",3,0,327,uiColors().ink,font16());updateStatus();btn(body,"START WI-FI",0,310,164,42,64);btn(body,"START BLE",174,310,164,42,65);btn(body,"STOP + SAVE",0,362,334,42,66);}
  else if(view==Network){btn(body,"SAVED NETWORKS",0,0,334,42,56);info=text(body,"",3,54,327,uiColors().ink,font16());updateStatus();btn(body,"PING GATEWAY",0,390,334,42,57);btn(body,"SCAN LOCAL /24",0,440,334,42,58);btn(body,"STOP SCAN",0,490,334,42,59);btn(body,"SAVE RESULTS",0,540,334,42,60);btn(body,"DISCONNECT",0,590,334,42,61);btn(body,"CLEAR RESULTS",0,640,334,42,62);text(body,"Add profiles in the web Radio tools. Saved passwords remain on this device. No automatic connection at boot. Session limit: 15 minutes.",4,694,326,uiColors().muted,font16());}
  else if(view==NetworkProfiles){char names[8][33];unsigned slots[8];unsigned count=networkProfiles(names,slots,8);for(unsigned i=0;i<count;++i)row(names[i],"Tap to join / pauses radar until disconnect",n++,700+slots[i]);if(!count)text(body,"Add a network in the web flasher\'s Radio tools, then return here.",4,8);}
@@ -83,7 +85,9 @@ if(id==1){recipeStop();reconStop();uiShow("radar");return;}
  switch(id){
  case 12:uiShow("targets");break;case 13:reconStop();uiShow("lab");break;case 14:change(Tools);break;
  case 73:{char name[24];snprintf(name,sizeof(name),"survey-%08lx",esp_random());say(surveySave(name)?"Survey saved in /surveys":"Survey save failed");uiNotify("Wi-Fi survey",status.message,nullptr,false);break;}
+#if BOARD_HAS_GPS
  case 70:change(Wardrive);break;case 71:wardriveStart();break;case 72:wardriveStop();break;
+#endif
  case 69:reconStop();uiShow("findmy-beeper");break;
  case 20:change(WifiTools);break;case 21:change(BleTools);break;case 22:if(!reconOwnsRadio()&&!bleLabOwnsRadio()){reconSetMode(ReconMode::Wifi);change(Networks);}break;
  case 23:change(Capture);break;case 24:change(Library);break;case 25:uiShow("channels");break;
@@ -108,7 +112,11 @@ if(id==1){recipeStop();reconStop();uiShow("radar");return;}
 }
 }
 void reconView(void* p,bool tools){root=(lv_obj_t*)p;view=pageRequested?requested:tools?Tools:Modes;pageRequested=false;redraw=true;draw();}
-void reconPage(const String& name){if(name=="ibeacon"){chosen=AttackMode::IBeacon;requested=Confirm;pageRequested=true;return;}requested=name=="wardrive"?Wardrive:name=="ble-attacks"?BleTools:name=="files"?Library:name=="attacks"?Attacks:name=="recipes"?Recipes:name=="missions"?Missions:name=="network"?Network:name=="csi"?Csi:name=="portal"?Portal:name=="analysis"?Statistics:name=="probes"?Probes:name=="filters"?Filters:Capture;pageRequested=true;}
+void reconPage(const String& name){
+#if !BOARD_HAS_GPS
+ if(name=="wardrive")return;
+#endif
+if(name=="ibeacon"){chosen=AttackMode::IBeacon;requested=Confirm;pageRequested=true;return;}requested=name=="wardrive"?Wardrive:name=="ble-attacks"?BleTools:name=="files"?Library:name=="attacks"?Attacks:name=="recipes"?Recipes:name=="missions"?Missions:name=="network"?Network:name=="csi"?Csi:name=="portal"?Portal:name=="analysis"?Statistics:name=="probes"?Probes:name=="filters"?Filters:Capture;pageRequested=true;}
 void reconViewLoop(){if(!root)return;if(pageRequested){view=requested;redraw=true;pageRequested=false;}if(redraw)draw();else if(millis()-updated>=300){updated=millis();if(view==Wardrive||view==Running||view==Capture||view==Statistics||view==Portal||view==Csi||view==Network||view==Missions||view==Recipes)updateStatus();}}
 void reconLeave(){reconStop();root=body=info=nullptr;}
 #endif

@@ -265,3 +265,7 @@ MITM clock photograph: `media/theme-logos/mitm-source.jpg`, supplied by the proj
 ## M5Stack Dial beta hardware references
 
 The [official Dial documentation](https://docs.m5stack.com/en/core/Dial), schematic and [M5Dial reference at 533c9d0](https://github.com/m5stack/M5Dial/tree/533c9d0198e72621d55a4d35f726d3d53a7e1431) informed the K130 pin map, RTC, encoder and power-hold implementation. The beta uses the existing pinned TFT_eSPI and LVGL dependencies; all physical validation remains pending. See [Dial setup](docs/M5STACK-DIAL.md).
+
+## SD resources beta 0.13.28
+
+The original DDR1 reader, generator and configuration/retry prototype are MIT application code. Fresh MA-L, MA-M and MA-S assignment facts come directly from IEEE, with source hashes in [the resource manifest](docs/sd-resource-manifest.json). [Upstream review](docs/SD-RESOURCES.md) identifies ChimeraBLE (GPL-3.0), JimGat/CYM and CYM-SD-Assets (no general top-level license grant found). No implementation or asset pack was copied from these projects. Original research notes are bundled with the optional pack.

@@ -1,7 +1,7 @@
 #pragma once
 #include <Arduino.h>
 #include "board_pins.h"
-#ifdef BOARD_AMOLED_175
+#if BOARD_HAS_GPS
 void wardriveBegin();
 void wardriveLoop();
 bool wardriveStart();

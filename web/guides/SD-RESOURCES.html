@@ -1,0 +1,91 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>SD-RESOURCES · Dragon Detector</title><style>body{max-width:960px;margin:2rem auto;padding:1rem;background:#111820;color:#e8f2ee;font:16px/1.65 system-ui}pre{padding:1rem;background:#061b13;overflow:auto}code{overflow-wrap:anywhere}a{color:#81e1b2}table{border-collapse:collapse;width:100%;font-size:.9rem}td,th{padding:.6rem;border:1px solid #365047;text-align:left}h1,h2{line-height:1.2}</style></head><body><a href="../index.html#install">Back to installer</a><h1>SD resources beta — 0.13.28</h1>
+<p>This is an optional resource edition. Radar and the internal MA-L registry still work without a card. No SD-required edition is being released: additional capacity is useful, but no physical SD latency or scan-continuity measurements are available yet. These changes are based on local commit <code>588ec4d</code>, preserving the Dial v1.1 release and approved showcase images. The production site is not automatically replaced by building this beta.</p>
+<h2>Install</h2>
+<p>Download <code>dragon-resources-v1-20261023.zip</code>. Extract <strong>the <code>dragon</code> directory to the FAT32 card root</strong>, giving <code>/dragon/resources/vendors.ddr</code>. Do not copy only the ZIP or create another containing directory. Preserve captures and private configuration already on the card. Insert before powering on and restart after changing the pack. Firmware 0.13.28 reads schema 1; older firmware ignores this optional file. <code>manifest.json</code> records exact source and output SHA-256 values. Check the ZIP against the supplied SHA256SUMS before use.</p>
+<p><code>resources status</code> reports validation status, snapshot, entry count, allocated bytes, startup load time, maximum lookup time and lookup count. Missing cards/files, unsupported schema, old snapshots, truncation, failed allocation and malformed data leave internal lookup available. This command exists only on SD profiles. No card formatting, overwriting existing resources, or automatic downloads occur.</p>
+<h2>Exact capability matrix</h2>
+<table>
+<thead>
+<tr>
+<th>Profile</th>
+<th>SD pack</th>
+<th>Onboard GPS / upload candidate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Spotpear / Guition JC3636W518</td>
+<td>Optional</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Waveshare ESP32-S3-Touch-AMOLED-1.75</td>
+<td>Optional</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Waveshare ESP32-S3-Touch-AMOLED-1.75-G</td>
+<td>Optional</td>
+<td>LC76G; upload transport not enabled in this beta</td>
+</tr>
+<tr>
+<td>Waveshare ESP32-S3-Touch-AMOLED-1.75C</td>
+<td>None</td>
+<td>No</td>
+</tr>
+<tr>
+<td>LILYGO T-Display-S3-AMOLED-1.75, H0175Y003AM</td>
+<td>Optional</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Seeed XIAO ESP32-S3 + Round Display</td>
+<td>Optional</td>
+<td>No</td>
+</tr>
+<tr>
+<td>M5Stack StopWatch C152</td>
+<td>None</td>
+<td>No</td>
+</tr>
+<tr>
+<td>M5Stack Dial / Dial v1.1</td>
+<td>None</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Elecrow CrowPanel 2.1 Rotary</td>
+<td>None</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Waveshare ESP32-S3-LCD-1.28 Lite</td>
+<td>None</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Tuya T5-E1 beta</td>
+<td>Not implemented; separate ARM project</td>
+<td>Not implemented</td>
+</tr>
+</tbody>
+</table>
+<p>The matrix follows the current board drivers and manufacturer references already pinned in the board guides. SD on the XIAO means the Round Display expansion, not the bare XIAO. No external GPS accessories are implicitly enabled. The T5-E1 has not been converted into an ESP32 target or given ESP32 capabilities. This beta also removes the GPS wardrive menu/command route from the non-GPS 1.75.</p>
+<h2>Architecture and measurements</h2>
+<p>The pack adds IEEE MA-M (28-bit) and MA-S (36-bit) assignments to MA-L (24-bit). Its 54,282 records occupy <strong>1,270,072 bytes</strong>, including a sorted 10-byte index and deduplicated names. More specific prefixes win. Public/universal addresses only: randomized BLE, locally administered Wi-Fi and multicast addresses do not produce vendor claims. Registry labels never change detector confidence or infer product identity.</p>
+<p>The independent DDR1 reader accepts at most 3 MiB / 100,000 records, validates lengths, CRC32, sorted unique keys, permitted prefix widths, string boundaries and label lengths. Snapshots before 2026-10-15 are rejected. It does not claim authenticity: CRC detects accidental corruption, and trusted distribution SHA-256 checks remain important.</p>
+<p>The card is read sequentially in 4 KiB chunks before radio startup. A complete validated index is retained in PSRAM; lookups perform at most three binary searches with <strong>zero SD calls</strong>, no allocation and no pointer eviction. At least 2 MiB free PSRAM is required beyond the allocation at load time. The existing 709,215-byte decoded internal registry remains available as fallback. This trades about 1.27 MB extra PSRAM and startup cost for predictable steady-state lookup. A sector cache would save RAM but introduce card stalls and cache-pointer lifetimes into UI lookup; it is not justified without hardware measurements. No-SD full profiles retain their existing compact flash registry; Lite profiles retain their existing detector tables.</p>
+<p>One Windows host run validated the full pack in 4,875 microseconds and performed 100,000 lookups in 7,002 microseconds (<code>-O2</code>, assertions enabled). These are parser/CPU observations, <strong>not ESP32 timing, filesystem throughput, or evidence of faster scanning</strong>. Reproduce with <code>tools/test_sd_resources.py</code>; timings vary. Device counters provide the missing measurements.</p>
+<h2>Hardware acceptance still required</h2>
+<p>For each SD board, compare no card, blank FAT32, valid pack, old schema/snapshot, truncated and corrupted files. Verify internal fallback, display and touch, scan queue drops and maximum radio lag; measure boot/load time, lookup maximum and free/largest PSRAM block. Test card removal after load: vendor pointers must remain valid, while recording reports its own card failure. Stop/finalize recording before normal removal. Repeat with slow cards and a nearly full card, and compare against the same firmware without a pack. No throughput or physical validation is asserted by the host tests.</p>
+<h2>Compared lookup approaches</h2>
+<p>ChimeraBLE's pinned <code>src/oui_db.cpp</code> searches a six-byte on-card OUI2 index and retains up to 128 lookup results, clearing that cache at capacity. A miss needs repeated seeks/reads. CYM's pinned <code>ESP32C5/main/oui_lookup.c</code> loads 32-byte OUI1 records into PSRAM and binary-searches memory. These are two different RAM/latency choices, not evidence that putting a database on SD makes execution faster. Dragon Detector's original reader was implemented independently before this source comparison: it uses a validated deduplicated 10-byte multi-prefix index in PSRAM, retaining the compact internal fallback. No code, binary format implementation or databases from those repositories are redistributed.</p>
+<h2>Upstream review — 2026-10-23</h2>
+<ul>
+<li><a href="https://github.com/MatthewKuKanich/ChimeraBLE/tree/2330423dae8f8fa163617172310784889d8972a7">MatthewKuKanich/ChimeraBLE</a>, GPL-3.0. Its Cardputer guide documents an optional <code>/ChimeraBLE/oui.bin</code> and a separate folder for profiles/logs. Reviewed as a workflow reference; no GPL code or database copied.</li>
+<li><a href="https://github.com/JimGat/CYM/tree/59a86a86a7bfb35635ebd3a8cac9165bdc6ca238">JimGat/CYM</a>, the exact Cheap Yellow Monster project. The recursive tree and README have no general top-level license grant at this revision; component/case licenses do not license the entire firmware.</li>
+<li><a href="https://github.com/JimGat/CYM-SD-Assets/tree/d4c93f3478b92e36bc3cca3e02be14cadc4f2698">JimGat/CYM-SD-Assets</a> separates SD provisioning and source manifests. No general top-level license grant found. Its optional dictionaries/assets are not imported. Dragon Detector has no supported RFID research workflow needing those dictionaries.</li>
+<li>Data is generated independently from <a href="https://standards-oui.ieee.org/oui/oui.csv">IEEE MA-L</a>, <a href="https://standards-oui.ieee.org/oui28/mam.csv">MA-M</a> and <a href="https://standards-oui.ieee.org/oui36/oui36.csv">MA-S</a>. The pack contains assignment/name facts only. Names and marks remain their owners'.</li>
+</ul>
+<p>Reverse-engineering storage already uses Dragon Detector's bounded DDG1 profiles, BLE inspection and captures. The beta pack includes an original reference note for interpreting those records; executable scripts, attack dictionaries, and undocumented payloads are not loaded from the card. See <code>WARDRIVE-UPLOAD-DESIGN.md</code> for the GPS-only upload investigation.</p>
+<p>The supplied ChatGPT Library reference could not be inspected: its exact URL redirected to account sign-in in the in-app browser, which has no remembered authenticated account. The file itself was not returned by web retrieval. Attach the file or provide an authenticated browser session to incorporate it.</p></body></html>
