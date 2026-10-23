@@ -1,5 +1,8 @@
 // Shared by full UI and the radar-only Lite UI. Coordinates use the 360px design.
-#ifdef BOARD_RADAR_LITE
+#ifdef BOARD_M5DIAL
+static constexpr unsigned RadarRenderLabelLimit=2;
+static constexpr bool RadarRenderLite=true;
+#elif defined(BOARD_RADAR_LITE)
 static constexpr unsigned RadarRenderLabelLimit=dragon::LiteRadarLabelLimit;
 static constexpr bool RadarRenderLite=true;
 #else
@@ -47,8 +50,12 @@ static const char* radarFamilyName(Family f){
 static void callout(lv_draw_ctx_t* ctx,const Dot& dot,unsigned slot,const char* text,uint32_t c){
   auto b=dragon::radarLabelSlot(slot,RadarRenderLite);int x=S(b.x),y=S(b.y),w=S(b.w),h=S(b.h);
   int edgeX=constrain(dot.x,x,x+w),edgeY=constrain(dot.y,y,y+h);
+#ifdef BOARD_M5DIAL
+  line(ctx,dot.x,dot.y,edgeX,edgeY,c,1,190);
+#else
   line(ctx,dot.x,dot.y,edgeX,edgeY,dragon::RadarLabelBackground,S(4),255);
   line(ctx,dot.x,dot.y,edgeX,edgeY,c,std::max(2,S(2)),255);
+#endif
 #ifdef BOARD_RADAR_LITE
   // Slim, open callouts: the family stays bright while signal state is secondary.
   lv_draw_rect_dsc_t box;lv_draw_rect_dsc_init(&box);box.radius=2;box.bg_color=color(0x020c0c);box.bg_opa=245;
@@ -82,7 +89,15 @@ static void radarDraw(lv_event_t* e){
   if(radarTheme==HypnoticTheme)hypnoticField(ctx,now,true);else if(radarTheme==MuldersRevengeTheme)muldersRadarField(ctx);else if(greenArtTheme(radarTheme))greenRadarField(ctx,radarTheme==XombiTheme);else if(radarTheme==CanCommanderTheme)canRadarField(ctx,now,radioEnabled);else if(radarTheme==31)capsuleRadarField(ctx,now);else if(radarTheme==32)sparrowsRadarField(ctx);else{
 #ifdef BOARD_RADAR_LITE
   if(liteBackdrop.data){lv_draw_img_dsc_t d;lv_draw_img_dsc_init(&d);lv_area_t a{0,0,SCREEN_RES-1,SCREEN_RES-1};lv_draw_img(ctx,&d,&a,&liteBackdrop);}
-  else disc(ctx,CENTER,CENTER,S(178),theme.bottom);
+  else {
+    disc(ctx,CENTER,CENTER,S(178),theme.bottom);
+#ifdef BOARD_M5DIAL
+    lv_point_t center{CENTER,CENTER};auto grid=arc;grid.color=color(theme.grid);grid.width=1;grid.opa=160;
+    for(int radius:{30,60,90})lv_draw_arc(ctx,&grid,&center,radius,0,359);
+    line(ctx,20,120,220,120,theme.grid,1,130);line(ctx,120,65,120,181,theme.grid,1,130);
+    grid.color=color(theme.ring);lv_draw_arc(ctx,&grid,&center,116,0,359);
+#endif
+  }
 
 #else
   disc(ctx,CENTER,CENTER,S(178),theme.grid);disc(ctx,CENTER,CENTER,S(176),theme.ring);
@@ -152,9 +167,14 @@ static void radarDraw(lv_event_t* e){
 #endif
   else {
   lv_draw_rect_dsc_t trail;lv_draw_rect_dsc_init(&trail);trail.bg_color=color(theme.sweep);
-  for(int n=0;n<18;++n){float nextX=dx*.998629535f+dy*.052335956f,nextY=dy*.998629535f-dx*.052335956f;
+#ifdef BOARD_M5DIAL
+  constexpr int sweepSlices=9,fadeStep=6;constexpr float sweepCos=.994521895f,sweepSin=.104528463f;
+#else
+  constexpr int sweepSlices=18,fadeStep=3;constexpr float sweepCos=.998629535f,sweepSin=.052335956f;
+#endif
+  for(int n=0;n<sweepSlices;++n){float nextX=dx*sweepCos+dy*sweepSin,nextY=dy*sweepCos-dx*sweepSin;
     lv_point_t wedge[]={{(lv_coord_t)CENTER,(lv_coord_t)CENTER},{(lv_coord_t)(CENTER+int(dx*S(166))),(lv_coord_t)(CENTER+int(dy*S(166)))},{(lv_coord_t)(CENTER+int(nextX*S(166))),(lv_coord_t)(CENTER+int(nextY*S(166)))}};
-    trail.bg_opa=58-n*3;lv_draw_triangle(ctx,&trail,wedge);dx=nextX;dy=nextY;
+    trail.bg_opa=58-n*fadeStep;lv_draw_triangle(ctx,&trail,wedge);dx=nextX;dy=nextY;
   }
   line(ctx,CENTER,CENTER,CENTER+int(cosf(angle)*S(166)),CENTER+int(sinf(angle)*S(166)),theme.sweep,S(2),200);
   }
@@ -164,7 +184,9 @@ static void radarDraw(lv_event_t* e){
     std::sort(radarOrder,radarOrder+radarCount,[now](int a,int b){if(a==trackedContact||b==trackedContact)return a==trackedContact&&b!=trackedContact;
       return preferContact(contacts[a],contacts[b],now);});
   }
+#ifndef BOARD_M5DIAL
   if(radarHasSelection&&dragon::radarSelectionExpired(now,radarSelectedAt))radarHasSelection=false;
+#endif
   dotCount=0;
   for(unsigned k=0;k<unsigned(radarCount);++k){int i=radarOrder[k];auto& c=contacts[i];if(!radarVisible(c,now))continue;
     float target=c.signal.count?dragon::radarRadius(c.signal.smooth):158.f;if(!c.plotRadius)c.plotRadius=target;else if(advancePlot&&!(radarHasSelection&&contactKey(c)==radarSelectedKey))c.plotRadius+=(target-c.plotRadius)*.35f;
@@ -179,7 +201,13 @@ static void radarDraw(lv_event_t* e){
     if(radarHasSelection&&dot.key==radarSelectedKey){auto selected=arc;selected.color=color(0xffffff);selected.width=std::max(1,S(2));selected.opa=255;lv_point_t point{(lv_coord_t)x,(lv_coord_t)y};lv_draw_arc(ctx,&selected,&point,S(12),0,359);}
     if(age>=30000){auto stale=arc;stale.color=color(deviceColor);stale.opa=opacity;stale.width=S(2);lv_point_t point{(lv_coord_t)x,(lv_coord_t)y};
       for(int a=0;a<360;a+=90)lv_draw_arc(ctx,&stale,&point,S(6),a,a+48);
-    }else if(tracker){disc(ctx,x,y,S(3),deviceColor,opacity);}
+    }else if(tracker){disc(ctx,x,y,
+#ifdef BOARD_M5DIAL
+      3,
+#else
+      S(3),
+#endif
+      deviceColor,opacity);}
     else{unsigned pulse=radioEnabled?unsigned((now+contactHash(contactKey(c)))%1800):900;pulse=pulse>900?1800-pulse:pulse;disc(ctx,x,y,S(9),deviceColor,unsigned(opacity)*(25+pulse/20)/255);disc(ctx,x,y,S(5),deviceColor,opacity);disc(ctx,x-S(1),y-S(1),S(2),0xffffff,opacity);}
     if(dot.index==trackedContact || (detector.enabled(c.trafficFamily)&&trafficFresh(c,now))){auto lock=arc;lock.color=color(dot.index==trackedContact?theme.text:0xff5040);lock.opa=220;lock.width=2;lv_point_t point{(lv_coord_t)x,(lv_coord_t)y};lv_draw_arc(ctx,&lock,&point,S(12),0,359);}
   }

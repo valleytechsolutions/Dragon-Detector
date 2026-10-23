@@ -41,7 +41,12 @@ static void litePageDraw(lv_event_t* e){
     if(radarTheme==29){themeArtwork(ctx,watch_logo_hackazillarex,90);dinoRun(ctx,radarFrameAt);return;}
     if(radarTheme==30){themeArtwork(ctx,watch_logo_m33k,68);cyberRim(ctx,radarFrameAt,clockValid?clockFrame.second:-1);return;}
     for(int i=0;i<60;++i){float a=i*.104719755f;int r=i%5?91:86;line(ctx,120+sinf(a)*r,120-cosf(a)*r,120+sinf(a)*96,120-cosf(a)*96,i%5?p.border:p.accent,i%5?1:2);}
-    for(int i:{3,6,9}){float a=i*.523598776f;char n[4];snprintf(n,sizeof(n),"%d",i);pageText(ctx,n,108+sinf(a)*76,115-cosf(a)*76,24,p.muted);}
+    for(int i:{3,6,9}){
+#ifdef BOARD_M5DIAL
+      if(i==6)continue; // The date occupies this space on the 240px Dial.
+#endif
+      float a=i*.523598776f;char n[4];snprintf(n,sizeof(n),"%d",i);pageText(ctx,n,108+sinf(a)*76,115-cosf(a)*76,24,p.muted);
+    }
     if(radarTheme==13){for(int side:{-1,1}){line(ctx,120+side*7,82,120+side*27,72,0x6f289b,8);line(ctx,120+side*7,82,120+side*27,72,0xefceff,3);}}
     if(radarTheme==24)pageText(ctx,"(o..o) /||||\\",78,76,84,p.accent);
     if(radarTheme==28)locksportPinRim(ctx,uint64_t(clockFrame.second)*1000000+(millis()%1000)*1000);
@@ -64,6 +69,9 @@ static void litePageDraw(lv_event_t* e){
 static void setLitePage(LitePage next){
   setRadioStandby(next==LitePage::Clock||next==LitePage::Timer);
   litePage=next;noticeAt=0;
+#ifdef BOARD_M5DIAL
+  dialPageChanged();
+#endif
   lv_obj_clear_flag(pageHint,LV_OBJ_FLAG_HIDDEN);
   for(auto* o:{radar,status,activity,pageLabel,notice})lv_obj_add_flag(o,LV_OBJ_FLAG_HIDDEN);
   for(auto* o:{pageCanvas,pageTitle,pageValue,pageSub})lv_obj_add_flag(o,LV_OBJ_FLAG_HIDDEN);

@@ -1,0 +1,64 @@
+{
+  "factory": {
+    "name": "Dragon Detector \u2014 M5Stack Dial (factory)",
+    "version": "0.13.27",
+    "new_install_prompt_erase": true,
+    "new_install_improv_wait_time": 0,
+    "builds": [
+      {
+        "chipFamily": "ESP32-S3",
+        "parts": [
+          {
+            "path": "bootloader.bin",
+            "offset": 0
+          },
+          {
+            "path": "partitions.bin",
+            "offset": 32768
+          },
+          {
+            "path": "boot_app0.bin",
+            "offset": 57344
+          },
+          {
+            "path": "firmware.bin",
+            "offset": 65536
+          },
+          {
+            "path": "littlefs.bin",
+            "offset": 6356992
+          }
+        ]
+      }
+    ]
+  },
+  "update": {
+    "name": "Dragon Detector \u2014 M5Stack Dial (update)",
+    "version": "0.13.27",
+    "new_install_prompt_erase": true,
+    "new_install_improv_wait_time": 0,
+    "builds": [
+      {
+        "chipFamily": "ESP32-S3",
+        "parts": [
+          {
+            "path": "bootloader.bin",
+            "offset": 0
+          },
+          {
+            "path": "partitions.bin",
+            "offset": 32768
+          },
+          {
+            "path": "boot_app0.bin",
+            "offset": 57344
+          },
+          {
+            "path": "firmware.bin",
+            "offset": 65536
+          }
+        ]
+      }
+    ]
+  }
+}

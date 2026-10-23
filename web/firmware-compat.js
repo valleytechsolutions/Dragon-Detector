@@ -4,8 +4,9 @@ export function parseBadgeInfo(line){
   if(match&&match[2]==='480'&&(match[4]!=='Elecrow CrowPanel 2.1 Rotary'||!/^0\.13\.(?:[2-9]\d|[1-9]\d{2,})$/.test(match[1])))return null;
   if(match&&match[2]==='240'&&!/^0\.(?:9\.([2-9]|\d{2,})|(?:10|11|12|13)\.\d+)$/.test(match[1]))return null;
   if(match){
-    const lite=['Waveshare ESP32-S3-LCD-1.28 Lite','M5Stack Dial Beta'].includes(match[4]);
+    const lite=['Waveshare ESP32-S3-LCD-1.28 Lite','M5Stack Dial Beta','M5Stack Dial'].includes(match[4]);
     if(match[4]==='M5Stack Dial Beta'&&(match[3]!=='LITE'||!/^0\.13\.(?:2[6-9]|[3-9]\d|[1-9]\d{2,})$/.test(match[1])))return null;
+    if(match[4]==='M5Stack Dial'&&(match[3]!=='LITE'||!/^0\.13\.(?:2[7-9]|[3-9]\d|[1-9]\d{2,})$/.test(match[1])))return null;
     if((match[3]!=='READY')!==lite)return null;
     if(match[3]==='LITE'&&!hasRetainedClock(match[1]))return null;
     if(lite&&(match[2]!=='240'||!/^0\.(?:9\.([4-9]|\d{2,})|(?:10|11|12|13)\.\d+)$/.test(match[1])))return null;

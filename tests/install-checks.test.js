@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import {checkRelease,usbErrorText,installDiagnostics} from '../web/install-checks.js';
 import {boardProfiles} from '../web/board-profiles.js';
 const published=JSON.parse(readFileSync(new URL('./fixtures/release-0.13.26-manifests.json',import.meta.url)));
+published.m5dial=JSON.parse(readFileSync(new URL('./fixtures/dial-0.13.27-manifests.json',import.meta.url)));
 
 function rig(board='waveshare',mode='factory',badFile){
   const manifest=structuredClone(published[board][mode]);
@@ -35,6 +36,12 @@ test('missing, empty, HTML fallback and oversized firmware keep installation una
 test('wrong manifest is rejected before requesting binaries',async()=>{
   const r=rig();r.manifest.builds[0].parts[0].path='https://example.com/wrong.bin';
   await assert.rejects(checkRelease('waveshare','factory',r),/does not match/);assert.equal(r.requests.length,1);
+});
+
+test('Dial rejects the old beta release manifest while supporting its USB upgrade identity',async()=>{
+  const r=rig('m5dial');r.manifest.version='0.13.26';
+  await assert.rejects(checkRelease('m5dial','factory',r),/0.13.27/);
+  assert.equal(r.requests.length,1);
 });
 
 test('CDN HEAD responses may omit content length without making the release unavailable',async()=>{

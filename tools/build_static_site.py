@@ -146,7 +146,7 @@ def build(output):
         downloads.append('<p>Version ' + html.escape(info['version']) + '</p>')
         metadata = json.loads((folder / 'build-info.json').read_text(encoding='utf-8'))
         if metadata.get('board') == 'm5dial':
-            downloads.append('<p><strong>Beta 1 — build/native checks only; all physical validation pending.</strong> <a href="M5STACK-DIAL.html">Dial installation, controls and RTC</a>.</p>')
+            downloads.append('<p><strong>Dial v1.1 — display, controls, radar actions and RTC restart verified. Original K130 not physically tested.</strong> <a href="M5STACK-DIAL.html">Dial installation, controls and RTC</a>.</p>')
         elif metadata.get('board') == 'lilygo_175':
             downloads.append('<p><strong>Beta — working display/touch baseline reported; new RTC/SD checks await hardware testing.</strong> <a href="LILYGO-AMOLED-175.html">Installation, RTC and SD</a>.</p>')
         elif metadata.get('board') == 'elecrow_21':

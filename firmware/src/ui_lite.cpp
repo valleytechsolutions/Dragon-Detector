@@ -69,6 +69,11 @@ static void startLiteSplash(){
   showStartupLogo(liteStartup);liteStartupAt=millis();
 }
 static uint32_t noticeAt=0,lastFrame=0,frames=0;
+#ifdef BOARD_M5DIAL
+static constexpr uint32_t liteFrameInterval=125;
+#else
+static constexpr uint32_t liteFrameInterval=83;
+#endif
 static lv_obj_t* text(const char* value,int y,int width,const lv_font_t* font,uint32_t rgb){
   auto* o=lv_label_create(root);lv_label_set_text(o,value);lv_obj_set_size(o,width,LV_SIZE_CONTENT);lv_obj_set_pos(o,(SCREEN_RES-width)/2,y);
   lv_obj_set_style_text_font(o,font,0);lv_obj_set_style_text_color(o,color(rgb),0);lv_obj_set_style_text_align(o,LV_TEXT_ALIGN_CENTER,0);
@@ -79,6 +84,7 @@ static lv_obj_t* text(const char* value,int y,int width,const lv_font_t* font,ui
 static void dialButton(dragon::LitePress);
 static void dialSignalUpdate();
 static void refreshLiteTheme();
+static void dialPageChanged();
 #endif
 #include "lite_pages.inc"
 #ifdef BOARD_M5DIAL
@@ -117,8 +123,11 @@ void uiLoop(){
     if(prefsReady&&litePrefs.putUChar("theme",radarTheme)!=1)Serial.println("LITE_THEME save failed");
     themeDirty=false;
   }
-  // Leave time between full radar draws to drain reception queues on the S3R2.
-  if(uint32_t(now-lastFrame)>=83){lastFrame=radarFrameAt=now;++frames;
+  // Leave time between full radar draws to drain reception queues.
+#ifdef BOARD_M5DIAL
+  if(dialMenuVisible()){lv_timer_handler();return;}
+#endif
+  if(uint32_t(now-lastFrame)>=liteFrameInterval){lastFrame=radarFrameAt=now;++frames;
     if(litePage==LitePage::Radar){lv_obj_invalidate(radar);
     char value[80];snprintf(value,sizeof(value),"%s RX   %02d SIGNALS   100%%",blePhase?"BLE":"WI-FI",radarCount);lv_label_set_text(status,value);
     const bool deauth=trafficStatus.disconnectActive(now),spam=trafficStatus.bleActive(now);
@@ -136,9 +145,17 @@ void uiLoop(){
   lv_timer_handler();
 }
 void uiNotify(const char* title,const char*,const dragon::DeviceKey*,bool){
+#ifdef BOARD_M5DIAL
+  if(dialMenuVisible())return;
+#endif
   if(!notice||litePage!=LitePage::Radar)return;noticeAt=millis();lv_label_set_text(notice,title);lv_obj_clear_flag(notice,LV_OBJ_FLAG_HIDDEN);lv_obj_add_flag(pageHint,LV_OBJ_FLAG_HIDDEN);
 }
-void uiShow(const String& name){if(name=="startup"){startLiteSplash();return;}for(unsigned i=0;i<5;++i)if(name==litePageNames[i]){setLitePage(LitePage(i));return;}}
+void uiShow(const String& name){
+#ifdef BOARD_M5DIAL
+  if(name=="menu"||name=="tools"||name=="settings"){dialMenuOpen(name=="menu"?DialMenu::Main:name=="tools"?DialMenu::Tools:DialMenu::Settings);return;}
+  if(dialMenuVisible())dialMenuClose();
+#endif
+  if(name=="startup"){startLiteSplash();return;}for(unsigned i=0;i<5;++i)if(name==litePageNames[i]){setLitePage(LitePage(i));return;}}
 static void refreshLiteTheme(){
   themeDirty=true;themeChangedAt=millis();
   prepareLiteBackdrop(root);lv_obj_set_style_bg_color(root,color(radarPalette(radarTheme).bottom),0);
@@ -159,7 +176,7 @@ bool uiCommand(const String& c){
 #ifdef BOARD_M5DIAL
   if(dialUiCommand(c))return true;
 #endif
-  if(c=="ui status"){Serial.printf("UI_STATUS page=%s lite=1 frames=%lu backdrop=%u frame_ms=83\n",litePageNames[unsigned(litePage)],frames,liteBackdrop.data?1:0);return true;}
+  if(c=="ui status"){Serial.printf("UI_STATUS page=%s lite=1 frames=%lu backdrop=%u frame_ms=%lu\n",litePageNames[unsigned(litePage)],frames,liteBackdrop.data?1:0,static_cast<unsigned long>(liteFrameInterval));return true;}
   if(c=="radar status"){Serial.printf("RADAR_SETTINGS theme=%u labels=1 recent=1 pages=1 plotted=%u primary=%d\n",radarTheme,dotCount,radarPrimary);return true;}
   if(c=="display status"){Serial.println("DISPLAY_SETTINGS brightness=100 output=100 dim=0 off=0 dim_level=0 wake=0");return true;}
   return false;

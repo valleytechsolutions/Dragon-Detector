@@ -111,7 +111,7 @@ static void command(const String& c){
   const bool timing=c.startsWith("time ")||c=="clock status"||c=="clock hardware"||c.startsWith("clock offset ")||c=="orientation status"||c=="stopwatch status"||c=="stopwatch laps"||c=="stopwatch start"||c=="stopwatch pause"||c=="stopwatch reset"||c=="stopwatch lap"||c=="stopwatch finish";
   const bool page=c=="screen radar"||c=="screen clock"||c=="screen stopwatch"||c=="screen signals"||c=="screen diagnostics"||c=="screen startup";
 #ifdef BOARD_M5DIAL
-  const bool dial=c.startsWith("dial ")||c.startsWith("radar theme ")||c=="clock diagnostics"||c=="touch status"||c=="rotary status";
+  const bool dial=c.startsWith("dial ")||c.startsWith("radar theme ")||c=="clock diagnostics"||c=="touch status"||c=="rotary status"||c=="screen menu"||c=="screen tools"||c=="screen settings";
 #else
   const bool dial=false;
 #endif

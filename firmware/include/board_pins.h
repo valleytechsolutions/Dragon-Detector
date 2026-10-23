@@ -4,7 +4,7 @@
 #define BTN_PIN 0
 
 #if defined(BOARD_M5DIAL)
-#define BOARD_NAME "M5Stack Dial Beta"
+#define BOARD_NAME "M5Stack Dial"
 #define SCREEN_RES 240
 #define BOARD_HAS_AUDIO 1
 #define BOARD_HAS_SD 0

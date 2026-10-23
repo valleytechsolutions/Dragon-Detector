@@ -1,5 +1,5 @@
 export const boardProfiles=Object.freeze({
-  m5dial:{name:'M5Stack Dial · Beta 1',firmwareName:'M5Stack Dial Beta',size:240,display:'Round LCD · touch + encoder · RTC · buzzer',filesystemOffset:0x610000,minVersion:'0.13.26',experimental:true,lite:true,storage:'8 MB flash, no PSRAM. Compact passive detector with 32 contact slots. No saved captures, SD, GPS, badge uploads or active labs in this beta.',features:'Initial K130 beta awaiting all physical testing. Wi-Fi/BLE detection, priority radar, tap/double-tap details, RSSI hunting, buzzer alerts, 40 built-in themes, RTC clock and stopwatch. Turn to change screens; press for the screen action; hold for radar. Clock and timer pause scanning. Onboard RFID is not enabled.'},
+  m5dial:{name:'M5Stack Dial v1.1',firmwareName:'M5Stack Dial',legacyNames:['M5Stack Dial Beta'],size:240,display:'Round LCD · touch + encoder · RTC · buzzer',filesystemOffset:0x610000,minVersion:'0.13.27',experimental:false,lite:true,storage:'8 MB flash, no PSRAM. Compact passive detector with 32 contact slots. No saved captures, SD, GPS, badge uploads or active labs.',features:'Tested on Dial v1.1. Wi-Fi/BLE detection, priority radar, dot actions, RSSI hunting, buzzer alerts, 40 built-in themes, RTC clock and stopwatch. Turn to browse; press to select; hold to go back. Separate Time and Date settings. Clock and timer pause scanning. Original K130 has not been physically tested; onboard RFID is not enabled.'},
   lilygo_175:{name:'LILYGO T-Display-S3 AMOLED 1.75 · Beta',firmwareName:'LilyGo T-Display-S3-AMOLED-1.75',size:466,display:'Round AMOLED · touch · PCF8563 RTC · microSD',filesystemOffset:0x810000,minVersion:'0.13.25',experimental:true,storage:'16 MB flash · 7.94 MiB internal file storage · optional FAT32 microSD for event/PCAP logs and files. No SD boot pack.',features:'For the round 1.75-inch H0175Y003AM panel, not the rectangular 1.64 or 1.43 variants. Owner reports the supplied 0.13.20 baseline fully working. This build preserves its display/touch pins and layout, and adds checked PCF8563 RTC saves. Full radar, themes, badge, clocks, radio tools and BLE Lab. No onboard speaker or GPS. New RTC retention and SD support await physical testing.'},
   elecrow_21:{name:'Elecrow CrowPanel 2.1 Rotary · Experimental',firmwareName:'Elecrow CrowPanel 2.1 Rotary',size:480,display:'Round IPS · touch + rotary · experimental',filesystemOffset:0x810000,minVersion:'0.13.20',experimental:true,storage:'16 MB flash · 7.94 MiB shared internal file storage. No SD slot. Save captures internally and download over USB.',features:'Stationary USB-powered profile with the full radar, 40 built-in themes, custom theme, badge, clock, locksport timers and radio tools. Turn to highlight controls, press to select, hold to return home. USB or saved-Wi-Fi time sync; no external RTC or speaker configured. Initial display, rotary, scanning and clock/timer checks passed on one unit. Wider field testing remains.'},
   spotpear:{name:'Spotpear / Guition JC3636W518',firmwareName:'Spotpear JC3636W518',size:360,display:'Round LCD',filesystemOffset:0xc10000,storage:'16 MB flash · 3.94 MiB shared user storage · optional microSD CSV/PCAP and file browser.',features:'Full radar, 40 built-in themes plus an optional personal design, badge, stopwatch, radio tools and BLE Lab. Touch controls and speaker connector; software clock.'},
@@ -12,7 +12,7 @@ export const boardProfiles=Object.freeze({
 });
 export function supportsBadge(board){return !!boardProfiles[board]&&!boardProfiles[board].lite;}
 export function connectedProfile(info){
-  return Object.entries(boardProfiles).find(([,p])=>p.firmwareName===info?.board&&p.size===info?.size)?.[0]||null;
+  return Object.entries(boardProfiles).find(([,p])=>(p.firmwareName===info?.board||p.legacyNames?.includes(info?.board))&&p.size===info?.size)?.[0]||null;
 }
 export function validateManifest(data,board,mode){
   const profile=boardProfiles[board];
@@ -25,7 +25,7 @@ export function validateManifest(data,board,mode){
 
   if(board==='waveshare_175_gps'&&!/^0\.13\.(?:2[1-9]|[3-9]\d|[1-9]\d{2,})$/.test(data?.version))throw new Error('GPS manifest requires firmware 0.13.21 or newer.');
   if(board==='lilygo_175'&&!/^0\.13\.(?:2[5-9]|[3-9]\d|[1-9]\d{2,})$/.test(data?.version))throw new Error('LILYGO 1.75 manifest requires firmware 0.13.25 or newer.');
-  if(board==='m5dial'&&!/^0\.13\.(?:2[6-9]|[3-9]\d|[1-9]\d{2,})$/.test(data?.version))throw new Error('M5Stack Dial manifest requires firmware 0.13.26 or newer.');
+  if(board==='m5dial'&&!/^0\.13\.(?:2[7-9]|[3-9]\d|[1-9]\d{2,})$/.test(data?.version))throw new Error('M5Stack Dial manifest requires firmware 0.13.27 or newer.');
   const build=data?.builds?.[0];
   const verifiedClock=/^0\.13\.[1-9]\d+$/.test(data?.version);
   if(board==='waveshare_lite'&&!/^0\.(?:9\.([4-9]|\d{2,})|(?:10|11|12|13)\.\d+)$/.test(data?.version))throw new Error('Waveshare Lite requires a 0.9.4 or newer matching manifest.');

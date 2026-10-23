@@ -2,14 +2,14 @@
 
 # Dragon Detector
 
-**New beta:** [M5Stack Dial K130](docs/M5STACK-DIAL.md) — compact 8 MB/no-PSRAM profile with touch, encoder, buzzer and checked RTC support. Beta 1 awaits all physical testing; see its feature limits and installation checklist.
+**M5Stack Dial v1.1:** [Version 0.13.27](docs/M5STACK-DIAL.md) adds ring navigation, touch menus, radar dot actions and separate Time/Date settings. Display, controls and RTC restart checks passed on Dial v1.1. See the guide for the compact profile’s feature limits; original K130 remains untested.
 
 
 Wi-Fi and Bluetooth detection, signal tracking, and logo watch faces for ESP32-S3 displays.
 
 **Web flasher available:** [Install from the independent host](https://valleytech-dragon-detector.pages.dev/). The original GitHub Pages address and GitHub-hosted images are temporarily unavailable. Source, artwork and release files are intact; existing devices are unaffected. [Hosting status](docs/HOSTING-STATUS.md).
 
-[**Install firmware**](https://valleytech-dragon-detector.pages.dev/#install) · [Latest release](docs/RELEASE-0.13.26.md) · [User guides](docs/GUI.md) · [Clock setup](docs/CLOCK-SETUP.md)
+[**Install firmware**](https://valleytech-dragon-detector.pages.dev/#install) · [Latest release](docs/RELEASE-0.13.27.md) · [User guides](docs/GUI.md) · [Clock setup](docs/CLOCK-SETUP.md)
 
 ## Radar controls and repeating Find My Beeper · 0.13.22
 
