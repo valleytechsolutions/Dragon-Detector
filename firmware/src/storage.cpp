@@ -104,6 +104,16 @@ void writePcap(const uint8_t* p,size_t n,size_t original,uint64_t us){
   if(!ok)addAlert("SD capture failed","Capture stopped after a write failure");
   else if(full)addAlert("Capture complete","16 MB capture limit reached; start a new capture to continue");
 }
+#ifdef BOARD_WATCHER
+bool watcherCloseStorage(){
+ if(!sdReady)return true;
+ if(xSemaphoreTake(sdMutex,pdMS_TO_TICKS(1000))!=pdTRUE)return false;
+ loggingEnabled=false;
+ if(eventFile){eventFile.flush();eventFile.close();}
+ if(pcapFile){pcapFile.flush();pcapFile.close();}
+ xSemaphoreGive(sdMutex);return true;
+}
+#endif
 void storageLoop(){if(sdReady && millis()-lastFlush>2000 && xSemaphoreTake(sdMutex,0)==pdTRUE){lastFlush=millis();if(eventFile)eventFile.flush();if(pcapFile)pcapFile.flush();xSemaphoreGive(sdMutex);}}
 
 #else

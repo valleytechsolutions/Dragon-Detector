@@ -8,5 +8,7 @@ lv_obj_t* uiRotaryScope();
 bool uiRotaryWake();
 #ifdef BOARD_WATCHER
 bool uiRotaryOpenMenu();
+void rotaryUiTouch(bool down);
+void rotaryUiReset();
 #endif
 #endif

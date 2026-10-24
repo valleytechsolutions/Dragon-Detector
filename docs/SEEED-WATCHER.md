@@ -4,7 +4,7 @@ This profile targets the original ESP32-S3 SenseCAP Watcher with a 412 × 412 SP
 
 ## Features and controls
 
-The full Dragon Detector application includes Wi-Fi/BLE detection, signal hunting, themes, badges, clocks, stopwatch and locksport timers, radio tools, BLE Lab, saved surveys and captures. Watcher integration adds touch, rotary navigation, PCF8563 RTC, ES8311 speaker output, battery estimate, FAT32 microSD storage and an external AT6668 UART GPS path for passive wardriving. Turn to highlight controls, click to select and hold for about one second to open the menu. Touch remains available alongside the knob. Battery percentage is an approximate voltage-based estimate.
+The full Dragon Detector application includes Wi-Fi/BLE detection, signal hunting, themes, badges, clocks, stopwatch and locksport timers, radio tools, BLE Lab, saved surveys and captures. Watcher integration adds touch, rotary navigation, PCF8563 RTC, ES8311 speaker output, battery estimate, FAT32 microSD storage and an external AT6668 UART GPS path for passive wardriving. Turn to highlight controls, click to select and hold for about one second to open the menu. Touch remains available alongside the knob. While a finger is touching the screen, wheel events are ignored; lift the finger before using the wheel. Turning only moves the highlight; a short press selects. Battery percentage is an approximate voltage-based estimate.
 
 The camera, microphone recording, RGB LED and separate Himax AI processor are not enabled in this first port. The Himax firmware is left untouched. Hardware test results are recorded below; compiled features are not evidence of a successful physical test.
 
@@ -15,6 +15,15 @@ The USB connector exposes two CH342 serial ports. Identify the ESP32-S3 port usi
 Back up all 32 MB of ESP32 flash before replacing factory firmware. Keep that dump private: it may contain account or network configuration. Verify it against the device and record its SHA-256. A dump of ESP32 flash does not back up Himax flash. Restore only to the same device using the saved image at offset 0, after verifying its checksum. No eFuse changes are needed.
 
 The partition layout has two 6 MiB application slots and 19.94 MiB of LittleFS. SD is preferred for persistent recon data; without SD, supported recon operations can use internal storage. Wardriving requires SD. The combined factory BIN is 32 MB; split images are used by the browser installer.
+
+## Sleep and power off
+
+**Tools → System → Sleep** stops scanning and powers down the display and peripherals while keeping the system latch active. Press the wheel to wake. A timed deep-sleep/restart test retained valid, advancing RTC time on the connected Watcher. Sleep is not a full electrical shutdown.
+
+The connected unit lost RTC time after full Power off. After that, resync over USB or set the time again; a stored timestamp cannot account for elapsed time with the clock unpowered.
+
+
+Open **Tools → System → Power off**, then confirm. Stop active recordings and wait for saving to finish first. The firmware closes its SD log and releases the same system-power latch used by Seeed's factory firmware. USB power can keep the hardware running; unplug USB to turn it fully off on battery. If power remains on, the firmware restores the latch and displays a message instead of claiming shutdown succeeded.
 
 ## SD card and resources
 
@@ -56,7 +65,7 @@ Firmware listens at 115200 baud, 8N1. Initial wiring is receive-only; no GPS rec
 
 USB commands include `watcher status`, `clock hardware`, `clock diagnostics`, `wardrive status`, `resources status`, `memory status` and ordinary Detector status commands. The Watcher status reports display flushes, touch samples, rotary edges/clicks/holds, power-bus errors, SD and RTC presence.
 
-Current status: firmware compilation and browser checks passed. The connected unit’s full 32 MB ESP32 factory image was read and verified against the device before flashing; its SHA-256 and restoration instructions are stored privately outside the repository. Display rendering, RTC retention across reset, SD mounting, the 54,282-entry vendor pack and a 579-packet Wi-Fi PCAP save (zero reported drops) were verified on the connected unit. Hold opens the menu, rotation moves focus and a short click selects; rotation alone does not open the menu. Touch and revised rotary behavior still require final hands-on confirmation. Longer capture sessions and battery calibration remain unverified. GPS wiring and field logging are deferred at the owner’s request. See the eventual hardware validation report before treating this as a verified release.
+Current status: firmware compilation and browser checks passed. The connected unit’s full 32 MB ESP32 factory image was read and verified against the device before flashing; its SHA-256 and restoration instructions are stored privately outside the repository. Display rendering, RTC retention across reset, SD mounting, the 54,282-entry vendor pack and a 579-packet Wi-Fi PCAP save (zero reported drops) were verified on the connected unit. Hold opens the menu, rotation moves focus and a short click selects; rotation alone does not open the menu. The owner confirmed touch and hold-menu rotary navigation on 0.13.29. Version 0.13.30 was tested by the owner but still allowed unintended wheel movement. Version 0.13.31 uses complete-detent decoding, ignores rotation while pressing the wheel, and sends separate next/previous/select keys without encoder editing mode. Touch starts on the first valid report and tolerates brief missing reports. Touch gestures have priority, and screen changes cancel pending wheel selections. Further owner testing identified intermittent controls and distracting detection popups. Version 0.13.35 confines detection popups to the radar, drops delayed wheel navigation, and rejects zero-pressure touch-release packets. The owner confirmed normal touch and wheel behavior on 0.13.35. The live notification regression check confirmed no popup in menus, a popup on radar, and dismissal on leaving radar. RTC validity survived firmware restart and a timed deep-sleep/wake test while USB was attached; battery-only sleep retention has not yet been independently checked. Longer capture sessions and battery calibration remain unverified. GPS wiring and field logging are deferred at the owner’s request. See the eventual hardware validation report before treating this as a verified release.
 
 ## Sources
 

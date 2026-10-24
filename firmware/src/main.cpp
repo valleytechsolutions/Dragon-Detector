@@ -140,6 +140,8 @@ static void command(const String& c){
   else if(c=="touch status"||c=="rotary status"){extern void crowInputStatus();crowInputStatus();}
 #endif
 #ifdef BOARD_WATCHER
+  else if(c=="watcher sleep test"){extern bool watcherSleep(unsigned);if(!watcherSleep(5))Serial.println("SLEEP_ERROR busy");}
+  else if(c=="watcher audio"){extern void watcherAudioDiagnostics();watcherAudioDiagnostics();}
   else if(c=="watcher status"||c=="touch status"||c=="rotary status"){extern void watcherInputStatus();watcherInputStatus();}
   else if(c.startsWith("touch inject ")){int x,y,pressed;char extra;if(sscanf(c.c_str(),"touch inject %d %d %d %c",&x,&y,&pressed,&extra)==3&&x>=0&&x<412&&y>=0&&y<412&&(pressed==0||pressed==1)){extern void testTouch(int,int,bool);testTouch(x,y,pressed);Serial.println("TOUCH_INJECT_OK");}else Serial.println("TOUCH_INJECT_ERROR");}
 #endif

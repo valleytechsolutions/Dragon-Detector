@@ -17,6 +17,10 @@ void toneOutput(uint16_t hz,uint16_t ms,uint8_t volume){M5.Speaker.setVolume(uns
 #endif
 static i2s_chan_handle_t tx=nullptr;
 static portMUX_TYPE lock=portMUX_INITIALIZER_UNLOCKED;
+#ifdef BOARD_WATCHER
+static volatile uint32_t outputWrites=0,outputErrors=0,audibleBuffers=0;
+void watcherToneDiagnostics(){Serial.printf("WATCHER_I2S writes=%lu errors=%lu audible_buffers=%lu\n",outputWrites,outputErrors,audibleBuffers);}
+#endif
 static uint16_t frequency=0;static uint8_t gain=0;static uint32_t until=0;
 static void outputTask(void*){
  int16_t samples[256*2];float phase=0,amplitude=0;
@@ -25,7 +29,12 @@ static void outputTask(void*){
   if(int32_t(millis()-end)>=0)hz=0;
   float target=hz?volume*327.0f:0;
   for(unsigned i=0;i<256;++i){amplitude+=(target-amplitude)*0.015f;phase+=hz*6.283185307f/16000;if(phase>6.283185307f)phase-=6.283185307f;int16_t v=int16_t(sinf(phase)*amplitude);samples[2*i]=samples[2*i+1]=v;}
-  size_t written=0;if(i2s_channel_write(tx,samples,sizeof(samples),&written,100)!=ESP_OK)vTaskDelay(1);
+  size_t written=0;esp_err_t result=i2s_channel_write(tx,samples,sizeof(samples),&written,100);
+#ifdef BOARD_WATCHER
+  if(result==ESP_OK&&written==sizeof(samples)){++outputWrites;if(hz&&volume)++audibleBuffers;}
+  else ++outputErrors;
+#endif
+  if(result!=ESP_OK)vTaskDelay(1);
  }
 }
 bool toneOutputBegin(){
@@ -42,7 +51,14 @@ bool toneOutputBegin(){
 #if defined(BOARD_WATCHER) || defined(BOARD_AMOLED_175C) || defined(BOARD_AMOLED_175)
  auto codec=es8311_create(0,ES8311_ADDRESS_0);if(!codec)return false;
  es8311_clock_config_t clock{};clock.mclk_from_mclk_pin=true;clock.mclk_frequency=4096000;clock.sample_frequency=16000;
- bool ok=es8311_init(codec,&clock,ES8311_RESOLUTION_16,ES8311_RESOLUTION_16)==ESP_OK&&es8311_voice_volume_set(codec,100,nullptr)==ESP_OK;es8311_delete(codec);if(!ok)return false;
+#ifdef BOARD_WATCHER
+ // Driver percent maps directly to DAC register: 100 -> 0xFF (+32 dB).
+ // 65 -> 0xA5 (-13 dB), keeping headroom even at full application volume.
+ constexpr int codecVolume=65;
+#else
+ constexpr int codecVolume=100;
+#endif
+ bool ok=es8311_init(codec,&clock,ES8311_RESOLUTION_16,ES8311_RESOLUTION_16)==ESP_OK&&es8311_voice_volume_set(codec,codecVolume,nullptr)==ESP_OK&&es8311_voice_mute(codec,false)==ESP_OK;es8311_delete(codec);if(!ok)return false;
 #endif
  if(xTaskCreate(outputTask,"dragon-tone",3072,nullptr,2,nullptr)!=pdPASS)return false;
 #ifdef BOARD_WATCHER

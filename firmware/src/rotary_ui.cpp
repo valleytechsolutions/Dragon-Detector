@@ -9,12 +9,23 @@ lv_group_t* group=nullptr;
 lv_obj_t* members[160]{};
 unsigned memberCount=0;
 #ifdef BOARD_WATCHER
-dragon::RotaryNavigation navigation(800,80);
+dragon::RotaryNavigation navigation(350,140);
 #else
 dragon::RotaryNavigation navigation;
 #endif
 unsigned pendingClicks=0;
 bool releasing=false;
+#ifdef BOARD_WATCHER
+lv_indev_t* encoderInput=nullptr;
+bool touchActive=false,touchSeen=false;
+uint32_t touchAt=0;
+uint32_t activeKey=LV_KEY_ENTER;
+bool touchOwnsInput(){return touchActive||(touchSeen&&uint32_t(millis()-touchAt)<150);}
+void cancelEncoder(){
+  navigation.clear();pendingClicks=0;releasing=false;
+  if(encoderInput)lv_indev_reset(encoderInput,nullptr);
+}
+#endif
 
 lv_obj_t* dialog(lv_obj_t* obj){
   if(!obj||lv_obj_has_flag(obj,LV_OBJ_FLAG_HIDDEN))return nullptr;
@@ -36,30 +47,88 @@ void collect(lv_obj_t* obj,lv_obj_t** found,unsigned& count){
 }
 void readEncoder(lv_indev_drv_t*,lv_indev_data_t* data){
   data->key=LV_KEY_ENTER;data->enc_diff=0;
+#ifdef BOARD_WATCHER
+  if(touchOwnsInput()){cancelEncoder();data->state=LV_INDEV_STATE_REL;return;}
+#endif
+#ifdef BOARD_WATCHER
+  // Finish each key press/release in one LVGL read cycle, before rendering.
+  if(releasing){
+    releasing=false;data->key=activeKey;data->state=LV_INDEV_STATE_REL;
+  }else{
+    if(pendingClicks){pendingClicks=0;activeKey=LV_KEY_ENTER;}
+    else {data->key=activeKey;data->state=LV_INDEV_STATE_REL;return;}
+    data->key=activeKey;data->state=LV_INDEV_STATE_PR;releasing=true;
+  }
+  data->continue_reading=releasing; // a selection cannot remain held across slow redraws
+#else
   if(releasing){releasing=false;data->state=LV_INDEV_STATE_REL;}
   else if(pendingClicks){--pendingClicks;releasing=true;data->state=LV_INDEV_STATE_PR;}
   else {data->enc_diff=navigation.take(millis());data->state=LV_INDEV_STATE_REL;}
+#endif
 }
 }
 void rotaryUiBegin(){
   group=lv_group_create();lv_group_set_wrap(group,true);
   static lv_indev_drv_t driver;lv_indev_drv_init(&driver);
-  driver.type=LV_INDEV_TYPE_ENCODER;driver.read_cb=readEncoder;
-  lv_indev_set_group(lv_indev_drv_register(&driver),group);
+#ifdef BOARD_WATCHER
+  driver.type=LV_INDEV_TYPE_KEYPAD;
+#else
+  driver.type=LV_INDEV_TYPE_ENCODER;
+#endif
+  driver.read_cb=readEncoder;
+  auto* input=lv_indev_drv_register(&driver);lv_indev_set_group(input,group);
+#ifdef BOARD_WATCHER
+  encoderInput=input;
+#endif
 }
 void rotaryUiInput(int steps,bool click,bool back){
   if(!group||(!steps&&!click&&!back))return;
-  if(uiRotaryWake()){navigation.clear();return;}
+#ifdef BOARD_WATCHER
+  if(touchOwnsInput()){cancelEncoder();return;}
+#endif
+  if(uiRotaryWake()){
+#ifdef BOARD_WATCHER
+    cancelEncoder();
+#else
+    navigation.clear();
+#endif
+    return;
+  }
   if(back){
+#ifdef BOARD_WATCHER
+    cancelEncoder();
+#endif
     navigation.clear();pendingClicks=0;releasing=false;lv_group_set_editing(group,false);
 #ifdef BOARD_WATCHER
     if(uiRotaryOpenMenu())return;
 #endif
     uiKey(true);return;
   }
+#ifdef BOARD_WATCHER
+  if(click){pendingClicks=1;}
+  else if(!pendingClicks&&!releasing){
+    lv_group_set_editing(group,false);
+    // Apply this frame's actual detents together, with no delayed navigation backlog.
+    int count=constrain(steps,-8,8);
+    while(count>0){lv_group_focus_next(group);--count;}
+    while(count<0){lv_group_focus_prev(group);++count;}
+  }
+#else
   if(click){navigation.clear();pendingClicks=1;}
   else if(!pendingClicks&&!releasing)navigation.push(steps,millis());
+#endif
 }
+#ifdef BOARD_WATCHER
+void rotaryUiTouch(bool down){
+  if(down||touchActive){touchAt=millis();touchSeen=true;}
+  touchActive=down;
+  if(down)cancelEncoder();
+}
+void rotaryUiReset(){
+  cancelEncoder();memberCount=0;
+  if(group){lv_group_remove_all_objs(group);lv_group_set_editing(group,false);}
+}
+#endif
 void rotaryUiLoop(){
   if(!group)return;
   auto* scope=uiRotaryScope();
@@ -70,6 +139,9 @@ void rotaryUiLoop(){
   for(unsigned i=0;i<count&&!changed;++i)changed=found[i]!=members[i];
   if(!changed)return;
   navigation.clear();
+#ifdef BOARD_WATCHER
+  cancelEncoder();
+#endif
   auto* focused=lv_group_get_focused(group);bool keep=false;
   for(unsigned i=0;i<count;++i)if(found[i]==focused)keep=true;
   bool editing=keep&&lv_group_get_editing(group);

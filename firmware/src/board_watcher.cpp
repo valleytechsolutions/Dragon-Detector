@@ -21,6 +21,9 @@
 #include <hal/gpio_ll.h>
 #include <soc/gpio_struct.h>
 #include <time.h>
+#include <esp_sleep.h>
+#include <driver/rtc_io.h>
+#include "recon.h"
 
 extern bool uiTouch(bool,int,int);
 namespace {
@@ -34,7 +37,9 @@ esp_lcd_panel_io_handle_t panelIo=nullptr;
 esp_lcd_touch_handle_t touch=nullptr;
 lv_disp_draw_buf_t drawBuffer;
 lv_disp_drv_t displayDriver;
-dragon::RotaryDecoder decoder;
+dragon::DetentDecoder decoder;
+volatile bool wheelPressed=false;
+volatile uint32_t wheelReleasedAt=0;
 dragon::RotaryButton button;
 portMUX_TYPE encoderMux=portMUX_INITIALIZER_UNLOCKED;
 volatile int detents=0;
@@ -45,6 +50,10 @@ QueueHandle_t touchQueue=nullptr,buttonQueue=nullptr;
 InputEdge physicalTouch{};
 esp_lcd_panel_io_t touchTransport{};
 uint32_t touchPolls=0;
+TaskHandle_t inputTaskHandle=nullptr;
+volatile uint32_t touchStatusRaw=0,touchPackets=0,rawContacts=0;
+volatile uint16_t rawX=0,rawY=0,rawStrength=0;
+bool readingStatus=false;
 uint32_t clicks=0,holds=0,touchPresses=0,touchSamples=0,touchErrors=0,i2cErrors=0;
 int position=0,lastX=0,lastY=0,battery=-1;
 uint32_t batteryMv=0;
@@ -67,7 +76,7 @@ bool sampleInputs(){uint8_t b[2];if(!readRegs(Expander,0,b,2))return false;input
 void ARDUINO_ISR_ATTR encoderChanged(){
  uint8_t state=(gpio_ll_get_level(&GPIO,41)<<1)|gpio_ll_get_level(&GPIO,42);
  portENTER_CRITICAL_ISR(&encoderMux);++edges;lastEdgeAt=millis();int step=decoder.update(state);
- if((step>0&&detents<48)||(step<0&&detents>-48))detents+=step;
+ if(!wheelPressed&&uint32_t(millis()-wheelReleasedAt)>=100&&((step>0&&detents<48)||(step<0&&detents>-48)))detents+=step;
  portEXIT_CRITICAL_ISR(&encoderMux);
 }
 bool IRAM_ATTR flushComplete(esp_lcd_panel_io_handle_t,esp_lcd_panel_io_event_data_t*,void*){
@@ -77,27 +86,39 @@ bool IRAM_ATTR flushComplete(esp_lcd_panel_io_handle_t,esp_lcd_panel_io_event_da
 // command-address write is inserted before the SPD2010 read transaction.
 esp_err_t touchWrite(esp_lcd_panel_io_t*,int,const void* data,size_t size){
  if(!data||!size||size>128)return ESP_ERR_INVALID_ARG;
+ readingStatus=size==2&&static_cast<const uint8_t*>(data)[0]==0x20&&static_cast<const uint8_t*>(data)[1]==0;
  Wire1.beginTransmission(0x53);Wire1.write(static_cast<const uint8_t*>(data),size);
  return Wire1.endTransmission(true)==0?ESP_OK:ESP_FAIL;
 }
 esp_err_t touchRead(esp_lcd_panel_io_t*,int,void* data,size_t size){
  if(!data||!size||size>128)return ESP_ERR_INVALID_ARG;
  if(Wire1.requestFrom(uint8_t(0x53),size)!=size){while(Wire1.available())Wire1.read();return ESP_FAIL;}
- auto* bytes=static_cast<uint8_t*>(data);for(size_t i=0;i<size;++i)bytes[i]=Wire1.read();return ESP_OK;
+ auto* bytes=static_cast<uint8_t*>(data);for(size_t i=0;i<size;++i)bytes[i]=Wire1.read();
+ if(readingStatus&&size==4){touchStatusRaw=uint32_t(bytes[0])|uint32_t(bytes[1])<<8|uint32_t(bytes[2])<<16|uint32_t(bytes[3])<<24;if(bytes[0]&1)++touchPackets;}
+ return ESP_OK;
 }
 void inputTask(void*){
- bool wasDown=false;TickType_t wake=xTaskGetTickCount();
+ dragon::TouchContactFilter contactFilter;
+ bool wasDown=false;uint16_t contactX=0,contactY=0;TickType_t wake=xTaskGetTickCount();
  for(;;){
   uint32_t now=millis();
   if(sampleInputs()){
-   auto event=button.update(!(inputs&(1u<<3)),now);
+   bool pressed=!(inputs&(1u<<3));
+   portENTER_CRITICAL(&encoderMux);
+   if(pressed){detents=0;wheelReleasedAt=now;}
+   wheelPressed=pressed;
+   portEXIT_CRITICAL(&encoderMux);
+   auto event=button.update(pressed,now);
    if(event!=dragon::RotaryPress::None){ButtonEvent e{event,now};xQueueSend(buttonQueue,&e,0);if(event==dragon::RotaryPress::Click)++clicks;else ++holds;}
   }
   uint16_t x=0,y=0,strength=0;uint8_t count=0;bool down=false;
   if(touch){++touchPolls;
-   if(esp_lcd_touch_read_data(touch)==ESP_OK)down=esp_lcd_touch_get_coordinates(touch,&x,&y,&strength,&count,1)&&count&&x<412&&y<412;
+   if(esp_lcd_touch_read_data(touch)==ESP_OK)down=esp_lcd_touch_get_coordinates(touch,&x,&y,&strength,&count,1)&&dragon::touchContactValid(count,x,y,strength,412);
    else ++touchErrors;
   }
+  if(count){++rawContacts;rawX=x;rawY=y;rawStrength=strength;}
+  if(down){contactX=x;contactY=y;}
+  down=contactFilter.update(down,now);x=contactX;y=contactY;
   portENTER_CRITICAL(&encoderMux);if(!down){x=physicalTouch.x;y=physicalTouch.y;}physicalTouch={down,x,y,now};portEXIT_CRITICAL(&encoderMux);
   if(down){++touchSamples;if(!wasDown)++touchPresses;}
   if(down!=wasDown){InputEdge e{down,x,y,now};if(xQueueSend(touchQueue,&e,0)!=pdTRUE){xQueueReset(touchQueue);InputEdge released{false,x,y,now};xQueueSend(touchQueue,&released,0);if(down)xQueueSend(touchQueue,&e,0);}wasDown=down;}
@@ -109,6 +130,7 @@ void readTouch(lv_indev_drv_t*,lv_indev_data_t* data){
  portENTER_CRITICAL(&encoderMux);point=physicalTouch;portEXIT_CRITICAL(&encoderMux);
  InputEdge queued;while(xQueueReceive(touchQueue,&queued,0)==pdTRUE){if(uint32_t(millis()-queued.at)<=500){point=queued;break;}}
  if(injected){point={injectedPress,uint16_t(injectedX),uint16_t(injectedY),millis()};if(!injectedPress)injected=false;}
+ rotaryUiTouch(point.down);
  lastX=point.x;lastY=point.y;data->point.x=lastX;data->point.y=lastY;
  data->state=point.down&&uiTouch(true,lastX,lastY)?LV_INDEV_STATE_PR:LV_INDEV_STATE_REL;
  if(!point.down)uiTouch(false,lastX,lastY);
@@ -139,6 +161,43 @@ void watcherAudioPower(bool on){
  uint16_t next=on?outputs|(1u<<12):outputs&~(1u<<12);
  if(writeWord(2,next))outputs=next;
 }
+bool watcherPowerOff(){
+ extern bool watcherCloseStorage();
+ bool wasLogging=loggingEnabled;
+ if(!watcherCloseStorage())return false;
+ audioStop();watcherAudioPower(false);
+ // Same PCA9535 system latch used by Seeed's bsp_system_shutdown().
+ uint16_t previous=outputs;
+ if(!writeWord(2,outputs&~(1u<<10))){loggingEnabled=wasLogging;watcherAudioPower(true);return false;}
+ delay(500); // Battery-powered hardware should have cut power by now.
+ // If external power kept the CPU alive, retain the latch and report failure.
+ writeWord(2,previous);watcherAudioPower(true);loggingEnabled=wasLogging;return false;
+}
+bool watcherSleep(unsigned seconds){
+ if(reconRecording()||reconStorageBusy()||wardriveBusy())return false;
+ extern bool watcherCloseStorage();
+ if(!watcherCloseStorage())return false;
+ audioStop();
+ // Stop the polling task outside its shared I2C transaction, then retain SYS.
+ if(xSemaphoreTake(busMutex,pdMS_TO_TICKS(100))!=pdTRUE)return false;
+ if(inputTaskHandle)vTaskSuspend(inputTaskHandle);
+ xSemaphoreGive(busMutex);
+ constexpr uint16_t peripheralPower=(1u<<8)|(1u<<9)|(1u<<11)|(1u<<12)|(1u<<14)|(1u<<15);
+ if(!writeWord(2,outputs&~peripheralPower)){if(inputTaskHandle)vTaskResume(inputTaskHandle);return false;}
+ ledcWrite(8,0);sampleInputs();
+ esp_sleep_enable_ext0_wakeup(GPIO_NUM_2,0);rtc_gpio_pullup_en(GPIO_NUM_2);rtc_gpio_pulldown_dis(GPIO_NUM_2);
+ if(seconds)esp_sleep_enable_timer_wakeup(uint64_t(seconds)*1000000);
+ Serial.println("WATCHER_SLEEP");Serial.flush();esp_deep_sleep_start();return true;
+}
+void watcherAudioDiagnostics(){
+ extern void watcherToneDiagnostics();watcherToneDiagnostics();
+ uint8_t latch[2]{};bool ok=readRegs(Expander,2,latch,2);
+ Serial.printf("WATCHER_AUDIO power_io=%u pa=%u",ok,bool(latch[1]&0x10));
+ for(uint8_t reg:{uint8_t(0x00),uint8_t(0x01),uint8_t(0x0d),uint8_t(0x12),uint8_t(0x13),uint8_t(0x31),uint8_t(0x32)}){
+  uint8_t value=0;bool read=readRegs(0x18,reg,&value,1);Serial.printf(" r%02x=%s%02x",reg,read?"":"ERR",value);
+ }
+ Serial.println();
+}
 void set_brightness(uint8_t value){ledcWrite(8,unsigned(constrain(value,0,100))*255/100);}
 void scr_lvgl_init(){
  spi_bus_config_t bus{};bus.sclk_io_num=7;bus.data0_io_num=9;bus.data1_io_num=1;bus.data2_io_num=14;bus.data3_io_num=13;
@@ -162,7 +221,7 @@ void scr_lvgl_init(){
  }
  touchQueue=xQueueCreate(8,sizeof(InputEdge));buttonQueue=xQueueCreate(4,sizeof(ButtonEvent));
  if(!touchQueue||!buttonQueue)abort();
- if(xTaskCreatePinnedToCore(inputTask,"watcher-input",4096,nullptr,3,nullptr,0)!=pdPASS)abort();
+ if(xTaskCreatePinnedToCore(inputTask,"watcher-input",4096,nullptr,3,&inputTaskHandle,0)!=pdPASS)abort();
  auto* pixels=(lv_color_t*)heap_caps_malloc(412*32*sizeof(lv_color_t),MALLOC_CAP_INTERNAL|MALLOC_CAP_DMA);
  if(!pixels){Serial.println("FATAL Watcher display DMA buffer");abort();}
  lv_init();lv_disp_draw_buf_init(&drawBuffer,pixels,nullptr,412*32);
@@ -181,6 +240,9 @@ void boardLoop(){
  portENTER_CRITICAL(&encoderMux);int steps=uint32_t(now-lastEdgeAt)<=350?detents:0;detents=0;portEXIT_CRITICAL(&encoderMux);
  position+=steps;bool click=false,back=false;static uint32_t batteryAt=0;
  ButtonEvent event;while(xQueueReceive(buttonQueue,&event,0)==pdTRUE){if(uint32_t(now-event.at)<=500){click=event.value==dragon::RotaryPress::Click;back=event.value==dragon::RotaryPress::Back;break;}}
+ // Do not let wheel events overtake a queued touch gesture between UI frames.
+ portENTER_CRITICAL(&encoderMux);bool touching=physicalTouch.down;portEXIT_CRITICAL(&encoderMux);
+ if(touching||uxQueueMessagesWaiting(touchQueue)>0)rotaryUiTouch(true);
  rotaryUiInput(steps,click,back);
  if(!batteryAt||now-batteryAt>=5000){batteryAt=now;uint32_t sum=0;for(unsigned i=0;i<8;++i)sum+=analogReadMilliVolts(3);
   batteryMv=(sum*41)/(8*10);battery=(batteryMv<2500||batteryMv>4500)?-1:constrain((int(batteryMv)-3300)*100/900,0,100);
@@ -191,7 +253,7 @@ void watcherInputStatus(){
  Serial.printf("WATCHER_STATUS flash=%u psram=%u free_psram=%u internal=%u battery_mv=%lu battery_estimate=%d sd=%u rtc=%u\n",ESP.getFlashChipSize(),ESP.getPsramSize(),ESP.getFreePsram(),ESP.getFreeHeap(),batteryMv,battery,sdReady,rtcAvailable);
  Serial.printf("ROTARY_STATUS position=%d edges=%lu clicks=%lu holds=%lu inputs=%04x errors=%lu\n",position,edges,clicks,holds,inputs,i2cErrors);
  Serial.printf("TOUCH_STATUS enabled=%u presses=%lu samples=%lu xy=%d,%d errors=%lu\n",touch!=nullptr,touchPresses,touchSamples,lastX,lastY,touchErrors);
- Serial.printf("TOUCH_POLL count=%lu\n",touchPolls);
+ Serial.printf("TOUCH_POLL count=%lu status=%08lx packets=%lu raw_contacts=%lu raw_xy=%u,%u strength=%u\n",touchPolls,touchStatusRaw,touchPackets,rawContacts,rawX,rawY,rawStrength);
  Serial.printf("DISPLAY_STATUS frames=%lu resolution=412x412\n",flushes);
 }
 int batteryPercent(){return battery;}

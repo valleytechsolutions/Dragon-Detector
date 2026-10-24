@@ -49,11 +49,30 @@ static void rotaryInputTests(){
   assert(navigation.take(420)==-1); // most recent direction wins, no backlog
   navigation.push(1,450);navigation.clear();assert(navigation.take(700)==0);
   navigation.push(1,710);assert(navigation.take(911)==0); // stale input expires
-  RotaryNavigation watcherNavigation(800,80);
+  RotaryNavigation watcherNavigation(350,140);
   watcherNavigation.push(1,100);assert(watcherNavigation.take(350)==1); // survives a slow display frame
   watcherNavigation.push(-1,360);assert(watcherNavigation.take(400)==0);
-  assert(watcherNavigation.take(430)==-1); // Watcher focus repeat interval
+  assert(watcherNavigation.take(490)==-1); // Watcher focus repeat interval
   watcherNavigation.push(1,500);assert(watcherNavigation.take(1301)==0); // stale USB backlog discarded
+  DetentDecoder strict;strict.reset(0);
+  assert(strict.update(2)==0);assert(strict.update(0)==0); // slight wobble
+  assert(strict.update(2)==0);assert(strict.update(3)==0);
+  assert(strict.update(1)==0);assert(strict.update(0)==1);
+  assert(strict.update(1)==0);assert(strict.update(3)==0);
+  assert(strict.update(2)==0);assert(strict.update(0)==-1);
+  assert(strict.update(3)==0);assert(strict.update(1)==0);assert(strict.update(0)==0); // missed edges resync
+  assert(strict.update(2)==0);assert(strict.update(3)==0);assert(strict.update(1)==0);assert(strict.update(0)==1);
+  assert(touchContactValid(1,100,200,20,412));
+  assert(!touchContactValid(1,100,200,0,412)); // SPD2010 zero weight means finger lifted
+  assert(!touchContactValid(0,100,200,20,412));
+  assert(!touchContactValid(1,412,200,20,412));
+  TouchContactFilter touch;
+  assert(touch.update(true,0));assert(touch.update(false,10)); // sparse report is still a tap
+  assert(touch.update(true,40));assert(touch.update(false,80));
+  assert(touch.update(false,99));assert(!touch.update(false,100));
+  TouchContactFilter rollover;
+  assert(rollover.update(true,0xfffffff0u));assert(rollover.update(false,10));
+  assert(!rollover.update(false,44));
   RotaryNavigation navWrap;navWrap.push(1,0xfffffff0u);
   assert(navWrap.take(0xfffffff0u)==1);navWrap.push(-1,40);
   assert(navWrap.take(40)==0);assert(navWrap.take(164)==-1);

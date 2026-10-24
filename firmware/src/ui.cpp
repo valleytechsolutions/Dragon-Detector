@@ -152,6 +152,9 @@ static void locksportColors(lv_obj_t* object){
 void uiNotify(const char* text,const char* detail,const dragon::DeviceKey* key,bool watched){
   dragon::DetectionNotice item;strlcpy(item.title,text,sizeof(item.title));strlcpy(item.detail,detail,sizeof(item.detail));item.watched=watched;item.at=millis();item.hasKey=key!=nullptr;if(key){item.key=*key;int i=findContact(*key);if(i>=0)item.family=contacts[i].match.family;}
   for(unsigned f=0;f<unsigned(Family::Count);++f)if(!strcmp(text,dragon::familyName(Family(f)))){item.family=Family(f);break;}
+#ifdef BOARD_WATCHER
+  if(key&&(page!=Radar||pending!=Radar)){noticeQueue.push(item);return;}
+#endif
   if(clockPrompt||page==Boot||page==Startup||page==BleLab||page==Stopwatch||page==Clock||page==ClockSettings||page==ClockWheels||page==ClockEdit||(notice&&noticePriority>=item.priority())){noticeQueue.push(item);return;}
   dismissNotice();noticeAt=millis();noticeWatch=watched;noticeHasKey=key!=nullptr;if(key)noticeKey=*key;
   noticePriority=item.priority();uint32_t accent=uiColors().accent;
@@ -295,6 +298,10 @@ static void loadFiles(){
 #include "startup_logo.inc"
 static void drawStartup(){showStartupLogo(root);}
 static void build(){
+#ifdef BOARD_WATCHER
+  rotaryUiReset();
+  if(pending!=Radar&&noticeHasKey)dismissNotice();
+#endif
   // BLE Lab owns its complete screen and returns before the shared mic label
   // is rebuilt. Never retain a label from the page that is about to be freed.
   micBadge=nullptr;radarSummary=nullptr;radarGesture.clear();radarPress.clear();
@@ -353,7 +360,14 @@ static void build(){
 #endif
     button(root,"Activity",79,242,202,43,116);}
 
-    if(menuTab==2){button(root,"Settings",60,126,240,48,40);button(root,"Recon notebook",60,184,240,48,153);button(root,"Radio health",79,243,202,44,99);}
+    if(menuTab==2){
+#ifdef BOARD_WATCHER
+      button(root,"Settings",60,115,240,38,40);button(root,"Recon notebook",60,160,240,38,153);
+      button(root,"Radio health",70,205,220,38,99);button(root,"Sleep",60,250,116,38,181);button(root,"Power off",184,250,116,38,180);
+#else
+      button(root,"Settings",60,126,240,48,40);button(root,"Recon notebook",60,184,240,48,153);button(root,"Radio health",79,243,202,44,99);
+#endif
+    }
   }else if(page==Devices){
     title(filter==0?"RADAR TARGETS":filter==1?"WI-FI CONTACTS":"BLE CONTACTS","Axon first / trackers last");body=scrollBody(88,180);
     int order[MAX_CONTACTS];deviceTotal=0;uint32_t now=millis();
@@ -718,6 +732,36 @@ static void action(lv_event_t* e){
     case 124:radarRecent=!radarRecent;settings.putBool("radar-recent",radarRecent);go(RadarStyle);page=Boot;break;
     case 110:if(historyPage>0)--historyPage;go(History);page=Boot;break;
     case 111:if(size_t((historyPage+1)*10)<historyCount)++historyPage;go(History);page=Boot;break;
+#ifdef BOARD_WATCHER
+    case 181:{
+      static const char* choices[]={"Cancel","Sleep",""};
+      auto* box=uiMessageBox(root,"SLEEP?","Stops scanning. Press the wheel to wake. Keeps the system power latch on for the clock.",choices,true);
+      lv_obj_set_width(box,S(260));lv_obj_center(box);
+      lv_obj_add_event_cb(box,[](lv_event_t* event){
+        auto* b=lv_event_get_current_target(event);bool yes=lv_msgbox_get_active_btn(b)==1;lv_msgbox_close(b);if(!yes)return;
+        extern bool watcherSleep(unsigned);
+        if(!watcherSleep(0)){auto* info=uiMessageBox(root,"SLEEP UNAVAILABLE","Stop recording and wait for saving to finish, then try again.",nullptr,true);lv_obj_set_width(info,S(260));lv_obj_center(info);}
+      },LV_EVENT_VALUE_CHANGED,nullptr);break;
+    }
+    case 180:{
+      static const char* choices[]={"Cancel","Power off",""};
+      auto* box=uiMessageBox(root,"POWER OFF?","Full power off can lose clock time. Use Sleep to retain it. Unplug USB first.",choices,true);
+      lv_obj_set_width(box,S(260));lv_obj_center(box);
+      lv_obj_add_event_cb(box,[](lv_event_t* event){
+        auto* b=lv_event_get_current_target(event);bool yes=lv_msgbox_get_active_btn(b)==1;
+        lv_msgbox_close(b);if(!yes)return;
+        if(reconRecording()||reconStorageBusy()||wardriveBusy()){
+          auto* info=uiMessageBox(root,"STILL SAVING","Stop recording and wait for saving to finish before powering off.",nullptr,true);
+          lv_obj_set_width(info,S(260));lv_obj_center(info);return;
+        }
+        extern bool watcherPowerOff();
+        if(!watcherPowerOff()){
+          auto* info=uiMessageBox(root,"POWER STILL ON","Could not power off. Unplug USB and try again.",nullptr,true);
+          lv_obj_set_width(info,S(260));lv_obj_center(info);
+        }
+      },LV_EVENT_VALUE_CHANGED,nullptr);break;
+    }
+#endif
     case 112:{static const char* buttons[]={"Cancel","Clear",""};auto* box=uiMessageBox(root,"CLEAR HISTORY?","Erase stored detections on this device? Active scanning can create new records.",buttons,true);lv_obj_set_width(box,S(260));lv_obj_center(box);lv_obj_add_event_cb(box,[](lv_event_t* event){auto* b=lv_event_get_current_target(event);if(lv_msgbox_get_active_btn(b)==1)historyClear();lv_msgbox_close(b);go(History);page=Boot;},LV_EVENT_VALUE_CHANGED,nullptr);break;}
     case 200:trackContact(-1);pending=page;page=Boot;break;
   }
@@ -789,6 +833,10 @@ void uiLoop(){
   int level=detector.offSeconds&&idle>=uint32_t(detector.offSeconds)*1000?0:detector.dimSeconds&&idle>=uint32_t(detector.dimSeconds)*1000?detector.idleBrightness:brightness;
   if(level!=outputBrightness){outputBrightness=level;set_brightness(level);}
   if(notice&&!noticeWatch&&millis()-noticeAt>=6000)dismissNotice();
+#ifdef BOARD_WATCHER
+  if((page!=Radar||pending!=Radar)&&noticeHasKey)dismissNotice();
+  if(page==Radar&&pending==Radar)
+#endif
   if(!clockPrompt&&!notice&&page!=Boot&&page!=Startup&&page!=BleLab&&page!=Recon&&page!=Stopwatch&&page!=Clock&&page!=ClockSettings&&page!=ClockWheels&&page!=ClockEdit){dragon::DetectionNotice next;if(noticeQueue.take(millis(),next)&&detector.enabled(next.family)&&(!detector.quiet||next.watched)&&(!next.hasKey||!(deviceRules(next.key)&(RuleIgnore|RuleSnooze))))uiNotify(next.title,next.detail,next.hasKey?&next.key:nullptr,next.watched);}
   if(((page==Boot&&pending==Boot)||(page==Startup&&pending==Startup)) && millis()-pageAt>2200)pending=Radar;
   if(page!=pending)build();
@@ -863,7 +911,10 @@ bool uiCommand(const String& cmd){
 
   if(cmd=="ui layout"){lv_obj_update_layout(root);Serial.printf("UI_LAYOUT count=%lu page=%u\n",lv_obj_get_child_cnt(root),unsigned(page));for(unsigned i=0;i<lv_obj_get_child_cnt(root);++i){auto* o=lv_obj_get_child(root,i);lv_area_t a;lv_obj_get_coords(o,&a);Serial.printf("UI_WIDGET %u x=%d y=%d w=%d h=%d hidden=%u opa=%u children=%lu type=%s\n",i,a.x1,a.y1,a.x2-a.x1+1,a.y2-a.y1+1,lv_obj_has_flag(o,LV_OBJ_FLAG_HIDDEN),lv_obj_get_style_opa(o,0),lv_obj_get_child_cnt(o),lv_obj_check_type(o,&lv_label_class)?"label":lv_obj_check_type(o,&lv_btn_class)?"button":"object");}Serial.println("UI_LAYOUT_END");return true;}
 
-  if(cmd=="ui status"){Serial.printf("UI_STATUS page=%u actions=%lu last_action=%d\n",unsigned(page),inputActions,lastInputAction);return true;}
+#ifdef BOARD_WATCHER
+  if(cmd=="ui test notification"){dragon::DeviceKey key{};uiNotify("Input test","Test detection notification",&key,false);Serial.println("UI_TEST_OK");return true;}
+#endif
+  if(cmd=="ui status"){Serial.printf("UI_STATUS page=%u actions=%lu last_action=%d notice=%u\n",unsigned(page),inputActions,lastInputAction,notice!=nullptr);return true;}
   if(cmd=="radar status"){Serial.printf("RADAR_SETTINGS theme=%u labels=%u recent=%u pages=1 plotted=%u primary=%d touches=%lu hits=%lu selected=%u\n",radarTheme,radarLabels,radarRecent,dotCount,radarPrimary,radarTouches,radarHits,radarHasSelection);return true;}
   if(cmd=="radar dots"){for(int i=0;i<dotCount;++i)Serial.printf("RADAR_DOT %d x=%d y=%d color=%06lx selected=%u\n",i,dots[i].x,dots[i].y,contactColor(contacts[dots[i].index]),radarHasSelection&&dots[i].key==radarSelectedKey);Serial.println("RADAR_DOTS_END");return true;}
   if(cmd=="radar scope all"||cmd=="radar scope candidates"){candidatesOnly=cmd.endsWith("candidates");settings.putBool("candidates",candidatesOnly);radarPrepared=0;Serial.printf("RADAR_SCOPE %s\n",candidatesOnly?"candidates":"all");return true;}

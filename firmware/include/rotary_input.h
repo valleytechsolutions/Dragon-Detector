@@ -18,6 +18,39 @@ public:
   }
 };
 
+// Emit only complete Gray-code cycles back to the resting position.
+class DetentDecoder {
+  uint8_t previous=0,anchor=0;
+  int8_t travel=0;
+  bool synchronized=true;
+public:
+  void reset(uint8_t state){previous=anchor=state&3;travel=0;synchronized=true;}
+  int update(uint8_t state){
+    state&=3;uint8_t changed=previous^state;
+    if(!changed)return 0;
+    if(changed==3){previous=state;travel=0;synchronized=state==anchor;return 0;}
+    if(!synchronized){previous=state;if(state==anchor)synchronized=true;return 0;}
+    travel+=((previous&1)^((state>>1)&1))?1:-1;previous=state;
+    if(state!=anchor)return 0;
+    int result=travel==4?1:travel==-4?-1:0;travel=0;return result;
+  }
+};
+
+inline bool touchContactValid(uint8_t count,uint16_t x,uint16_t y,uint16_t strength,uint16_t size){
+  return count>0&&strength>0&&x<size&&y<size;
+}
+// A single valid report starts contact; missing reports must persist before lift.
+class TouchContactFilter {
+  bool stable=false;
+  uint32_t lastContact=0;
+public:
+  bool update(bool down,uint32_t now){
+    if(down){stable=true;lastContact=now;}
+    else if(stable&&uint32_t(now-lastContact)>=60)stable=false;
+    return stable;
+  }
+};
+
 enum class RotaryPress {None,Click,Back};
 class RotaryNavigation {
   int pending=0;
