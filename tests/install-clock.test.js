@@ -4,7 +4,7 @@ import {syncInstalledClock,finishInstallSession,completeInstallSession} from '..
 import {boardProfiles} from '../web/board-profiles.js';
 function rig(board='waveshare',{rtc=1,offset=345,valid=1,identity,drift=0,openFails=0,version='0.13.7'}={}){
   const events=[],writes=[],now=new Date('2026-10-16T20:10:30Z');now.getTimezoneOffset=()=>-offset;
-  const epoch=now.getTime()/1000;let openings=0;
+  const epoch=now.getTime()/1000;let openings=0,hardwareReads=0;
   const options={now:()=>now,delay:async()=>{},makeLink:()=>({
     async open(){events.push('open');if(openings++<openFails)throw new Error('USB restarting');},
     async close(){events.push('close');},
@@ -12,7 +12,7 @@ function rig(board='waveshare',{rtc=1,offset=345,valid=1,identity,drift=0,openFa
     async wait(match){
       const reply=this.command==='badge info'?`BADGE_INFO ${version} ${boardProfiles[board].size} ${boardProfiles[board].lite?(version==='0.13.7'?'RADAR_ONLY':'LITE'):'READY'} ${identity||boardProfiles[board].firmwareName}`:
         this.command.startsWith('time ')?'TIME_OK':this.command.startsWith('clock offset ')?'CLOCK_OK':
-        this.command==='clock hardware'?`CLOCK_HARDWARE detected=0 valid=0 epoch=0`:
+        this.command==='clock hardware'?`CLOCK_HARDWARE detected=${board==='watcher'?1:0} valid=${board==='watcher'?1:0} epoch=${board==='watcher'?epoch+hardwareReads++:0}`:
         this.command==='clock status'?`CLOCK_STATUS rtc=${rtc} valid=${valid} epoch=${epoch+drift} offset=${offset}`:'ORIENTATION_STATUS manual=1 degrees=0';
       assert.ok(match(reply),reply);return reply;
     }
@@ -42,10 +42,10 @@ test('successful flash with locked USB cannot start a competing clock connection
 test('post-install clock verifies each full board, current offset and RTC state',async()=>{
   for(const board of Object.keys(boardProfiles).filter(k=>!boardProfiles[k].lite)){
     for(const offset of [-720,-240,0,330,345,840]){
-      const rtc=['lilygo_175','stopwatch','xiao_round','waveshare_175','waveshare_175_gps'].includes(board)?1:0;
-      const r=rig(board,{offset,rtc,version:board==='elecrow_21'?'0.13.20':'0.13.7'});const result=await syncInstalledClock({},board,r.options);
+      const rtc=['watcher','lilygo_175','stopwatch','xiao_round','waveshare_175','waveshare_175_gps'].includes(board)?1:0;
+      const r=rig(board,{offset,rtc,version:board==='watcher'?'0.13.29':board==='elecrow_21'?'0.13.20':'0.13.7'});const result=await syncInstalledClock({},board,r.options);
       assert.equal(result.board,board);assert.equal(result.rtc,!!rtc);assert.equal(result.offset,offset);
-      assert.deepEqual(r.writes,['badge info',`time ${r.epoch}`,`clock offset ${offset}`,'clock status','orientation status',...(board==='elecrow_21'?['clock hardware']:[])]);
+      assert.deepEqual(r.writes,['badge info',`time ${r.epoch}`,`clock offset ${offset}`,'clock status','orientation status',...(board==='watcher'?['clock hardware','clock hardware']:board==='elecrow_21'?['clock hardware']:[])]);
       assert.deepEqual(r.events,['open','close']);
     }
   }

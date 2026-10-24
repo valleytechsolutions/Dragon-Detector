@@ -269,3 +269,8 @@ The [official Dial documentation](https://docs.m5stack.com/en/core/Dial), schema
 ## SD resources beta 0.13.28
 
 The original DDR1 reader, generator and configuration/retry prototype are MIT application code. Fresh MA-L, MA-M and MA-S assignment facts come directly from IEEE, with source hashes in [the resource manifest](docs/sd-resource-manifest.json). [Upstream review](docs/SD-RESOURCES.md) identifies ChimeraBLE (GPL-3.0), JimGat/CYM and CYM-SD-Assets (no general top-level license grant found). No implementation or asset pack was copied from these projects. Original research notes are bundled with the optional pack.
+
+
+## Watcher display support
+
+Seeed SenseCAP Watcher pin mapping was checked against its official Apache-2.0 BSP and public schematic. The SPD2010 LCD/touch and base touch drivers are Espressif Apache-2.0 components; their original headers, licenses, exact upstream revisions and local changes are retained in [WatcherDisplay NOTICE](hardware/seeed-watcher/lib/WatcherDisplay/NOTICE.md). Factory firmware and private device dumps are not distributed.

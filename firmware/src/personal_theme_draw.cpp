@@ -8,7 +8,7 @@ int scale(int v){return (v*SCREEN_RES+(v>=0?180:-180))/360;}
 #if SCREEN_RES<=240
 const lv_font_t* small=&lv_font_montserrat_10;
 const lv_font_t* large=&lv_font_montserrat_22;
-#elif SCREEN_RES>=466
+#elif SCREEN_RES>=400
 const lv_font_t* small=&lv_font_montserrat_18;
 const lv_font_t* large=&lv_font_montserrat_40;
 #else

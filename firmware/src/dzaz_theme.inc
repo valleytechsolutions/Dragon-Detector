@@ -14,7 +14,7 @@ static void crowFeather(lv_draw_ctx_t* ctx,float turns,int length,int width,uint
   for(int r=-12;r<length;r+=5)stroke(point(r),point(std::min(length,r+5)),ink,1);
 }
 static void dzazWatch(lv_draw_ctx_t* ctx,const dragon::Calendar& d,bool valid){
-#if SCREEN_RES>=466
+#if SCREEN_RES>=400
   const lv_font_t *small=&lv_font_montserrat_16,*medium=&lv_font_montserrat_20,*digits=&lv_font_montserrat_40;
 #elif SCREEN_RES>=360
   const lv_font_t *small=&lv_font_montserrat_12,*medium=&lv_font_montserrat_16,*digits=&lv_font_montserrat_32;

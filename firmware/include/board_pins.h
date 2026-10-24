@@ -3,7 +3,19 @@
 
 #define BTN_PIN 0
 
-#if defined(BOARD_M5DIAL)
+#if defined(BOARD_WATCHER)
+#define BOARD_NAME "Seeed SenseCAP Watcher"
+#define SCREEN_RES 412
+#define BOARD_HAS_AUDIO 1
+#define BOARD_HAS_SD 1
+#define BOARD_SD_SPI 1
+#define WATCHER_GPS_RX 19
+#define WATCHER_GPS_TX 20
+#define AUDIO_I2S_MCK_IO 10
+#define AUDIO_I2S_BCK_IO 11
+#define AUDIO_I2S_WS_IO 12
+#define AUDIO_I2S_DO_IO 16
+#elif defined(BOARD_M5DIAL)
 #define BOARD_NAME "M5Stack Dial"
 #define SCREEN_RES 240
 #define BOARD_HAS_AUDIO 1
@@ -164,7 +176,7 @@
 
 #endif
 
-#if defined(BOARD_AMOLED_175) && defined(BOARD_GPS_LC76G) && BOARD_HAS_SD
+#if (defined(BOARD_WATCHER) || (defined(BOARD_AMOLED_175) && defined(BOARD_GPS_LC76G))) && BOARD_HAS_SD
 #define BOARD_HAS_GPS 1
 #else
 #define BOARD_HAS_GPS 0

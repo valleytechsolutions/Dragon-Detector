@@ -89,3 +89,8 @@ A fourth profile, `xiao_round`, supports the 240×240 GC9A01/CHSC6X expansion wi
 The `waveshare_lite` profile supports the **non-touch ESP32-S3-LCD-1.28**, with 16 MB flash, 2 MB quad-SPI PSRAM and a 240×240 GC9A01 panel. Its BOOT button navigates passive radar, clock, timer, signals and status pages. Clock and timer pages pause scanning. It has no audio, touch, full menus, badge or persistent history. [Wiring, behavior and recovery](WAVESHARE-LITE.md).
 
 All four full profiles compile the [mode launcher and radio toolkit](RADIO-TOOLKIT.md), BLE Lab, notebook and sessions in 0.13.x. Lite excludes interactive labs. Waveshare's 32 MB partition layout remains unchanged from 0.9.8. No current profile implements automatic orientation, MP3 playback, microphone recording, 5/6 GHz or Bluetooth Classic.
+
+
+## Seeed SenseCAP Watcher beta
+
+The `watcher` environment targets 412×412, 32 MB flash and 8 MB PSRAM with full-board software, touch/rotary controls, RTC, speaker and FAT32 SD. Optional UART AT6668 GPS support uses expansion GPIO19/20, not the shared I²C Grove socket. Camera, microphone recording and Himax AI are not enabled. [Setup, wiring and current physical validation](SEEED-WATCHER.md).

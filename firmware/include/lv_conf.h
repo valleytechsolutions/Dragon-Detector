@@ -30,7 +30,7 @@
 #define LV_FONT_MONTSERRAT_28 1
 #endif
 #define LV_FONT_DEFAULT &lv_font_montserrat_10
-#elif defined(BOARD_LILYGO_175) || defined(BOARD_AMOLED_175C) || defined(BOARD_AMOLED_175) || defined(BOARD_STOPWATCH) || defined(BOARD_CROWPANEL_21)
+#elif defined(BOARD_WATCHER) || defined(BOARD_LILYGO_175) || defined(BOARD_AMOLED_175C) || defined(BOARD_AMOLED_175) || defined(BOARD_STOPWATCH) || defined(BOARD_CROWPANEL_21)
 // 466 px panel: each 360 px layout font moves up to keep the same proportions.
 #define LV_FONT_MONTSERRAT_14 1
 #define LV_FONT_MONTSERRAT_16 1

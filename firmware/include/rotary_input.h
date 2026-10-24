@@ -23,7 +23,9 @@ class RotaryNavigation {
   int pending=0;
   bool stepped=false;
   uint32_t receivedAt=0,steppedAt=0;
+  uint32_t expiryMs,intervalMs;
 public:
+  explicit RotaryNavigation(uint32_t expiry=200,uint32_t interval=180):expiryMs(expiry),intervalMs(interval){}
   void clear(){pending=0;}
   void push(int steps,uint32_t now){
     if(!steps)return;
@@ -31,8 +33,8 @@ public:
   }
   int take(uint32_t now){
     if(!pending)return 0;
-    if(uint32_t(now-receivedAt)>200){pending=0;return 0;}
-    if(stepped&&uint32_t(now-steppedAt)<180)return 0;
+    if(uint32_t(now-receivedAt)>expiryMs){pending=0;return 0;}
+    if(stepped&&uint32_t(now-steppedAt)<intervalMs)return 0;
     int step=pending;pending=0;stepped=true;steppedAt=now;return step;
   }
 };

@@ -4,7 +4,7 @@ import {boardProfiles} from '../web/board-profiles.js';
 import {resourceSetup,resourcePack,hasSd,hasGpsAndSd} from '../web/sd-resources.js';
 test('all exact board profiles gate SD resources and GPS independently',()=>{
  for(const board of [...Object.keys(boardProfiles),'t5_e1','unknown']){
-  assert.equal(hasGpsAndSd(board),board==='waveshare_175_gps');
+  assert.equal(hasGpsAndSd(board),['watcher','waveshare_175_gps'].includes(board));
   assert.equal(resourceSetup(board,{version:'0.13.26'}),null);
   const m={version:'0.13.28',sdResources:{...resourcePack}};
   if(hasSd(board)){assert.match(resourceSetup(board,m).title,/Optional/);m.sdResources.required=true;assert.match(resourceSetup(board,m).title,/REQUIRED/);}

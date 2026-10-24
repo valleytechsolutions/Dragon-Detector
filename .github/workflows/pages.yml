@@ -83,6 +83,12 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
           name: dragon-detector-lilygo_175
           path: web/firmware/lilygo_175
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+          name: dragon-detector-watcher
+          path: web/firmware/watcher
       - name: Verify published manifests and images
         run: python tools/validate_release.py
       - name: Verify browser accepts every generated manifest

@@ -353,7 +353,7 @@ void setRadio(bool enabled){
     esp_wifi_set_promiscuous(true);
   }
 }
-#ifdef BOARD_AMOLED_175
+#if BOARD_HAS_GPS
 void radioWardrive(bool enabled){
   static int previousTracked=-1;static uint8_t previousChannel=0;static bool previousRadio=true;
   wardriveTransition=true;

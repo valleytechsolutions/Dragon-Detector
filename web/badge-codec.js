@@ -7,7 +7,7 @@ export function crc32(bytes) {
   return (crc ^ 0xffffffff) >>> 0;
 }
 export function encodeBadge(rgba, size) {
-  if (![240, 360, 466, 480].includes(size) || rgba.length !== size * size * 4) throw new Error('Invalid display size');
+  if (![240, 360, 412, 466, 480].includes(size) || rgba.length !== size * size * 4) throw new Error('Invalid display size');
   const bytes = new Uint8Array(8 + size * size * 2);
   bytes.set([68, 68, 66, 49, size & 255, size >> 8, size & 255, size >> 8]);
   for (let i = 0; i < size * size; i++) {

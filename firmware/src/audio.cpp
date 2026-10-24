@@ -117,7 +117,7 @@ bool audioCommand(const String& c){
  Serial.println("TONE_ERROR command");return true;
 }
 #if !defined(BOARD_STOPWATCH) && !defined(BOARD_CROWPANEL_21)
-#if !defined(BOARD_LILYGO_175) && !defined(BOARD_AMOLED_175C) && !defined(BOARD_AMOLED_175) && !defined(BOARD_XIAO_ROUND)
+#if !defined(BOARD_WATCHER) && !defined(BOARD_LILYGO_175) && !defined(BOARD_AMOLED_175C) && !defined(BOARD_AMOLED_175) && !defined(BOARD_XIAO_ROUND)
 void boardBegin(){}
 void boardLoop(){}
 #endif

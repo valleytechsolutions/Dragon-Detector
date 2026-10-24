@@ -7,6 +7,9 @@
 #include "recipes.h"
 #include "sd_records.h"
 #include <Wire.h>
+#ifdef BOARD_WATCHER
+#include <HardwareSerial.h>
+#endif
 namespace {
 dragon::wardrive::Nmea gps;
 SdRecords driveLog;
@@ -76,6 +79,18 @@ void gpsLoop(){
   if(!ok){++gpsErrors;present=false;remaining=discard=0;gps.fix.position=false;phase=Phase::LengthCommand;due=now+2000;while(Wire.available())Wire.read();}
 }
 #endif
+#ifdef BOARD_WATCHER
+HardwareSerial gpsSerial(1);
+uint32_t lastGpsByte=0;
+void gpsLoop(){
+  uint32_t now=millis();unsigned waiting=gpsSerial.available();
+  // Bounded per-loop work, keeping only fresh tail data after a stalled UI.
+  if(waiting>2048){gps.fix.position=false;gps.discardPartial();++gpsErrors;unsigned discard=waiting-1024;while(discard--&&gpsSerial.available())gpsSerial.read();}
+  unsigned budget=512;while(budget--&&gpsSerial.available()){gps.feed(char(gpsSerial.read()),now);lastGpsByte=now;}
+  present=lastGpsByte&&uint32_t(now-lastGpsByte)<3000;
+  if(!present)gps.fix.position=false;
+}
+#endif
 bool located(uint32_t now){
 #ifdef BOARD_GPS_LC76G
   // Do not consume a partially drained FIFO while its newest fix is pending.
@@ -96,13 +111,17 @@ void record(const uint8_t* mac,const uint8_t* name,size_t length,const char* aut
 bool wardriveActive(){return running;}
 bool wardriveBusy(){return owned;}
 void wardriveBegin(){
+#ifdef BOARD_WATCHER
+  gpsSerial.setRxBufferSize(4096);gpsSerial.begin(115200,SERIAL_8N1,WATCHER_GPS_RX,WATCHER_GPS_TX);
+  strlcpy(notice,"External AT6668: UART RX19/TX20; separate verified 5V power",sizeof(notice));
+#endif
 #ifdef BOARD_GPS_LC76G
   // Do not reset the shared expander or change LCD/touch/PMU wiring.
   strlcpy(notice,"LC76G GPS / SD wardriving ready",sizeof(notice));
 #endif
 }
 bool wardriveStart(){
-#ifndef BOARD_GPS_LC76G
+#if !defined(BOARD_GPS_LC76G) && !defined(BOARD_WATCHER)
   strlcpy(notice,"Flash the 1.75-G GPS profile on LC76G hardware",sizeof(notice));return false;
 #else
   if(owned)return false;
@@ -114,7 +133,11 @@ bool wardriveStart(){
   if(!seen){strlcpy(notice,"Wardrive cache allocation failed",sizeof(notice));return false;}
   memset(seen,0,SeenCount*sizeof(Seen));
   char header[512];
+#ifdef BOARD_WATCHER
+  snprintf(header,sizeof(header),"WigleWifi-1.6,appRelease=" DRAGON_VERSION ",model=SenseCAP-Watcher,release=" DRAGON_VERSION ",device=DragonDetector,display=LCD,board=watcher,brand=Seeed\n%s",dragon::wardrive::Columns);
+#else
   snprintf(header,sizeof(header),"WigleWifi-1.6,appRelease=" DRAGON_VERSION ",model=ESP32-S3-Touch-AMOLED-1.75-G,release=" DRAGON_VERSION ",device=DragonDetector,display=AMOLED,board=waveshare_175_gps,brand=Waveshare\n%s",dragon::wardrive::Columns);
+#endif
   if(!driveLog.begin("/wardrive","wigle","csv",header,strlen(header))){strlcpy(notice,driveLog.message,sizeof(notice));return false;}
   wifi=ble=noFix=duplicate=late=0;running=owned=true;radioWardrive(true);
   strlcpy(notice,"Passive Wi-Fi + BLE; waiting for a valid GPS fix",sizeof(notice));return true;
@@ -125,7 +148,7 @@ void wardriveStop(){
   strlcpy(notice,"Stopping; keep SD inserted until saved",sizeof(notice));
 }
 void wardriveLoop(){
-#ifdef BOARD_GPS_LC76G
+#if defined(BOARD_GPS_LC76G) || defined(BOARD_WATCHER)
   gpsLoop();
 #endif
   driveLog.loop();
@@ -155,6 +178,8 @@ void wardriveStatus(char* out,size_t cap){
     running?"WARDRIVING":owned?"SAVING":"WARDRIVE IDLE",
 #ifdef BOARD_GPS_LC76G
     "LC76G / passive Wi-Fi + BLE",
+#elif defined(BOARD_WATCHER)
+    "AT6668 UART / passive Wi-Fi + BLE",
 #else
     "GPS firmware profile required",
 #endif

@@ -10,8 +10,9 @@ Download `dragon-resources-v1-20261023.zip`. Extract **the `dragon` directory to
 
 ## Exact capability matrix
 
-| Profile | SD pack | Onboard GPS / upload candidate |
+| Profile | SD pack | GPS / upload candidate |
 |---|---|---|
+| Seeed SenseCAP Watcher (0.13.29+) | Optional | External AT6668 via UART; GPS testing deferred; no automatic upload |
 | Spotpear / Guition JC3636W518 | Optional | No |
 | Waveshare ESP32-S3-Touch-AMOLED-1.75 | Optional | No |
 | Waveshare ESP32-S3-Touch-AMOLED-1.75-G | Optional | LC76G; upload transport not enabled in this beta |

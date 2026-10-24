@@ -21,7 +21,7 @@ public:
     return true;
   }
   bool select() {
-#if defined(BOARD_AMOLED_175)
+#if defined(BOARD_AMOLED_175) || defined(BOARD_WATCHER)
     if (sdReady) {
       if (!CardFS.exists("/dragon") && !CardFS.mkdir("/dragon")) return false;
       card_ = true;
@@ -38,13 +38,13 @@ public:
   bool onCard() const { return card_; }
   const char* medium() const { return card_ ? "SD /dragon" : "internal flash"; }
   uint64_t totalBytes() {
-#if defined(BOARD_AMOLED_175)
+#if defined(BOARD_AMOLED_175) || defined(BOARD_WATCHER)
     if (card_) return sdReady ? CardFS.totalBytes() : 0;
 #endif
     return internal_->totalBytes();
   }
   uint64_t usedBytes() {
-#if defined(BOARD_AMOLED_175)
+#if defined(BOARD_AMOLED_175) || defined(BOARD_WATCHER)
     if (card_) return sdReady ? CardFS.usedBytes() : 0;
 #endif
     return internal_->usedBytes();

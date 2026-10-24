@@ -19,6 +19,8 @@ The v0.13.17 source audit confirms that Waveshare AMOLED, M5Stack StopWatch, Spo
 | Waveshare 1.75C | 2 MiB | 2 MiB |
 | Waveshare 1.75 / 1.75-G beta with SD | 64 KiB queue / 32 MiB segments | 64 MiB / 8 hours |
 | Waveshare 1.75 / 1.75-G without SD | 2 MiB RAM | 2 MiB |
+| Seeed Watcher beta with SD | 64 KiB queue / 32 MiB segments | 64 MiB / 8 hours |
+| Seeed Watcher without SD | 2 MiB RAM | 2 MiB |
 | M5Stack StopWatch | 2 MiB | 2 MiB |
 | Spotpear | 1 MiB | 256 KiB |
 | Seeed XIAO Round | 512 KiB | 256 KiB |
@@ -86,3 +88,8 @@ The [0.13 guide](RECON-013.md) documents session, recipe, archive, HID and bridg
 ### Clock and Lite expansion · 0.13.9
 
 All four full boards now support opt-in saved-Wi-Fi time recovery. Lite adds a compact themed analog/digital clock, stopwatch/locksport timer, signal inspector and diagnostics, preserving passive reception. Its 2 MiB PSRAM and lack of touch still exclude the full-board labs and UI. Lossless logos recover flash capacity; storage limits remain enforced. See [Lite controls](WAVESHARE-LITE.md) and [Spotpear clock setup](SPOTPEAR-CLOCK.md).
+
+
+## Seeed SenseCAP Watcher beta
+
+The `watcher` environment targets 412×412, 32 MB flash and 8 MB PSRAM with full-board software, touch/rotary controls, RTC, speaker and FAT32 SD. Optional UART AT6668 GPS support uses expansion GPIO19/20, not the shared I²C Grove socket. Camera, microphone recording and Himax AI are not enabled. [Setup, wiring and current physical validation](SEEED-WATCHER.md).

@@ -3,7 +3,7 @@ from pathlib import Path
 import argparse, csv, hashlib, json, os, re, shutil, subprocess, sys
 from flash_budget import report as flash_report
 ROOT=Path(__file__).resolve().parents[1]
-BOARDS={'m5dial':('M5Stack Dial','m5stack-dial'),'lilygo_175':('LilyGo T-Display-S3-AMOLED-1.75','lilygo-amoled-175'),'elecrow_21':('Elecrow CrowPanel 2.1 Rotary','elecrow-rotary-21'),'waveshare_175_gps':('Waveshare ESP32-S3-Touch-AMOLED-1.75-G','waveshare-amoled-175'),'waveshare_175':('Waveshare ESP32-S3-Touch-AMOLED-1.75','waveshare-amoled-175'),'spotpear':('Spotpear JC3636W518','spotpear'),'waveshare':('Waveshare ESP32-S3-Touch-AMOLED-1.75C','waveshare-amoled'),'stopwatch':('M5Stack StopWatch C152','m5stack-stopwatch'),'xiao_round':('Seeed XIAO ESP32-S3 + Round Display','xiao-round'),'waveshare_lite':('Waveshare ESP32-S3-LCD-1.28 Lite','waveshare-lite')}
+BOARDS={'watcher':('Seeed SenseCAP Watcher','seeed-watcher'),'m5dial':('M5Stack Dial','m5stack-dial'),'lilygo_175':('LilyGo T-Display-S3-AMOLED-1.75','lilygo-amoled-175'),'elecrow_21':('Elecrow CrowPanel 2.1 Rotary','elecrow-rotary-21'),'waveshare_175_gps':('Waveshare ESP32-S3-Touch-AMOLED-1.75-G','waveshare-amoled-175'),'waveshare_175':('Waveshare ESP32-S3-Touch-AMOLED-1.75','waveshare-amoled-175'),'spotpear':('Spotpear JC3636W518','spotpear'),'waveshare':('Waveshare ESP32-S3-Touch-AMOLED-1.75C','waveshare-amoled'),'stopwatch':('M5Stack StopWatch C152','m5stack-stopwatch'),'xiao_round':('Seeed XIAO ESP32-S3 + Round Display','xiao-round'),'waveshare_lite':('Waveshare ESP32-S3-LCD-1.28 Lite','waveshare-lite')}
 VERSION=re.search(r'#define DRAGON_VERSION "([0-9.]+)"',(ROOT/'firmware/include/dragon_version.h').read_text()).group(1)
 
 def run(*args):subprocess.run([sys.executable,*args],cwd=ROOT,check=True)
@@ -37,6 +37,11 @@ def build(board,skip):
             'Extended touchscreen coverage and field testing remain.\n'
             'Use Fresh installation for the factory demo or another board profile.\n'
             'https://valleytech-dragon-detector.pages.dev/guides/ELECROW-ROTARY-21.html\n',encoding='utf-8')
+    if board=='watcher':
+        drivers=ROOT/'hardware/seeed-watcher/lib/WatcherDisplay'
+        for notice in [drivers/'NOTICE.md',*drivers.glob('*LICENSE*')]:
+            shutil.copyfile(notice,out/('WATCHER-'+notice.name))
+        (out/'BOARD-STATUS.txt').write_text('BETA: Seeed SenseCAP Watcher, 412x412, 32 MB flash, 8 MB PSRAM.\nDisplay, RTC retention, SD vendor pack and 579-packet Wi-Fi capture verified. Touch and revised rotary controls await hands-on confirmation. Hold opens menu; turn navigates; short click selects. Battery calibration and extended capture testing remain.\nExternal AT6668 GPS testing deferred. Do not attach UART GPS directly to shared I2C Grove.\nCamera, microphone recording and Himax AI are not enabled.\nUse Fresh installation for Seeed factory firmware; back up original ESP32 flash first.\nSee SEEED-WATCHER guide for wiring and validation.\n',encoding='utf-8')
     if board=='m5dial':
         (out/'BOARD-STATUS.txt').write_text('M5Stack Dial v1.1, 240x240, 8 MB flash, no PSRAM.\nDisplay, touch, ring, menus, radar actions and RTC restart checks passed on Dial v1.1.\nOriginal K130 is not physically tested. RTC retention requires its power supply.\nUse Fresh installation for factory firmware or any other profile. No SD pack.\nhttps://valleytech-dragon-detector.pages.dev/guides/M5STACK-DIAL.html\n',encoding='utf-8')
     if board=='lilygo_175':
@@ -68,7 +73,7 @@ def build(board,skip):
     for mode in ('factory','update'):
         selected=segments+(filesystem_segments if mode=='factory' else [])
         manifest={'name':f'Dragon Detector — {BOARDS[board][0]} ({mode})','version':VERSION,'new_install_prompt_erase':True,'new_install_improv_wait_time':0,'builds':[{'chipFamily':'ESP32-S3','parts':[{'path':name,'offset':offset} for name,offset in selected]}]}
-        if board in ('spotpear','waveshare_175','waveshare_175_gps','xiao_round','lilygo_175'):
+        if board in ('watcher','spotpear','waveshare_175','waveshare_175_gps','xiao_round','lilygo_175'):
             manifest['sdResources']={'schema':1,'required':False,'path':'resources/dragon-resources-v1-20261023.zip','placement':'/dragon/resources/vendors.ddr'}
         (out/f'{mode}.json').write_text(json.dumps(manifest,indent=2)+'\n',encoding='utf-8')
     # A merged factory image is also provided for esptool/M5Burner-style tools.
@@ -88,10 +93,11 @@ def build(board,skip):
     (out/'SHA256SUMS.txt').write_text(''.join(checks),encoding='ascii')
     metadata={'version':VERSION,'board':board,'name':BOARDS[board][0],'source_commit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),'source_dirty':bool(subprocess.check_output(['git','status','--porcelain','--untracked-files=normal'],cwd=ROOT,text=True).strip()),'filesystem_offset':fs_offset,'filesystem_size':fs_size,'factory_resets_badges':True,'update_preserves_nvs_and_filesystem':True}
     metadata['hardware_validation']='dial-v11-display-controls-rtc-restart-verified' if board=='m5dial' else 'lilygo-baseline-reported-rtc-sd-pending' if board=='lilygo_175' else 'initial-unit-verified' if board=='elecrow_21' else 'new-sd-gps-features-pending' if board in ('waveshare_175','waveshare_175_gps') else 'existing-profile'
-    if board in ('spotpear','waveshare_175','waveshare_175_gps','xiao_round','lilygo_175'):
+    if board in ('watcher','spotpear','waveshare_175','waveshare_175_gps','xiao_round','lilygo_175'):
         metadata['hardware_validation']='sd-resource-beta-unverified'
         metadata['sd_resources']={'schema':1,'required':False,'snapshot':20261023}
-    metadata['flash_size']=0x2000000 if board=='waveshare' else 0x800000 if board in ('m5dial','xiao_round') else 0x1000000
+    if board=='watcher':metadata['hardware_validation']='display-rtc-sd-verified-controls-pending'
+    metadata['flash_size']=0x2000000 if board in ('watcher','waveshare') else 0x800000 if board in ('m5dial','xiao_round') else 0x1000000
     metadata['memory']=flash_report(entries,(build/'firmware.bin').stat().st_size,metadata['flash_size'])
     (out/'memory-budget.json').write_text(json.dumps(metadata['memory'],indent=2)+'\n',encoding='utf-8')
     if board=='waveshare':metadata.update(recon_offset=recon_offset,recon_size=recon_size,update_preserves_recon=True)

@@ -57,3 +57,8 @@ Earlier evidence remains attached to its [release](https://git.churchofmalware.o
 ## 0.13.19 non-C AMOLED 1.75
 
 The `waveshare_175` port is prepared from the official schematic and maintained BSP. Automated pin/partition/manifest checks and compilation are separate from physical validation. No physical unit has been tested for this port. Display, touch, RTC retention, buttons, SD, audio and battery operation remain on the [arrival checklist](WAVESHARE-AMOLED-175.md#arrival-checklist).
+
+
+## Seeed SenseCAP Watcher beta
+
+The `watcher` environment targets 412×412, 32 MB flash and 8 MB PSRAM with full-board software, touch/rotary controls, RTC, speaker and FAT32 SD. Optional UART AT6668 GPS support uses expansion GPIO19/20, not the shared I²C Grove socket. Camera, microphone recording and Himax AI are not enabled. [Setup, wiring and current physical validation](SEEED-WATCHER.md).

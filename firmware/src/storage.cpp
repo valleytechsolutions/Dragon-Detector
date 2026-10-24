@@ -1,7 +1,7 @@
 #include "app.h"
 #include "background_radio.h"
 #include "board_pins.h"
-#ifdef BOARD_AMOLED_175
+#if defined(BOARD_AMOLED_175) || defined(BOARD_WATCHER)
 #include "recon_internal.h"
 #endif
 #include <esp_timer.h>
@@ -31,7 +31,7 @@ static void mount(){
   bool mounted=CardFS.begin("/sdcard",true,false,SDMMC_FREQ_DEFAULT,12);
 #endif
   if(!mounted){Serial.println("SD: not mounted; insert FAT32 card and restart");return;}
-  const char* dirs[]={"/dragon","/music","/recordings","/dragon/captures","/dragon/profiles","/dragon/events","/dragon/surveys","/dragon/missions","/dragon/wardrive"};
+  const char* dirs[]={"/dragon","/music","/recordings","/dragon/captures","/dragon/profiles","/dragon/events","/dragon/surveys","/dragon/missions","/dragon/wardrive","/dragon/resources"};
   for(const char* path:dirs){if(!CardFS.exists(path)&&!CardFS.mkdir(path)){Serial.printf("SD: cannot create %s; storage disabled\n",path);return;}}
 
   char s[40];snprintf(s,sizeof(s),"/dragon/session-%08lx",(unsigned long)esp_random());sessionPath=s;
@@ -76,7 +76,7 @@ void addAlert(const char* title,const char* detail,const uint8_t* mac){
 }
 #if BOARD_HAS_SD
 bool setCapture(bool enabled){
-#ifdef BOARD_AMOLED_175
+#if defined(BOARD_AMOLED_175) || defined(BOARD_WATCHER)
   if(enabled)return dragon::toolkit::captureStart(false);
   dragon::toolkit::captureStop();return false;
 #else

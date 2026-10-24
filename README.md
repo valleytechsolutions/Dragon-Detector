@@ -63,15 +63,20 @@ Some store links are affiliate links. Purchases through them may earn Valleytech
 | **M5Stack StopWatch C152** | 466 × 466 AMOLED | Touch, yellow/blue buttons, RTC, speaker, haptics, 16 MB flash | [M5Stack](https://shop.m5stack.com/products/m5stack-stopwatch-dev-kit-esp32-s3?ref=marvvxzb&variant=48862593515777) |
 | **Elecrow CrowPanel 2.1 Rotary · Experimental** | 480 × 480 IPS | Touch, rotary ring and press, 16 MB flash; V1.0 board | [Elecrow](https://www.elecrow.com/crowpanel-2-1inch-hmi-esp32-rotary-display-480-480-ips-round-touch-knob-screen.html) |
 | **LILYGO T-Display-S3 AMOLED 1.75 · Beta** | 466 × 466 round AMOLED | H0175Y003AM panel, touch, PCF8563 RTC, microSD, 16 MB flash; choose **1.75-inch** | [LILYGO · select 1.75-inch](https://lilygo.cc/en-us/products/t-display-s3-amoled-1-64) |
+| **Seeed SenseCAP Watcher · Beta** | 412 × 412 LCD | Touch, rotary knob/click, RTC, speaker, microSD, 32 MB flash, 8 MB PSRAM; external UART GPS support | [Setup and wiring](docs/SEEED-WATCHER.md) |
 | **Spotpear / Guition JC3636W518** | 360 × 360 LCD | Touch, optional microSD, 16 MB flash; match the board model | [Spotpear](https://spotpear.com/shop/EPS32-S3R8-1.8inch-360x360-Round-LCD-Display-WIFI-Secondary-TouchScreen-AIDA64-Arduino-LVGL-WirelessAida64-Wireless-Power-Video-Electronic-Photo-Frame-MP3/EPS32-S3-1.8inch-Touch-LCD-360-Aida64.html) |
 | **Seeed XIAO ESP32-S3 + Round Display** | 240 × 240 LCD | Touch, RTC, microSD, 8 MB flash; **both parts required** | [ESP32-S3 board](https://www.seeedstudio.com/XIAO-ESP32S3-p-5627.html?c_event_medium=search%3A%3Aresults&c_event_id=2529207033%3A%3Axiao+round+display&sensecap_affiliate=qV5RXdv&referring_service=link) + [Round Display](https://www.seeedstudio.com/1-28-Round-Touch-Display-for-Seeed-Studio-XIAO-ESP32.html?c_event_medium=search%3A%3Aresults_recommend&c_event_id=2529207033%3A%3Axiao+round+display&sensecap_affiliate=qV5RXdv&referring_service=link) |
 | **Waveshare ESP32-S3-LCD-1.28 Lite** | 240 × 240 LCD | BOOT button, 16 MB flash; **non-touch** model | [Waveshare](https://www.waveshare.com/esp32-s3-lcd-1.28.htm) |
 
-The seven full profiles share the radar, 37 built-in themes, logo watch faces, timers, notebook, badge editor, radio tools, and BLE Lab. StopWatch and Waveshare AMOLED support 2 MiB captures and 2 MiB recon sessions. Their total file storage differs.
+The nine full profiles share the radar, 40 built-in themes, logo watch faces, timers, notebook, badge editor, radio tools, and BLE Lab. StopWatch and Waveshare AMOLED support 2 MiB captures and 2 MiB recon sessions. Their total file storage differs.
 
-Lite provides five button-operated pages: radar, clock, timer, signals, and diagnostics. It shares detection and all 37 built-in themes, with compact clocks. It does not include Badge Studio, audio, or active labs.
+Lite provides five button-operated pages: radar, clock, timer, signals, and diagnostics. It shares detection and all 40 built-in themes, with compact clocks. It does not include Badge Studio, audio, or active labs.
 
 Firmware is board-specific. The Waveshare **1.75C**, **1.75** and **1.75-G** each have a separate installer profile. New non-C SD/GPS features await field testing; Elecrow has passed initial checks on one unit. [Hardware guide](docs/HARDWARE.md) · [Feature comparison](docs/FEATURE-MATRIX.md) · [Tested hardware and limitations](docs/VALIDATION.md)
+
+## Watcher beta
+
+The Watcher port adds touch and rotary navigation, SD logging, optional manufacturer resources, RTC and speaker integration. External AT6668 GPS wiring is documented but GPS testing is deferred. Camera, microphone recording and Himax AI are not enabled. See the [Watcher guide](docs/SEEED-WATCHER.md) for installation, pin mapping and validation status.
 
 ## Radar and watches
 
@@ -117,7 +122,7 @@ Detection matches observable radio signatures; it does not establish intent, own
 | `hardware/` | Board partitions and archived projects |
 | `docs/` | Setup guides, architecture, and validation |
 
-CI tests the firmware core and browser modules, builds all eight profiles, and publishes matching firmware, manifests, and SHA-256 checksums. Historical projects under `hardware/` retain their original licenses and are not current update targets.
+CI tests the firmware core and browser modules, builds all eleven ESP32 profiles, and publishes matching firmware, manifests, and SHA-256 checksums. Historical projects under `hardware/` retain their original licenses and are not current update targets.
 
 ## Credits and license
 

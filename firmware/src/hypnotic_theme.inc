@@ -28,7 +28,7 @@ static void hypnoticWatch(lv_draw_ctx_t* ctx,const dragon::Calendar& date,bool v
   panel.radius=S(14);panel.border_width=std::max(1,S(2));panel.border_color=color(0xc5b4eb);
   lv_area_t box{lv_coord_t(S(69)),lv_coord_t(S(137)),lv_coord_t(S(291)),lv_coord_t(S(223))};
   lv_draw_rect(ctx,&panel,&box);
-#if SCREEN_RES>=466
+#if SCREEN_RES>=400
   const lv_font_t *digits=&lv_font_montserrat_48,*small=&lv_font_montserrat_14;
 #elif SCREEN_RES>=360
   const lv_font_t *digits=&lv_font_montserrat_40,*small=&lv_font_montserrat_10;

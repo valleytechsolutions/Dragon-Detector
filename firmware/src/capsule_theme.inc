@@ -35,7 +35,7 @@ static void capsuleHand(lv_draw_ctx_t* ctx,float turns,int length,int width,uint
   line(ctx,p.x,p.y,q.x,q.y,face,std::max(1,S(width)));p=point(length-26);line(ctx,p.x,p.y,q.x,q.y,tip,std::max(1,S(width-2)));
 }
 static void capsuleWatch(lv_draw_ctx_t* ctx,const dragon::Calendar& date,bool valid){
-#if SCREEN_RES>=466
+#if SCREEN_RES>=400
   const lv_font_t *small=&lv_font_montserrat_14,*medium=&lv_font_montserrat_20,*digits=&lv_font_montserrat_40;
 #elif SCREEN_RES>=360
   const lv_font_t *small=&lv_font_montserrat_10,*medium=&lv_font_montserrat_16,*digits=&lv_font_montserrat_32;

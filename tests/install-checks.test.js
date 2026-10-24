@@ -7,6 +7,8 @@ import {resourcePack} from '../web/sd-resources.js';
 const published=JSON.parse(readFileSync(new URL('./fixtures/release-0.13.26-manifests.json',import.meta.url)));
 published.m5dial=JSON.parse(readFileSync(new URL('./fixtures/dial-0.13.27-manifests.json',import.meta.url)));
 
+published.watcher=JSON.parse(readFileSync(new URL('./fixtures/watcher-0.13.29-manifests.json',import.meta.url)));
+
 function rig(board='waveshare',mode='factory',badFile){
   const manifest=structuredClone(published[board][mode]);
   const requests=[];

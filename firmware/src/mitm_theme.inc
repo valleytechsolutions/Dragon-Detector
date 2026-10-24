@@ -23,7 +23,7 @@ static void mitmWatch(lv_draw_ctx_t* ctx,const dragon::Calendar& date,bool valid
   lv_draw_rect_dsc_t panel;lv_draw_rect_dsc_init(&panel);panel.bg_color=color(0x050719);panel.bg_opa=195;
   panel.radius=S(12);panel.border_width=std::max(1,S(1));panel.border_color=color(accent);
   lv_area_t box{lv_coord_t(S(62)),lv_coord_t(S(219)),lv_coord_t(S(298)),lv_coord_t(S(303))};lv_draw_rect(ctx,&panel,&box);
-#if SCREEN_RES>=466
+#if SCREEN_RES>=400
   const lv_font_t *digits=&lv_font_montserrat_48,*small=&lv_font_montserrat_14;
 #elif SCREEN_RES>=360
   const lv_font_t *digits=&lv_font_montserrat_40,*small=&lv_font_montserrat_10;

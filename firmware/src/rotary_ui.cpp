@@ -1,4 +1,4 @@
-#ifdef BOARD_CROWPANEL_21
+#if defined(BOARD_CROWPANEL_21) || defined(BOARD_WATCHER)
 #include "app.h"
 #include "rotary_ui.h"
 #include "rotary_input.h"
@@ -8,7 +8,11 @@ namespace {
 lv_group_t* group=nullptr;
 lv_obj_t* members[160]{};
 unsigned memberCount=0;
+#ifdef BOARD_WATCHER
+dragon::RotaryNavigation navigation(800,80);
+#else
 dragon::RotaryNavigation navigation;
+#endif
 unsigned pendingClicks=0;
 bool releasing=false;
 
@@ -46,7 +50,13 @@ void rotaryUiBegin(){
 void rotaryUiInput(int steps,bool click,bool back){
   if(!group||(!steps&&!click&&!back))return;
   if(uiRotaryWake()){navigation.clear();return;}
-  if(back){navigation.clear();pendingClicks=0;releasing=false;lv_group_set_editing(group,false);uiKey(true);return;}
+  if(back){
+    navigation.clear();pendingClicks=0;releasing=false;lv_group_set_editing(group,false);
+#ifdef BOARD_WATCHER
+    if(uiRotaryOpenMenu())return;
+#endif
+    uiKey(true);return;
+  }
   if(click){navigation.clear();pendingClicks=1;}
   else if(!pendingClicks&&!releasing)navigation.push(steps,millis());
 }

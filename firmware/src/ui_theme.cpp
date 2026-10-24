@@ -51,7 +51,7 @@ const lv_font_t* uiFont(const lv_font_t* standard){
   if(!uiAscii())return standard;
   // Montserrat includes ascender/descender padding in line_height. Use the
   // board's actual regular-font metrics rather than rounding pixel sizes up.
-#if defined(BOARD_LILYGO_175) || defined(BOARD_AMOLED_175C) || defined(BOARD_AMOLED_175) || defined(BOARD_STOPWATCH) || defined(BOARD_CROWPANEL_21)
+#if defined(BOARD_WATCHER) || defined(BOARD_LILYGO_175) || defined(BOARD_AMOLED_175C) || defined(BOARD_AMOLED_175) || defined(BOARD_STOPWATCH) || defined(BOARD_CROWPANEL_21)
   const int small=21,body=22;
 #elif defined(BOARD_XIAO_ROUND)
   const int small=11,body=15;

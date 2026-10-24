@@ -1,0 +1,76 @@
+{
+  "factory": {
+    "name": "Dragon Detector \u2014 Seeed SenseCAP Watcher (factory)",
+    "version": "0.13.29",
+    "new_install_prompt_erase": true,
+    "new_install_improv_wait_time": 0,
+    "builds": [
+      {
+        "chipFamily": "ESP32-S3",
+        "parts": [
+          {
+            "path": "bootloader.bin",
+            "offset": 0
+          },
+          {
+            "path": "partitions.bin",
+            "offset": 32768
+          },
+          {
+            "path": "boot_app0.bin",
+            "offset": 57344
+          },
+          {
+            "path": "firmware.bin",
+            "offset": 65536
+          },
+          {
+            "path": "littlefs.bin",
+            "offset": 12648448
+          }
+        ]
+      }
+    ],
+    "sdResources": {
+      "schema": 1,
+      "required": false,
+      "path": "resources/dragon-resources-v1-20261023.zip",
+      "placement": "/dragon/resources/vendors.ddr"
+    }
+  },
+  "update": {
+    "name": "Dragon Detector \u2014 Seeed SenseCAP Watcher (update)",
+    "version": "0.13.29",
+    "new_install_prompt_erase": true,
+    "new_install_improv_wait_time": 0,
+    "builds": [
+      {
+        "chipFamily": "ESP32-S3",
+        "parts": [
+          {
+            "path": "bootloader.bin",
+            "offset": 0
+          },
+          {
+            "path": "partitions.bin",
+            "offset": 32768
+          },
+          {
+            "path": "boot_app0.bin",
+            "offset": 57344
+          },
+          {
+            "path": "firmware.bin",
+            "offset": 65536
+          }
+        ]
+      }
+    ],
+    "sdResources": {
+      "schema": 1,
+      "required": false,
+      "path": "resources/dragon-resources-v1-20261023.zip",
+      "placement": "/dragon/resources/vendors.ddr"
+    }
+  }
+}

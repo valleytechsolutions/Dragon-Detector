@@ -1,6 +1,6 @@
-const sdBoards=new Set(['spotpear','waveshare_175','waveshare_175_gps','xiao_round','lilygo_175']);
+const sdBoards=new Set(['watcher','spotpear','waveshare_175','waveshare_175_gps','xiao_round','lilygo_175']);
 export function hasSd(board){return sdBoards.has(board);}
-export function hasGpsAndSd(board){return board==='waveshare_175_gps';}
+export function hasGpsAndSd(board){return ['watcher','waveshare_175_gps'].includes(board);}
 export const resourcePack=Object.freeze({schema:1,required:false,path:'resources/dragon-resources-v1-20261023.zip',placement:'/dragon/resources/vendors.ddr'});
 export function resourceSetup(board,manifest){
   const value=manifest?.sdResources;

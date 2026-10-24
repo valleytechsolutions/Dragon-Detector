@@ -3,7 +3,7 @@
 extern lv_img_dsc_t radar_logo_ogg,watch_logo_ogg,radar_logo_xombi,watch_logo_xombi;
 static constexpr unsigned OggTheme=36,XombiTheme=37,OggWatch=39,XombiWatch=40;
 static bool greenArtTheme(unsigned theme){return theme==OggTheme||theme==XombiTheme;}
-#if SCREEN_RES>=466
+#if SCREEN_RES>=400
 static const lv_font_t *GreenSmall=&lv_font_montserrat_14,*GreenTitle=&lv_font_montserrat_20,*GreenTime=&lv_font_montserrat_48;
 #elif SCREEN_RES>=360
 static const lv_font_t *GreenSmall=&lv_font_montserrat_10,*GreenTitle=&lv_font_montserrat_16,*GreenTime=&lv_font_montserrat_40;

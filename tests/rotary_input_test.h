@@ -49,6 +49,11 @@ static void rotaryInputTests(){
   assert(navigation.take(420)==-1); // most recent direction wins, no backlog
   navigation.push(1,450);navigation.clear();assert(navigation.take(700)==0);
   navigation.push(1,710);assert(navigation.take(911)==0); // stale input expires
+  RotaryNavigation watcherNavigation(800,80);
+  watcherNavigation.push(1,100);assert(watcherNavigation.take(350)==1); // survives a slow display frame
+  watcherNavigation.push(-1,360);assert(watcherNavigation.take(400)==0);
+  assert(watcherNavigation.take(430)==-1); // Watcher focus repeat interval
+  watcherNavigation.push(1,500);assert(watcherNavigation.take(1301)==0); // stale USB backlog discarded
   RotaryNavigation navWrap;navWrap.push(1,0xfffffff0u);
   assert(navWrap.take(0xfffffff0u)==1);navWrap.push(-1,40);
   assert(navWrap.take(40)==0);assert(navWrap.take(164)==-1);

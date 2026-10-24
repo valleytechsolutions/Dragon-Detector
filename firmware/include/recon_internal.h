@@ -4,7 +4,7 @@
 #include "attack_frames.h"
 #include "recon_analysis.h"
 namespace dragon::toolkit {
-#ifdef BOARD_AMOLED_175
+#if defined(BOARD_AMOLED_175) || defined(BOARD_WATCHER)
 constexpr unsigned ApCapacity=128,ClientCapacity=256;
 #else
 constexpr unsigned ApCapacity=48,ClientCapacity=96;

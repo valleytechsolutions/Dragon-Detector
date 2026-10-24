@@ -1,7 +1,7 @@
 // Original supplied artwork, black field and quiet brass details.
 extern lv_img_dsc_t radar_logo_muldersrevenge,watch_logo_muldersrevenge;
 static constexpr unsigned MuldersRevengeTheme=38,MuldersRevengeWatch=41;
-#if SCREEN_RES>=466
+#if SCREEN_RES>=400
 static const lv_font_t *MuldersSmall=&lv_font_montserrat_14,*MuldersTitle=&lv_font_montserrat_20,*MuldersTime=&lv_font_montserrat_48;
 #elif SCREEN_RES>=360
 static const lv_font_t *MuldersSmall=&lv_font_montserrat_10,*MuldersTitle=&lv_font_montserrat_16,*MuldersTime=&lv_font_montserrat_40;

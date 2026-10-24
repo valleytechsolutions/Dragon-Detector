@@ -2,7 +2,7 @@
 extern lv_img_dsc_t radar_logo_can_commander,watch_logo_can_commander;
 static constexpr unsigned CanCommanderTheme=35,CanCommanderWatch=38;
 static constexpr uint32_t CanBlack=0x02040c,CanPanel=0x101d29,CanSteel=0xc8d2dc,CanBlue=0x72c5e8;
-#if SCREEN_RES>=466
+#if SCREEN_RES>=400
 static const lv_font_t *CanSmall=&lv_font_montserrat_14,*CanTitle=&lv_font_montserrat_20,*CanDigits=&lv_font_montserrat_40;
 #elif SCREEN_RES>=360
 static const lv_font_t *CanSmall=&lv_font_montserrat_10,*CanTitle=&lv_font_montserrat_16,*CanDigits=&lv_font_montserrat_32;

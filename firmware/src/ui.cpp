@@ -41,7 +41,7 @@ extern lv_img_dsc_t radar_logo_awok,watch_logo_awok,radar_logo_baph,watch_logo_b
 #define F20 (&lv_font_montserrat_14)
 #define FCALLOUT (&lv_font_montserrat_8)
 #define FTIMER (&lv_font_montserrat_22)
-#elif SCREEN_RES>=466
+#elif SCREEN_RES>=400
 #define F12 (&lv_font_montserrat_16)
 #define F14 (&lv_font_montserrat_18)
 #define F16 (&lv_font_montserrat_20)
@@ -329,7 +329,17 @@ static void build(){
     for(auto* b:{targets,tools,quiet}){lv_obj_set_style_bg_color(b,color(theme.panel),0);lv_obj_set_style_bg_opa(b,LV_OPA_80,0);lv_obj_set_style_border_color(b,color(theme.ring),0);lv_obj_set_style_border_opa(b,LV_OPA_60,0);if(locksport()||radarTheme==31)lv_obj_set_style_text_color(lv_obj_get_child(b,0),color(theme.text),0);}
   }else if(page==Menu){
     title("DRAGON TOOLS");const char* tabs[]={"RECON","UTILITIES","SYSTEM"};
-    for(int i=0;i<3;++i){auto* b=button(root,tabs[i],47+i*89,76,86,32,10+i);if(menuTab==i)lv_obj_set_style_bg_color(b,color(uiColors().raised),0);}
+    for(int i=0;i<3;++i){
+      auto* b=button(root,tabs[i],47+i*89,76,86,32,10+i);
+#ifdef BOARD_WATCHER
+      // Keep the longest tab title on one line within the circular display.
+      auto* caption=lv_obj_get_child(b,0);
+      lv_obj_set_style_text_font(caption,uiFont(&lv_font_montserrat_14),0);
+      lv_label_set_long_mode(caption,LV_LABEL_LONG_CLIP);
+      lv_obj_center(caption);
+#endif
+      if(menuTab==i)lv_obj_set_style_bg_color(b,color(uiColors().raised),0);
+    }
     #ifndef BOARD_RADAR_LITE
     if(menuTab==0){button(root,"Modes",57,115,119,40,7100);button(root,"Attacks",184,115,119,40,7103);button(root,"Wi-Fi",57,162,119,40,20);button(root,"Bluetooth",184,162,119,40,21);button(root,"History",57,209,119,40,60);button(root,"Hunt",184,209,119,40,57);button(root,"Radio tools",57,257,119,39,7102);button(root,"BLE Lab",184,257,119,39,7000);}
 #else
@@ -496,13 +506,18 @@ static void build(){
 #ifdef BOARD_STOPWATCH
     row(body,alertVibration?"Vibration: ON":"Vibration: OFF","Built-in StopWatch motor",n++,79);
 #endif
+#ifdef BOARD_WATCHER
+    row(body,"Capture studio",sdReady?"Wi-Fi + BLE / SD streaming / Stop saves":"RAM capture / Stop then Save",n++,7105);
+    row(body,"Saved captures",sdReady?"SD files / USB download":"Internal files / USB download",n++,7104);
+#else
     row(body,"Capture studio","Record Wi-Fi / BLE to internal flash",n++,7105);
     row(body,"Saved captures","Internal flash files / USB download",n++,7104);
+#endif
 #if BOARD_HAS_SD
     row(body,loggingEnabled&&sdReady?"SD event logging: ON":"SD event logging: OFF",sdReady?sessionPath.c_str():"Requires a mounted SD card",n++,43);
-#ifdef BOARD_AMOLED_175
+#if defined(BOARD_AMOLED_175)
     row(body,"Capture studio",sdReady?"Wi-Fi + BLE / SD streaming / Stop saves":"RAM capture / Stop then Save",n++,7105);
-#else
+#elif !defined(BOARD_WATCHER)
     row(body,captureEnabled?"SD PCAP: recording":"SD PCAP: stopped",sdReady?"Raw 802.11 / 16 MB per capture":"Requires a mounted SD card",n++,24);
 #endif
 #endif
@@ -715,8 +730,11 @@ bool uiTouch(bool pressed,int,int){
   // Navigation uses visible Tools/Home buttons. Leave drags to LVGL lists.
   return true;
 }
-#ifdef BOARD_CROWPANEL_21
+#if defined(BOARD_CROWPANEL_21) || defined(BOARD_WATCHER)
 lv_obj_t* uiRotaryScope(){return resetBox?resetBox:clockPrompt?clockPrompt:notice?notice:root;}
+#ifdef BOARD_WATCHER
+bool uiRotaryOpenMenu(){if(resetBox||clockPrompt||notice)return false;go(Menu);return true;}
+#endif
 bool uiRotaryWake(){bool wasOff=outputBrightness==0;lastInteraction=millis();return wasOff;}
 #endif
 void uiShow(const String& name){if(name=="startup"){go(Startup);page=Boot;return;}if(name=="radar")recipeStop();
@@ -818,7 +836,7 @@ void uiLoop(){
     }
     if(page==Audio && audioLabel){auto s=audioStatus();String text=String(s.mode==AudioMode::Recording?"RECORDING":s.mode==AudioMode::Playing?"PLAYING":s.mode==AudioMode::Error?"ERROR":"READY")+"  "+s.seconds+"s  Vol "+s.volume+"%\n"+s.message;lv_label_set_text(audioLabel,text.c_str());lv_bar_set_value(audioMeter,s.peak,LV_ANIM_OFF);}
   }
-#ifdef BOARD_CROWPANEL_21
+#if defined(BOARD_CROWPANEL_21) || defined(BOARD_WATCHER)
   rotaryUiLoop();
 #endif
   lv_timer_handler();

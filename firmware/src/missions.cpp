@@ -12,7 +12,7 @@
 namespace {
 using namespace dragon;using namespace dragon::mission;
 constexpr unsigned MaxSeen=512,MaxRelations=128,MaxSessions=32;
-#if defined(BOARD_LILYGO_175) || defined(BOARD_AMOLED_175C) || defined(BOARD_AMOLED_175) || defined(BOARD_STOPWATCH)
+#if defined(BOARD_WATCHER) || defined(BOARD_LILYGO_175) || defined(BOARD_AMOLED_175C) || defined(BOARD_AMOLED_175) || defined(BOARD_STOPWATCH)
 constexpr size_t FlashSessionLimit=2*1024*1024;
 #else
 constexpr size_t FlashSessionLimit=256*1024;
