@@ -274,3 +274,20 @@ The original DDR1 reader, generator and configuration/retry prototype are MIT ap
 ## Watcher display support
 
 Seeed SenseCAP Watcher pin mapping was checked against its official Apache-2.0 BSP and public schematic. The SPD2010 LCD/touch and base touch drivers are Espressif Apache-2.0 components; their original headers, licenses, exact upstream revisions and local changes are retained in [WatcherDisplay NOTICE](hardware/seeed-watcher/lib/WatcherDisplay/NOTICE.md). Factory firmware and private device dumps are not distributed.
+
+## VectorPotential preview
+
+The project owner supplied the VectorPotential VP logo and glowing lock artwork
+on October 25, 2026. Both complete original WebP files are retained unchanged in
+`media/theme-logos/vectorpotential-*-source.webp`. Native display assets select
+the VP logo region, resize and palette-encode the supplied pixels; they are not
+redrawn. Artwork rights remain with its original owner. The source VP image
+includes a "Made with AI" label outside the displayed logo region.
+
+The two clock hands are original native drawing code, visually inspired by
+Law Lock Tools' [Nessie PRO 0.5 mm](https://www.lawlocktools.co.uk/products/nessie-pro-0-5mm)
+and [Tipene Heavy Metal Hook 1 PRO 0.6 mm](https://www.lawlocktools.co.uk/products/copy-of-deep-hook-3-pro-0-6mm).
+Nessie is the longer minute hand; the hook is the shorter hour hand. The
+laminated handle and tip features are simplified for a small display. Product
+photographs are reference material only and are not embedded in the firmware.
+No affiliation or endorsement is implied.

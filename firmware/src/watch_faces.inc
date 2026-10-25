@@ -51,9 +51,10 @@ static const WatchPalette watches[]={
   {"XomBi",0x090f0b,0xdceccc,0xa7e76b,0xabc49b,false},
   {"MuldersreVenge",0x000000,0xffe8bc,0xf2b95f,0xcab48e,false},
   {"MITM",0x050719,0xf5f7ff,0x00eaff,0xc6badf,false},
-  {"Hypnotic",0x030509,0xf5f3ed,0xc5b4eb,0xbab6c6,false}
+  {"Hypnotic",0x030509,0xf5f3ed,0xc5b4eb,0xbab6c6,false},
+  {"VectorPotential",0x02070c,0xe4faff,0x66d9ee,0xa2c9d4,true}
 };
-static constexpr uint8_t WatchFaces[]={0,1,2,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43};
+static constexpr uint8_t WatchFaces[]={0,1,2,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44};
 static constexpr unsigned WatchCount=sizeof(WatchFaces)/sizeof(WatchFaces[0]);
 static bool watchFaceAllowed(unsigned face){if(face==dragon::PersonalWatchId&&!personalThemeReady())return false;for(auto id:WatchFaces)if(id==face)return true;return false;}
 static unsigned watchFacePosition(){for(unsigned i=0;i<WatchCount;++i)if(WatchFaces[i]==watchFace)return i;return 0;}
@@ -291,6 +292,7 @@ static void watchDraw(lv_event_t* e){
   }
   if(watchFace==dragon::PersonalWatchId){personalThemeClock(ctx,d,valid);return;}
   if(watchFace==MuldersRevengeWatch){muldersWatch(ctx,d,valid);return;}
+  if(watchFace==VectorPotentialWatch){vpWatch(ctx,d,valid);return;}
   if(watchFace==HypnoticWatch){hypnoticWatch(ctx,d,valid,watchFrameAt);return;}
   if(watchFace==MitmWatch){mitmWatch(ctx,d,valid,watchFrameAt);return;}
   if(watchFace==OggWatch||watchFace==XombiWatch){greenWatch(ctx,d,valid,watchFace==XombiWatch);return;}
@@ -404,6 +406,7 @@ static void buildChronographFrame(){
       watchText(ctx,"LOCKSPORT TIMER",48,74,264,F20,uiColors().accent);
     }
     if(lpu()&&page==Stopwatch){watchLogo(ctx,radar_logo_lpu,14);watchText(ctx,"LOCKSPORT TIMER",48,74,264,F20,uiColors().accent);}
+    if(vectorPotential()&&page==Stopwatch){watchLogo(ctx,watch_logo_vp,23);watchText(ctx,"LOCKSPORT TIMER",48,74,264,F20,uiColors().accent);}
     if(sparrows()&&page==Stopwatch){watchLogo(ctx,radar_logo_sparrows,14);watchText(ctx,"LOCKSPORT TIMER",48,74,264,F20,uiColors().accent);}
     if(dmac()&&page==Stopwatch){watchLogo(ctx,radar_logo_dmac,20,0,false,true);watchText(ctx,"LOCKSPORT COUNTER",38,74,284,F20,uiColors().accent);}
     if(locksport())for(float angle:{.125f,.375f,.625f,.875f}){auto at=watchPolar(angle,171);watchScrew(ctx,at.x,at.y,uiColors().accent,locksportBg());}
