@@ -359,8 +359,12 @@ static void build(){
     }
     #ifndef BOARD_RADAR_LITE
     if(menuTab==0){
-#ifdef BOARD_GPS_LC76G
+#ifdef BOARD_AMOLED_175
+#ifdef BOARD_GPS_UART
+      button(root,gpsExternalConfig().enabled?"START WARDRIVE":"GPS SETUP",57,114,246,36,7109);
+#else
       button(root,"START WARDRIVE",57,114,246,36,7109);
+#endif
       button(root,"Modes",57,156,119,32,7100);button(root,"Attacks",184,156,119,32,7103);
       button(root,"Wi-Fi",57,194,119,32,20);button(root,"Bluetooth",184,194,119,32,21);
       button(root,"History",57,232,119,32,60);button(root,"Hunt",184,232,119,32,57);
@@ -384,6 +388,9 @@ static void build(){
 #ifdef BOARD_WATCHER
       button(root,"Settings",60,115,240,38,40);button(root,"Recon notebook",60,160,240,38,153);
       button(root,"Radio health",70,205,220,38,99);button(root,"Sleep",60,250,116,38,181);button(root,"Power off",184,250,116,38,180);
+#elif defined(BOARD_AMOLED_175)
+      button(root,"Settings",60,115,240,38,40);button(root,"GPS setup",60,160,240,38,7110);
+      button(root,"Recon notebook",60,205,240,38,153);button(root,"Radio health",70,250,220,38,99);
 #else
       button(root,"Settings",60,126,240,48,40);button(root,"Recon notebook",60,184,240,48,153);button(root,"Radio health",79,243,202,44,99);
 #endif
@@ -638,7 +645,14 @@ static void action(lv_event_t* e){
   if(id>=8000&&id<8010){unsigned row=id-8000;if(row<notebookRows&&notebookAdverts){auto& k=notebookKeys[row];for(unsigned i=0;i<dragon::notebook::Capacity;++i){auto& a=notebookAdverts[i];if(a.used&&a.type==k.addressType&&!memcmp(a.mac,k.mac,6)){notebookSelection=a;go(NotebookDetail);return;}}}go(NotebookBle);return;}
   if(id>=201 && id<=211){trackedContact=-1;channelLock=id-200;setRadio(true);go(Channels);page=Boot;return;}
 #ifndef BOARD_RADAR_LITE
-  if(id==7109){reconPage("wardrive");go(Recon);wardriveStart();return;}
+  if(id==7109){
+#ifdef BOARD_GPS_UART
+    if(!gpsExternalConfig().enabled){reconPage("gps-setup");go(Recon);return;}
+#endif
+    reconPage("wardrive");go(Recon);wardriveStart();return;}
+#ifdef BOARD_AMOLED_175
+  if(id==7110){reconPage("gps-setup");go(Recon);return;}
+#endif
   if(id==7104||id==7105){reconPage(id==7104?"files":"captures");go(Recon);return;}
   if(id==7100||id==7102){openRadioTools=id==7102;go(Recon);return;}
   if(id==7103){reconPage("attacks");go(Recon);return;}
@@ -808,8 +822,8 @@ void uiShow(const String& name){if(name=="startup"){go(Startup);page=Boot;return
   if(name=="findmy-beeper"){bleLabBeeperPage();go(BleLab);return;}
   if(name=="lab"){go(BleLab);return;}
   if(
-#ifdef BOARD_GPS_LC76G
-     name=="wardrive-upload"||
+#ifdef BOARD_AMOLED_175
+     name=="wardrive-upload"||name=="gps-setup"||
 #endif
 #if BOARD_HAS_GPS
      name=="wardrive"||

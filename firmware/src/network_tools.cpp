@@ -6,6 +6,7 @@
 #include "ble_profile.h"
 #include "ble_insights.h"
 #include "network_packets.h"
+#include "wardrive.h"
 #include <Preferences.h>
 #include <esp_netif.h>
 #include <esp_wifi_default.h>
@@ -110,23 +111,42 @@ void networkStop(){
  if(!active&&!iface)return;scanStop();esp_wifi_disconnect();wifi_config_t blank{}; // Clear the driver's RAM copy as well as disconnecting.
  esp_wifi_set_config(WIFI_IF_STA,&blank);esp_wifi_set_mode(WIFI_MODE_NULL);
  if(wifiEvents){esp_event_handler_instance_unregister(WIFI_EVENT,ESP_EVENT_ANY_ID,wifiEvents);wifiEvents=nullptr;}
- if(iface){esp_netif_destroy_default_wifi(iface);iface=nullptr;}active=connected=false;address={};memset(&joiningProfile,0,sizeof(joiningProfile));channelLock=oldLock;setRadio(resume);note("Disconnected / previous radar state restored");}
+ if(iface){esp_netif_destroy_default_wifi(iface);iface=nullptr;}active=connected=false;address={};memset(&joiningProfile,0,sizeof(joiningProfile));channelLock=oldLock;setRadio(resume);
+#ifdef BOARD_GPS_UART
+ gpsExternalSuspend(false);
+#endif
+ note("Disconnected / previous radar state restored");}
 static bool connectProfile(const Profile& profile,bool clockOnly){using namespace dragon::toolkit;
  if(radioStandby()&&!clockOnly){note("Leave clock or timer to use network tools");return false;}
- constexpr unsigned minimumHeap=
-#ifdef BOARD_GPS_LC76G
-  24000; // This profile allocates TLS buffers from its 8 MiB PSRAM.
-#else
-  35000;
+ if(active||!valid(profile)||reconOwnsRadio()||reconStorageBusy()||bleLabOwnsRadio()||status.recording){note("Choose a saved profile; stop other radio sessions");return false;}
+#ifdef BOARD_GPS_UART
+ // Release the UART ring/task while Wi-Fi owns the radio. Restore on every
+ // setup failure or disconnect; settings stay saved and fixes are invalidated.
+ struct GpsLease {bool keep=false;GpsLease(){gpsExternalSuspend(true);}~GpsLease(){if(!keep)gpsExternalSuspend(false);}} gpsLease;
 #endif
- if(active||!valid(profile)||reconOwnsRadio()||reconStorageBusy()||bleLabOwnsRadio()||status.recording||ESP.getFreeHeap()<minimumHeap){note("Choose a saved profile; stop other radio sessions");return false;}
+#ifdef BOARD_AMOLED_175
+ // Initialize the resident TCP/IP task before measuring headroom. Its roughly
+ // 6 KiB stays allocated after disconnect; checking a pre-init budget on later
+ // joins incorrectly rejects them. TLS buffers use this board's 8 MiB PSRAM.
  esp_err_t err=esp_netif_init();if(err!=ESP_OK&&err!=ESP_ERR_INVALID_STATE)return false;
+ constexpr unsigned minimumHeap=18000;
+#else
+ constexpr unsigned minimumHeap=35000;
+#endif
+ if(ESP.getFreeHeap()<minimumHeap){note("Not enough free memory to join Wi-Fi");return false;}
+#ifndef BOARD_AMOLED_175
+ esp_err_t err=esp_netif_init();if(err!=ESP_OK&&err!=ESP_ERR_INVALID_STATE)return false;
+#endif
  iface=esp_netif_create_default_wifi_sta();if(!iface){note("Network interface unavailable");return false;}
  joiningProfile=profile;resume=radioEnabled;oldLock=channelLock;setRadio(false);active=true;connected=false;address={};started=millis();lastCheck=0;disconnectReason=0;disconnectCount=0;handledDisconnect=0;attempts=1;lastAttempt=started;
  if(esp_event_handler_instance_register(WIFI_EVENT,ESP_EVENT_ANY_ID,wifiEvent,nullptr,&wifiEvents)!=ESP_OK){networkStop();return false;}
  wifi_config_t cfg{};memcpy(cfg.sta.ssid,joiningProfile.name,strlen(joiningProfile.name));memcpy(cfg.sta.password,joiningProfile.password,strlen(joiningProfile.password));cfg.sta.threshold.authmode=*joiningProfile.password?WIFI_AUTH_WPA2_PSK:WIFI_AUTH_OPEN;cfg.sta.pmf_cfg.capable=true;cfg.sta.pmf_cfg.required=false;
  err=esp_wifi_set_mode(WIFI_MODE_STA);if(err==ESP_OK)err=esp_wifi_set_config(WIFI_IF_STA,&cfg);memset(cfg.sta.password,0,sizeof(cfg.sta.password));memset(joiningProfile.password,0,sizeof(joiningProfile.password));if(err==ESP_OK)err=esp_wifi_connect();
- if(err!=ESP_OK){networkStop();note("Wi-Fi connection setup failed");return false;}note("Joining saved network / 25-second deadline");return true;
+ if(err!=ESP_OK){networkStop();note("Wi-Fi connection setup failed");return false;}
+#ifdef BOARD_GPS_UART
+ gpsLease.keep=true;
+#endif
+ note("Joining saved network / 25-second deadline");return true;
 }
 bool networkConnect(unsigned index,bool clockOnly){return index<8&&connectProfile(profiles[index],clockOnly);}
 bool networkConnectCredentials(const char* ssid,const char* password){

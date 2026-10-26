@@ -94,7 +94,7 @@ static void health(){
 }
 static uint32_t loopLastUs[6]{},loopMaxUs[6]{};
 static void command(const String& c){
-#ifdef BOARD_GPS_LC76G
+#ifdef BOARD_AMOLED_175
   // The removable card is the deliberate credential-editing surface. Do not
   // expose its secrets through generic Web Serial/USB file previews or dumps.
   if(c.startsWith("get ")){String path=c.substring(4);path.toLowerCase();

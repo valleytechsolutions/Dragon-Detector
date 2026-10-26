@@ -1,6 +1,8 @@
 # Upload saved wardrives from the GPS Waveshare
 
-Local development version **0.13.39**, `waveshare_175_gps` only. Finish the wardrive
+Local development **0.13.40** supports `waveshare_175_gps` and standard
+`waveshare_175` with [optional external GPS](EXTERNAL-GPS-AMOLED175.md).
+Finish the wardrive
 and wait for the menu before uploading. Open **Radio tools → GPS wardrive → UPLOADS**.
 Uploads use the Wi-Fi radio exclusively, so recording and uploading cannot run together.
 

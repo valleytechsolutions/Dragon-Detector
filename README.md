@@ -27,7 +27,7 @@ The round **H0175Y003AM 1.75-inch** model now has its own installer profile. Its
 
 A native 480 × 480 stationary profile with touch and rotary controls: turn to highlight, press to select, and hold to return home. Internal storage replaces SD functions; time synchronizes over USB or a saved Wi-Fi network. Display centering, ring navigation, scanning and clock/timer operation have passed initial hardware checks. [Installation and controls](docs/ELECROW-ROTARY-21.md).
 
-## Waveshare AMOLED 1.75 / 1.75-G · 0.13.39 development
+## Waveshare AMOLED 1.75 / 1.75-G · 0.13.40 development
 
 The tested non-C baseline now has SD-first profiles, events, captures and surveys,
 plus a separate LC76G GPS build for Wi-Fi/BLE wardriving and WiGLE CSV.
@@ -39,7 +39,11 @@ passed SD readback checks. The GPS build adds explicit WiGLE/WDGoWars uploads
 configured on SD; live authenticated service imports and moving routes remain
 unverified. No mandatory SD pack is needed. This local development build
 has not replaced the public flasher release.
-[Hardware guide](docs/WAVESHARE-AMOLED-175.md) · [Validation](docs/VALIDATION-0.13.39.md).
+The standard 1.75 now offers optional external UART GPS under **SYSTEM → GPS
+setup**, disabled until configured. Both variants can recover an unset clock
+from a fresh GPS fix; RTC retention during power-off requires a battery supply.
+[External GPS wiring](docs/EXTERNAL-GPS-AMOLED175.md).
+[Hardware guide](docs/WAVESHARE-AMOLED-175.md) · [RTC / external GPS validation](docs/VALIDATION-0.13.40.md) · [Located wardrive validation](docs/VALIDATION-0.13.39.md).
 
 ## Clock and timer power saving
 

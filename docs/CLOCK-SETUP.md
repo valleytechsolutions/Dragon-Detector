@@ -56,6 +56,14 @@ The StopWatch's RTC shares the **L1** supply with its IMU. Its backup pin has a 
 
 On the XIAO Round Display, the independent RTC backup is a **CR927 coin cell**; the main rechargeable battery is a separate supply. See [Seeed's installation guide](https://wiki.seeedstudio.com/seeedstudio_round_display_usage/#install-the-rtc-battery). On the Waveshare non-C 1.75/-G, PCF85063 power comes from the AXP2101 RTCLDO rail, which stays supplied while its battery source is available.
 
+**Waveshare USB-only use:** without a battery, unplugging USB removes RTC power.
+Saving a timestamp cannot recover elapsed off-time. Both connected RTCs passed
+write/readback and advancing-second checks on October 26, 2026; oscillator loss
+was observed after USB-only power removal. From 0.13.40, an onboard or enabled
+external GPS restores an unset clock after a fresh fix. **SYSTEM → GPS setup →
+SYNC CLOCK FROM GPS** also supports explicit synchronization. The saved local
+offset is preserved. See [external GPS and clock recovery](EXTERNAL-GPS-AMOLED175.md).
+
 The RX8130 **VLF** flag means its oscillator stopped and the date must be set again. **VBLF** is a backup-voltage warning; it does not by itself invalidate the calendar. The firmware now distinguishes them and avoids importing an unvalidated date through the board library. For XIAO and Waveshare RTCs, time-setting exits test/stop modes and checks the saved date by reading it back. Waveshare's oscillator load-capacitance setting is preserved.
 
 To verify off-time retention, sync once, disconnect USB, shut down normally for several minutes, then power up before reconnecting to any auto-sync tool. Confirm that the clock advanced by the elapsed time. Direct `clock hardware` queries do not synchronize or repair it. If it loses time, check `clock diagnostics` and the RTC's battery/supply; writing an old timestamp to flash cannot reconstruct elapsed off-time.

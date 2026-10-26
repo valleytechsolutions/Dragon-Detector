@@ -7,7 +7,7 @@ struct WardriveUploadSnapshot {
   int http=0;
   char file[48]{},message[144]{},service[16]{};
 };
-#ifdef BOARD_GPS_LC76G
+#ifdef BOARD_AMOLED_175
 void wardriveUploadBegin();
 void wardriveUploadLoop();
 bool wardriveUploadBusy();

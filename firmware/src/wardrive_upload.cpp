@@ -1,5 +1,5 @@
 #include "wardrive_upload.h"
-#ifdef BOARD_GPS_LC76G
+#ifdef BOARD_AMOLED_175
 #include "wardrive_upload_format.h"
 #include "wardrive.h"
 #include "app.h"

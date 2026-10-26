@@ -134,5 +134,5 @@ int main(){
 path=work/'upload.cpp';path.write_text(source)
 cc=[sys.executable,'-m','ziglang'];obj=work/'cJSON.o';exe=work/'upload.exe'
 subprocess.run(cc+['cc','-O1','-I'+str(dep),'-c',str(dep/'cJSON.c'),'-o',str(obj)],check=True)
-subprocess.run(cc+['c++','-std=c++17','-O1','-I'+str(dep),'-I'+str(root/'firmware/include'),str(path),str(obj),'-o',str(exe)],check=True)
+subprocess.run(cc+['c++','-UNDEBUG','-std=c++17','-O1','-I'+str(dep),'-I'+str(root/'firmware/include'),str(path),str(obj),'-o',str(exe)],check=True)
 subprocess.run([str(exe)],check=True)

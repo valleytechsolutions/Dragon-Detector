@@ -1,5 +1,12 @@
 # Waveshare AMOLED 1.75 and 1.75-G — SD and GPS
 
+Local development **0.13.40** adds **SYSTEM → GPS setup** to the standard 1.75:
+optional NMEA UART input, saved RX/baud controls and GPS clock recovery.
+It starts disabled. See [external GPS wiring and setup](EXTERNAL-GPS-AMOLED175.md).
+The -G continues to use its onboard LC76G and can also restore an unset clock
+from a fresh fix. Neither RTC can count through USB-only total power loss without
+a battery supply.
+
 Version **0.13.39** has been bench tested on both 16 MB **non-C** models.
 Factory flash backups were read and verified before installation. Wi-Fi PCAP and
 BLE CSV captures from both cards passed byte-count, CRC and format validation.
@@ -171,7 +178,8 @@ IMU gesture/step functions remain unimplemented.
 
 For download mode, hold BOOT while connecting USB. The official factory image
 remains available in Waveshare's repository for recovery. Synchronize time through
-USB as before; GNSS logging uses GNSS UTC without rewriting the hardware RTC.
+USB as before. GNSS logging uses GNSS UTC. From 0.13.40, a fresh fix restores an
+unset RTC clock, and **GPS setup → SYNC CLOCK FROM GPS** requests an explicit sync.
 
 ## Clock retention
 

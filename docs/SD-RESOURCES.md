@@ -14,7 +14,7 @@ Download `dragon-resources-v1-20261023.zip`. Extract **the `dragon` directory to
 |---|---|---|
 | Seeed SenseCAP Watcher (0.13.29+) | Optional | External AT6668 via UART; GPS testing deferred; no automatic upload |
 | Spotpear / Guition JC3636W518 | Optional | No |
-| Waveshare ESP32-S3-Touch-AMOLED-1.75 | Optional | No |
+| Waveshare ESP32-S3-Touch-AMOLED-1.75 | Optional | 0.13.40 development: [optional external UART GPS](EXTERNAL-GPS-AMOLED175.md), off by default; explicit SD-configured uploads |
 | Waveshare ESP32-S3-Touch-AMOLED-1.75-G | Optional | LC76G; 0.13.39 development adds explicit [SD-configured uploads](WARDRIVE-UPLOADS.md), pending live service validation |
 | Waveshare ESP32-S3-Touch-AMOLED-1.75C | None | No |
 | LILYGO T-Display-S3-AMOLED-1.75, H0175Y003AM | Optional | No |
@@ -25,7 +25,7 @@ Download `dragon-resources-v1-20261023.zip`. Extract **the `dragon` directory to
 | Waveshare ESP32-S3-LCD-1.28 Lite | None | No |
 | Tuya T5-E1 beta | Not implemented; separate ARM project | Not implemented |
 
-The matrix follows the current board drivers and manufacturer references already pinned in the board guides. SD on the XIAO means the Round Display expansion, not the bare XIAO. No external GPS accessories are implicitly enabled. The T5-E1 has not been converted into an ESP32 target or given ESP32 capabilities. This beta also removes the GPS wardrive menu/command route from the non-GPS 1.75.
+The matrix follows the current board drivers and manufacturer references already pinned in the board guides. SD on the XIAO means the Round Display expansion, not the bare XIAO. No external GPS accessories are implicitly enabled. The T5-E1 has not been converted into an ESP32 target or given ESP32 capabilities. The original 0.13.28 beta removed GPS wardriving from the standard 1.75; 0.13.40 restores it only through explicitly enabled external GPS settings.
 
 ## Architecture and measurements
 

@@ -6,9 +6,14 @@
 #include "missions.h"
 #include "recipes.h"
 #include "sd_records.h"
+#include "wardrive_upload.h"
 #include <Wire.h>
-#ifdef BOARD_WATCHER
+#if defined(BOARD_WATCHER) || defined(BOARD_GPS_UART)
 #include <HardwareSerial.h>
+#endif
+#ifdef BOARD_GPS_UART
+#include <Preferences.h>
+#include <atomic>
 #endif
 namespace {
 dragon::wardrive::Nmea gps;
@@ -29,7 +34,7 @@ bool allow(const uint8_t* mac,uint8_t kind,uint32_t now){
     if(!seen[i].used){slot=i;break;}
     if(seen[i].kind==kind&&!memcmp(seen[i].mac,mac,6)){
       if(now-seen[i].at<
-#ifdef BOARD_GPS_LC76G
+#ifdef BOARD_AMOLED_175
          1500
 #else
          5000
@@ -127,6 +132,7 @@ void gpsLoop(){
   if(!present)gps.fix.position=false;
 }
 #endif
+#include "wardrive_uart.inc"
 const dragon::wardrive::Fix& recordingFix(){
 #ifdef BOARD_GPS_LC76G
   // Publish only complete FIFO batches. The previous fresh pair stays usable
@@ -157,6 +163,28 @@ bool wardriveI2cBusy(){
 #endif
 }
 bool wardriveBusy(){return owned;}
+bool wardriveSyncClock(){
+  if(wardriveI2cBusy()||!located(millis()))return false;
+  const auto& fix=recordingFix();
+  return configureClock(fix.epoch+uint32_t(millis()-fix.positionAt)/1000);
+}
+#ifdef BOARD_GPS_UART
+dragon::gpsuart::Config gpsExternalConfig(){return externalGpsConfig;}
+void gpsExternalSuspend(bool value){
+  if(externalGpsSuspended==value)return;
+  externalGpsSuspended=value;externalGpsApply();
+}
+bool gpsExternalConfigure(const dragon::gpsuart::Config& value){
+  if(!dragon::gpsuart::valid(value)||externalGpsSuspended||owned||wardriveUploadBusy()||reconOwnsRadio()||reconStorageBusy())return false;
+  if(!externalGpsPrefsReady||externalGpsPrefs.putUInt("config",dragon::gpsuart::encode(value))!=sizeof(uint32_t))return false;
+  externalGpsConfig=value;externalGpsApply();
+  strlcpy(notice,!value.enabled?"External GPS disabled":externalGpsOpen?"External NMEA GPS enabled; waiting for data":"GPS UART unavailable; check free memory",sizeof(notice));
+  return !value.enabled||externalGpsOpen;
+}
+void gpsExternalStatus(char* out,size_t cap){
+  snprintf(out,cap,"enabled=%u open=%u suspended=%u rx=%d tx=none baud=%lu bytes=%lu nmea=%lu checksum_bad=%lu errors=%lu present=%u fix=%u",externalGpsConfig.enabled,externalGpsOpen,externalGpsSuspended,externalGpsConfig.rx,(unsigned long)externalGpsConfig.baud,externalGpsBytes,gps.sentences,gps.badChecksum,gpsErrors,present,located(millis()));
+}
+#endif
 WardriveSnapshot wardriveSnapshot(){
   WardriveSnapshot s;s.running=running;s.busy=owned;s.fixed=located(millis());s.present=present;s.failed=driveLog.failed()||radioFailed;
   s.wifi=wifi;s.ble=ble;s.seenWifi=seenWifi;s.seenBle=seenBle;s.elapsedMs=running?millis()-started:ended-started;
@@ -164,6 +192,9 @@ WardriveSnapshot wardriveSnapshot(){
   s.bytes=driveLog.bytes;s.satellites=gps.fix.satellites;strlcpy(s.file,driveLog.path(),sizeof(s.file));strlcpy(s.message,notice,sizeof(s.message));return s;
 }
 void wardriveBegin(){
+#ifdef BOARD_GPS_UART
+  externalGpsBegin();strlcpy(notice,externalGpsConfig.enabled?"External NMEA GPS configured; waiting for data":"Enable external GPS in GPS setup before wardriving",sizeof(notice));
+#endif
 #ifdef BOARD_WATCHER
   gpsSerial.setRxBufferSize(4096);gpsSerial.begin(115200,SERIAL_8N1,WATCHER_GPS_RX,WATCHER_GPS_TX);
   strlcpy(notice,"External AT6668: UART RX19/TX20; separate verified 5V power",sizeof(notice));
@@ -174,10 +205,13 @@ void wardriveBegin(){
 #endif
 }
 bool wardriveStart(){
-#if !defined(BOARD_GPS_LC76G) && !defined(BOARD_WATCHER)
+#if !defined(BOARD_GPS_LC76G) && !defined(BOARD_WATCHER) && !defined(BOARD_GPS_UART)
   strlcpy(notice,"Flash the 1.75-G GPS profile on LC76G hardware",sizeof(notice));return false;
 #else
   if(owned)return false;
+#ifdef BOARD_GPS_UART
+  if(!externalGpsConfig.enabled||!externalGpsOpen){strlcpy(notice,"Enable external GPS in GPS setup before wardriving",sizeof(notice));return false;}
+#endif
   radioFailed=false;
   if(stopwatch.running){strlcpy(notice,"Pause the timer before starting a wardrive",sizeof(notice));return false;}
   if(radioStandby()||!radioEnabled||bleLabOwnsRadio()||reconOwnsRadio()||reconStorageBusy()||
@@ -190,8 +224,10 @@ bool wardriveStart(){
   char header[512];
 #ifdef BOARD_WATCHER
   snprintf(header,sizeof(header),"WigleWifi-1.6,appRelease=" DRAGON_VERSION ",model=SenseCAP-Watcher,release=" DRAGON_VERSION ",device=DragonDetector,display=LCD,board=watcher,brand=Seeed\n%s",dragon::wardrive::Columns);
-#else
+#elif defined(BOARD_GPS_LC76G)
   snprintf(header,sizeof(header),"WigleWifi-1.6,appRelease=" DRAGON_VERSION ",model=ESP32-S3-Touch-AMOLED-1.75-G,release=" DRAGON_VERSION ",device=DragonDetector,display=AMOLED,board=waveshare_175_gps,brand=Waveshare\n%s",dragon::wardrive::Columns);
+#else
+  snprintf(header,sizeof(header),"WigleWifi-1.6,appRelease=" DRAGON_VERSION ",model=ESP32-S3-Touch-AMOLED-1.75,release=" DRAGON_VERSION ",device=DragonDetector,display=AMOLED,board=waveshare_175,brand=Waveshare\n%s",dragon::wardrive::Columns);
 #endif
   if(!driveLog.begin("/wardrive","wigle","csv",header,strlen(header))){strlcpy(notice,driveLog.message,sizeof(notice));return false;}
   wifi=ble=noFix=duplicate=late=seenWifi=seenBle=0;started=ended=millis();
@@ -205,8 +241,14 @@ void wardriveStop(){
   strlcpy(notice,"Stopping; keep SD inserted until saved",sizeof(notice));
 }
 void wardriveLoop(){
-#if defined(BOARD_GPS_LC76G) || defined(BOARD_WATCHER)
+#if defined(BOARD_GPS_LC76G) || defined(BOARD_WATCHER) || defined(BOARD_GPS_UART)
   gpsLoop();
+#endif
+#ifdef BOARD_AMOLED_175
+  // USB-only power loss invalidates the RTC. A checked fresh GNSS pair can
+  // recover UTC after acquisition, without rewriting an already-valid clock.
+  static uint32_t clockAttempt=0;
+  if(!wallTime()&&!wardriveI2cBusy()&&located(millis())&&uint32_t(millis()-clockAttempt)>=5000){clockAttempt=millis();wardriveSyncClock();}
 #endif
   driveLog.loop();
   if(owned&&!driveLog.active()&&running){ended=millis();running=false;strlcpy(notice,driveLog.message,sizeof(notice));}
@@ -239,7 +281,9 @@ void wardriveStatus(char* out,size_t cap){
   snprintf(out,cap,"%s\n%s\n\nGPS: %s / %u satellites\nWi-Fi %lu   BLE %lu\nNo fix %lu   Late %lu\nDuplicates %lu   SD drops %lu\nSaved %llu KB / queued %u B\nGPS errors %lu / NMEA %lu\n\nSD /dragon/wardrive\n%s",
     running?"WARDRIVING":owned?"SAVING":"WARDRIVE IDLE",
 #ifdef BOARD_GPS_LC76G
-    "LC76G / passive Wi-Fi + BLE",
+    "LC76G / WiFi + BLE",
+#elif defined(BOARD_GPS_UART)
+    "External UART GPS / WiFi + BLE",
 #elif defined(BOARD_WATCHER)
     "AT6668 UART / passive Wi-Fi + BLE",
 #else
@@ -250,6 +294,15 @@ void wardriveStatus(char* out,size_t cap){
     owned?(fixed?"Recording located observations":"No valid fix: located rows paused"):notice);
 }
 bool wardriveCommand(const String& c){
+  if(c=="gps clock sync"){Serial.println(wardriveSyncClock()?"GPS_CLOCK_OK":"GPS_CLOCK_ERROR fresh fix / RTC required");return true;}
+#ifdef BOARD_GPS_UART
+  if(c=="gps external status"){char state[220];gpsExternalStatus(state,sizeof(state));Serial.printf("GPS_EXTERNAL %s\n",state);return true;}
+  if(c=="gps external off"){auto value=gpsExternalConfig();value.enabled=false;Serial.println(gpsExternalConfigure(value)?"GPS_EXTERNAL_OK":"GPS_EXTERNAL_ERROR busy or save failed");return true;}
+  if(c.startsWith("gps external on ")){
+    int rx=-1;unsigned long baud=0;char tail;bool ok=sscanf(c.c_str(),"gps external on %d %lu %c",&rx,&baud,&tail)==2&&gpsExternalConfigure({true,rx,uint32_t(baud)});
+    Serial.println(ok?"GPS_EXTERNAL_OK":"GPS_EXTERNAL_ERROR allowed pins 18/17/16/44; baud 4800/9600/19200/38400/57600/115200; stop sessions first");return true;
+  }
+#endif
   if(c=="gps reception"){
     bool recent=uint32_t(millis()-gps.viewAt)<=5000;
     Serial.printf("GPS_RECEPTION rmc=%lu gga=%lu gsv=%lu rmc_status=%c in_view=%u best_snr=%u quality=%u used=%u fresh=%u\n",gps.rmcSentences,gps.ggaSentences,gps.gsvSentences,gps.rmcStatus?gps.rmcStatus:'?',recent?gps.inView:0,recent?gps.bestSnr:0,gps.fix.quality,gps.fix.satellites,located(millis()));return true;

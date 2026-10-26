@@ -12,6 +12,7 @@ source=r'''
 #include <cstdio>
 #include <vector>
 #define BOARD_GPS_LC76G
+#define BOARD_AMOLED_175
 using esp_event_handler_instance_t=void*;using esp_event_base_t=int;using wifi_mode_t=int;using wifi_ps_type_t=int;
 constexpr int ESP_OK=0,WIFI_MODE_NULL=0,WIFI_MODE_STA=1,WIFI_PS_MIN_MODEM=1,WIFI_PS_NONE=0,WIFI_EVENT=0,WIFI_EVENT_SCAN_DONE=1,WIFI_SCAN_TYPE_ACTIVE=0;
 enum wifi_auth_mode_t {WIFI_AUTH_OPEN,WIFI_AUTH_WEP,WIFI_AUTH_WPA_PSK,WIFI_AUTH_WPA2_PSK,WIFI_AUTH_WPA_WPA2_PSK,WIFI_AUTH_WPA2_ENTERPRISE,WIFI_AUTH_WPA3_PSK,WIFI_AUTH_WPA2_WPA3_PSK};
@@ -55,5 +56,5 @@ int main(){
 }
 '''
 path=work/'radio.cpp';path.write_text(source);exe=work/'radio.exe'
-subprocess.run([sys.executable,'-m','ziglang','c++','-std=c++17','-O1',str(path),'-o',str(exe)],cwd=root,check=True)
+subprocess.run([sys.executable,'-m','ziglang','c++','-UNDEBUG','-std=c++17','-O1',str(path),'-o',str(exe)],cwd=root,check=True)
 subprocess.run([str(exe)],check=True)

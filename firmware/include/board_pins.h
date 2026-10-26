@@ -176,7 +176,11 @@
 
 #endif
 
-#if (defined(BOARD_WATCHER) || (defined(BOARD_AMOLED_175) && defined(BOARD_GPS_LC76G))) && BOARD_HAS_SD
+#if defined(BOARD_AMOLED_175) && !defined(BOARD_GPS_LC76G)
+// Optional, user-enabled NMEA input on the non-C expansion header.
+#define BOARD_GPS_UART 1
+#endif
+#if (defined(BOARD_WATCHER) || defined(BOARD_AMOLED_175)) && BOARD_HAS_SD
 #define BOARD_HAS_GPS 1
 #else
 #define BOARD_HAS_GPS 0

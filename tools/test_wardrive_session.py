@@ -29,6 +29,7 @@ source = r'''
 #include <vector>
 #define BOARD_HAS_GPS 1
 #define BOARD_GPS_LC76G 1
+#define BOARD_AMOLED_175 1
 #define DRAGON_VERSION "test"
 uint32_t now=1000;uint32_t millis(){return now;}
 size_t strlcpy(char* out,const char* in,size_t size){size_t n=strlen(in);if(size){memcpy(out,in,std::min(n,size-1));out[std::min(n,size-1)]=0;}return n;}
@@ -42,6 +43,9 @@ namespace dragon::toolkit {struct {bool recording=false;} status;}
 unsigned audioStops=0,gpsCalls=0;std::vector<bool> transitions;
 void audioStop(){++audioStops;}bool radioWardrive(bool active){transitions.push_back(active);return true;}
 void gpsLoop(){++gpsCalls;}uint16_t remaining=0;dragon::wardrive::Fix stableFix;
+uint32_t softwareClock=1792380000;unsigned clockWrites=0;
+uint32_t wallTime(){return softwareClock;}bool wardriveI2cBusy(){return false;}
+bool configureClock(uint32_t epoch){softwareClock=epoch;++clockWrites;return true;}
 struct SdRecords {
  bool accepting=false,closing=false,error=false,missing=false,failNext=false;
  uint32_t dropped=0;uint64_t bytes=0;size_t queued=0;char message[120]{};
@@ -58,18 +62,18 @@ struct SdRecords {
 };
 ''' + snapshot
 source += driver[driver.index('dragon::wardrive::Nmea gps;'):driver.index('#ifdef BOARD_GPS_LC76G\nenum class Phase')]
-for name in ['const dragon::wardrive::Fix& recordingFix(', 'bool located(', 'void record(', 'bool wardriveActive(', 'bool wardriveBusy(',
+for name in ['const dragon::wardrive::Fix& recordingFix(', 'bool located(', 'bool wardriveSyncClock(', 'void record(', 'bool wardriveActive(', 'bool wardriveBusy(',
              'WardriveSnapshot wardriveSnapshot(', 'bool wardriveStart(', 'void wardriveStop(', 'void wardriveLoop(']:
     source += '\n' + function(driver, name)
 source += r'''
 // The actual dashboard exit controller must wait for writer finalization.
 using String=std::string;
-enum View {Modes,Wardrive,Running,Capture,Statistics,Portal,Csi,Network,Missions,Recipes,Uploads};
+enum View {Modes,Wardrive,Running,Capture,Statistics,Portal,Csi,Network,Missions,Recipes,Uploads,GpsSetup};
 bool wardriveExitRequested=false,redraw=false,pageRequested=false;void* root=(void*)1;
 View view=Modes,requested=Modes;uint32_t updated=0;unsigned menuReturns=0,errorDraws=0;
 void reconPage(const String&){requested=Wardrive;pageRequested=true;}
 void uiShow(const char* name){assert(std::string(name)=="menu");++menuReturns;}
-void draw(){++errorDraws;redraw=false;}void updateWardrive(){}void updateStatus(){}void updateUploads(){}
+void draw(){++errorDraws;redraw=false;}void updateWardrive(){}void updateStatus(){}void updateUploads(){}void updateGpsSetup(){}
 ''' + function(ui, 'void reconEndWardrive(') + '\n' + function(ui, 'void reconViewLoop(')
 source += r'''
 void fix(){gps.fix.position=true;gps.fix.quality=1;gps.fix.epoch=1793030400;
@@ -107,6 +111,10 @@ int main(){
  assert(wardriveSnapshot().elapsedMs==25);
  now=0xfffffff0;assert(wardriveStart());now=0x20;assert(wardriveSnapshot().elapsedMs==48);
  wardriveStop();now+=500;assert(wardriveSnapshot().elapsedMs==48);wardriveLoop();
+ now=10000;softwareClock=0;fix();wardriveLoop();assert(clockWrites==1&&softwareClock==stableFix.epoch);
+ now+=6000;fix();wardriveLoop();assert(clockWrites==1); // Never rewrite a valid clock automatically.
+ softwareClock=0;stableFix.position=false;wardriveLoop();assert(clockWrites==1&&!softwareClock);
+ fix();assert(wardriveSyncClock()&&clockWrites==2); // Explicit fresh-fix recovery also works.
  free(seen);
  puts("PASS wardrive conflicts, counters, fresh fixes, deduplication, async stop, safe UI exit, SD failure, elapsed rollover");
 }
@@ -114,6 +122,6 @@ int main(){
 cpp = work / 'session.cpp'
 exe = work / 'session.exe'
 cpp.write_text(source)
-subprocess.run([sys.executable, '-m', 'ziglang', 'c++', '-std=c++17', '-O1',
+subprocess.run([sys.executable, '-m', 'ziglang', 'c++', '-UNDEBUG', '-std=c++17', '-O1',
                 '-Ifirmware/include', str(cpp), '-o', str(exe)], cwd=root, check=True)
 subprocess.run([str(exe)], cwd=root, check=True)

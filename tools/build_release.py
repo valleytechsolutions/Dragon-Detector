@@ -57,6 +57,8 @@ def build(board,skip):
             'Both non-C boards passed physical Wi-Fi/BLE SD capture and resource-pack readback checks on 0.13.39.\n'
             'GPS hardware acquired a fix and saved verified located CSVs. Moving routes and live authenticated uploads remain unverified.\n'
             'Use waveshare_175_gps only on the -G board with onboard LC76G.\n'
+            'Standard waveshare_175 offers optional external NMEA GPS under SYSTEM > GPS setup, off by default. External receiver acquisition still needs hardware validation.\n'
+            'RTC retention requires a powered backup supply: USB-only boards lose time when unplugged. A fresh GPS fix can recover an unset clock after power returns.\n'
             'FAT32 SD needs no asset pack. Stop sessions and wait for SAVED before card removal.\n'
             'Not compatible with the 32 MB 1.75C profile. Use Fresh installation for a new board.\n'
             'Installation and validation checklist:\n'

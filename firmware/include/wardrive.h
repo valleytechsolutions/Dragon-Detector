@@ -1,6 +1,7 @@
 #pragma once
 #include <Arduino.h>
 #include "board_pins.h"
+#include "gps_uart_config.h"
 struct WardriveSnapshot {
   bool running=false,busy=false,fixed=false,present=false,failed=false;
   uint32_t wifi=0,ble=0,seenWifi=0,seenBle=0,elapsedMs=0,noFix=0,late=0,duplicates=0,drops=0,gpsErrors=0,queued=0;
@@ -18,6 +19,7 @@ bool wardriveActive();
 bool wardriveI2cBusy();
 bool wardriveBusy();
 bool wardriveCommand(const String&);
+bool wardriveSyncClock();
 void wardriveStatus(char*,size_t);
 void wardriveWifi(const uint8_t*,size_t,int,uint8_t,uint32_t);
 void wardriveWifiResult(const uint8_t*,const uint8_t*,size_t,const char*,int,uint8_t,uint32_t);
@@ -34,7 +36,14 @@ inline bool wardriveActive(){return false;}
 inline bool wardriveI2cBusy(){return false;}
 inline bool wardriveBusy(){return false;}
 inline bool wardriveCommand(const String&){return false;}
+inline bool wardriveSyncClock(){return false;}
 inline void wardriveStatus(char* out,size_t cap){snprintf(out,cap,"Requires AMOLED 1.75-G GPS profile");}
 inline void wardriveWifi(const uint8_t*,size_t,int,uint8_t,uint32_t){}
 inline void wardriveBle(const uint8_t*,uint8_t,int,const uint8_t*,size_t,uint32_t){}
+#endif
+#ifdef BOARD_GPS_UART
+dragon::gpsuart::Config gpsExternalConfig();
+bool gpsExternalConfigure(const dragon::gpsuart::Config&);
+void gpsExternalSuspend(bool);
+void gpsExternalStatus(char*,size_t);
 #endif

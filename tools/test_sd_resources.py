@@ -50,10 +50,10 @@ with zipfile.ZipFile(root/'web/resources/dragon-resources-v1-20261023.zip') as z
     (work/'full.ddr').write_bytes(raw)
     assert all('config.txt' not in n and 'wardrive/' not in n for n in z.namelist())
 subprocess.run([str(work/'reader.exe'),str(work/'valid.ddr')]+[str(work/f'{name}.ddr') for name in cases]+[str(work/'full.ddr')],check=True)
-boards={'spotpear':('',1,0),'waveshare':('BOARD_AMOLED_175C',0,0),'waveshare_175':('BOARD_AMOLED_175',1,0),'waveshare_175_gps':('BOARD_AMOLED_175',1,1),'stopwatch':('BOARD_STOPWATCH',0,0),'xiao_round':('BOARD_XIAO_ROUND',1,0),'waveshare_lite':('BOARD_RADAR_LITE',0,0),'lilygo_175':('BOARD_LILYGO_175',1,0),'elecrow_21':('BOARD_CROWPANEL_21',0,0),'m5dial':('BOARD_M5DIAL',0,0)}
+boards={'spotpear':('',1,0),'waveshare':('BOARD_AMOLED_175C',0,0),'waveshare_175':('BOARD_AMOLED_175',1,1),'waveshare_175_gps':('BOARD_AMOLED_175',1,1),'stopwatch':('BOARD_STOPWATCH',0,0),'xiao_round':('BOARD_XIAO_ROUND',1,0),'waveshare_lite':('BOARD_RADAR_LITE',0,0),'lilygo_175':('BOARD_LILYGO_175',1,0),'elecrow_21':('BOARD_CROWPANEL_21',0,0),'m5dial':('BOARD_M5DIAL',0,0)}
 for board,(define,sd,gps) in boards.items():
     p=work/'gate.cpp';p.write_text(f'#include "board_pins.h"\nstatic_assert(BOARD_HAS_SD=={sd});\nstatic_assert(BOARD_HAS_GPS=={gps});\nint main(){{}}')
-    flags=(['-D'+define] if define else [])+(['-DBOARD_GPS_LC76G'] if gps else [])
+    flags=(['-D'+define] if define else [])+(['-DBOARD_GPS_LC76G'] if board=='waveshare_175_gps' else [])
     subprocess.run(compiler+['-std=c++17','-c','-o',str(work/'gate.o'),'-I'+str(root/'firmware/include')]+flags+[str(p)],check=True)
     print('PASS capability',board)
 print('PASS resource corruption, longest prefix, address privacy, all board gates')

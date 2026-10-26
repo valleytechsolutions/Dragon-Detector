@@ -27,6 +27,7 @@ static_assert(LCD_RESET == {lcd} && TP_RESET == {touch});
 static_assert(AUDIO_I2S_MCK_IO == {mclk} && BOARD_HAS_SD == {sd});
 static_assert(IIC_SDA == 15 && IIC_SCL == 14 && TP_INT == 11);
 #ifdef BOARD_AMOLED_175
+static_assert(BOARD_HAS_GPS == 1 && BOARD_GPS_UART == 1);
 static_assert(SD_MMC_CMD_PIN == 1 && SD_MMC_CLK_PIN == 2 && SD_MMC_D0_PIN == 3);
 static_assert(LCD_RESET != SD_MMC_CMD_PIN && TP_RESET != SD_MMC_CLK_PIN);
 #endif
