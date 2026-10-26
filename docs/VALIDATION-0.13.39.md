@@ -27,6 +27,7 @@ non-C speaker gain is lower, but physical audio validation remains pending.
 | GPS BLE CSV | 46,058 bytes / 501 records; offsets, CRC and column counts valid |
 | GPS located WiGLE run | 705,387 bytes / 6,701 rows: 2,732 Wi-Fi + 3,969 BLE; CRC `e8c4d2bb`; two headers, 14 columns, valid timestamps and coordinate ranges |
 | Located run stop | Queue drained, file finalized, returned to menu; zero late rows, dropped records and GPS transport errors |
+| Owner's touch workflow check | Confirmed on October 26: START WARDRIVE increases WiFi/BLE counters; END & RETURN TO MENU saves and returns cleanly on 0.13.39 |
 | GPS fix | Antenna outside the window; 12 satellites at first checked fix, 8–10 in subsequent checks; valid RMC/GGA |
 | Post-upload-build wardrive | At 77 seconds: 308 Wi-Fi + 517 BLE located rows, zero no-fix skips, late rows, drops or GPS errors; 28 completed sweeps |
 | Post-update finalized CSV | 199,317 bytes / 1,906 rows: 701 Wi-Fi + 1,205 BLE; CRC `54169bef`; format/time/location checks passed; 177-second run had zero no-fix skips, late rows or drops |
