@@ -52,9 +52,12 @@ static const WatchPalette watches[]={
   {"MuldersreVenge",0x000000,0xffe8bc,0xf2b95f,0xcab48e,false},
   {"MITM",0x050719,0xf5f7ff,0x00eaff,0xc6badf,false},
   {"Hypnotic",0x030509,0xf5f3ed,0xc5b4eb,0xbab6c6,false},
-  {"VectorPotential",0x02070c,0xe4faff,0x66d9ee,0xa2c9d4,true}
+  {"VectorPotential",0x02070c,0xe4faff,0x66d9ee,0xa2c9d4,true},
+  {"Argyle",0xf5f5f2,0x111417,0x111417,0x525e65,true},
+  {"Law Lock Tools",0xffffff,0x074567,0x008bc9,0x376783,true},
+  {"Moki",0x000000,0xe2ffdd,0x34ff16,0x9dcf99,true}
 };
-static constexpr uint8_t WatchFaces[]={0,1,2,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44};
+static constexpr uint8_t WatchFaces[]={0,1,2,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47};
 static constexpr unsigned WatchCount=sizeof(WatchFaces)/sizeof(WatchFaces[0]);
 static bool watchFaceAllowed(unsigned face){if(face==dragon::PersonalWatchId&&!personalThemeReady())return false;for(auto id:WatchFaces)if(id==face)return true;return false;}
 static unsigned watchFacePosition(){for(unsigned i=0;i<WatchCount;++i)if(WatchFaces[i]==watchFace)return i;return 0;}
@@ -292,6 +295,9 @@ static void watchDraw(lv_event_t* e){
   }
   if(watchFace==dragon::PersonalWatchId){personalThemeClock(ctx,d,valid);return;}
   if(watchFace==MuldersRevengeWatch){muldersWatch(ctx,d,valid);return;}
+  if(watchFace==LawLockToolsWatch){lltWatch(ctx,d,valid);return;}
+  if(watchFace==MokiWatch){mokiWatch(ctx,d,valid);return;}
+  if(watchFace==ArgyleWatch){argyleWatch(ctx,d,valid);return;}
   if(watchFace==VectorPotentialWatch){vpWatch(ctx,d,valid);return;}
   if(watchFace==HypnoticWatch){hypnoticWatch(ctx,d,valid,watchFrameAt);return;}
   if(watchFace==MitmWatch){mitmWatch(ctx,d,valid,watchFrameAt);return;}
@@ -358,7 +364,7 @@ static void buildWatch(){
   bool compact=watchFace==0||watchFace==10||watchFace==12||watchFace==27||watchFace==28||watchFace>=29;int y=watchFace==0?316:watchFace==27?315:(watchFace==12||watchFace==28||watchFace>=29)?326:watchFace==10?317:279,h=(watchFace==0||watchFace==12||watchFace==28||watchFace>=29)?21:27;
   auto* b=button(watchDial,watchFace==27?"[+]":LV_SYMBOL_SETTINGS,watchFace==27?126:compact?145:108,y,watchFace==27?48:compact?34:44,h,160);auto* home=button(watchDial,watchFace==27?"[=]":LV_SYMBOL_LIST,watchFace==27?186:compact?181:208,y,watchFace==27?48:compact?34:44,h,2);
   for(auto* o:{b,home}){
-    if(watchFace>=29)lv_obj_set_y(o,S(watchFace>=34?326:310));
+    if(watchFace>=29)lv_obj_set_y(o,S(watchFace==LawLockToolsWatch?310:watchFace>=34?326:310));
     lv_obj_set_style_pad_all(o,0,0);lv_obj_set_style_bg_opa(o,LV_OPA_TRANSP,0);lv_obj_set_style_border_width(o,0,0);
     auto* icon=lv_obj_get_child(o,0);lv_obj_set_style_text_font(icon,uiFont(F12),0);lv_obj_set_style_text_color(icon,color(watchFace==dragon::PersonalWatchId?themeUiColors(dragon::PersonalThemeId).muted:p.muted),0);lv_obj_center(icon);
   }
@@ -381,6 +387,7 @@ static void watchTick(){
 }
 static void updateTimerOrbit(uint64_t elapsed){
   if(!timerOrbit)return;
+  if(lawLockTools()){static uint64_t last=UINT64_MAX;uint64_t second=elapsed/1000000;if(second!=last){last=second;lv_obj_invalidate(timerOrbit);}return;}
   if(lpu()||radarTheme==CanCommanderTheme){lv_obj_invalidate(timerOrbit);return;}
   // A ten-second lap follows monotonic attempt time: pause/OPEN freeze it,
   // resume continues from that position, and reset returns it to twelve.
@@ -406,6 +413,9 @@ static void buildChronographFrame(){
       watchText(ctx,"LOCKSPORT TIMER",48,74,264,F20,uiColors().accent);
     }
     if(lpu()&&page==Stopwatch){watchLogo(ctx,radar_logo_lpu,14);watchText(ctx,"LOCKSPORT TIMER",48,74,264,F20,uiColors().accent);}
+    if(lawLockTools()&&page==Stopwatch){lltArtwork(ctx,radar_logo_llt,59);watchText(ctx,"LOCKSPORT TIMER",48,90,264,F16,LltInk);}
+    if(moki()&&page==Stopwatch){themeArtwork(ctx,radar_logo_moki,19);watchText(ctx,"LOCKSPORT TIMER",48,74,264,F20,uiColors().accent);}
+    if(argyle()&&page==Stopwatch){argyleArtwork(ctx,radar_logo_argyle,20);watchText(ctx,"LOCKSPORT TIMER",48,74,264,F20,uiColors().accent);}
     if(vectorPotential()&&page==Stopwatch){watchLogo(ctx,watch_logo_vp,23);watchText(ctx,"LOCKSPORT TIMER",48,74,264,F20,uiColors().accent);}
     if(sparrows()&&page==Stopwatch){watchLogo(ctx,radar_logo_sparrows,14);watchText(ctx,"LOCKSPORT TIMER",48,74,264,F20,uiColors().accent);}
     if(dmac()&&page==Stopwatch){watchLogo(ctx,radar_logo_dmac,20,0,false,true);watchText(ctx,"LOCKSPORT COUNTER",38,74,284,F20,uiColors().accent);}
@@ -415,6 +425,7 @@ static void buildChronographFrame(){
     timerOrbit=lv_obj_create(frame);lv_obj_remove_style_all(timerOrbit);lv_obj_set_size(timerOrbit,SCREEN_RES,SCREEN_RES);
     lv_obj_clear_flag(timerOrbit,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);
     if(radarTheme==CanCommanderTheme)lv_obj_add_event_cb(timerOrbit,[](lv_event_t* e){canBusRim(lv_event_get_draw_ctx(e),uint32_t(stopwatch.elapsed(stopwatchNow())/10000),true);},LV_EVENT_DRAW_MAIN,nullptr);
+    else if(lawLockTools())lv_obj_add_event_cb(timerOrbit,[](lv_event_t* e){lltPinRim(lv_event_get_draw_ctx(e),stopwatch.elapsed(stopwatchNow())/1000000);},LV_EVENT_DRAW_MAIN,nullptr);
     else if(lpu())lv_obj_add_event_cb(timerOrbit,[](lv_event_t* e){locksportPinRim(lv_event_get_draw_ctx(e),stopwatch.elapsed(stopwatchNow()));},LV_EVENT_DRAW_MAIN,nullptr);
     else for(unsigned i=0;i<7;++i){
       auto* dot=lv_obj_create(timerOrbit);lv_obj_remove_style_all(dot);int size=S(i==6?6:i>3?4:3);lv_obj_set_size(dot,size,size);

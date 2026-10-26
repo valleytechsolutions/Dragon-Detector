@@ -76,10 +76,13 @@ static bool covert(){return radarTheme==9;}
 static bool lpu(){return radarTheme==28;}
 static bool lpl(){return radarTheme==26;}
 static bool sparrows(){return radarTheme==32;}
+static bool lawLockTools(){return radarTheme==43;}
+static bool moki(){return radarTheme==44;}
+static bool argyle(){return radarTheme==42;}
 static bool vectorPotential(){return radarTheme==41;}
 static bool dmac(){return radarTheme==21;}
-static bool locksport(){return radarTheme==6||radarTheme==8||covert()||dmac()||lpl()||lpu()||sparrows()||vectorPotential()||(radarTheme==dragon::PersonalThemeId&&(personalTheme().flags&8));}
-static bool locksportDark(){return locksport()&&radarTheme!=6;}
+static bool locksport(){return radarTheme==6||radarTheme==8||covert()||dmac()||lpl()||lpu()||sparrows()||vectorPotential()||argyle()||lawLockTools()||moki()||(radarTheme==dragon::PersonalThemeId&&(personalTheme().flags&8));}
+static bool locksportDark(){return locksport()&&radarTheme!=6&&!argyle()&&!lawLockTools();}
 static uint32_t locksportBg(){return uiColors().bg;}
 static uint32_t locksportInk(){return uiColors().ink;}
 static uint32_t locksportAccent(){return uiColors().accent;}
@@ -171,7 +174,7 @@ void uiNotify(const char* text,const char* detail,const dragon::DeviceKey* key,b
 static void title(const char* text,const char* subtitle=nullptr){
   auto* t=label(root,text,55,39,250,F20);lv_obj_set_style_text_align(t,LV_TEXT_ALIGN_CENTER,0);
   if(subtitle){auto* s=label(root,subtitle,55,67,250,F12,uiColors().muted);lv_obj_set_style_text_align(s,LV_TEXT_ALIGN_CENTER,0);}
-  button(root,LV_SYMBOL_HOME,149,307,62,33,1);
+  button(root,LV_SYMBOL_HOME,149,307,62,lawLockTools()?23:33,1);
 }
 static void legible(lv_obj_t* o){lv_obj_set_style_bg_color(o,color(uiColors().surface),0);lv_obj_set_style_bg_opa(o,LV_OPA_80,0);lv_obj_set_style_radius(o,7,0);}
 static lv_obj_t* scrollBody(int y=91,int h=211){
@@ -241,7 +244,7 @@ static void selectRadarTheme(uint8_t selected){
   radarTheme=selected;dismissNotice();uiApplyTheme(radarTheme);settings.putUChar("radar-theme",radarTheme);
   if(radarTheme==dragon::PersonalThemeId){watchFace=dragon::PersonalWatchId;settings.putUChar("watch-face",watchFace);return;}
   if(radarTheme==0){watchFace=0;settings.putUChar("watch-face",watchFace);}
-  if(locksport()){watchFace=vectorPotential()?VectorPotentialWatch:sparrows()?35:lpu()?31:lpl()?29:dmac()?24:covert()?12:locksportDark()?11:9;settings.putUChar("watch-face",watchFace);}
+  if(locksport()){watchFace=lawLockTools()?LawLockToolsWatch:moki()?MokiWatch:argyle()?ArgyleWatch:vectorPotential()?VectorPotentialWatch:sparrows()?35:lpu()?31:lpl()?29:dmac()?24:covert()?12:locksportDark()?11:9;settings.putUChar("watch-face",watchFace);}
   else if(radarTheme==7){watchFace=10;settings.putUChar("watch-face",watchFace);}
   else if(radarTheme>=10){watchFace=radarTheme+3;settings.putUChar("watch-face",watchFace);}
 }
@@ -320,7 +323,7 @@ static void build(){
     radar=lv_obj_create(root);lv_obj_remove_style_all(radar);lv_obj_set_pos(radar,0,0);lv_obj_set_size(radar,SCREEN_RES,SCREEN_RES);lv_obj_clear_flag(radar,LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN);lv_obj_add_flag(radar,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_PRESS_LOCK);
     lv_obj_add_event_cb(radar,radarDraw,LV_EVENT_DRAW_MAIN,nullptr);lv_obj_add_event_cb(radar,radarTap,LV_EVENT_PRESSED,nullptr);lv_obj_add_event_cb(radar,radarTap,LV_EVENT_CLICKED,nullptr);lv_obj_add_event_cb(radar,radarTap,LV_EVENT_PRESS_LOST,nullptr);
     if(radarTheme==8||radarTheme==14||dmac()||radarTheme==22||radarTheme==23)circleLogo(root,radarLogo(radarTheme),17);
-    else if(!vectorPotential()&&radarTheme!=13&&radarTheme!=24&&radarTheme!=32&&radarTheme!=CanCommanderTheme&&radarTheme!=MuldersRevengeTheme&&!greenArtTheme(radarTheme)){auto* logo=lv_img_create(root);lv_img_set_src(logo,radarLogo(radarTheme));lv_obj_align(logo,LV_ALIGN_TOP_MID,0,S(17));lv_obj_clear_flag(logo,LV_OBJ_FLAG_CLICKABLE);if(radarTheme==10||radarTheme==3){lv_obj_set_style_img_recolor(logo,color(radarTheme==3?0xe1e8ec:0xffffff),0);lv_obj_set_style_img_recolor_opa(logo,LV_OPA_COVER,0);}}
+    else if(!lawLockTools()&&!moki()&&!argyle()&&!vectorPotential()&&radarTheme!=13&&radarTheme!=24&&radarTheme!=32&&radarTheme!=CanCommanderTheme&&radarTheme!=MuldersRevengeTheme&&!greenArtTheme(radarTheme)){auto* logo=lv_img_create(root);lv_img_set_src(logo,radarLogo(radarTheme));lv_obj_align(logo,LV_ALIGN_TOP_MID,0,S(17));lv_obj_clear_flag(logo,LV_OBJ_FLAG_CLICKABLE);if(radarTheme==10||radarTheme==3){lv_obj_set_style_img_recolor(logo,color(radarTheme==3?0xe1e8ec:0xffffff),0);lv_obj_set_style_img_recolor_opa(logo,LV_OPA_COVER,0);}}
     const auto& theme=radarPalette(radarTheme);
     statusLabel=label(root,"LISTENING",56,66,248,F12,theme.text);lv_obj_set_style_text_align(statusLabel,LV_TEXT_ALIGN_CENTER,0);legible(statusLabel);lv_obj_set_style_bg_color(statusLabel,color(theme.panel),0);lv_obj_set_style_bg_opa(statusLabel,LV_OPA_60,0);
     radarActivity=label(root,"",75,84,210,F12,0xffbc76);lv_obj_set_style_text_align(radarActivity,LV_TEXT_ALIGN_CENTER,0);legible(radarActivity);lv_obj_add_flag(radarActivity,LV_OBJ_FLAG_CLICKABLE);lv_obj_add_event_cb(radarActivity,action,LV_EVENT_CLICKED,(void*)116);
@@ -540,10 +543,10 @@ static void build(){
   }else if(page==Stopwatch){
     dismissNotice();lv_obj_set_style_bg_color(root,color(locksport()?locksportBg():uiColors().bg),0);buildChronographFrame();
     if(locksport()){
-      if(radarTheme!=dragon::PersonalThemeId&&!covert()&&!dmac()&&!lpl()&&!lpu()&&!sparrows()&&!vectorPotential()){circleLogo(root,&radar_logo_toool,20);centered(label(root,"LOCKSPORT TIMER",48,74,264,F20,locksportAccent()));}
-      button(root,LV_SYMBOL_HOME,149,307,62,33,1);
+      if(radarTheme!=dragon::PersonalThemeId&&!covert()&&!dmac()&&!lpl()&&!lpu()&&!sparrows()&&!vectorPotential()&&!argyle()&&!lawLockTools()&&!moki()){circleLogo(root,&radar_logo_toool,20);centered(label(root,"LOCKSPORT TIMER",48,74,264,F20,locksportAccent()));}
+      button(root,LV_SYMBOL_HOME,149,307,62,lawLockTools()?23:33,1);
     }else if(radarTheme!=dragon::PersonalThemeId&&radarTheme!=CanCommanderTheme)title("CHRONOGRAPH","Precision stopwatch");
-    timerState=label(root,"",50,locksport()?106:98,260,F12,locksport()?locksportAccent():uiColors().accent);centered(timerState);
+    timerState=label(root,"",50,lawLockTools()?112:locksport()?106:98,260,F12,locksport()?locksportAccent():uiColors().accent);centered(timerState);
     timerValue=label(root,"00:00.00",33,locksport()?136:130,294,FTIMER,locksport()?locksportInk():uiColors().ink);centered(timerValue);
     timerLap=label(root,"",50,184,260,F14,uiColors().muted);centered(timerLap);
     timerStartButton=button(root,"START",55,220,122,47,131);timerSecondary=button(root,"LAP",184,220,122,47,132);

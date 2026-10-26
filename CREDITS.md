@@ -291,3 +291,36 @@ Nessie is the longer minute hand; the hook is the shorter hour hand. The
 laminated handle and tip features are simplified for a small display. Product
 photographs are reference material only and are not embedded in the firmware.
 No affiliation or endorsement is implied.
+
+## Argyle preview
+
+The project owner supplied `media/theme-logos/argyle-source.webp` on October 25,
+2026 for the Argyle locksport theme. The complete source is retained unchanged;
+native-size indexed copies and a circular display mask adapt it to the dial.
+Artwork rights remain with its original owner.
+
+Argyle's clock hands and rotating dimple-style radar pick are original native
+drawing code. The radar tool has a cylindrical banded grip, slender shaft and
+small offset flag; the general tool form was checked against Multipick's
+[dimple-pick reference](https://multipick.com/us/elite-g-pro-community-dimple-pick-14-short-thin-flat-flag/).
+No product photograph or manufacturer logo is included, and the drawing is a
+stylized display ornament rather than an exact product model.
+
+## Law Lock Tools and Moki locksport themes
+
+The project owner supplied the original LLT wordmark and Moki logo, preserved
+unchanged as `media/theme-logos/lawlocktools-source.avif` and
+`media/theme-logos/moki-source.png`. Indexed native display assets adapt their
+size; LLT's white wordmark is tinted blue at runtime for its white dial.
+Artwork rights remain with their respective owners; no endorsement is implied.
+
+Law Lock Tools' [Ronin PRO set](https://www.lawlocktools.co.uk/products/0-4mm-set)
+informed the original native pick drawings: oval opening, long slot, diagonal
+grip cutouts and shallow/extended hook tips. Its clock and timer have sixty
+paired pin markers, with spring chambers at the five-second positions.
+
+Moki's [AKAB set with handles](https://mok-workshop.de/en/products/akab-set-mit-griffschalen)
+informed the original native radar tool: a screw-on handle, tapered shoulder,
+straight shaft and square offset tip. The clock has two handled hook picks.
+Product photos were used only as visual references and are not distributed
+in firmware. These are simplified display illustrations, not product CAD.

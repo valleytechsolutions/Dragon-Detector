@@ -11,18 +11,19 @@ def build(board,skip):
     if not skip:run('-m','platformio','run','-e',board)
     build=ROOT/'.pio/build'/board;out=ROOT/'web/firmware'/board;out.mkdir(parents=True,exist_ok=True)
     core=Path(os.environ.get('PLATFORMIO_CORE_DIR',Path.home()/'.platformio'))
+    packages=Path(os.environ.get('PLATFORMIO_PACKAGES_DIR',core/'packages'))
     partition=ROOT/'hardware'/BOARDS[board][1]/'partitions.csv'
     entries={row[0].strip():row for row in csv.reader(partition.read_text().splitlines()) if row and not row[0].startswith('#')}
     app_offset=int(entries['app0'][3],0);fs_offset=int(entries['spiffs'][3],0);fs_size=int(entries['spiffs'][4],0)
     if board=='waveshare':
         # PlatformIO chooses the last filesystem partition, which is recon.
         # Build the legacy badge image explicitly at its unchanged size.
-        mk=core/'packages/tool-mklittlefs'/('mklittlefs.exe' if os.name=='nt' else 'mklittlefs')
+        mk=packages/'tool-mklittlefs'/('mklittlefs.exe' if os.name=='nt' else 'mklittlefs')
         subprocess.run([str(mk),'-c',str(ROOT/'firmware/data'),'-b','4096','-p','256','-s',str(fs_size),str(build/'littlefs.bin')],check=True)
     else:run('-m','platformio','run','-e',board,'-t','buildfs')
     assert (build/'firmware.bin').stat().st_size<=int(entries['app0'][4],0),'Firmware exceeds partition'
     assert (build/'littlefs.bin').stat().st_size==fs_size,'Filesystem size mismatch'
-    sources={'bootloader.bin':build/'bootloader.bin','partitions.bin':build/'partitions.bin','firmware.bin':build/'firmware.bin','littlefs.bin':build/'littlefs.bin','boot_app0.bin':core/'packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin'}
+    sources={'bootloader.bin':build/'bootloader.bin','partitions.bin':build/'partitions.bin','firmware.bin':build/'firmware.bin','littlefs.bin':build/'littlefs.bin','boot_app0.bin':packages/'framework-arduinoespressif32/tools/partitions/boot_app0.bin'}
     for name,path in sources.items():
         assert path.is_file(),path
         shutil.copyfile(path,out/name)
@@ -41,7 +42,7 @@ def build(board,skip):
         drivers=ROOT/'hardware/seeed-watcher/lib/WatcherDisplay'
         for notice in [drivers/'NOTICE.md',*drivers.glob('*LICENSE*')]:
             shutil.copyfile(notice,out/('WATCHER-'+notice.name))
-        (out/'BOARD-STATUS.txt').write_text('BETA: Seeed SenseCAP Watcher, 412x412, 32 MB flash, 8 MB PSRAM.\nDisplay, RTC retention, SD vendor pack and 579-packet Wi-Fi capture verified. Touch and revised rotary controls await hands-on confirmation. Hold opens menu; turn navigates; short click selects. Battery calibration and extended capture testing remain.\nExternal AT6668 GPS testing deferred. Do not attach UART GPS directly to shared I2C Grove.\nCamera, microphone recording and Himax AI are not enabled.\nUse Fresh installation for Seeed factory firmware; back up original ESP32 flash first.\nSee SEEED-WATCHER guide for wiring and validation.\n',encoding='utf-8')
+        (out/'BOARD-STATUS.txt').write_text('BETA: Seeed SenseCAP Watcher, 412x412, 32 MB flash, 8 MB PSRAM.\nDisplay, RTC retention, SD vendor pack and 579-packet Wi-Fi capture verified. Touch and revised rotary controls confirmed by the owner on 0.13.35. Hold opens menu; turn navigates; short click selects. Battery calibration and extended capture testing remain.\nExternal AT6668 GPS testing deferred. Do not attach UART GPS directly to shared I2C Grove.\nCamera, microphone recording and Himax AI are not enabled.\nUse Fresh installation for Seeed factory firmware; back up original ESP32 flash first.\nSee SEEED-WATCHER guide for wiring and validation.\n',encoding='utf-8')
     if board=='m5dial':
         (out/'BOARD-STATUS.txt').write_text('M5Stack Dial v1.1, 240x240, 8 MB flash, no PSRAM.\nDisplay, touch, ring, menus, radar actions and RTC restart checks passed on Dial v1.1.\nOriginal K130 is not physically tested. RTC retention requires its power supply.\nUse Fresh installation for factory firmware or any other profile. No SD pack.\nhttps://valleytech-dragon-detector.pages.dev/guides/M5STACK-DIAL.html\n',encoding='utf-8')
     if board=='lilygo_175':
@@ -66,7 +67,7 @@ def build(board,skip):
         assert (recon_offset,recon_size)==(0x1000000,0x1000000)
         empty=ROOT/'.work/recon-factory';empty.mkdir(parents=True,exist_ok=True)
         assert not list(empty.iterdir()),'Recon factory source must be empty'
-        mk=core/'packages/tool-mklittlefs'/('mklittlefs.exe' if os.name=='nt' else 'mklittlefs')
+        mk=packages/'tool-mklittlefs'/('mklittlefs.exe' if os.name=='nt' else 'mklittlefs')
         subprocess.run([str(mk),'-c',str(empty),'-b','4096','-p','256','-s',str(recon_size),str(out/'reconfs.bin')],check=True)
         filesystem_segments.append(('reconfs.bin',recon_offset))
     segments=[('bootloader.bin',0),('partitions.bin',0x8000),('boot_app0.bin',0xe000),('firmware.bin',app_offset)]
@@ -96,7 +97,7 @@ def build(board,skip):
     if board in ('watcher','spotpear','waveshare_175','waveshare_175_gps','xiao_round','lilygo_175'):
         metadata['hardware_validation']='sd-resource-beta-unverified'
         metadata['sd_resources']={'schema':1,'required':False,'snapshot':20261023}
-    if board=='watcher':metadata['hardware_validation']='display-rtc-sd-verified-controls-pending'
+    if board=='watcher':metadata['hardware_validation']='display-rtc-sd-controls-verified'
     metadata['flash_size']=0x2000000 if board in ('watcher','waveshare') else 0x800000 if board in ('m5dial','xiao_round') else 0x1000000
     metadata['memory']=flash_report(entries,(build/'firmware.bin').stat().st_size,metadata['flash_size'])
     (out/'memory-budget.json').write_text(json.dumps(metadata['memory'],indent=2)+'\n',encoding='utf-8')

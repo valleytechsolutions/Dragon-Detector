@@ -1,12 +1,12 @@
 # Installation and hosting status
 
-Updated October 18, 2026.
+Updated October 25, 2026.
 
 ## Working web flasher
 
 **[Open Dragon Detector](https://valleytech-dragon-detector.pages.dev/)**
 
-This independently hosted copy includes the same verified 0.13.17 firmware for all five boards, USB date/time setup, device tools and the optional personal-theme creator. Guides and screenshots are served here too. The firmware on an already-installed device is unaffected by a website outage.
+This independently hosted copy includes the 0.13.38 firmware for all eleven board profiles, USB date/time setup, device tools and the optional personal-theme creator. Guides and screenshots are served here too. The firmware on an already-installed device is unaffected by a website outage.
 
 The original GitHub Pages address, public repository pages and GitHub-hosted images are currently unavailable. The original source, artwork, release files and Git history remain intact. This is a hosting/account-access issue; reinstalling firmware or erasing a device will not repair the website.
 
@@ -18,7 +18,7 @@ The original GitHub Pages address, public repository pages and GitHub-hosted ima
 
 The Custom theme tab is optional. Its personal-theme slot stays hidden on the device unless a design is explicitly installed.
 
-[Full installation guide](FLASHING.md) · [Clock setup](CLOCK-SETUP.md) · [Custom theme guide](CUSTOM-THEME.md) · [Release notes](RELEASE-0.13.17.md)
+[Full installation guide](FLASHING.md) · [Clock setup](CLOCK-SETUP.md) · [Custom theme guide](CUSTOM-THEME.md) · [Release notes](RELEASE-0.13.38.md)
 
 ## GitHub and Gitea
 

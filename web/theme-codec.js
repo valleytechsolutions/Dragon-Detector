@@ -1,4 +1,4 @@
-import {crc32} from './badge-codec.js?v=2026-10-23-watcher';
+import {crc32} from './badge-codec.js?v=2026-10-25-locksport-01338';
 
 export const LOGO_SIDE=160,HEADER_SIZE=64,THEME_SIZE=HEADER_SIZE+LOGO_SIDE*LOGO_SIDE*4+4;
 export const defaultTheme=Object.freeze({name:'My theme',layout:1,hands:0,font:0,markers:0,seconds:true,date:true,hour24:true,locksport:false,logoSize:1,sweep:0,bg:'#080d16',ink:'#f3f6fb',accent:'#68e2c1',secondary:'#72aaff'});

@@ -1,4 +1,4 @@
-import {validateManifest} from './board-profiles.js?v=2026-10-23-watcher';
+import {validateManifest} from './board-profiles.js?v=2026-10-25-locksport-01338';
 
 // Check availability before asking for USB access. The installer downloads the
 // binaries itself before erasing; these HEAD requests do not verify their hash.

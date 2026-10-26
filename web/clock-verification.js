@@ -1,5 +1,5 @@
 import {readWearable,syncComputerClock} from './wearable-transfer.js?v=0.13.10';
-import {hasHardwareClockCheck} from './firmware-compat.js?v=2026-10-23-watcher';
+import {hasHardwareClockCheck} from './firmware-compat.js?v=2026-10-25-locksport-01338';
 import {deviceQuery} from './device-query.js?v=0.13.10';
 
 export async function readHardwareClock(link){

@@ -1,7 +1,7 @@
 import {BadgeSerial} from './serial.js?v=0.13.3';
 import {deviceQuery} from './device-query.js';
-import {parseBadgeInfo} from './firmware-compat.js?v=2026-10-23-watcher';
-import {connectedProfile} from './board-profiles.js?v=2026-10-23-watcher';
+import {parseBadgeInfo} from './firmware-compat.js?v=2026-10-25-locksport-01338';
+import {connectedProfile} from './board-profiles.js?v=2026-10-25-locksport-01338';
 import {hasPersonalThemes,uploadTheme} from './theme-transfer.js';
 import {decodeTheme} from './theme-codec.js';
 
