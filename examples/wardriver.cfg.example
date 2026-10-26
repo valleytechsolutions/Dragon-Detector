@@ -1,0 +1,10 @@
+# Copy to the FAT32 SD root as /wardriver.cfg. Keep the filled file private.
+# These are the Piglet-compatible field names. Uploads are always explicit.
+homeSsid=
+homePsk=
+# Optional saved WiFi slot 0-7; overrides homeSsid/homePsk:
+uploadNetworkProfile=
+# WiGLE account API: Encoded for Use, WITHOUT the "Basic " prefix:
+wigleBasicToken=
+# WDGoWars profile API key:
+wdgwarsApiKey=

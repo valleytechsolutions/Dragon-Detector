@@ -28,3 +28,4 @@ managed_components/
 web/betas/
 web/guides/
 /config.txt
+/wardriver.cfg

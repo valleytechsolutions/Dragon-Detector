@@ -9,6 +9,7 @@
 #include "missions.h"
 #include "recipes.h"
 #include "wardrive.h"
+#include "wardrive_upload.h"
 #include <lvgl.h>
 #include "lab_ui_scale.h"
 using namespace dragon;
@@ -16,10 +17,19 @@ using namespace dragon::tx;
 using namespace dragon::toolkit;
 namespace {
 using namespace dragon::labui;
-enum View {Modes,Tools,WifiTools,BleTools,Networks,Stations,Confirm,Running,Capture,Library,FileDetail,Statistics,Probes,Filters,Portal,Csi,Network,NetworkProfiles,Missions,Recipes,Attacks,Wardrive};
+enum View {Modes,Tools,WifiTools,BleTools,Networks,Stations,Confirm,Running,Capture,Library,FileDetail,Statistics,Probes,Filters,Portal,Csi,Network,NetworkProfiles,Missions,Recipes,Attacks,Wardrive,Uploads};
 View requested=Modes;bool pageRequested=false;
 View view=Modes;lv_obj_t* root=nullptr;lv_obj_t* body=nullptr;lv_obj_t* info=nullptr;
 bool redraw=true;uint32_t updated=0;AttackMode chosen=AttackMode::Beacon;
+#if BOARD_HAS_GPS
+bool wardriveExitRequested=false;
+lv_obj_t *driveTime=nullptr,*driveWifi=nullptr,*driveBle=nullptr,*driveGps=nullptr,*driveRows=nullptr,*driveSd=nullptr,*driveNotice=nullptr;
+bool driveWasRunning=false,driveWasBusy=false,driveWasFailed=false;
+#endif
+#ifdef BOARD_GPS_LC76G
+lv_obj_t *uploadMessage=nullptr,*uploadFile=nullptr,*uploadProgress=nullptr,*uploadCounts=nullptr,*uploadConfig=nullptr;
+bool uploadWasBusy=false,uploadWasCancelling=false;
+#endif
 char fileNames[32][48]{};size_t fileSizes[32]{};unsigned fileCount=0,fileIndex=0;
 // Copy keys into the row model. A live scan can reuse the cache slot before tap.
 uint8_t apKeys[ApCapacity][6]{},clientKeys[ClientCapacity][6]{};unsigned apRows=0,clientRows=0;
@@ -28,9 +38,88 @@ lv_obj_t* text(lv_obj_t* parent,const String& s,int x,int y,int w=326,uint32_t c
 lv_obj_t* btn(lv_obj_t* parent,const char* s,int x,int y,int w,int h,int id){auto* b=lv_btn_create(parent);dragon::labui::pos(b,x,y);dragon::labui::size(b,w,h);lv_obj_set_style_bg_color(b,lv_color_hex(uiColors().surface),0);lv_obj_set_style_border_width(b,1,0);lv_obj_set_style_border_color(b,lv_color_hex(uiColors().border),0);lv_obj_set_style_pad_all(b,dragon::labui::px(10),0);lv_obj_set_style_radius(b,uiAscii()?0:dragon::labui::px(12),0);lv_obj_set_style_shadow_width(b,0,0);lv_obj_add_event_cb(b,action,LV_EVENT_CLICKED,(void*)(intptr_t)id);if(!*s)return b;auto* l=lv_label_create(b);lv_label_set_text(l,s);lv_obj_set_style_text_font(l,uiFont(font18()),0);lv_obj_center(l);return b;}
 void row(const char* title,const char* detail,unsigned i,int id){auto* b=btn(body,"",0,i*70,338,64,id);text(b,title,0,-1,308,uiColors().ink,font18());text(b,detail,0,24,308,uiColors().muted,font14());}
 void change(View v){view=v;redraw=true;}
+#if BOARD_HAS_GPS
+void updateWardrive(){
+  auto s=wardriveSnapshot();
+  if(s.running!=driveWasRunning||s.busy!=driveWasBusy||s.failed!=driveWasFailed){redraw=true;return;}
+  auto set=[](lv_obj_t* label,const char* value){if(label&&strcmp(lv_label_get_text(label),value))lv_label_set_text(label,value);};
+  char line[160];uint32_t seconds=s.elapsedMs/1000;
+  snprintf(line,sizeof(line),"%s  %02lu:%02lu:%02lu",s.running?"SCANNING":s.busy?"SAVING":s.failed?"ERROR":"READY",seconds/3600,seconds/60%60,seconds%60);set(driveTime,line);
+  snprintf(line,sizeof(line),"%lu",s.seenWifi);set(driveWifi,line);snprintf(line,sizeof(line),"%lu",s.seenBle);set(driveBle,line);
+  snprintf(line,sizeof(line),"GPS %s  /  %u satellites",s.fixed?"FIX":s.present?"WAITING":"NO DATA",s.satellites);set(driveGps,line);
+  snprintf(line,sizeof(line),"Located rows: Wi-Fi %lu  /  BLE %lu",s.wifi,s.ble);set(driveRows,line);
+  snprintf(line,sizeof(line),"SD %llu KB  /  queue %lu B\nDropped %lu  /  late %lu",(unsigned long long)(s.bytes/1024),s.queued,s.drops,s.late);set(driveSd,line);
+  set(driveNotice,s.failed?s.message:s.busy?(s.running?(s.fixed?"Saving GPS-tagged observations":"Waiting for GPS: located rows paused"):"Finishing file; keep the SD card inserted"):s.message);
+}
+void drawWardrive(){
+  auto s=wardriveSnapshot();driveWasRunning=s.running;driveWasBusy=s.busy;driveWasFailed=s.failed;
+  auto centered=[&](const char* value,int x,int y,int w,const lv_font_t* font,uint32_t color){auto* l=text(root,value,x,y,w,color,font);lv_obj_set_style_text_align(l,LV_TEXT_ALIGN_CENTER,0);lv_obj_clear_flag(l,LV_OBJ_FLAG_CLICKABLE);return l;};
+  centered("WARDRIVE",75,45,316,font26(),uiColors().accent);
+  driveTime=centered("",65,84,336,font18(),uiColors().ink);
+  for(unsigned i=0;i<2;++i){
+    auto* panel=lv_obj_create(root);dragon::labui::pos(panel,68+i*172,121);dragon::labui::size(panel,158,98);
+    lv_obj_set_style_bg_color(panel,lv_color_hex(uiColors().surface),0);lv_obj_set_style_border_color(panel,lv_color_hex(uiColors().border),0);
+    lv_obj_set_style_radius(panel,dragon::labui::px(12),0);lv_obj_clear_flag(panel,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);
+    centered(i?"BLE":"WiFi",68+i*172,133,158,font18(),uiColors().muted);
+    auto* count=centered("0",68+i*172,162,158,font26(),uiColors().ink);if(i)driveBle=count;else driveWifi=count;
+  }
+  driveGps=centered("",55,232,356,font18(),uiColors().accent);
+  driveRows=centered("",45,261,376,font16(),uiColors().ink);
+  driveSd=centered("",65,287,336,font14(),uiColors().muted);
+  driveNotice=centered("",65,329,336,font14(),uiColors().ink);
+  auto* end=btn(root,s.running?"END & RETURN TO MENU":s.busy?"SAVING...":"START WARDRIVE",92,372,282,48,s.running?72:71);
+  lv_obj_set_style_text_font(lv_obj_get_child(end,0),uiFont(font16()),0);
+  if(s.busy&&!s.running)lv_obj_add_state(end,LV_STATE_DISABLED);
+  if(!s.busy){
+#ifdef BOARD_GPS_LC76G
+    auto* uploads=btn(root,"UPLOADS",145,416,90,30,75);lv_obj_set_style_text_font(lv_obj_get_child(uploads,0),uiFont(font14()),0);
+    auto* menu=btn(root,"MENU",243,416,78,30,74);lv_obj_set_style_text_font(lv_obj_get_child(menu,0),uiFont(font14()),0);
+#else
+    btn(root,"MENU",183,424,100,28,74);
+#endif
+  }
+  updateWardrive();redraw=false;updated=millis();
+}
+#endif
+#ifdef BOARD_GPS_LC76G
+void updateUploads(){
+  auto s=wardriveUploadSnapshot();if(s.busy!=uploadWasBusy||s.cancelling!=uploadWasCancelling){redraw=true;return;}
+  auto set=[](lv_obj_t* label,const char* value){if(label&&strcmp(lv_label_get_text(label),value))lv_label_set_text(label,value);};
+  char line[192];set(uploadMessage,s.message);set(uploadFile,s.file);
+  snprintf(line,sizeof(line),"%s  %lu / %lu KB",s.service,(unsigned long)(s.sent/1024),(unsigned long)(s.size/1024));set(uploadProgress,line);
+  snprintf(line,sizeof(line),"Accepted %lu  /  queued %lu\nSkipped %lu  /  failed %lu",s.accepted,s.pending,s.skipped,s.failed);set(uploadCounts,line);
+  snprintf(line,sizeof(line),"SD keys: WiGLE %s  /  WDGoWars %s",s.wigleConfigured?"set":"missing",s.wdgConfigured?"set":"missing");set(uploadConfig,line);
+}
+void drawUploads(){
+  auto s=wardriveUploadSnapshot();uploadWasBusy=s.busy;uploadWasCancelling=s.cancelling;
+  auto centered=[&](const char* value,int y,int width,const lv_font_t* font,uint32_t color){auto* l=text(root,value,(466-width)/2,y,width,color,font);lv_obj_set_style_text_align(l,LV_TEXT_ALIGN_CENTER,0);return l;};
+  centered("WARDRIVE UPLOADS",48,350,font26(),uiColors().accent);
+  uploadMessage=centered("",94,320,font16(),uiColors().ink);dragon::labui::height(uploadMessage,63);lv_label_set_long_mode(uploadMessage,LV_LABEL_LONG_DOT);
+  uploadFile=centered("",162,320,font14(),uiColors().muted);dragon::labui::height(uploadFile,22);lv_label_set_long_mode(uploadFile,LV_LABEL_LONG_DOT);
+  uploadProgress=centered("",192,320,font18(),uiColors().accent);
+  uploadCounts=centered("",224,330,font16(),uiColors().ink);
+  uploadConfig=centered("",272,350,font14(),uiColors().muted);
+  if(s.busy){auto* cancel=btn(root,s.cancelling?"CANCELLING...":"CANCEL UPLOAD",105,351,256,48,79);if(s.cancelling)lv_obj_add_state(cancel,LV_STATE_DISABLED);}
+  else{
+    btn(root,"WiGLE",68,306,158,44,76);btn(root,"WDGoWars",240,306,158,44,77);
+    auto* check=btn(root,"CHECK JOBS",88,361,142,38,78);lv_obj_set_style_text_font(lv_obj_get_child(check,0),uiFont(font14()),0);
+    auto* retry=btn(root,"RETRY UNCLEAR",238,361,142,38,80);lv_obj_set_style_text_font(lv_obj_get_child(retry,0),uiFont(font14()),0);
+    btn(root,"BACK",183,420,100,32,70);
+  }
+  updateUploads();redraw=false;updated=millis();
+}
+#endif
 void updateStatus(){if(!info)return;char line[520];if(view==Wardrive){wardriveStatus(line,sizeof(line));}else if(view==Recipes){recipeStatus(line,sizeof(line));}else if(view==Missions){missionStatus(line,sizeof(line));}else if(view==Network){networkStatus(line,sizeof(line),true);}else if(view==Csi){csiStatus(line,sizeof(line));}else if(view==Portal){portalStatus(line,sizeof(line),true);}else if(view==Statistics){snprintf(line,sizeof(line),"PASSIVE WI-FI OBSERVATIONS\n\nFrames: %lu   Retries: %lu\nBeacons: %lu   Probes: %lu\nDisconnects: %lu\nEAPOL: %lu   Protected: %lu\nPwnagotchi: %lu   Detections: %lu\n\nEAPOL key-message candidates\nM1 %lu  M2 %lu  M3 %lu  M4 %lu\nCounts do not prove a complete\nhandshake. Export PCAP to inspect.",counters.frames,counters.retries,counters.beacons,counters.probes,counters.disconnect,counters.eapol,counters.protectedFrames,counters.peers,counters.detections,counters.keyMessages[1],counters.keyMessages[2],counters.keyMessages[3],counters.keyMessages[4]);}else if(view==Running){unsigned left=status.active?std::max<int>(0,int(seconds)-int((millis()-status.started)/1000)):0;snprintf(line,sizeof(line),"%s\n\n%s\n\n%us remaining\nAccepted: %lu   Errors: %lu\nAuth replies: %lu   EAPOL: %lu\n\nAccepted = driver accepted.\nEffect requires receiver verification.",attackDefinitions[unsigned(status.attack)].name,status.message,left,status.accepted,status.errors,status.responses,status.eapol);}else{snprintf(line,sizeof(line),"%s\n\n%s\n%lu records / %u KB\n\n%s\nStorage: %s",status.recording?"RECORDING":status.saving?"SAVING":"CAPTURE IDLE",status.message,status.records,unsigned(status.bytes/1024),bleLabStorageOnCard()?"64 KB queue / 32 MB SD segments.\nStop finalizes automatically.":"RAM capture / Stop then Save.",bleLabStorageName());}if(strcmp(lv_label_get_text(info),line))lv_label_set_text(info,line);}
 void draw(){
  lv_obj_clean(root);info=nullptr;lv_obj_set_style_bg_color(root,lv_color_hex(uiColors().bg),0);
+#ifdef BOARD_GPS_LC76G
+ uploadMessage=uploadFile=uploadProgress=uploadCounts=uploadConfig=nullptr;
+ if(view==Uploads){body=nullptr;drawUploads();return;}
+#endif
+#if BOARD_HAS_GPS
+ driveTime=driveWifi=driveBle=driveGps=driveRows=driveSd=driveNotice=nullptr;
+ if(view==Wardrive){body=nullptr;drawWardrive();return;}
+#endif
  const char* titles[]={"MISSION MODES","RADIO TOOLKIT","WI-FI ATTACKS","BLE ATTACKS","SELECT NETWORK","SELECT CLIENT","REVIEW TEST","LIVE SESSION","CAPTURE STUDIO","CAPTURE LIBRARY","SAVED CAPTURE","WI-FI ANALYSIS","PROBE REQUESTS","CAPTURE FILTERS","PORTAL LAB","CSI SIGNAL MONITOR","NETWORK TOOLS","SAVED NETWORKS","RECON SESSIONS","RECON RECIPES","ATTACKS","GPS WARDRIVE"};
  auto* heading=text(root,titles[view],63,40,340,uiColors().accent,font26());lv_obj_set_style_text_align(heading,LV_TEXT_ALIGN_CENTER,0);
  auto* subtitle=text(root,reconModes[unsigned(reconMode())].name,70,78,326,uiColors().muted,font16());lv_obj_set_style_text_align(subtitle,LV_TEXT_ALIGN_CENTER,0);
@@ -62,9 +151,6 @@ void draw(){
  else if(view==Portal){info=text(body,"",3,0,327,uiColors().ink,font16());updateStatus();btn(body,"START 30 SECONDS",0,200,334,44,48);btn(body,"STOP PORTAL",0,252,334,44,49);btn(body,"SAVE SESSION LOG",0,304,334,44,50);text(body,"Choose the AP name, captured probe or custom HTML in web Radio tools. Default: Dragon-Lab, a clearly labeled test page.",4,366,326,uiColors().muted,font16());}
  else if(view==Csi){info=text(body,"",3,0,327,uiColors().ink,font16());updateStatus();btn(body,"START SELECTED AP",0,280,334,42,52);btn(body,"RECALIBRATE",0,330,334,42,53);btn(body,"STOP CSI",0,380,334,42,54);}
  else if(view==Recipes){info=text(body,"",3,0,327,uiColors().ink,font16());updateStatus();text(body,"Create and review recipes in the web Radio tools. No automatic startup. Home cancels a running recipe and restores the previous radio mode.",3,180,327,uiColors().muted,font16());btn(body,"STOP RECIPE",0,342,334,44,68);}
-#if BOARD_HAS_GPS
- else if(view==Wardrive){info=text(body,"",3,0,327,uiColors().ink,font16());updateStatus();btn(body,"START WARDRIVE",0,330,334,44,71);btn(body,"STOP + SAVE",0,384,334,44,72);}
-#endif
  else if(view==Missions){info=text(body,"",3,0,327,uiColors().ink,font16());updateStatus();btn(body,"START WI-FI",0,310,164,42,64);btn(body,"START BLE",174,310,164,42,65);btn(body,"STOP + SAVE",0,362,334,42,66);}
  else if(view==Network){btn(body,"SAVED NETWORKS",0,0,334,42,56);info=text(body,"",3,54,327,uiColors().ink,font16());updateStatus();btn(body,"PING GATEWAY",0,390,334,42,57);btn(body,"SCAN LOCAL /24",0,440,334,42,58);btn(body,"STOP SCAN",0,490,334,42,59);btn(body,"SAVE RESULTS",0,540,334,42,60);btn(body,"DISCONNECT",0,590,334,42,61);btn(body,"CLEAR RESULTS",0,640,334,42,62);text(body,"Add profiles in the web Radio tools. Saved passwords remain on this device. No automatic connection at boot. Session limit: 15 minutes.",4,694,326,uiColors().muted,font16());}
  else if(view==NetworkProfiles){char names[8][33];unsigned slots[8];unsigned count=networkProfiles(names,slots,8);for(unsigned i=0;i<count;++i)row(names[i],"Tap to join / pauses radar until disconnect",n++,700+slots[i]);if(!count)text(body,"Add a network in the web flasher\'s Radio tools, then return here.",4,8);}
@@ -73,7 +159,8 @@ void draw(){
  redraw=false;updated=millis();
 }
 void action(lv_event_t* e){int id=(intptr_t)lv_event_get_user_data(e);
- if(wardriveBusy()&&id!=72){if(id==1||id==2)wardriveStop();return;}
+ if(wardriveUploadBusy()){if(id==79||id==1||id==2)wardriveUploadCancel();return;}
+ if(wardriveBusy()&&id!=72){if(id==1||id==2)reconEndWardrive();return;}
 if(id==1){recipeStop();reconStop();uiShow("radar");return;}
  if(id==2){if(view==Modes)change(Tools);else if(view==Running){stop();change(Tools);}else if(view==Confirm)change(attackDefinitions[unsigned(chosen)].ble?BleTools:WifiTools);else if(view==WifiTools||view==BleTools)change(Attacks);else if(view==Attacks)uiShow("menu");else if(view==Capture||view==Library||view==Statistics||view==Probes||view==Filters||view==Portal||view==Csi||view==Network)change(Tools);else if(view==NetworkProfiles)change(Network);else if(view==Networks||view==Stations)change(Confirm);else if(view==FileDetail)change(Library);else change(Modes);return;}
  if(id>=100&&id<100+unsigned(ReconMode::Count)){if(reconSetMode(ReconMode(id-100)))uiShow("radar");return;}
@@ -86,7 +173,16 @@ if(id==1){recipeStop();reconStop();uiShow("radar");return;}
  case 12:uiShow("targets");break;case 13:reconStop();uiShow("lab");break;case 14:change(Tools);break;
  case 73:{char name[24];snprintf(name,sizeof(name),"survey-%08lx",esp_random());say(surveySave(name)?"Survey saved in /surveys":"Survey save failed");uiNotify("Wi-Fi survey",status.message,nullptr,false);break;}
 #if BOARD_HAS_GPS
- case 70:change(Wardrive);break;case 71:wardriveStart();break;case 72:wardriveStop();break;
+ case 70:change(Wardrive);break;
+ case 71:wardriveExitRequested=false;wardriveStart();redraw=true;break;
+ case 72:reconEndWardrive();break;
+ case 74:wardriveExitRequested=false;uiShow("menu");break;
+#endif
+#ifdef BOARD_GPS_LC76G
+ case 75:change(Uploads);break;
+ case 76:case 77:wardriveUploadStart(id==77);redraw=true;break;
+ case 78:wardriveUploadStart(true,true);redraw=true;break;
+ case 80:{static const char* buttons[]={"WiGLE","WDGoWars","Cancel",""};auto* box=uiMessageBox(root,"Retry uncertain upload?","Check the service first. A previous upload may have arrived even when its reply was lost.",buttons,true);dragon::labui::width(box,330);lv_obj_center(box);lv_obj_add_event_cb(box,[](lv_event_t* ev){auto* box=lv_event_get_current_target(ev);unsigned choice=lv_msgbox_get_active_btn(box);if(choice<2)wardriveUploadStart(choice==1,false,true);lv_msgbox_close(box);redraw=true;},LV_EVENT_VALUE_CHANGED,nullptr);break;}
 #endif
  case 69:reconStop();uiShow("findmy-beeper");break;
  case 20:change(WifiTools);break;case 21:change(BleTools);break;case 22:if(!reconOwnsRadio()&&!bleLabOwnsRadio()){reconSetMode(ReconMode::Wifi);change(Networks);}break;
@@ -113,10 +209,41 @@ if(id==1){recipeStop();reconStop();uiShow("radar");return;}
 }
 void reconView(void* p,bool tools){root=(lv_obj_t*)p;view=pageRequested?requested:tools?Tools:Modes;pageRequested=false;redraw=true;draw();}
 void reconPage(const String& name){
+#ifdef BOARD_GPS_LC76G
+ if(name=="wardrive-upload"){requested=Uploads;pageRequested=true;return;}
+#endif
 #if !BOARD_HAS_GPS
  if(name=="wardrive")return;
 #endif
 if(name=="ibeacon"){chosen=AttackMode::IBeacon;requested=Confirm;pageRequested=true;return;}requested=name=="wardrive"?Wardrive:name=="ble-attacks"?BleTools:name=="files"?Library:name=="attacks"?Attacks:name=="recipes"?Recipes:name=="missions"?Missions:name=="network"?Network:name=="csi"?Csi:name=="portal"?Portal:name=="analysis"?Statistics:name=="probes"?Probes:name=="filters"?Filters:Capture;pageRequested=true;}
-void reconViewLoop(){if(!root)return;if(pageRequested){view=requested;redraw=true;pageRequested=false;}if(redraw)draw();else if(millis()-updated>=300){updated=millis();if(view==Wardrive||view==Running||view==Capture||view==Statistics||view==Portal||view==Csi||view==Network||view==Missions||view==Recipes)updateStatus();}}
-void reconLeave(){reconStop();root=body=info=nullptr;}
+void reconEndWardrive(){
+#if BOARD_HAS_GPS
+ wardriveExitRequested=true;wardriveStop();reconPage("wardrive");
+#endif
+}
+void reconViewLoop(){
+ if(!root)return;
+#if BOARD_HAS_GPS
+ if(wardriveExitRequested&&!wardriveBusy()){
+   wardriveExitRequested=false;
+   if(!wardriveSnapshot().failed){pageRequested=false;uiShow("menu");return;}
+   // Failed writes retain their .part file. Keep the error visible for review.
+   redraw=true;
+ }
+#endif
+ if(pageRequested){view=requested;redraw=true;pageRequested=false;}
+ if(redraw)draw();else if(millis()-updated>=300){updated=millis();
+#ifdef BOARD_GPS_LC76G
+ if(view==Uploads){updateUploads();return;}
+#endif
+#if BOARD_HAS_GPS
+ if(view==Wardrive){updateWardrive();return;}
+#endif
+ if(view==Running||view==Capture||view==Statistics||view==Portal||view==Csi||view==Network||view==Missions||view==Recipes)updateStatus();}
+}
+void reconLeave(){reconStop();root=body=info=nullptr;
+#if BOARD_HAS_GPS
+ driveTime=driveWifi=driveBle=driveGps=driveRows=driveSd=driveNotice=nullptr;wardriveExitRequested=false;
+#endif
+}
 #endif

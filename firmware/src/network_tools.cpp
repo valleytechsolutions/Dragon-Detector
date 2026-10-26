@@ -21,8 +21,9 @@
 namespace {
 struct Profile {char name[33]{};char password[64]{};};
 Profile profiles[8];Preferences prefs;
+Profile joiningProfile;
 bool active=false,connected=false,resume=false,scanning=false,waiting=false;
-uint8_t oldLock=0;unsigned selected=0;uint32_t started=0,lastCheck=0,sentAt=0,nextAt=0;
+uint8_t oldLock=0;uint32_t started=0,lastCheck=0,sentAt=0,nextAt=0;
 esp_netif_t* iface=nullptr;esp_netif_ip_info_t address{};int fd=-1;
 esp_event_handler_instance_t wifiEvents=nullptr;std::atomic<unsigned> disconnectReason{0},disconnectCount{0};
 unsigned attempts=0,handledDisconnect=0;uint32_t lastAttempt=0;
@@ -99,6 +100,7 @@ void networkBegin(){prefs.begin("dd-net",false);for(unsigned i=0;i<8;++i){char k
 #endif
 }
 bool networkActive(){return active;}
+bool networkConnected(){return active&&connected;}
 unsigned networkProfiles(char names[][33],unsigned slots[],unsigned cap){unsigned n=0;for(unsigned i=0;i<8&&n<cap;++i)if(valid(profiles[i])){strlcpy(names[n],profiles[i].name,33);slots[n++]=i;}return n;}
 void networkStop(){
 #ifdef DRAGON_WIFI_CLOCK
@@ -108,17 +110,28 @@ void networkStop(){
  if(!active&&!iface)return;scanStop();esp_wifi_disconnect();wifi_config_t blank{}; // Clear the driver's RAM copy as well as disconnecting.
  esp_wifi_set_config(WIFI_IF_STA,&blank);esp_wifi_set_mode(WIFI_MODE_NULL);
  if(wifiEvents){esp_event_handler_instance_unregister(WIFI_EVENT,ESP_EVENT_ANY_ID,wifiEvents);wifiEvents=nullptr;}
- if(iface){esp_netif_destroy_default_wifi(iface);iface=nullptr;}active=connected=false;address={};channelLock=oldLock;setRadio(resume);note("Disconnected / previous radar state restored");}
-bool networkConnect(unsigned index,bool clockOnly){using namespace dragon::toolkit;
+ if(iface){esp_netif_destroy_default_wifi(iface);iface=nullptr;}active=connected=false;address={};memset(&joiningProfile,0,sizeof(joiningProfile));channelLock=oldLock;setRadio(resume);note("Disconnected / previous radar state restored");}
+static bool connectProfile(const Profile& profile,bool clockOnly){using namespace dragon::toolkit;
  if(radioStandby()&&!clockOnly){note("Leave clock or timer to use network tools");return false;}
- if(active||index>=8||!valid(profiles[index])||reconOwnsRadio()||reconStorageBusy()||bleLabOwnsRadio()||status.recording||ESP.getFreeHeap()<35000){note("Choose a saved profile; stop other radio sessions");return false;}
+ constexpr unsigned minimumHeap=
+#ifdef BOARD_GPS_LC76G
+  24000; // This profile allocates TLS buffers from its 8 MiB PSRAM.
+#else
+  35000;
+#endif
+ if(active||!valid(profile)||reconOwnsRadio()||reconStorageBusy()||bleLabOwnsRadio()||status.recording||ESP.getFreeHeap()<minimumHeap){note("Choose a saved profile; stop other radio sessions");return false;}
  esp_err_t err=esp_netif_init();if(err!=ESP_OK&&err!=ESP_ERR_INVALID_STATE)return false;
  iface=esp_netif_create_default_wifi_sta();if(!iface){note("Network interface unavailable");return false;}
- resume=radioEnabled;oldLock=channelLock;setRadio(false);active=true;connected=false;address={};selected=index;started=millis();lastCheck=0;disconnectReason=0;disconnectCount=0;handledDisconnect=0;attempts=1;lastAttempt=started;
+ joiningProfile=profile;resume=radioEnabled;oldLock=channelLock;setRadio(false);active=true;connected=false;address={};started=millis();lastCheck=0;disconnectReason=0;disconnectCount=0;handledDisconnect=0;attempts=1;lastAttempt=started;
  if(esp_event_handler_instance_register(WIFI_EVENT,ESP_EVENT_ANY_ID,wifiEvent,nullptr,&wifiEvents)!=ESP_OK){networkStop();return false;}
- wifi_config_t cfg{};memcpy(cfg.sta.ssid,profiles[index].name,strlen(profiles[index].name));memcpy(cfg.sta.password,profiles[index].password,strlen(profiles[index].password));cfg.sta.threshold.authmode=*profiles[index].password?WIFI_AUTH_WPA2_PSK:WIFI_AUTH_OPEN;cfg.sta.pmf_cfg.capable=true;cfg.sta.pmf_cfg.required=false;
- err=esp_wifi_set_mode(WIFI_MODE_STA);if(err==ESP_OK)err=esp_wifi_set_config(WIFI_IF_STA,&cfg);memset(cfg.sta.password,0,sizeof(cfg.sta.password));if(err==ESP_OK)err=esp_wifi_connect();
+ wifi_config_t cfg{};memcpy(cfg.sta.ssid,joiningProfile.name,strlen(joiningProfile.name));memcpy(cfg.sta.password,joiningProfile.password,strlen(joiningProfile.password));cfg.sta.threshold.authmode=*joiningProfile.password?WIFI_AUTH_WPA2_PSK:WIFI_AUTH_OPEN;cfg.sta.pmf_cfg.capable=true;cfg.sta.pmf_cfg.required=false;
+ err=esp_wifi_set_mode(WIFI_MODE_STA);if(err==ESP_OK)err=esp_wifi_set_config(WIFI_IF_STA,&cfg);memset(cfg.sta.password,0,sizeof(cfg.sta.password));memset(joiningProfile.password,0,sizeof(joiningProfile.password));if(err==ESP_OK)err=esp_wifi_connect();
  if(err!=ESP_OK){networkStop();note("Wi-Fi connection setup failed");return false;}note("Joining saved network / 25-second deadline");return true;
+}
+bool networkConnect(unsigned index,bool clockOnly){return index<8&&connectProfile(profiles[index],clockOnly);}
+bool networkConnectCredentials(const char* ssid,const char* password){
+ Profile p;if(strlen(ssid)>32||strlen(password)>63)return false;strlcpy(p.name,ssid,sizeof(p.name));strlcpy(p.password,password,sizeof(p.password));
+ bool ok=connectProfile(p,false);memset(&p,0,sizeof(p));return ok;
 }
 void networkLoop(){uint32_t now=millis();
 #ifdef DRAGON_WIFI_CLOCK
@@ -148,8 +161,8 @@ void networkStatus(char* out,size_t cap,bool readable){esp_netif_dns_info_t dns{
 #ifdef DRAGON_WIFI_CLOCK
  if(timeProfile>=0)bootConnection="Saved Wi-Fi clock recovery enabled.";
 #endif
- if(readable&&!connected){snprintf(out,cap,"%s\n%s\n\n%s\n\nLast scan: %u sent / %u replied\n%u no reply / %u send errors\n\n%s",active?"JOINING / WAITING FOR IP":"DISCONNECTED",active?profiles[selected].name:"Choose Saved networks above",bootConnection,sent,received,missed,errors,message);return;}
- if(readable)snprintf(out,cap,"%s\n%s\nIP %s\nGateway %s\nMask %s / CH%u\nDNS %s / %d dBm\n\nPing: %u sent / %u replied\n%u no reply / %u send errors\n%s\n\n%s",connected?"NETWORK CONNECTED":active?"JOINING":"DISCONNECTED",active?profiles[selected].name:"No automatic connection",ip(ntohl(address.ip.addr)).c_str(),ip(ntohl(address.gw.addr)).c_str(),ip(ntohl(address.netmask.addr)).c_str(),ap.primary,ip(ntohl(dns.ip.u_addr.ip4.addr)).c_str(),ap.rssi,sent,received,missed,errors,scanning?"SCAN RUNNING":"SCAN IDLE",message);
+ if(readable&&!connected){snprintf(out,cap,"%s\n%s\n\n%s\n\nLast scan: %u sent / %u replied\n%u no reply / %u send errors\n\n%s",active?"JOINING / WAITING FOR IP":"DISCONNECTED",active?joiningProfile.name:"Choose Saved networks above",bootConnection,sent,received,missed,errors,message);return;}
+ if(readable)snprintf(out,cap,"%s\n%s\nIP %s\nGateway %s\nMask %s / CH%u\nDNS %s / %d dBm\n\nPing: %u sent / %u replied\n%u no reply / %u send errors\n%s\n\n%s",connected?"NETWORK CONNECTED":active?"JOINING":"DISCONNECTED",active?joiningProfile.name:"No automatic connection",ip(ntohl(address.ip.addr)).c_str(),ip(ntohl(address.gw.addr)).c_str(),ip(ntohl(address.netmask.addr)).c_str(),ap.primary,ip(ntohl(dns.ip.u_addr.ip4.addr)).c_str(),ap.rssi,sent,received,missed,errors,scanning?"SCAN RUNNING":"SCAN IDLE",message);
  else snprintf(out,cap,"active=%u connected=%u scanning=%u ip=%s gateway=%s mask=%s dns=%s channel=%u rssi=%d associated=%u disconnect_reason=%u attempts=%u sent=%u received=%u timeouts=%u errors=%u retained=%u dirty=%u message=%s",active,connected,scanning,ip(ntohl(address.ip.addr)).c_str(),ip(ntohl(address.gw.addr)).c_str(),ip(ntohl(address.netmask.addr)).c_str(),ip(ntohl(dns.ip.u_addr.ip4.addr)).c_str(),ap.primary,ap.rssi,associated,disconnectReason.load(),attempts,sent,received,missed,errors,count,dirty,message);
 }
 bool networkSaveResults(){if(scanning||!dirty)return false;auto* fs=bleLabStorage();if(!fs||!bleLabStorageSpace(32768))return false;char names[32][48];size_t sizes[32];if(dragon::toolkit::fileList(names,sizes,32)>=32)return false;fs->mkdir("/captures");char path[64];snprintf(path,sizeof(path),"/captures/net-%08lx.csv",esp_random());String temp=String(path)+".part";if(fs->exists(path)||fs->exists(temp))return false;File f=fs->open(temp,FILE_WRITE);if(!f)return false;bool ok=f.printf("# sent=%u,replied=%u,no_reply=%u,send_errors=%u\nipv4,rtt_ms\n",sent,received,missed,errors)>0;for(unsigned i=0;i<count&&ok;++i)ok=f.printf("%s,%u\n",ip(results[i].host).c_str(),results[i].elapsed)>0;f.flush();f.close();ok=ok&&fs->rename(temp,path);if(ok){dirty=false;snprintf(message,sizeof(message),"Saved %s",path+10);}else fs->remove(temp);return ok;}

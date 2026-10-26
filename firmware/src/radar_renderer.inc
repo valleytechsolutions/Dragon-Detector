@@ -29,6 +29,38 @@ static void line(lv_draw_ctx_t* ctx,int x1,int y1,int x2,int y2,uint32_t c,int w
 static void disc(lv_draw_ctx_t* ctx,int x,int y,int r,uint32_t c,int opa=255){
   lv_draw_rect_dsc_t d;lv_draw_rect_dsc_init(&d);d.radius=LV_RADIUS_CIRCLE;d.bg_color=color(c);d.bg_opa=opa;lv_area_t a{(lv_coord_t)(x-r),(lv_coord_t)(y-r),(lv_coord_t)(x+r),(lv_coord_t)(y+r)};lv_draw_rect(ctx,&d,&a);
 }
+#if defined(BOARD_AMOLED_175)
+static lv_img_dsc_t radarBackdrop{};
+static unsigned backdropTheme=UINT32_MAX;
+static void prepareRadarBackdrop(lv_obj_t* parent,bool enabled){
+  if(!enabled||radarTheme>=6){
+    lv_img_cache_invalidate_src(&radarBackdrop);free((void*)radarBackdrop.data);radarBackdrop={};backdropTheme=UINT32_MAX;return;
+  }
+  if(radarBackdrop.data&&backdropTheme==radarTheme)return;
+  auto* pixels=(lv_color_t*)radarBackdrop.data;
+  if(!pixels)pixels=(lv_color_t*)ps_malloc(SCREEN_RES*SCREEN_RES*sizeof(lv_color_t));
+  if(!pixels)return; // Original drawing remains the allocation-failure fallback.
+  lv_img_cache_invalidate_src(&radarBackdrop);
+  const auto& theme=radarPalette(radarTheme);
+  auto* canvas=lv_canvas_create(parent);lv_canvas_set_buffer(canvas,pixels,SCREEN_RES,SCREEN_RES,LV_IMG_CF_TRUE_COLOR);
+  lv_canvas_fill_bg(canvas,color(uiColors().bg),LV_OPA_COVER);
+  lv_draw_rect_dsc_t field;lv_draw_rect_dsc_init(&field);field.radius=LV_RADIUS_CIRCLE;
+  for(int r:{178,176}){field.bg_color=color(r==178?theme.grid:theme.ring);lv_canvas_draw_rect(canvas,CENTER-S(r),CENTER-S(r),S(r)*2+1,S(r)*2+1,&field);}
+  field.bg_color=color(theme.top);field.bg_grad.dir=LV_GRAD_DIR_VER;field.bg_grad.stops[0].color=field.bg_color;field.bg_grad.stops[1].color=color(theme.bottom);
+  lv_canvas_draw_rect(canvas,S(9),S(9),SCREEN_RES-S(9)*2,SCREEN_RES-S(9)*2,&field);
+  static const int reaches[]={77,119,143,157,166,169,166,157,143,119,77};
+  lv_draw_line_dsc_t grid;lv_draw_line_dsc_init(&grid);grid.color=color(theme.grid);grid.width=S(1);grid.opa=180;
+  for(int n=0;n<11;++n){int axis=CENTER+S(n*30-150),reach=S(reaches[n]);
+    lv_point_t v[]={{lv_coord_t(axis),lv_coord_t(CENTER-reach)},{lv_coord_t(axis),lv_coord_t(CENTER+reach)}};
+    lv_point_t h[]={{lv_coord_t(CENTER-reach),lv_coord_t(axis)},{lv_coord_t(CENTER+reach),lv_coord_t(axis)}};
+    lv_canvas_draw_line(canvas,v,2,&grid);lv_canvas_draw_line(canvas,h,2,&grid);
+  }
+  lv_draw_arc_dsc_t arc;lv_draw_arc_dsc_init(&arc);arc.color=color(theme.ring);arc.width=std::max(1,S(1));arc.opa=160;
+  if(radarTheme)for(int r=42;r<169;r+=42)lv_canvas_draw_arc(canvas,CENTER,CENTER,S(r),0,359,&arc);
+  arc.width=S(2);lv_canvas_draw_arc(canvas,CENTER,CENTER,S(170),0,359,&arc);
+  radarBackdrop=*lv_canvas_get_img(canvas);lv_obj_del(canvas);backdropTheme=radarTheme;
+}
+#endif
 #include "lpl_radar.inc"
 #include "containment_radar.inc"
 #include "cyber_runner.inc"
@@ -104,6 +136,10 @@ static void radarDraw(lv_event_t* e){
   }
 
 #else
+#ifdef BOARD_AMOLED_175
+  if(radarBackdrop.data&&backdropTheme==radarTheme){lv_draw_img_dsc_t d;lv_draw_img_dsc_init(&d);lv_area_t a{0,0,SCREEN_RES-1,SCREEN_RES-1};lv_draw_img(ctx,&d,&a,&radarBackdrop);}
+  else{
+#endif
   disc(ctx,CENTER,CENTER,S(178),theme.grid);disc(ctx,CENTER,CENTER,S(176),theme.ring);
   lv_draw_rect_dsc_t glass;lv_draw_rect_dsc_init(&glass);glass.radius=LV_RADIUS_CIRCLE;
   glass.bg_color=color(theme.top);glass.bg_grad.dir=LV_GRAD_DIR_VER;glass.bg_grad.stops[0].color=glass.bg_color;glass.bg_grad.stops[1].color=color(theme.bottom);
@@ -144,6 +180,9 @@ static void radarDraw(lv_event_t* e){
   lv_point_t center{(lv_coord_t)CENTER,(lv_coord_t)CENTER};
   if(radarTheme&&radarTheme!=24)for(int radius=42;radius<169;radius+=42)lv_draw_arc(ctx,&arc,&center,S(radius),0,359);
   if(radarTheme!=24){arc.width=S(2);lv_draw_arc(ctx,&arc,&center,S(170),0,359);}
+#ifdef BOARD_AMOLED_175
+  }
+#endif
 #endif
   }
   if(radarTheme==9){

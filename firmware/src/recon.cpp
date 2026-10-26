@@ -9,6 +9,7 @@
 #include "missions.h"
 #include "recipes.h"
 #include "wardrive.h"
+#include "wardrive_upload.h"
 #include "sd_records.h"
 #ifndef BOARD_RADAR_LITE
 #include "app.h"
@@ -191,7 +192,7 @@ uint8_t reconRadio(){return reconModes[unsigned(mode)].radio;}
 bool reconAll(){return reconModes[unsigned(mode)].all;}
 bool reconAccepts(Family family,bool ble){return modeAccepts(mode,family,ble);}
 bool reconStorageBusy(){return status.saving||cardCapture.busy();}
-bool reconOwnsRadio(){return wardriveBusy()||status.active||portalActive()||csiActive()||networkActive();}
+bool reconOwnsRadio(){return wardriveBusy()||wardriveUploadBusy()||status.active||portalActive()||csiActive()||networkActive();}
 bool reconRecording(){return wifiRecording.load();}
 bool reconSetMode(ReconMode next){if(!validMode(unsigned(next))||busy())return false;if(status.recording&&next!=mode)captureStop();mode=next;prefs.putUChar("mode",unsigned(mode));trackedContact=-1;channelLock=0;radioApplyMode();return true;}
 void reconStop(){wardriveStop();networkStop();csiStop();portalStop();stop();captureStop();}

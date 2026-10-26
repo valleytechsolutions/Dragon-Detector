@@ -324,3 +324,13 @@ informed the original native radar tool: a screw-on handle, tapered shoulder,
 straight shaft and square offset tip. The clock has two handled hook picks.
 Product photos were used only as visual references and are not distributed
 in firmware. These are simplified display illustrations, not product CAD.
+
+## Piglet wardriving workflow reference
+
+[Hamspiced/Piglet](https://github.com/Hamspiced/piglet), revision
+`fb71eded9c7bdec6b646f14dff3711ff4bd1bf5a`, was reviewed for its cooperative
+scanner/GPS workflow, status presentation, batched SD saves and SD-configured
+WiGLE/WDGoWars uploads. Dragon Detector's wardrive dashboard, LC76G transport,
+recording and upload implementation are original
+code; no Piglet code or assets are included. Piglet's LICENSE at that revision is
+CC BY-NC-SA 4.0. Its ESP32-C5 radio capabilities differ from this ESP32-S3 board.

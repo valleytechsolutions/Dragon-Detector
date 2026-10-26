@@ -1,6 +1,13 @@
 # GPS + SD upload investigation — 2026-10-23
 
-Status: researched contract and tested configuration/retry policy only. **This resource beta does not read credentials or send wardrive uploads.** No upload controls or config download appear on non-GPS boards. Live TLS, radio ownership and real-device cancellation must be implemented and validated before enabling a transport. No real or synthetic observations were uploaded during development.
+Historical design for the **0.13.28 resource beta**. That beta did not read
+credentials or send uploads. This proposal is retained as research history;
+its `config.txt` schema and automatic-queue policy are not the current interface.
+The **0.13.39 GPS Waveshare development build** implements explicit uploads with
+Piglet-compatible `/wardriver.cfg` fields. See the [current upload guide](WARDRIVE-UPLOADS.md)
+and [validation record](VALIDATION-0.13.39.md). Live authenticated service
+validation remains pending. No real or synthetic observations were uploaded
+to production services during this work.
 
 ## Verified official contracts
 

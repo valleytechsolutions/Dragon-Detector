@@ -51,7 +51,7 @@ bool toneOutputBegin(){
 #if defined(BOARD_WATCHER) || defined(BOARD_AMOLED_175C) || defined(BOARD_AMOLED_175)
  auto codec=es8311_create(0,ES8311_ADDRESS_0);if(!codec)return false;
  es8311_clock_config_t clock{};clock.mclk_from_mclk_pin=true;clock.mclk_frequency=4096000;clock.sample_frequency=16000;
-#ifdef BOARD_WATCHER
+#if defined(BOARD_WATCHER) || defined(BOARD_AMOLED_175)
  // Driver percent maps directly to DAC register: 100 -> 0xFF (+32 dB).
  // 65 -> 0xA5 (-13 dB), keeping headroom even at full application volume.
  constexpr int codecVolume=65;

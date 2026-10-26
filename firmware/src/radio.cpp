@@ -354,14 +354,27 @@ void setRadio(bool enabled){
   }
 }
 #if BOARD_HAS_GPS
-void radioWardrive(bool enabled){
+#include "wardrive_radio.inc"
+bool radioWardrive(bool enabled){
   static int previousTracked=-1;static uint8_t previousChannel=0;static bool previousRadio=true;
   wardriveTransition=true;
   if(enabled){previousTracked=trackedContact;previousChannel=channelLock;previousRadio=radioEnabled;}
   setRadio(false);wardriveScanning=enabled;
   trackedContact=enabled?-1:previousTracked;channelLock=enabled?0:previousChannel;
   scanCommand(ScanAction::Configure,0,enabled?false:activeBle&&reconMode()==dragon::ReconMode::Radar);
+#ifdef BOARD_GPS_LC76G
+  if(enabled){bool ok=driveRadioBegin();wardriveTransition=false;return ok;}
+  driveRadioEnd();
+#endif
   setRadio(enabled||previousRadio);wardriveTransition=false;
+  return true;
+}
+void radioWardriveStatus(){
+#ifdef BOARD_GPS_LC76G
+  Serial.printf("WARDRIVE_RADIO phase=%u scans=%lu errors=%lu recoveries=%lu scan_max_ms=%lu pending=%u wifi_dwell_ms=100 ble_gap_ms=1500 active_wifi=1\n",unsigned(driveScanPhase),driveScans,driveScanErrors,driveScanResets,driveScanMaxMs,driveResultsLeft);
+#else
+  Serial.println("WARDRIVE_RADIO passive=1");
+#endif
 }
 #endif
 void radioLoop(){
@@ -377,6 +390,9 @@ void radioLoop(){
   radioMaxBatchUs=std::max<uint32_t>(radioMaxBatchUs,esp_timer_get_time()-batchAt);
   queueDrops=drops.load();
   uint32_t now=millis(),elapsed=now-lastAccounting;lastAccounting=now;
+#ifdef BOARD_GPS_LC76G
+  if(wardriveBusy()){driveRadioLoop(now,elapsed);return;}
+#endif
   if(!radioEnabled || !scanner)return;
   schedule.focus=trackedContact>=0&&contacts[trackedContact].ble?dragon::RadioSchedule::Bluetooth:channelLock?dragon::RadioSchedule::Wifi:dragon::RadioSchedule::Balanced;
   if(!wardriveBusy()&&reconRadio()){

@@ -1,5 +1,6 @@
 #include "app.h"
 #include "wardrive.h"
+#include "wardrive_upload.h"
 #include "personal_theme.h"
 #include "notebook.h"
 #include "vendor_registry.h"
@@ -126,7 +127,8 @@ static lv_obj_t* label(lv_obj_t* parent,const char* text,int x,int y,int w=0,con
   auto* o=lv_label_create(parent);lv_label_set_text(o,text);lv_obj_set_pos(o,S(x),S(y));if(w)lv_obj_set_width(o,S(w));lv_obj_set_style_text_font(o,uiFont(font),0);lv_obj_set_style_text_color(o,color(c),0);return o;
 }
 static void go(Page p){
-if(wardriveBusy()&&p!=Recon){wardriveStop();reconPage("wardrive");pending=Recon;return;}
+if(wardriveUploadBusy()&&p!=Recon){wardriveUploadCancel();reconPage("wardrive-upload");pending=Recon;return;}
+if(wardriveBusy()&&p!=Recon){reconEndWardrive();pending=Recon;return;}
 if(p==Radar){recipeStop();reconStop();bleLabStop();}
 #ifndef BOARD_RADAR_LITE
 if(page==Recon&&p!=Recon)reconLeave();
@@ -154,6 +156,7 @@ static void locksportColors(lv_obj_t* object){
   for(unsigned i=0;i<lv_obj_get_child_cnt(object);++i)locksportColors(lv_obj_get_child(object,i));
 }
 void uiNotify(const char* text,const char* detail,const dragon::DeviceKey* key,bool watched){
+  if(wardriveBusy()||wardriveUploadBusy())return;
   dragon::DetectionNotice item;strlcpy(item.title,text,sizeof(item.title));strlcpy(item.detail,detail,sizeof(item.detail));item.watched=watched;item.at=millis();item.hasKey=key!=nullptr;if(key){item.key=*key;int i=findContact(*key);if(i>=0)item.family=contacts[i].match.family;}
   for(unsigned f=0;f<unsigned(Family::Count);++f)if(!strcmp(text,dragon::familyName(Family(f)))){item.family=Family(f);break;}
 #ifdef BOARD_WATCHER
@@ -313,6 +316,9 @@ static void build(){
   badgeUnload();page=pending;pageAt=millis();statusLabel=audioLabel=audioMeter=radar=trackingLabel=huntValue=huntMeta=huntGauge=huntGraph=diagnosticsLabel=activityLabel=radarActivity=nullptr;radarPrepared=0;
   setRadioStandby(page==Clock||page==Stopwatch||page==Laps||page==ClockSettings||page==ClockWheels||page==ClockEdit);
   lv_obj_clean(root);lv_obj_set_style_bg_color(root,color(uiColors().bg),0);
+#ifdef BOARD_AMOLED_175
+  prepareRadarBackdrop(root,page==Radar);
+#endif
   #ifndef BOARD_RADAR_LITE
   if(page==BleLab){bleLabView(root);return;}
   if(page==Recon){reconView(root,openRadioTools);return;}
@@ -352,7 +358,17 @@ static void build(){
       if(menuTab==i)lv_obj_set_style_bg_color(b,color(uiColors().raised),0);
     }
     #ifndef BOARD_RADAR_LITE
-    if(menuTab==0){button(root,"Modes",57,115,119,40,7100);button(root,"Attacks",184,115,119,40,7103);button(root,"Wi-Fi",57,162,119,40,20);button(root,"Bluetooth",184,162,119,40,21);button(root,"History",57,209,119,40,60);button(root,"Hunt",184,209,119,40,57);button(root,"Radio tools",57,257,119,39,7102);button(root,"BLE Lab",184,257,119,39,7000);}
+    if(menuTab==0){
+#ifdef BOARD_GPS_LC76G
+      button(root,"START WARDRIVE",57,114,246,36,7109);
+      button(root,"Modes",57,156,119,32,7100);button(root,"Attacks",184,156,119,32,7103);
+      button(root,"Wi-Fi",57,194,119,32,20);button(root,"Bluetooth",184,194,119,32,21);
+      button(root,"History",57,232,119,32,60);button(root,"Hunt",184,232,119,32,57);
+      button(root,"Radio tools",57,270,119,32,7102);button(root,"BLE Lab",184,270,119,32,7000);
+#else
+      button(root,"Modes",57,115,119,40,7100);button(root,"Attacks",184,115,119,40,7103);button(root,"Wi-Fi",57,162,119,40,20);button(root,"Bluetooth",184,162,119,40,21);button(root,"History",57,209,119,40,60);button(root,"Hunt",184,209,119,40,57);button(root,"Radio tools",57,257,119,39,7102);button(root,"BLE Lab",184,257,119,39,7000);
+#endif
+    }
 #else
     if(menuTab==0){button(root,"Wi-Fi",57,119,119,49,20);button(root,"Bluetooth",184,119,119,49,21);button(root,"History",57,176,119,49,60);button(root,"Hunt",184,176,119,49,57);button(root,"Detectors",57,233,119,45,61);button(root,"Activity",184,233,119,45,116);}
     #endif
@@ -622,6 +638,7 @@ static void action(lv_event_t* e){
   if(id>=8000&&id<8010){unsigned row=id-8000;if(row<notebookRows&&notebookAdverts){auto& k=notebookKeys[row];for(unsigned i=0;i<dragon::notebook::Capacity;++i){auto& a=notebookAdverts[i];if(a.used&&a.type==k.addressType&&!memcmp(a.mac,k.mac,6)){notebookSelection=a;go(NotebookDetail);return;}}}go(NotebookBle);return;}
   if(id>=201 && id<=211){trackedContact=-1;channelLock=id-200;setRadio(true);go(Channels);page=Boot;return;}
 #ifndef BOARD_RADAR_LITE
+  if(id==7109){reconPage("wardrive");go(Recon);wardriveStart();return;}
   if(id==7104||id==7105){reconPage(id==7104?"files":"captures");go(Recon);return;}
   if(id==7100||id==7102){openRadioTools=id==7102;go(Recon);return;}
   if(id==7103){reconPage("attacks");go(Recon);return;}
@@ -791,6 +808,9 @@ void uiShow(const String& name){if(name=="startup"){go(Startup);page=Boot;return
   if(name=="findmy-beeper"){bleLabBeeperPage();go(BleLab);return;}
   if(name=="lab"){go(BleLab);return;}
   if(
+#ifdef BOARD_GPS_LC76G
+     name=="wardrive-upload"||
+#endif
 #if BOARD_HAS_GPS
      name=="wardrive"||
 #endif
@@ -833,6 +853,15 @@ void uiBegin(){
   pageAt=millis();
 }
 void uiLoop(){
+  if(wardriveUploadBusy()){
+    dismissNotice();if(clockPrompt){lv_obj_del(clockPrompt);clockPrompt=nullptr;}
+    if(page!=Recon&&pending!=Recon){reconPage("wardrive-upload");pending=Recon;}
+  }
+  if(wardriveBusy()){
+    dismissNotice();
+    if(clockPrompt){lv_obj_del(clockPrompt);clockPrompt=nullptr;}
+    if(page!=Recon&&pending!=Recon){reconPage("wardrive");pending=Recon;}
+  }
   uint32_t idle=millis()-lastInteraction;
   int level=detector.offSeconds&&idle>=uint32_t(detector.offSeconds)*1000?0:detector.dimSeconds&&idle>=uint32_t(detector.dimSeconds)*1000?detector.idleBrightness:brightness;
   if(level!=outputBrightness){outputBrightness=level;set_brightness(level);}
@@ -844,7 +873,7 @@ void uiLoop(){
   if(!clockPrompt&&!notice&&page!=Boot&&page!=Startup&&page!=BleLab&&page!=Recon&&page!=Stopwatch&&page!=Clock&&page!=ClockSettings&&page!=ClockWheels&&page!=ClockEdit){dragon::DetectionNotice next;if(noticeQueue.take(millis(),next)&&detector.enabled(next.family)&&(!detector.quiet||next.watched)&&(!next.hasKey||!(deviceRules(next.key)&(RuleIgnore|RuleSnooze))))uiNotify(next.title,next.detail,next.hasKey?&next.key:nullptr,next.watched);}
   if(((page==Boot&&pending==Boot)||(page==Startup&&pending==Startup)) && millis()-pageAt>2200)pending=Radar;
   if(page!=pending)build();
-  clockSetupPrompt();
+  if(!wardriveBusy()&&!wardriveUploadBusy())clockSetupPrompt();
 #ifndef BOARD_RADAR_LITE
   if(page==BleLab)bleLabViewLoop();
   if(page==Recon)reconViewLoop();

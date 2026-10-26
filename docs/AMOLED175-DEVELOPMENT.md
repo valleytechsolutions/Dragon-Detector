@@ -46,3 +46,22 @@ Implementation is recorded in [0.13.21 release notes](RELEASE-0.13.21.md).
 The new touch workflow also uses identity-checked double taps and direct BLE
 Toolkit / GATT profile entry points. Automated validation does not replace the
 physical-board checklist in the [hardware guide](WAVESHARE-AMOLED-175.md).
+
+## October 26, 2026: connected hardware
+
+Both non-C models are now available. Their complete factory flash images were
+backed up and verified before installation. Version 0.13.39 fixes LC76G wake and
+complete command/reply handling on the shared bus, adds a dedicated wardrive
+dashboard and safe return to menu, and caches the classic radar background.
+Physical SD captures have been exported and checked on each board. The earlier
+"no connected hardware" statement above describes the original 0.13.21 work,
+not this bench session. See [current validation](VALIDATION-0.13.39.md).
+
+Piglet's asynchronous Wi-Fi schedule is now the GPS variant's reference: 100 ms
+maximum active dwell per channel, then 1,500 ms of passive BLE. The antenna
+outside the window acquired a fix; a finalized file contained 2,732 Wi-Fi and
+3,969 BLE location-tagged rows, all checked after CRC-verified SD export. The
+latest build maintains a published fresh fix through ordinary FIFO reads.
+Explicit SD-configured WiGLE/WDGoWars uploads have native protocol/failure tests
+and a verified physical UI, but await configured credentials for live service
+validation. Original CSVs and per-service upload receipts are retained.

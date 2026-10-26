@@ -23,6 +23,12 @@ static void wardriveTests(){
   const std::string gga="GNGGA,123519.00,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,";
   Nmea parser;send(parser,rmc,100);assert(!parser.fix.usable(100));
   send(parser,gga,200);assert(parser.fix.usable(200));
+  assert(parser.rmcSentences==1&&parser.ggaSentences==1&&parser.rmcStatus=='A');
+  send(parser,"GPGSV,1,1,02,01,45,120,35,02,60,220,41",220);
+  assert(parser.gsvSentences==1&&parser.inView==2&&parser.bestSnr==41&&parser.fix.usable(220));
+  // Reception telemetry cannot create a position or refresh an expired fix.
+  send(parser,"GPGSV,1,1,01,03,45,120,20",6000);
+  assert(parser.gsvSentences==2&&parser.inView==1&&parser.bestSnr==20&&!parser.fix.usable(6000));
   assert(std::abs(parser.fix.latitude-48.1173)<0.0000001);
   assert(std::abs(parser.fix.longitude-11.5166666667)<0.0000001);
   assert(parser.fix.epoch==dragon::dateEpoch({2026,10,19,12,35,19}));

@@ -2,6 +2,7 @@
 #include <Arduino.h>
 #include "app.h"
 #include "wardrive.h"
+#include "wardrive_upload.h"
 #include "personal_theme.h"
 #include "notebook.h"
 #include "vendor_registry.h"
@@ -93,8 +94,21 @@ static void health(){
 }
 static uint32_t loopLastUs[6]{},loopMaxUs[6]{};
 static void command(const String& c){
+#ifdef BOARD_GPS_LC76G
+  // The removable card is the deliberate credential-editing surface. Do not
+  // expose its secrets through generic Web Serial/USB file previews or dumps.
+  if(c.startsWith("get ")){String path=c.substring(4);path.toLowerCase();
+    // FAT is case-insensitive and can expose 8.3 aliases; protect the extension
+    // as well as the long filename, including staging/backup variants.
+    if(path.indexOf(".cfg")>=0){Serial.println("FILE_ERROR private configuration; edit on the SD card");return;}
+  }
+#endif
+  if(wardriveUploadCommand(c))return;
+  if(wardriveUploadBusy()&&c!="status"&&c!="memory status"&&c!="ui status"&&c!="screen wardrive-upload"){
+    Serial.println("UPLOAD_BUSY cancel or wait for the upload to finish");return;
+  }
   if(wardriveCommand(c))return;
-  if(wardriveBusy()&&c!="status"&&c!="scan status"&&c!="memory status"&&c!="loop diagnostics"&&c!="screen wardrive"){
+  if(wardriveBusy()&&c!="status"&&c!="scan status"&&c!="memory status"&&c!="loop diagnostics"&&c!="screen wardrive"&&c!="ui status"&&c!="touch status"&&c!="amoled status"){
     Serial.println("WARDRIVE_BUSY stop wardriving and wait for SD save first");return;
   }
   if(personalThemeCommand(c))return;
@@ -132,6 +146,9 @@ static void command(const String& c){
 #ifdef BOARD_XIAO_ROUND
   else if(c=="touch status"){extern void xiaoTouchStatus();xiaoTouchStatus();}
 #endif
+#if defined(BOARD_AMOLED_175) || defined(BOARD_AMOLED_175C)
+  else if(c=="touch status"||c=="amoled status"){extern void amoledHardwareStatus();amoledHardwareStatus();}
+#endif
 #ifdef BOARD_STOPWATCH
   else if(c=="touch status"){extern void stopwatchTouchStatus();stopwatchTouchStatus();}
   else if(c.startsWith("touch inject ")){int x,y,pressed;char extra;if(sscanf(c.c_str(),"touch inject %d %d %d %c",&x,&y,&pressed,&extra)==3&&x>=0&&x<466&&y>=0&&y<466&&(pressed==0||pressed==1)){extern void testTouch(int,int,bool);testTouch(x,y,pressed);Serial.println("TOUCH_INJECT_OK");}else Serial.println("TOUCH_INJECT_ERROR");}
@@ -160,9 +177,23 @@ static void command(const String& c){
     if(audioStatus().mode==AudioMode::Recording || audioStatus().mode==AudioMode::Playing){Serial.println("PUT_ERROR stop audio first");return;}
     xSemaphoreTake(sdMutex,portMAX_DELAY);bool exists=CardFS.exists(path)||CardFS.exists(path+".part");File file;if(!exists)file=CardFS.open(path+".part",FILE_WRITE);xSemaphoreGive(sdMutex);
     if(!file){Serial.println("PUT_ERROR file exists or cannot open");return;}
-    RadioTransfer transfer;Serial.println("PUT_READY");uint8_t buffer[1024];size_t written=0;uint32_t last=millis();bool ok=true;
-    while(written<size_t(total) && millis()-last<5000){int available=Serial.available();if(available){size_t n=Serial.readBytes(buffer,std::min<size_t>(sizeof(buffer),std::min<size_t>(available,total-written)));xSemaphoreTake(sdMutex,portMAX_DELAY);size_t result=file.write(buffer,n);xSemaphoreGive(sdMutex);if(result!=n){ok=false;break;}written+=n;last=millis();Serial.printf("PUT_ACK %u\n",unsigned(written));}radioTransferTick();delay(1);}
-    xSemaphoreTake(sdMutex,portMAX_DELAY);file.close();ok=ok&&written==size_t(total);if(ok)ok=CardFS.rename(path+".part",path);if(!ok)CardFS.remove(path+".part");xSemaphoreGive(sdMutex);Serial.println(ok?"PUT_OK":"PUT_ERROR incomplete transfer");
+    RadioTransfer transfer;uint8_t buffer[1024];size_t written=0;uint32_t last=millis(),ack=last;
+    bool ok=serialBytes((const uint8_t*)"PUT_READY\n",10);
+    // Native USB may drop unchecked writes when its TX queue is full. Use
+    // backpressure and repeat the cumulative offset so a missed ACK cannot
+    // deadlock the host and device while both wait for the next block.
+    auto acknowledge=[&](){char line[32];int n=snprintf(line,sizeof(line),"PUT_ACK %u\n",unsigned(written));ack=millis();return serialBytes((const uint8_t*)line,n);};
+    while(ok&&written<size_t(total)&&millis()-last<5000){
+      int available=Serial.available();
+      if(available){
+        size_t n=Serial.readBytes(buffer,std::min<size_t>(sizeof(buffer),std::min<size_t>(available,total-written)));
+        if(n){xSemaphoreTake(sdMutex,portMAX_DELAY);size_t result=file.write(buffer,n);xSemaphoreGive(sdMutex);
+          if(result!=n){ok=false;break;}written+=n;last=millis();ok=acknowledge();}
+      }else if(millis()-ack>=250)ok=acknowledge();
+      radioTransferTick();delay(1);
+    }
+    xSemaphoreTake(sdMutex,portMAX_DELAY);file.close();ok=ok&&written==size_t(total);if(ok)ok=CardFS.rename(path+".part",path);if(!ok)CardFS.remove(path+".part");xSemaphoreGive(sdMutex);
+    char result[100];int n=snprintf(result,sizeof(result),ok?"PUT_OK\n":"PUT_ERROR incomplete transfer received=%u expected=%u\n",unsigned(written),unsigned(total));serialBytes((const uint8_t*)result,n);
   }
   else if(c.startsWith("get ") && sdReady){
     xSemaphoreTake(sdMutex,portMAX_DELAY);File file=CardFS.open(c.substring(4));xSemaphoreGive(sdMutex);
@@ -223,12 +254,25 @@ void setup(){
 #ifdef BOARD_CROWPANEL_21
   extern void crowInputStatus();crowInputStatus();
 #endif
-  radioBegin();bleLabBegin();reconBegin();wardriveBegin();Serial.println("DRAGON READY");health();
+  radioBegin();bleLabBegin();reconBegin();wardriveBegin();wardriveUploadBegin();Serial.println("DRAGON READY");health();
 }
 void loop(){
   uint32_t stamp=micros();auto measured=[&](int i){uint32_t end=micros();loopLastUs[i]=end-stamp;loopMaxUs[i]=std::max(loopMaxUs[i],loopLastUs[i]);stamp=end;};
-  boardLoop();wardriveLoop();bleLabLoop();reconLoop();measured(0);radioLoop();measured(1);storageLoop();detectorLoop();measured(2);audioLoop();measured(3);uiLoop();measured(4);badgeLoop();measured(5);
+  // LC76G command/reply exchanges span short cooperative waits. Other I2C
+  // slaves must remain quiet until the reply has been consumed. Radios and SD
+  // still run during these waits; touch IRQs stay latched for the next UI pass.
+  if(!wardriveI2cBusy())boardLoop();wardriveLoop();wardriveUploadLoop();
+  // A wardrive owns the radios and SD writer. Suspend unrelated analysis,
+  // history writes, alerts and badge traffic until finalization completes.
+  if(!wardriveBusy()&&!wardriveUploadBusy()){bleLabLoop();reconLoop();}measured(0);
+  radioLoop();measured(1);
+  if(!wardriveBusy()&&!wardriveUploadBusy()){storageLoop();detectorLoop();}measured(2);
+  if(!wardriveBusy()&&!wardriveUploadBusy())audioLoop();measured(3);
+  if(!wardriveI2cBusy())uiLoop();measured(4);
+  if(!wardriveBusy()&&!wardriveUploadBusy())badgeLoop();measured(5);
+  if(!wardriveI2cBusy()){
   while(Serial.available()){char c=Serial.read();if(c=='\n'){serialLine.trim();if(serialOverflow)Serial.println("COMMAND_ERROR too long");else command(serialLine);serialLine="";serialOverflow=false;}else if(serialLine.length()<1200)serialLine+=c;else serialOverflow=true;}
   if(millis()-lastHealth>10000){lastHealth=millis();health();}
+  }
   delay(2);
 }

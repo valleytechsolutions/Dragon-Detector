@@ -67,11 +67,19 @@ class Nmea {
     int high=nibble(star[1]),low=nibble(star[2]);if(high<0||low<0)return;
     uint8_t check=0;for(char* p=line_+1;p<star;++p)check^=uint8_t(*p);
     if(check!=uint8_t(high*16+low)){++badChecksum;return;}
-    *star=0;char* fields[22]{};unsigned count=1;fields[0]=line_+1;
+    ++sentences;*star=0;char* fields[22]{};unsigned count=1;fields[0]=line_+1;
     for(char* p=line_+1;*p;++p)if(*p==','){*p=0;if(count==22)return;fields[count++]=p+1;}
     if(std::strlen(fields[0])!=5)return;
+    if(!std::strcmp(fields[0]+2,"GSV")&&count>=4){
+      unsigned visible=0;if(integer(fields[3],visible,99)){
+        if(uint32_t(now-viewAt)>5000){inView=0;bestSnr=0;}
+        inView=std::max(inView,visible);viewAt=now;++gsvSentences;
+        for(unsigned i=7;i<count;i+=4){unsigned snr=0;if(integer(fields[i],snr,99))bestSnr=std::max(bestSnr,snr);}
+      }return;
+    }
     Calendar date;unsigned seconds;
     if(!std::strcmp(fields[0]+2,"RMC")&&count>=10) {
+      ++rmcSentences;rmcStatus=fields[2][0];
       if(std::strcmp(fields[2],"A")){fix.position=false;return;}
       double latitude,longitude;
       if(!clockFields(fields[1],date,seconds)||
@@ -87,6 +95,7 @@ class Nmea {
       fix.latitude=latitude;fix.longitude=longitude;fix.epoch=epoch;
       fix.positionAt=now;fix.rmcSecond=seconds;fix.position=true;++positions;
     } else if(!std::strcmp(fields[0]+2,"GGA")&&count>=11) {
+      ++ggaSentences;
       unsigned quality,satellites;double hdop,altitude;
       if(!clockFields(fields[1],date,seconds)||!integer(fields[6],quality,8)||
          !integer(fields[7],satellites,99)||!number(fields[8],hdop)||hdop<0||
@@ -98,7 +107,9 @@ class Nmea {
     }
   }
 public:
-  Fix fix;uint32_t badChecksum=0,overlong=0,positions=0;
+  Fix fix;uint32_t badChecksum=0,overlong=0,positions=0,sentences=0;
+  uint32_t rmcSentences=0,ggaSentences=0,gsvSentences=0,viewAt=0;
+  unsigned inView=0,bestSnr=0;char rmcStatus='?';
   void discardPartial(){length_=0;collecting_=false;}
   void feed(char c,uint32_t now) {
     if(c=='$'){length_=0;collecting_=true;line_[length_++]=c;return;}

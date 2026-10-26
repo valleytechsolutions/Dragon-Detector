@@ -19,9 +19,12 @@ static TouchDrvCST92xx touch;
 static XPowersPMU power;
 static bool touchReady=false,powerReady=false;
 static volatile bool touchIrq=false;
-static void IRAM_ATTR onTouch(){touchIrq=true;}
+static volatile uint32_t touchIrqs=0;
+static uint32_t touchReads=0,touchDowns=0,touchUps=0,touchTimeouts=0,touchMaxReadUs=0;
+static void IRAM_ATTR onTouch(){touchIrq=true;++touchIrqs;}
 static lv_disp_draw_buf_t draw_buf;
 static lv_disp_drv_t disp_drv;
+static uint32_t flushStarted=0,flushCount=0,flushTotalUs=0,flushMaxUs=0;
 
 extern bool uiTouch(bool pressed,int x,int y);
 
@@ -30,6 +33,7 @@ static void rounder(lv_disp_drv_t*,lv_area_t* area){
   area->x1&=~1;area->y1&=~1;area->x2|=1;area->y2|=1;
 }
 static void flush(lv_disp_drv_t* disp,const lv_area_t* area,lv_color_t* color_p){
+  flushStarted=micros();
   // The completion callback releases LVGL's buffer only after DMA is finished.
   if(esp_lcd_panel_draw_bitmap(panel,area->x1,area->y1,area->x2+1,area->y2+1,color_p)!=ESP_OK)lv_disp_flush_ready(disp);
 }
@@ -39,13 +43,16 @@ static void touchRead(lv_indev_drv_t*,lv_indev_data_t* data){
   // its interrupt. A missed release report is covered by the report timeout.
   if(touchIrq){
     touchIrq=false;
+    const uint32_t started=micros();++touchReads;
     if(touch.getPoint(x,y,1)>0){pressed=true;lastReport=millis();lastX=constrain(x[0],0,SCREEN_RES-1);lastY=constrain(y[0],0,SCREEN_RES-1);}
     else pressed=false;
-  }else if(pressed && millis()-lastReport>200)pressed=false;
-  if(pressed!=was){was=pressed;if(pressed)Serial.printf("TOUCH %d %d\n",lastX,lastY);}
+    touchMaxReadUs=std::max(touchMaxReadUs,uint32_t(micros()-started));
+  }else if(pressed && millis()-lastReport>200){pressed=false;++touchTimeouts;}
+  if(pressed!=was){was=pressed;if(pressed){++touchDowns;Serial.printf("TOUCH %d %d\n",lastX,lastY);}else ++touchUps;}
   data->point.x=lastX;data->point.y=lastY;data->state=pressed?LV_INDEV_STATE_PRESSED:LV_INDEV_STATE_RELEASED;
   if(!uiTouch(pressed,lastX,lastY))data->state=LV_INDEV_STATE_RELEASED;
 }
+void amoledHardwareStatus(){Serial.printf("AMOLED_HARDWARE touch=%u pmu=%u irq=%lu reads=%lu downs=%lu ups=%lu timeouts=%lu read_max_us=%lu bus_hz=%lu flushes=%lu flush_total_us=%lu flush_max_us=%lu\n",touchReady,powerReady,touchIrqs,touchReads,touchDowns,touchUps,touchTimeouts,touchMaxReadUs,Wire.getClock(),flushCount,flushTotalUs,flushMaxUs);}
 // 输入值为0-100
 void set_brightness(uint8_t bri){if(panelIo){uint8_t value=uint16_t(constrain(bri,0,100))*255/100;esp_lcd_panel_io_tx_param(panelIo,0x02005100,&value,1);}}
 int batteryPercent(){
@@ -66,7 +73,10 @@ void scr_lvgl_init(){
   ESP_ERROR_CHECK(spi_bus_initialize(SPI2_HOST,&bus,SPI_DMA_CH_AUTO));
   esp_lcd_panel_io_spi_config_t io{};io.cs_gpio_num=LCD_CS;io.dc_gpio_num=-1;io.spi_mode=0;io.pclk_hz=40000000;
   io.trans_queue_depth=1;io.lcd_cmd_bits=32;io.lcd_param_bits=8;io.flags.quad_mode=true;io.user_ctx=&disp_drv;
-  io.on_color_trans_done=[](esp_lcd_panel_io_handle_t,esp_lcd_panel_io_event_data_t*,void* ctx){lv_disp_flush_ready((lv_disp_drv_t*)ctx);return false;};
+  io.on_color_trans_done=[](esp_lcd_panel_io_handle_t,esp_lcd_panel_io_event_data_t*,void* ctx){
+    uint32_t us=micros()-flushStarted;++flushCount;flushTotalUs+=us;flushMaxUs=std::max(flushMaxUs,us);
+    lv_disp_flush_ready((lv_disp_drv_t*)ctx);return false;
+  };
   ESP_ERROR_CHECK(esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)SPI2_HOST,&io,&panelIo));
   esp_lcd_panel_dev_config_t cfg{};cfg.reset_gpio_num=LCD_RESET;cfg.rgb_ele_order=LCD_RGB_ELEMENT_ORDER_RGB;cfg.bits_per_pixel=16;
   ESP_ERROR_CHECK(esp_lcd_new_panel_co5300(panelIo,&cfg,&panel));

@@ -24,6 +24,7 @@ void reconBle(const uint8_t*,uint8_t,int,const uint8_t*,size_t,size_t,uint32_t);
 void reconView(void*,bool tools=false);
 void reconViewLoop();
 void reconPage(const String&);
+void reconEndWardrive();
 void reconLeave();
 void radioApplyMode();
 uint16_t reconHopDwell();uint8_t reconNextChannel(uint8_t);
@@ -44,6 +45,7 @@ inline bool reconOwnsRadio(){return false;}
 inline bool reconStorageBusy(){return false;}
 inline bool reconRecording(){return false;}
 inline void reconStop(){}
+inline void reconEndWardrive(){}
 inline void reconWifi(const uint8_t*,size_t,size_t,uint64_t,int,uint8_t){}
 inline void reconBle(const uint8_t*,uint8_t,int,const uint8_t*,size_t,size_t,uint32_t){}
 #endif

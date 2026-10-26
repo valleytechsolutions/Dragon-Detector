@@ -54,11 +54,12 @@ def build(board,skip):
     if board in ('waveshare_175','waveshare_175_gps'):
         (out/'BOARD-STATUS.txt').write_text(
             f'BETA: {BOARDS[board][0]}, 16 MB flash.\n'
-            'Existing non-GPS baseline reported working by the owner; new SD/GPS features await hardware tests.\n'
+            'Both non-C boards passed physical Wi-Fi/BLE SD capture and resource-pack readback checks on 0.13.39.\n'
+            'GPS hardware acquired a fix and saved verified located CSVs. Moving routes and live authenticated uploads remain unverified.\n'
             'Use waveshare_175_gps only on the -G board with onboard LC76G.\n'
             'FAT32 SD needs no asset pack. Stop sessions and wait for SAVED before card removal.\n'
             'Not compatible with the 32 MB 1.75C profile. Use Fresh installation for a new board.\n'
-            'Installation and arrival checklist:\n'
+            'Installation and validation checklist:\n'
             'https://valleytech-dragon-detector.pages.dev/guides/WAVESHARE-AMOLED-175.html\n',encoding='utf-8')
     filesystem_segments=[('littlefs.bin',fs_offset)]
     if board=='waveshare':

@@ -27,13 +27,19 @@ The round **H0175Y003AM 1.75-inch** model now has its own installer profile. Its
 
 A native 480 × 480 stationary profile with touch and rotary controls: turn to highlight, press to select, and hold to return home. Internal storage replaces SD functions; time synchronizes over USB or a saved Wi-Fi network. Display centering, ring navigation, scanning and clock/timer operation have passed initial hardware checks. [Installation and controls](docs/ELECROW-ROTARY-21.md).
 
-## Waveshare AMOLED 1.75 / 1.75-G · 0.13.21 beta
+## Waveshare AMOLED 1.75 / 1.75-G · 0.13.39 development
 
 The tested non-C baseline now has SD-first profiles, events, captures and surveys,
-plus a separate LC76G GPS build for passive Wi-Fi/BLE wardriving and WiGLE CSV.
+plus a separate LC76G GPS build for Wi-Fi/BLE wardriving and WiGLE CSV.
 Tap a dot for its summary; double-tap for details, Hunt and BLE/GATT tools.
-New SD/GPS/touch behavior awaits physical testing. No mandatory SD pack is needed.
-[Beta guide](docs/WAVESHARE-AMOLED-175.md) · [Change notes](docs/RELEASE-0.13.21.md).
+Both boards now have verified physical Wi-Fi/BLE SD captures. The GPS model adds
+a direct Start Wardrive button, live counters and save-before-exit controls.
+The receiver acquired a fix with its antenna outside, and 6,701 located CSV rows
+passed SD readback checks. The GPS build adds explicit WiGLE/WDGoWars uploads
+configured on SD; live authenticated service imports and moving routes remain
+unverified. No mandatory SD pack is needed. This local development build
+has not replaced the public flasher release.
+[Hardware guide](docs/WAVESHARE-AMOLED-175.md) · [Validation](docs/VALIDATION-0.13.39.md).
 
 ## Clock and timer power saving
 
@@ -72,7 +78,7 @@ The nine full profiles share the radar, 44 built-in themes, logo watch faces, ti
 
 Lite provides five button-operated pages: radar, clock, timer, signals, and diagnostics. It shares detection and all 44 built-in themes, with compact clocks. It does not include Badge Studio, audio, or active labs.
 
-Firmware is board-specific. The Waveshare **1.75C**, **1.75** and **1.75-G** each have a separate installer profile. New non-C SD/GPS features await field testing; Elecrow has passed initial checks on one unit. [Hardware guide](docs/HARDWARE.md) · [Feature comparison](docs/FEATURE-MATRIX.md) · [Tested hardware and limitations](docs/VALIDATION.md)
+Firmware is board-specific. The Waveshare **1.75C**, **1.75** and **1.75-G** each have a separate installer profile. Non-C SD captures and GPS transport have passed bench checks; GPS routes still await field testing. Elecrow has passed initial checks on one unit. [Hardware guide](docs/HARDWARE.md) · [Feature comparison](docs/FEATURE-MATRIX.md) · [Tested hardware and limitations](docs/VALIDATION.md)
 
 ## Watcher beta
 

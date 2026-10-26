@@ -8,6 +8,8 @@ void networkStop();
 void networkStatus(char*,size_t,bool readable=false);
 bool networkCommand(const String&);
 bool networkConnect(unsigned,bool clockOnly=false);
+bool networkConnectCredentials(const char*,const char*);
+bool networkConnected();
 bool networkPingGateway();
 bool networkScanLocal();
 unsigned networkProfiles(char names[][33],unsigned slots[],unsigned capacity);

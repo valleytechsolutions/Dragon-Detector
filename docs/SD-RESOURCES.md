@@ -15,7 +15,7 @@ Download `dragon-resources-v1-20261023.zip`. Extract **the `dragon` directory to
 | Seeed SenseCAP Watcher (0.13.29+) | Optional | External AT6668 via UART; GPS testing deferred; no automatic upload |
 | Spotpear / Guition JC3636W518 | Optional | No |
 | Waveshare ESP32-S3-Touch-AMOLED-1.75 | Optional | No |
-| Waveshare ESP32-S3-Touch-AMOLED-1.75-G | Optional | LC76G; upload transport not enabled in this beta |
+| Waveshare ESP32-S3-Touch-AMOLED-1.75-G | Optional | LC76G; 0.13.39 development adds explicit [SD-configured uploads](WARDRIVE-UPLOADS.md), pending live service validation |
 | Waveshare ESP32-S3-Touch-AMOLED-1.75C | None | No |
 | LILYGO T-Display-S3-AMOLED-1.75, H0175Y003AM | Optional | No |
 | Seeed XIAO ESP32-S3 + Round Display | Optional | No |
