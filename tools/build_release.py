@@ -1,6 +1,6 @@
 """Build matching board images and ESP Web Tools manifests; never use device dumps."""
 from pathlib import Path
-import argparse, csv, hashlib, json, os, re, shutil, subprocess, sys
+import argparse, csv, hashlib, json, os, re, shutil, subprocess, sys, zipfile
 from flash_budget import report as flash_report
 ROOT=Path(__file__).resolve().parents[1]
 BOARDS={'watcher':('Seeed SenseCAP Watcher','seeed-watcher'),'m5dial':('M5Stack Dial','m5stack-dial'),'lilygo_175':('LilyGo T-Display-S3-AMOLED-1.75','lilygo-amoled-175'),'elecrow_21':('Elecrow CrowPanel 2.1 Rotary','elecrow-rotary-21'),'waveshare_175_gps':('Waveshare ESP32-S3-Touch-AMOLED-1.75-G','waveshare-amoled-175'),'waveshare_175':('Waveshare ESP32-S3-Touch-AMOLED-1.75','waveshare-amoled-175'),'spotpear':('Spotpear JC3636W518','spotpear'),'waveshare':('Waveshare ESP32-S3-Touch-AMOLED-1.75C','waveshare-amoled'),'stopwatch':('M5Stack StopWatch C152','m5stack-stopwatch'),'xiao_round':('Seeed XIAO ESP32-S3 + Round Display','xiao-round'),'waveshare_lite':('Waveshare ESP32-S3-LCD-1.28 Lite','waveshare-lite')}
@@ -103,6 +103,13 @@ def build(board,skip):
     (out/'memory-budget.json').write_text(json.dumps(metadata['memory'],indent=2)+'\n',encoding='utf-8')
     if board=='waveshare':metadata.update(recon_offset=recon_offset,recon_size=recon_size,update_preserves_recon=True)
     (out/'build-info.json').write_text(json.dumps(metadata,indent=2)+'\n',encoding='utf-8')
+    bundle=out/f'dragon-detector-{board}.zip'
+    with zipfile.ZipFile(bundle,'w',zipfile.ZIP_DEFLATED) as archive:
+        for file in sorted(out.iterdir()):
+            if file.is_file() and file.suffix!='.zip':archive.write(file,file.name)
+    with zipfile.ZipFile(bundle) as archive:assert archive.testzip() is None,'Corrupt board ZIP'
+    with (out/'SHA256SUMS.txt').open('a',encoding='ascii') as checksums:
+        checksums.write(f'{hashlib.sha256(bundle.read_bytes()).hexdigest()}  {bundle.name}\n')
     print(f'PACKAGED {board}: {len(merged)} bytes, verified offsets and SHA-256')
 
 if __name__=='__main__':
