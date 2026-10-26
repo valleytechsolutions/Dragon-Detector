@@ -22,6 +22,14 @@ sync waits for a free I2C transaction slot and reports the result. Native tests
 cover unset-clock recovery and preserving an already-valid clock. Battery-backed
 shutdown retention remains untested because no batteries are attached.
 
+After the owner reported reconnecting the GPS board, a read-only check found the
+RTC valid, oscillator-loss clear, and time advancing two seconds over two seconds.
+It was three seconds behind the host UTC clock; the saved offset remained −240
+minutes. GPS reported a fresh fix using 20 satellites. No USB time-setting or
+manual GPS-sync command was sent during this check. The observed uptime continued
+from the latest flash, so the check establishes current clock/GPS health but does
+not independently capture an invalid-RTC → automatic-recovery cold-boot transition.
+
 ## Optional external GPS on the standard board
 
 The standard `waveshare_175` image now offers **SYSTEM → GPS setup**. It defaults
