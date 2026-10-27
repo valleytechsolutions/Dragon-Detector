@@ -4,7 +4,7 @@ import {maintainComputerClock} from './clock-maintenance.js?v=2026-10-23-dial-v1
 import {startRadarBackground} from './radar-background.js?v=0.13.12';
 import {completeInstallSession,syncInstalledClock} from './install-clock.js?v=2026-10-25-locksport-01338';
 import {checkRelease,usbErrorText,installDiagnostics} from './install-checks.js?v=2026-10-25-locksport-01338';
-import {updateVisitCounter} from './visit-counter.js?v=2026-10-18';
+import {createInstallCounter} from './install-counter.js?v=2026-10-26-installs';
 import {hasFullLab,hasFullRecon,hasSessionTools} from './lab-capabilities.js?v=2026-10-25-locksport-01338';
 import {sessionName,downloadMission,recipePutCommand,sourceMacCommand} from './mission-tools.js?v=0.13.21';
 import {hasNetworkTools,networkProfileCommand,networkResultsCsv} from './network-tools.js?v=0.13.3';
@@ -13,7 +13,7 @@ import {hasReconTools,reconLines,exportCapture,exportReconFile,captureName,impor
 import {decodeProfile,exportProfile,exportLog,importProfile,labLines,safeProfileName} from './ble-lab.js?v=0.13.21';
 import {localClockEpoch,setClock,readWearable,setOrientation} from './wearable-transfer.js?v=0.13.12';
 import {syncVerifiedClock,clockResultText} from './clock-verification.js?v=2026-10-25-locksport-01338';
-import {clockInstallDialogClass} from './clock-install-dialog.js?v=2026-10-21-flasher';
+import {clockInstallDialogClass} from './clock-install-dialog.js?v=2026-10-26-installs';
 import {deviceQuery} from './device-query.js';
 import {BadgeSerial} from './serial.js?v=0.13.3';
 import {encodeBadge} from './badge-codec.js?v=2026-10-25-locksport-01338';
@@ -32,7 +32,8 @@ import {hasPersonalThemes} from './theme-transfer.js?v=0.13.17';
 setupWorkspaceTabs();
 revealLocation();
 const $ = id => document.getElementById(id);
-void updateVisitCounter($('visit-count'));
+const installCounter=createInstallCounter($('install-count'));
+void installCounter.refresh();
 startRadarBackground($('radar-background'),$('radar-motion'));
 const models = Object.fromEntries(Object.entries(boardProfiles).map(([id,p])=>[id,p.name]));
 let serial=null;
@@ -137,6 +138,7 @@ $('install-button').onclick=async()=>{
   try{
     port=await navigator.serial.requestPort();await port.open({baudRate:115200,bufferSize:8192});
     const dialog=document.createElement('dragon-clock-install-dialog');
+    dialog.onFirmwareInstalled=()=>{void installCounter.recordInstall();};
     dialog.installMode=$('install-mode').value;dialog.autoClock=autoClock;dialog.autoTheme=!!customTheme;
     dialog.port=port;dialog.manifestPath=$('installer').getAttribute('manifest');
     dialog.addEventListener('closed',async()=>{

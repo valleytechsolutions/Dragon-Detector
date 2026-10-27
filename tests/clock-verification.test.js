@@ -94,3 +94,17 @@ test('completed flash stays successful when USB cannot reopen; failed writes do 
   dialog._installState={state:'error',message:'Writing stopped'};
   assert.equal(dialog.installSucceeded,false);assert.equal(dialog.installError,'Writing stopped');
 });
+
+test('install counter reports successful writes once, including clock opt-out and USB reopen failure',async()=>{
+  for(const config of [{},{autoClock:false},{_state:'ERROR'}]){
+    const {dialog}=dialogRig();Object.assign(dialog,config);let reported=0;dialog.onFirmwareInstalled=()=>++reported;
+    await dialog._initialize(false);dialog._closeDialog();assert.equal(reported,0);
+    dialog._installState={state:'error'};dialog._closeDialog();assert.equal(reported,0);
+    dialog._installState={state:'finished'};await dialog._initialize(true);dialog._closeDialog();dialog._closeDialog();assert.equal(reported,1);
+    dialog._startInstall();dialog._installState={state:'finished'};await dialog._initialize(true);assert.equal(reported,2);
+  }
+  class BrokenUsb {async _initialize(){throw new Error('USB reopen failed');}_startInstall(){}_closeDialog(){}}
+  const dialog=new (clockInstallDialogClass(BrokenUsb))();dialog._installState={state:'finished'};let reported=0;dialog.onFirmwareInstalled=()=>++reported;
+  await assert.rejects(dialog._initialize(true),/USB reopen/);dialog._closeDialog();assert.equal(reported,1);
+  dialog._installReported=false;dialog.onFirmwareInstalled=()=>{throw new Error('counter failed');};assert.doesNotThrow(()=>dialog._closeDialog());
+});

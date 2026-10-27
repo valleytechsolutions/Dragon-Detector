@@ -29,6 +29,6 @@ After checking all five board selectors, both installation modes, the Custom the
 npx wrangler@4.139.0 pages deploy .build/site --project-name valleytech-dragon-detector --branch main
 ```
 
-Verify the public manifests and downloaded image hashes after deployment. A website-only update can reuse the existing firmware version; it must not claim that device firmware changed. Keep Cloudflare and GitHub hosting synchronized during future releases. The visit counter allows both production origins and retains a single shared total; its deployment is documented in [VISIT-COUNTER.md](VISIT-COUNTER.md).
+Verify the public manifests and downloaded image hashes after deployment. A website-only update can reuse the existing firmware version; it must not claim that device firmware changed. Keep Cloudflare and GitHub hosting synchronized during future releases. The install counter allows both production origins and counts completed firmware writes; its deployment is documented in [INSTALL-COUNTER.md](INSTALL-COUNTER.md).
 
 Do not upload `.work/`, `.pio/`, device flash backups, scan contacts, raw packet captures, credentials or local serial logs. Generated current firmware lives in CI artifacts / Pages, not under a misleading older version filename. Earlier board releases remain under `hardware/` with original licenses.

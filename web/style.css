@@ -28,7 +28,7 @@ textarea{width:100%;box-sizing:border-box;resize:vertical;background:#081b15;col
 
 nav{flex-wrap:wrap;justify-content:flex-end;gap:14px 20px}#locksport{padding-top:65px;scroll-margin-top:30px}@media(min-width:1000px){#locksport .theme-gallery{grid-template-columns:repeat(4,minmax(0,1fr))}}
 
-header{position:relative;padding-right:128px}.visit-counter{position:absolute;right:0;top:24px;display:grid;gap:4px;text-align:right;min-width:86px}.visit-counter span{font:10px/1.2 monospace;letter-spacing:.16em;color:var(--muted)}.visit-counter strong{font:600 18px/1.2 monospace;color:var(--lime);font-variant-numeric:tabular-nums}@media(max-width:700px){header{padding-right:0;padding-top:18px}.brand{padding-right:100px}.visit-counter{top:19px;right:0}header nav{width:100%}}
+header{position:relative;padding-right:128px}.install-counter{position:absolute;right:0;top:24px;display:grid;gap:4px;text-align:right;min-width:86px}.install-counter span{font:10px/1.2 monospace;letter-spacing:.16em;color:var(--muted)}.install-counter strong{font:600 18px/1.2 monospace;color:var(--lime);font-variant-numeric:tabular-nums}@media(max-width:700px){header{padding-right:0;padding-top:18px}.brand{padding-right:100px}.install-counter{top:19px;right:0}header nav{width:100%}}
 
 /* A decorative field behind content. Fixed dimensions override badge canvases. */
 body{isolation:isolate}#radar-background{position:fixed;inset:0;z-index:-1;width:100vw;height:100vh;max-width:none;aspect-ratio:auto;border-radius:0;outline:0;box-shadow:none;pointer-events:none;touch-action:auto;opacity:.64;cursor:default}
@@ -47,8 +47,8 @@ body{isolation:isolate}#radar-background{position:fixed;inset:0;z-index:-1;width
 header{gap:22px;padding:22px 128px 22px 30px;min-height:86px}
 header nav{gap:22px;font-size:12px}
 .brand{font-weight:700;white-space:nowrap;letter-spacing:.09em}
-.visit-counter{right:30px;top:24px}
-.visit-counter strong{font-size:16px;color:var(--text)}
+.install-counter{right:30px;top:24px}
+.install-counter strong{font-size:16px;color:var(--text)}
 .hero{padding-top:64px;padding-bottom:52px;gap:54px;align-items:center}
 .hero h1{font-size:clamp(72px,7.5vw,108px);line-height:.92;letter-spacing:-.035em}
 .hero .lede{max-width:470px;line-height:1.8;font-size:17px}
@@ -79,8 +79,8 @@ header nav{gap:22px;font-size:12px}
 .notes h2{font-size:36px}
 #radar-background{opacity:.28}
 #radar-motion{font-size:10px;white-space:nowrap}
-@media(max-width:1050px){header{flex-wrap:wrap}header nav{width:100%;gap:20px}.hero{gap:30px}.visit-counter{top:27px}.hero .lede{font-size:16px}}
-@media(max-width:700px){header{padding:20px}.visit-counter{right:20px;top:24px}.brand{padding-right:65px}header nav{gap:17px}.hero{padding-top:40px;gap:20px}.hero h1{font-size:78px}.project-logo{max-width:250px}.hero .radar-art{margin-top:16px}.release-banner{align-items:flex-start;flex-wrap:wrap;gap:9px 18px}.release-banner span{width:100%;order:2}.release-banner a{margin-left:auto}.theme-library{padding:0 16px}.theme-library>summary{flex-wrap:wrap}.theme-library>summary small{display:none}.section-heading h2{font-size:36px}.nav-tools>div{right:0}.feature-strip{gap:20px}}
+@media(max-width:1050px){header{flex-wrap:wrap}header nav{width:100%;gap:20px}.hero{gap:30px}.install-counter{top:27px}.hero .lede{font-size:16px}}
+@media(max-width:700px){header{padding:20px}.install-counter{right:20px;top:24px}.brand{padding-right:65px}header nav{gap:17px}.hero{padding-top:40px;gap:20px}.hero h1{font-size:78px}.project-logo{max-width:250px}.hero .radar-art{margin-top:16px}.release-banner{align-items:flex-start;flex-wrap:wrap;gap:9px 18px}.release-banner span{width:100%;order:2}.release-banner a{margin-left:auto}.theme-library{padding:0 16px}.theme-library>summary{flex-wrap:wrap}.theme-library>summary small{display:none}.section-heading h2{font-size:36px}.nav-tools>div{right:0}.feature-strip{gap:20px}}
 
 /* A small, equally weighted set of device previews. */
 .firmware-previews{padding-top:65px;scroll-margin-top:30px}
