@@ -2,24 +2,24 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {DatabaseSync} from 'node:sqlite';
-import worker,{VisitCounter} from '../services/visit-counter/worker.js';
+import worker,{InstallCounter} from '../services/install-counter/worker.js';
 import {createInstallCounter,isProductionOrigin} from '../web/install-counter.js';
 
 const origin='https://valleytechsolutions.github.io';
 function fixture(){
   const db=new DatabaseSync(':memory:');
   const ctx={storage:{sql:{exec(query,...args){const rows=db.prepare(query).all(...args);return {one:()=>rows[0]};}}}};
-  let counter=new VisitCounter(ctx);
-  return {db,env:{VISITS:{idFromName:x=>x,get:()=>counter}},restart(){counter=new VisitCounter(ctx);}};
+  let counter=new InstallCounter(ctx);
+  return {db,env:{INSTALLS:{idFromName:x=>x,get:()=>counter}},restart(){counter=new InstallCounter(ctx);}};
 }
 const req=(method='GET',id=randomUUID(),site=origin,path='/installs')=>new Request('https://counter'+path,{method,headers:{Origin:site,'Content-Type':'application/json'},...(method==='POST'?{body:JSON.stringify({id})}:{})});
 const count=async(f,path='/installs')=>(await (await worker.fetch(req('GET',undefined,origin,path),f.env)).json()).count;
-test('installs begin at zero; visits are preserved and frozen even for cached old pages',async()=>{
+test('installs begin at zero independently of any historical visits',async()=>{
   const f=fixture();try{
-    f.db.prepare('UPDATE visits SET count=9876').run();
-    assert.equal(await count(f),0);assert.equal(await count(f,'/visits'),9876);
-    await worker.fetch(req('POST',randomUUID(),origin,'/visits'),f.env);
-    assert.equal(await count(f,'/visits'),9876);assert.equal(await count(f),0);
+    f.db.exec('CREATE TABLE visits (count INTEGER); INSERT INTO visits VALUES (9876)');
+    assert.equal(await count(f),0);f.restart();assert.equal(await count(f),0);
+    assert.equal((await worker.fetch(req('POST',randomUUID(),origin,'/visits'),f.env)).status,404);
+    assert.equal(f.db.prepare('SELECT count FROM visits').get().count,9876);
   }finally{f.db.close();}
 });
 test('both production origins can record installs; previews and unrelated origins cannot',async()=>{

@@ -11,7 +11,7 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
     let count=0,reads=0,posts=0;const ids=new Set(),errors=[];
     await context.route('**/*',async route=>{
       const req=route.request(),url=new URL(req.url());
-      if(url.hostname==='dragon-detector-visits.valleytechsolutions-dd.workers.dev'){
+      if(url.hostname==='dragon-detector-installs.valleytechsolutions-dd.workers.dev'){
         assert.equal(url.pathname,'/installs');
         if(req.method()==='POST'){posts++;const {id}=req.postDataJSON();if(!ids.has(id)){ids.add(id);count++;}}
         else if(req.method()==='GET')reads++;

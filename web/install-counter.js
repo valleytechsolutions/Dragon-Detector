@@ -1,5 +1,5 @@
 export const isProductionOrigin = origin => ['https://valleytechsolutions.github.io','https://valleytech-dragon-detector.pages.dev'].includes(origin);
-export function createInstallCounter(element,{fetcher=fetch,production=isProductionOrigin(location.origin),endpoint='https://dragon-detector-visits.valleytechsolutions-dd.workers.dev/installs',newId=()=>crypto.randomUUID()}={}){
+export function createInstallCounter(element,{fetcher=fetch,production=isProductionOrigin(location.origin),endpoint='https://dragon-detector-installs.valleytechsolutions-dd.workers.dev/installs',newId=()=>crypto.randomUUID()}={}){
   let displayed=-1;
   const title='Completed web-flasher installs since October 26, 2026. Updates and reinstalls count; downloads and page visits do not.';
   function show(count){

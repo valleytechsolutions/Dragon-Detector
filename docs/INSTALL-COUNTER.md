@@ -1,11 +1,17 @@
 # Completed web-flasher installs
 
+**Deployment pending.** On October 26, 2026, Cloudflare returned HTTP 403 for
+updating the old counter service and for creating the separate install-counter
+Worker. Source and browser tests pass; the public website has not been replaced.
+Restore Workers access before deploying, and confirm the actual workers.dev URL
+returned by Wrangler matches the frontend endpoint below.
+
 The top-right **INSTALLS** counter starts October 26, 2026. It counts successful
 firmware writes reported by the web installer on the two production origins.
 Updates and reinstalls count. Page loads, firmware downloads, cancelled/failed
 writes, USB clock-only setup and personal-theme-only uploads do not.
 
-The former page-visit total is preserved separately and frozen. It is not used
+The existing page-visit total remains in its separate service. It is not used
 as an install baseline: historical installs cannot be inferred from page visits.
 Command-line, M5Burner, Tuya-tool and other external installs are not observed.
 
@@ -30,20 +36,22 @@ before delivery can undercount. Unknown/unavailable totals display a dash.
 
 ## Endpoints and deployment
 
-Worker: `services/visit-counter/`; public endpoint:
-`https://dragon-detector-visits.valleytechsolutions-dd.workers.dev/installs`.
+Worker: `services/install-counter/`; planned endpoint (verify after deployment):
+`https://dragon-detector-installs.valleytechsolutions-dd.workers.dev/installs`.
 GET reads the count without incrementing. POST accepts a JSON UUID-v4 `id` from
 `https://valleytechsolutions.github.io` or
 `https://valleytech-dragon-detector.pages.dev`. Local and preview sites only read.
-The old `/visits` endpoint returns its frozen historical total, including for
-cached old pages still sending POST requests.
+The old visit service is untouched and may still receive page-load requests
+from cached old pages. Current source uses only the new install service.
 
-Preserve the existing Worker name, `VisitCounter` class, `VISITS` binding,
-migration history and `dragon-detector-flasher` instance. New install tables
-are additive; do not rename/drop the old visits table or seed installs from it.
-Deploy the Worker before the updated website. No firmware rebuild is required.
+The new Worker is `dragon-detector-installs`, with class `InstallCounter`, binding
+`INSTALLS`, migration `v1` and named instance `dragon-detector-flasher-installs`.
+Preserve these after first deployment to retain the total. Do not seed installs
+from the old visit count. Deploy the Worker before the updated website. No
+firmware rebuild is required. The prepared website retains every published
+0.13.38 firmware package; only counter-related assets and guides change.
 
 `tests/install-counter.test.js` exercises real SQLite, concurrent completions,
-lost-response deduplication, persistence, legacy visits, origin checks, bad
+lost-response deduplication, persistence, independent visit totals, origin checks, bad
 requests, stale reads and failure handling. `tests/clock-verification.test.js`
 covers success-only reporting and independent USB/clock handoff behavior.

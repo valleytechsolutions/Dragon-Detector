@@ -1,0 +1,26 @@
+{
+  "name": "dragon-detector-installs",
+  "account_id": "3127f33d56e12972e0f069f07cc02734",
+  "main": "worker.js",
+  "compatibility_date": "2026-10-16",
+  "workers_dev": true,
+  "observability": {
+    "enabled": false
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "INSTALLS",
+        "class_name": "InstallCounter"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "InstallCounter"
+      ]
+    }
+  ]
+}
