@@ -6,20 +6,37 @@ import worker,{InstallCounter} from '../services/install-counter/worker.js';
 import {createInstallCounter,isProductionOrigin} from '../web/install-counter.js';
 
 const origin='https://valleytechsolutions.github.io';
-function fixture(){
+function fixture(previous){
   const db=new DatabaseSync(':memory:');
+  if(previous){
+    db.exec('CREATE TABLE installs (id INTEGER PRIMARY KEY CHECK(id=1), count INTEGER NOT NULL); CREATE TABLE install_events (id TEXT PRIMARY KEY, created_at INTEGER NOT NULL)');
+    db.prepare('INSERT INTO installs (id,count) VALUES (1,?)').run(previous.count);
+    db.prepare('INSERT INTO install_events (id,created_at) VALUES (?,?)').run(previous.id,Date.now());
+  }
   const ctx={storage:{sql:{exec(query,...args){const rows=db.prepare(query).all(...args);return {one:()=>rows[0]};}}}};
   let counter=new InstallCounter(ctx);
   return {db,env:{INSTALLS:{idFromName:x=>x,get:()=>counter}},restart(){counter=new InstallCounter(ctx);}};
 }
 const req=(method='GET',id=randomUUID(),site=origin,path='/installs')=>new Request('https://counter'+path,{method,headers:{Origin:site,'Content-Type':'application/json'},...(method==='POST'?{body:JSON.stringify({id})}:{})});
 const count=async(f,path='/installs')=>(await (await worker.fetch(req('GET',undefined,origin,path),f.env)).json()).count;
-test('installs begin at zero independently of any historical visits',async()=>{
+test('requested 2156 baseline persists independently of historical visit storage',async()=>{
   const f=fixture();try{
     f.db.exec('CREATE TABLE visits (count INTEGER); INSERT INTO visits VALUES (9876)');
-    assert.equal(await count(f),0);f.restart();assert.equal(await count(f),0);
+    assert.equal(await count(f),2156);f.restart();assert.equal(await count(f),2156);
+    assert.equal(f.db.prepare('SELECT count FROM installs').get().count,0);
     assert.equal((await worker.fetch(req('POST',randomUUID(),origin,'/visits'),f.env)).status,404);
     assert.equal(f.db.prepare('SELECT count FROM visits').get().count,9876);
+  }finally{f.db.close();}
+});
+
+test('adding the baseline preserves existing completions and retry IDs across restarts',async()=>{
+  const id=randomUUID(),f=fixture({count:7,id});try{
+    assert.deepEqual(await (await worker.fetch(req(),f.env)).json(),{count:2163,baseline:2156,recorded:7,since:'2026-10-26'});
+    await worker.fetch(req('POST',id),f.env);assert.equal(await count(f),2163);
+    await worker.fetch(req('POST'),f.env);assert.equal(await count(f),2164);
+    f.restart();f.restart();assert.equal(await count(f),2164);
+    assert.equal(f.db.prepare('SELECT count FROM installs').get().count,8);
+    assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM install_baseline').get().n,1);
   }finally{f.db.close();}
 });
 test('both production origins can record installs; previews and unrelated origins cannot',async()=>{
@@ -30,16 +47,16 @@ test('both production origins can record installs; previews and unrelated origin
     for(const site of ['https://preview.valleytech-dragon-detector.pages.dev','https://valleytech-dragon-detector.pages.dev.evil.test','http://localhost:8149','']){
       assert.equal(isProductionOrigin(site),false);assert.equal((await worker.fetch(req('POST',randomUUID(),site),f.env)).status,403);
     }
-    assert.equal(await count(f),2);
+    assert.equal(await count(f),2158);
   }finally{f.db.close();}
 });
 test('atomic increments and retry deduplication survive object reconstruction',async()=>{
   const f=fixture();try{
     const ids=Array.from({length:40},randomUUID);
     await Promise.all(ids.flatMap(id=>[worker.fetch(req('POST',id),f.env),worker.fetch(req('POST',id),f.env)]));
-    assert.equal(await count(f),40);f.restart();await worker.fetch(req('POST',ids[0].toUpperCase()),f.env);assert.equal(await count(f),40);
+    assert.equal(await count(f),2196);f.restart();await worker.fetch(req('POST',ids[0].toUpperCase()),f.env);assert.equal(await count(f),2196);
     f.db.prepare('UPDATE install_events SET created_at=0').run();await worker.fetch(req('POST'),f.env);
-    assert.equal(await count(f),41);assert.equal(f.db.prepare('SELECT count(*) AS n FROM install_events').get().n,1);
+    assert.equal(await count(f),2197);assert.equal(f.db.prepare('SELECT count(*) AS n FROM install_events').get().n,1);
   }finally{f.db.close();}
 });
 test('bad routes, methods, IDs and bounded request bodies cannot increment',async()=>{
@@ -48,7 +65,7 @@ test('bad routes, methods, IDs and bounded request bodies cannot increment',asyn
     for(const body of ['{}','null','oops',JSON.stringify({id:'not-an-id'}),'x'.repeat(129)]){
       const r=await worker.fetch(new Request('https://counter/installs',{method:'POST',headers:{Origin:origin},body}),f.env);assert.ok([400,413].includes(r.status));
     }
-    const r=await worker.fetch(req('OPTIONS'),f.env);assert.equal(r.headers.get('Access-Control-Allow-Headers'),'Content-Type');assert.equal(await count(f),0);
+    const r=await worker.fetch(req('OPTIONS'),f.env);assert.equal(r.headers.get('Access-Control-Allow-Headers'),'Content-Type');assert.equal(await count(f),2156);
   }finally{f.db.close();}
 });
 test('page loads only read, success reports only from production, totals format correctly',async()=>{
@@ -66,7 +83,7 @@ test('a lost POST response retries the same ID and never double counts',async()=
       bodies.push(options.body);const r=await worker.fetch(new Request(url,{...options,headers:{...options.headers,Origin:origin}}),f.env);
       if(++attempts===1)throw new Error('response lost');return r;
     }});
-    await counter.recordInstall();assert.equal(attempts,2);assert.equal(bodies[0],bodies[1]);assert.equal(await count(f),1);assert.equal(el.textContent,'1');
+    await counter.recordInstall();assert.equal(attempts,2);assert.equal(bodies[0],bodies[1]);assert.equal(await count(f),2157);assert.equal(el.textContent,'2,157');
   }finally{f.db.close();}
 });
 test('slow GET cannot replace a newer success count; counter outages never escape to USB flow',async()=>{

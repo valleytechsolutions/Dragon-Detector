@@ -8,6 +8,10 @@ export class InstallCounter {
     this.sql=ctx.storage.sql;
     this.sql.exec('CREATE TABLE IF NOT EXISTS installs (id INTEGER PRIMARY KEY CHECK(id=1), count INTEGER NOT NULL)');
     this.sql.exec('INSERT OR IGNORE INTO installs (id,count) VALUES (1,0)');
+    // Owner-requested carry-forward on 2026-10-27. Keep this separate from
+    // measured completions; INSERT OR IGNORE preserves it across restarts.
+    this.sql.exec('CREATE TABLE IF NOT EXISTS install_baseline (id INTEGER PRIMARY KEY CHECK(id=1), count INTEGER NOT NULL)');
+    this.sql.exec('INSERT OR IGNORE INTO install_baseline (id,count) VALUES (1,2156)');
     this.sql.exec('CREATE TABLE IF NOT EXISTS install_events (id TEXT PRIMARY KEY, created_at INTEGER NOT NULL)');
     this.sql.exec('CREATE TRIGGER IF NOT EXISTS count_install AFTER INSERT ON install_events BEGIN UPDATE installs SET count=count+1 WHERE id=1; END');
   }
@@ -28,7 +32,9 @@ export class InstallCounter {
       // completion cannot increment twice, even after a response is lost.
       this.sql.exec('INSERT OR IGNORE INTO install_events (id,created_at) VALUES (?,?)',data.id.toLowerCase(),now);
     }
-    return reply({count:this.sql.exec('SELECT count FROM installs WHERE id=1').one().count,since:'2026-10-26'});
+    const recorded=this.sql.exec('SELECT count FROM installs WHERE id=1').one().count;
+    const baseline=this.sql.exec('SELECT count FROM install_baseline WHERE id=1').one().count;
+    return reply({count:baseline+recorded,baseline,recorded,since:'2026-10-26'});
   }
 }
 

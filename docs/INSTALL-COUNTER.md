@@ -5,13 +5,16 @@ permissions were restored through OAuth reauthorization on October 26, 2026.
 Its production endpoint below was verified with a read-only request before
 publishing the updated flasher.
 
-The top-right **INSTALLS** counter starts October 26, 2026. It counts successful
-firmware writes reported by the web installer on the two production origins.
+The top-right **INSTALLS** counter includes an owner-requested starting total of
+**2,156**, carried forward on October 27, 2026. Successful firmware writes reported
+by the web installer since October 26 are added to that baseline on the two production origins.
 Updates and reinstalls count. Page loads, firmware downloads, cancelled/failed
 writes, USB clock-only setup and personal-theme-only uploads do not.
 
-The existing page-visit total remains in its separate service. It is not used
-as an install baseline: historical installs cannot be inferred from page visits.
+The original page-visit data remains in its separate service. The carried-forward
+2,156 is the owner's chosen baseline, not a reconstruction of historical installs
+from visits. It is stored separately from newly measured completions, so existing
+completions and retry IDs are preserved. The tooltip identifies the carry-forward.
 Command-line, M5Burner, Tuya-tool and other external installs are not observed.
 
 ## Completion and storage
@@ -37,7 +40,8 @@ before delivery can undercount. Unknown/unavailable totals display a dash.
 
 Worker: `services/install-counter/`; production endpoint:
 `https://dragon-detector-installs.valleytechsolutions-dd.workers.dev/installs`.
-GET reads the count without incrementing. POST accepts a JSON UUID-v4 `id` from
+GET reads the total `count`, carried-forward `baseline` and measured `recorded`
+completions without incrementing. POST accepts a JSON UUID-v4 `id` from
 `https://valleytechsolutions.github.io` or
 `https://valleytech-dragon-detector.pages.dev`. Local and preview sites only read.
 The old visit service is untouched and may still receive page-load requests
@@ -45,12 +49,13 @@ from cached old pages. Current source uses only the new install service.
 
 The new Worker is `dragon-detector-installs`, with class `InstallCounter`, binding
 `INSTALLS`, migration `v1` and named instance `dragon-detector-flasher-installs`.
-Preserve these after first deployment to retain the total. Do not seed installs
-from the old visit count. Deploy the Worker before the updated website. No
+Preserve these after first deployment to retain the total. The singleton
+`install_baseline` row is inserted only if absent; restarting or redeploying
+cannot add it again or overwrite measured completions. Deploy the Worker before the updated website. No
 firmware rebuild is required. This website update retains every published
 0.13.38 firmware package; only counter-related assets and guides change.
 
 `tests/install-counter.test.js` exercises real SQLite, concurrent completions,
-lost-response deduplication, persistence, independent visit totals, origin checks, bad
+lost-response deduplication, baseline migration with existing completions, restart persistence, origin checks, bad
 requests, stale reads and failure handling. `tests/clock-verification.test.js`
 covers success-only reporting and independent USB/clock handoff behavior.
