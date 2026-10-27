@@ -1,10 +1,9 @@
 # Completed web-flasher installs
 
-**Deployment pending.** On October 26, 2026, Cloudflare returned HTTP 403 for
-updating the old counter service and for creating the separate install-counter
-Worker. Source and browser tests pass; the public website has not been replaced.
-Restore Workers access before deploying, and confirm the actual workers.dev URL
-returned by Wrangler matches the frontend endpoint below.
+The separate install-counter Worker is deployed. Wrangler's missing Workers
+permissions were restored through OAuth reauthorization on October 26, 2026.
+Its production endpoint below was verified with a read-only request before
+publishing the updated flasher.
 
 The top-right **INSTALLS** counter starts October 26, 2026. It counts successful
 firmware writes reported by the web installer on the two production origins.
@@ -36,7 +35,7 @@ before delivery can undercount. Unknown/unavailable totals display a dash.
 
 ## Endpoints and deployment
 
-Worker: `services/install-counter/`; planned endpoint (verify after deployment):
+Worker: `services/install-counter/`; production endpoint:
 `https://dragon-detector-installs.valleytechsolutions-dd.workers.dev/installs`.
 GET reads the count without incrementing. POST accepts a JSON UUID-v4 `id` from
 `https://valleytechsolutions.github.io` or
@@ -48,7 +47,7 @@ The new Worker is `dragon-detector-installs`, with class `InstallCounter`, bindi
 `INSTALLS`, migration `v1` and named instance `dragon-detector-flasher-installs`.
 Preserve these after first deployment to retain the total. Do not seed installs
 from the old visit count. Deploy the Worker before the updated website. No
-firmware rebuild is required. The prepared website retains every published
+firmware rebuild is required. This website update retains every published
 0.13.38 firmware package; only counter-related assets and guides change.
 
 `tests/install-counter.test.js` exercises real SQLite, concurrent completions,
