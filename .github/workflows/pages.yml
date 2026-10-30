@@ -1,12 +1,14 @@
-name: Publish web flasher
+name: Forward visitors to web flasher
 on:
-  workflow_run:
-    workflows: [Firmware and web checks]
+  push:
     branches: [main]
-    types: [completed]
+    paths:
+      - .github/workflows/pages.yml
+      - hosting/github-pages/**
+      - tests/github-pages-redirect.test.js
+  workflow_dispatch:
 permissions:
   contents: read
-  actions: read
   pages: write
   id-token: write
 concurrency:
@@ -14,92 +16,23 @@ concurrency:
   cancel-in-progress: false
 jobs:
   deploy:
-    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha }}
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ github.event.workflow_run.id }}
-          name: dragon-detector-spotpear
-          path: web/firmware/spotpear
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ github.event.workflow_run.id }}
-          name: dragon-detector-waveshare
-          path: web/firmware/waveshare
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ github.event.workflow_run.id }}
-          name: dragon-detector-stopwatch
-          path: web/firmware/stopwatch
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ github.event.workflow_run.id }}
-          name: dragon-detector-m5dial
-          path: web/firmware/m5dial
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ github.event.workflow_run.id }}
-          name: dragon-detector-xiao_round
-          path: web/firmware/xiao_round
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ github.event.workflow_run.id }}
-          name: dragon-detector-waveshare_lite
-          path: web/firmware/waveshare_lite
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ github.event.workflow_run.id }}
-          name: dragon-detector-waveshare_175
-          path: web/firmware/waveshare_175
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ github.event.workflow_run.id }}
-          name: dragon-detector-waveshare_175_gps
-          path: web/firmware/waveshare_175_gps
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ github.event.workflow_run.id }}
-          name: dragon-detector-elecrow_21
-          path: web/firmware/elecrow_21
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ github.event.workflow_run.id }}
-          name: dragon-detector-lilygo_175
-          path: web/firmware/lilygo_175
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ github.event.workflow_run.id }}
-          name: dragon-detector-watcher
-          path: web/firmware/watcher
-      - name: Verify published manifests and images
-        run: python tools/validate_release.py
-      - name: Verify browser accepts every generated manifest
-        run: node tools/check_web_manifests.mjs
-      - name: Package firmware and standalone guides
+      - name: Check forwarding destinations
+        run: node --test tests/github-pages-redirect.test.js
+      - name: Package forwarding page
         run: |
-          python -m pip install -r tools/requirements-site.txt
-          python tools/build_static_site.py --output .build/site
+          mkdir -p .build/github-pages
+          cp hosting/github-pages/index.html .build/github-pages/index.html
+          cp hosting/github-pages/index.html .build/github-pages/404.html
+          touch .build/github-pages/.nojekyll
       - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
-          path: .build/site
+          path: .build/github-pages
       - uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
         id: deployment

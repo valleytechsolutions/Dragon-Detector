@@ -1,6 +1,6 @@
 # Installation and hosting status
 
-Updated October 25, 2026.
+Updated October 30, 2026.
 
 ## Working web flasher
 
@@ -8,7 +8,11 @@ Updated October 25, 2026.
 
 This independently hosted copy includes the 0.13.38 firmware for all eleven board profiles, USB date/time setup, device tools and the optional personal-theme creator. Guides and screenshots are served here too. The firmware on an already-installed device is unaffected by a website outage.
 
-The original GitHub Pages address, public repository pages and GitHub-hosted images are currently unavailable. The original source, artwork, release files and Git history remain intact. This is a hosting/account-access issue; reinstalling firmware or erasing a device will not repair the website.
+Public GitHub repository access is restored. The [repository](https://github.com/valleytechsolutions/Dragon-Detector)
+links directly to this working flasher. The original
+[GitHub Pages address](https://valleytechsolutions.github.io/Dragon-Detector/)
+forwards visitors here, preserving tab links, query parameters and guide paths.
+Cloudflare remains the primary installer, so there is one public firmware source.
 
 ## Installation
 
@@ -22,7 +26,12 @@ The Custom theme tab is optional. Its personal-theme slot stays hidden on the de
 
 ## GitHub and Gitea
 
-The Gitea migration copied repositories. It did not move GitHub Pages hosting or configure replacement workflow runners. The GitHub and Gitea repositories are independent copies, so their latest commits and releases can differ. Restoring GitHub access is being handled separately; this flasher does not depend on GitHub Pages to deliver its firmware.
+GitHub now contains the source changes made while access was unavailable. The
+Gitea repository remains a separate copy; its commits and releases can differ.
+The GitHub Pages workflow publishes only the forwarding page. Firmware CI builds
+remain validation artifacts until explicitly released to the primary flasher.
+The public firmware is still 0.13.38 for all eleven profiles; the documented
+0.13.40 Waveshare development source is not automatically promoted by a Git push.
 
 ## M5Burner
 

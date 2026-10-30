@@ -2,14 +2,22 @@
 
 # Dragon Detector
 
-**M5Stack Dial v1.1:** [Version 0.13.27](docs/M5STACK-DIAL.md) adds ring navigation, touch menus, radar dot actions and separate Time/Date settings. Display, controls and RTC restart checks passed on Dial v1.1. See the guide for the compact profile’s feature limits; original K130 remains untested.
-
-
 Wi-Fi and Bluetooth detection, signal tracking, and logo watch faces for ESP32-S3 displays.
 
-**Web flasher available:** [Install from the independent host](https://valleytech-dragon-detector.pages.dev/). The original GitHub Pages address and GitHub-hosted images are temporarily unavailable. Source, artwork and release files are intact; existing devices are unaffected. [Hosting status](docs/HOSTING-STATUS.md).
+[![Open Web Flasher](https://img.shields.io/badge/OPEN_WEB_FLASHER-Install_Dragon_Detector-167c4b?style=for-the-badge)](https://valleytech-dragon-detector.pages.dev/#install)
+
+**[Open the web flasher →](https://valleytech-dragon-detector.pages.dev/#install)**
+Use desktop Chrome or Edge, connect your board with a USB data cable, and choose
+the exact hardware model. The flasher provides firmware, guides and device tools
+without downloading or building this repository.
+
+GitHub source access is restored. The Cloudflare address above remains the primary
+installer; the [original GitHub Pages link](https://valleytechsolutions.github.io/Dragon-Detector/)
+forwards there. [Hosting status](docs/HOSTING-STATUS.md).
 
 [**Install firmware**](https://valleytech-dragon-detector.pages.dev/#install) · [Latest release](docs/RELEASE-0.13.38.md) · [User guides](docs/GUI.md) · [Clock setup](docs/CLOCK-SETUP.md)
+
+**M5Stack Dial v1.1:** [Version 0.13.27](docs/M5STACK-DIAL.md) adds ring navigation, touch menus, radar dot actions and separate Time/Date settings. Display, controls and RTC restart checks passed on Dial v1.1. See the guide for the compact profile’s feature limits; original K130 remains untested.
 
 ## Radar controls and repeating Find My Beeper · 0.13.22
 

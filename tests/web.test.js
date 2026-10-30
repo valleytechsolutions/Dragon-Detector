@@ -69,11 +69,12 @@ test('every board is installable; only full boards have badge preview controls',
   }
 });
 
-test('publishing workflow downloads an independent artifact for every selectable board',()=>{
-  const workflow=readFileSync(new URL('../.github/workflows/pages.yml',import.meta.url),'utf8');
-  const artifacts=[...workflow.matchAll(/name: dragon-detector-(\w+)\s+path: web\/firmware\/(\w+)/g)];
-  assert.deepEqual(artifacts.map(m=>m[1]).sort(),Object.keys(boardProfiles).sort());
-  for(const item of artifacts)assert.equal(item[1],item[2]);
+test('firmware CI keeps an independent artifact for every selectable board',()=>{
+  const workflow=readFileSync(new URL('../.github/workflows/build.yml',import.meta.url),'utf8');
+  const boards=workflow.match(/board: \[([^\]]+)\]/)[1].split(',').map(x=>x.trim());
+  assert.deepEqual(boards.sort(),Object.keys(boardProfiles).sort());
+  assert.ok(workflow.includes('name: dragon-detector-${{ matrix.board }}'));
+  assert.ok(workflow.includes('path: web/firmware/${{ matrix.board }}'));
 });
 
 test('badge chunks stay bounded and terminate with a short USB packet',()=>{
