@@ -1,0 +1,7 @@
+# Reviewed 2026-10-30: exact historical false positives only.
+# Empty example key: the matcher consumed the field name after a comment.
+611c6aa362feea9857c475ac799b799dd26ce4f2:examples/wardriver.cfg.example:generic-api-key:9
+# Empty documentation values: the matcher crossed the newline between fields.
+611c6aa362feea9857c475ac799b799dd26ce4f2:docs/WARDRIVE-UPLOADS.md:generic-api-key:19
+# Synthetic parser fixture abcdefgh12345678, not a service credential.
+611c6aa362feea9857c475ac799b799dd26ce4f2:tools/test_wardrive_upload.py:generic-api-key:98
