@@ -1,6 +1,6 @@
 // 44Delta: supplied wordmark and padlock, original vector lockpick hands.
 // All geometry uses the shared 360px design space; no per-frame allocations.
-extern lv_img_dsc_t radar_logo_delta44,watch_logo_delta44;
+extern lv_img_dsc_t radar_logo_delta44,watch_logo_delta44,watch_dial_delta44;
 static constexpr unsigned Delta44Theme=45,Delta44Watch=48;
 #if SCREEN_RES>=400
 static const lv_font_t *Delta44Small=&lv_font_montserrat_14,*Delta44Medium=&lv_font_montserrat_20;
@@ -48,8 +48,7 @@ static void delta44Watch(lv_draw_ctx_t* ctx,const dragon::Calendar& d,bool valid
   capsuleText(ctx,"III",309,170,30,Delta44Medium,0xb8ebee);
   capsuleText(ctx,"VI",161,310,38,Delta44Medium,0xb8ebee);
   capsuleText(ctx,"IX",22,170,30,Delta44Medium,0xb8ebee);
-  themeArtwork(ctx,watch_logo_delta44,76);
-  capsuleText(ctx,"L O C K S P O R T",80,265,200,Delta44Small,0x739ea5);
+  themeArtwork(ctx,watch_dial_delta44,70);
   if(valid){
     delta44Pick(ctx,(d.hour%12+d.minute/60.f+d.second/3600.f)/12.f,false);
     delta44Pick(ctx,(d.minute+d.second/60.f)/60.f,true);

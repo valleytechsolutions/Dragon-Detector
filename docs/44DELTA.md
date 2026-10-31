@@ -11,6 +11,11 @@ and a small moving seconds marker at the rim. The longer, brighter pick shows
 minutes; the shorter, darker pick shows hours. It has no digital time or date
 overlay. An unset clock displays SET TIME until the clock is synchronized.
 
+Version **0.13.42** enlarges the clock's original skull/wordmark by about 60%
+in each dimension and removes the LOCKSPORT caption at the bottom of the dial.
+The clock uses a separate native-size logo asset, so radar and timer headers
+retain their existing layout.
+
 The radar centers the supplied black spider-engraved padlock with its brass
 shackle. Its cyan sweep travels around the outside of the padlock. Signal dots
 and labels retain their detection-family colors. The sweep is decorative; it

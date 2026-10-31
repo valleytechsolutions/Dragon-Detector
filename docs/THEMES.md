@@ -1,7 +1,7 @@
 # Radar themes
 
-Firmware **0.13.41** offers 45 built-in themes plus an optional personal design
-across all eleven hardware profiles. [Latest changes](RELEASE-0.13.41.md) add
+Firmware **0.13.42** offers 45 built-in themes plus an optional personal design
+across all eleven hardware profiles. [Latest changes](RELEASE-0.13.42.md) refine
 [44Delta](44DELTA.md): cyan on black, a centered padlock radar and an analog-only
 clock with silver lockpick hands. The earlier VectorPotential, Argyle, Law Lock
 Tools and Moki themes remain available.

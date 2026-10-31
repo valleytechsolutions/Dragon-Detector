@@ -32,6 +32,11 @@ appear in the log. This verifies the UI action path, not physical touch sensing
 or button feel. Clock, radar and timer screenshots from the actual device pass
 the USB transfer CRC check and have been visually inspected.
 
+The owner subsequently confirmed that the physical screen looked good and
+touch worked, then requested a larger clock logo and removal of the bottom
+LOCKSPORT caption. Those visual refinements are tracked in
+[0.13.42](RELEASE-0.13.42.md).
+
 The tested StopWatch application is 3,463,856 bytes, leaving 730,448 bytes
 (17.42%) in its 4 MiB application slot. Other profiles are build-validated;
 they were not physically exercised for this theme release.

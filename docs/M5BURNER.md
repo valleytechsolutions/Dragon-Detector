@@ -2,17 +2,17 @@
 
 The M5Burner project is **Dragon Detector - M5Stack StopWatch C152**, with **StopWatch** as its only supported device. Its package contains only the C152 build.
 
-## 0.13.41 release package
+## 0.13.42 release package
 
 The current C152 package adds [44Delta](44DELTA.md): cyan-on-black branding,
 an analog-only lockpick-hand clock, a padlock radar and a Locksport Timer.
 Download the [current C152 factory BIN](https://valleytech-dragon-detector.pages.dev/firmware/stopwatch/factory-0x0.bin)
 and [checksums](https://valleytech-dragon-detector.pages.dev/firmware/stopwatch/SHA256SUMS.txt).
 The checked upload filename is
-`Dragon-Detector-0.13.41-M5Stack-StopWatch-C152-FACTORY-0x0.bin`.
+`Dragon-Detector-0.13.42-M5Stack-StopWatch-C152-FACTORY-0x0.bin`.
 
 Catalog upload/approval is separate from publication on the web flasher. The
-0.13.41 upload has not yet been confirmed: browser automation was blocked by
+0.13.42 upload has not yet been confirmed: browser automation was blocked by
 its URL-verification safety check. Update existing project `2111312268664066049`
 with this merged BIN at 0x0; keep StopWatch as the only supported device.
 
