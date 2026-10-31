@@ -55,9 +55,10 @@ static const WatchPalette watches[]={
   {"VectorPotential",0x02070c,0xe4faff,0x66d9ee,0xa2c9d4,true},
   {"Argyle",0xf5f5f2,0x111417,0x111417,0x525e65,true},
   {"Law Lock Tools",0xffffff,0x074567,0x008bc9,0x376783,true},
-  {"Moki",0x000000,0xe2ffdd,0x34ff16,0x9dcf99,true}
+  {"Moki",0x000000,0xe2ffdd,0x34ff16,0x9dcf99,true},
+  {"44Delta",0x000000,0xe0f7fa,0x00dce4,0x9dbec5,true}
 };
-static constexpr uint8_t WatchFaces[]={0,1,2,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47};
+static constexpr uint8_t WatchFaces[]={0,1,2,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48};
 static constexpr unsigned WatchCount=sizeof(WatchFaces)/sizeof(WatchFaces[0]);
 static bool watchFaceAllowed(unsigned face){if(face==dragon::PersonalWatchId&&!personalThemeReady())return false;for(auto id:WatchFaces)if(id==face)return true;return false;}
 static unsigned watchFacePosition(){for(unsigned i=0;i<WatchCount;++i)if(WatchFaces[i]==watchFace)return i;return 0;}
@@ -296,6 +297,7 @@ static void watchDraw(lv_event_t* e){
   if(watchFace==dragon::PersonalWatchId){personalThemeClock(ctx,d,valid);return;}
   if(watchFace==MuldersRevengeWatch){muldersWatch(ctx,d,valid);return;}
   if(watchFace==LawLockToolsWatch){lltWatch(ctx,d,valid);return;}
+  if(watchFace==Delta44Watch){delta44Watch(ctx,d,valid);return;}
   if(watchFace==MokiWatch){mokiWatch(ctx,d,valid);return;}
   if(watchFace==ArgyleWatch){argyleWatch(ctx,d,valid);return;}
   if(watchFace==VectorPotentialWatch){vpWatch(ctx,d,valid);return;}
@@ -414,6 +416,7 @@ static void buildChronographFrame(){
     }
     if(lpu()&&page==Stopwatch){watchLogo(ctx,radar_logo_lpu,14);watchText(ctx,"LOCKSPORT TIMER",48,74,264,F20,uiColors().accent);}
     if(lawLockTools()&&page==Stopwatch){lltArtwork(ctx,radar_logo_llt,59);watchText(ctx,"LOCKSPORT TIMER",48,90,264,F16,LltInk);}
+    if(delta44()&&page==Stopwatch){themeArtwork(ctx,watch_logo_delta44,26);watchText(ctx,"LOCKSPORT TIMER",48,74,264,F20,uiColors().accent);}
     if(moki()&&page==Stopwatch){themeArtwork(ctx,radar_logo_moki,19);watchText(ctx,"LOCKSPORT TIMER",48,74,264,F20,uiColors().accent);}
     if(argyle()&&page==Stopwatch){argyleArtwork(ctx,radar_logo_argyle,20);watchText(ctx,"LOCKSPORT TIMER",48,74,264,F20,uiColors().accent);}
     if(vectorPotential()&&page==Stopwatch){watchLogo(ctx,watch_logo_vp,23);watchText(ctx,"LOCKSPORT TIMER",48,74,264,F20,uiColors().accent);}

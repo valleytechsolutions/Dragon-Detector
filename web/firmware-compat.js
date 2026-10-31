@@ -45,5 +45,8 @@ export function hasMuldersRevengeTheme(version){const m=/^0\.13\.(0|[1-9]\d*)$/.
 export function hasHypnoticTheme(version){return hasMitmTheme(version);}
 export function hasMitmTheme(version){const m=/^0\.13\.(0|[1-9]\d*)$/.exec(version);return !!m&&Number(m[1])>=26;}
 
+// Persistent ID 45: 44Delta, including its analog-only clock.
+export function hasDelta44Theme(version){const m=/^0\.13\.(0|[1-9]\d*)$/.exec(version);return !!m&&Number(m[1])>=41;}
+
 // Persistent IDs 41..44: VectorPotential, Argyle, Law Lock Tools and Moki.
 export function hasLocksportCollection(version){const m=/^0\.13\.(0|[1-9]\d*)$/.exec(version);return !!m&&Number(m[1])>=38;}

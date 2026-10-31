@@ -76,6 +76,7 @@ static void prepareRadarBackdrop(lv_obj_t* parent,bool enabled){
 #include "argyle_theme.inc"
 #include "lawlocktools_theme.inc"
 #include "moki_theme.inc"
+#include "delta44_theme.inc"
 static const char* radarFamilyName(Family f){
 #if SCREEN_RES<=240
   // Keep the family on one line, leaving the second line for signal/age.
@@ -122,7 +123,7 @@ static void radarDraw(lv_event_t* e){
   const uint32_t now=radarFrameAt;
   static uint32_t plotFrame=UINT32_MAX;const bool advancePlot=plotFrame!=now;plotFrame=now;
   lv_draw_arc_dsc_t arc;lv_draw_arc_dsc_init(&arc);arc.color=color(theme.ring);arc.width=std::max(1,S(1));arc.opa=160;
-  if(radarTheme==LawLockToolsTheme)lltRadarField(ctx);else if(radarTheme==MokiTheme)mokiRadarField(ctx);else if(radarTheme==ArgyleTheme)argyleRadarField(ctx);else if(radarTheme==VectorPotentialTheme)vpRadarField(ctx);else if(radarTheme==HypnoticTheme)hypnoticField(ctx,now,true);else if(radarTheme==MuldersRevengeTheme)muldersRadarField(ctx);else if(greenArtTheme(radarTheme))greenRadarField(ctx,radarTheme==XombiTheme);else if(radarTheme==CanCommanderTheme)canRadarField(ctx,now,radioEnabled);else if(radarTheme==31)capsuleRadarField(ctx,now);else if(radarTheme==32)sparrowsRadarField(ctx);else{
+  if(radarTheme==Delta44Theme)delta44RadarField(ctx);else if(radarTheme==LawLockToolsTheme)lltRadarField(ctx);else if(radarTheme==MokiTheme)mokiRadarField(ctx);else if(radarTheme==ArgyleTheme)argyleRadarField(ctx);else if(radarTheme==VectorPotentialTheme)vpRadarField(ctx);else if(radarTheme==HypnoticTheme)hypnoticField(ctx,now,true);else if(radarTheme==MuldersRevengeTheme)muldersRadarField(ctx);else if(greenArtTheme(radarTheme))greenRadarField(ctx,radarTheme==XombiTheme);else if(radarTheme==CanCommanderTheme)canRadarField(ctx,now,radioEnabled);else if(radarTheme==31)capsuleRadarField(ctx,now);else if(radarTheme==32)sparrowsRadarField(ctx);else{
 #ifdef BOARD_RADAR_LITE
   if(liteBackdrop.data){lv_draw_img_dsc_t d;lv_draw_img_dsc_init(&d);lv_area_t a{0,0,SCREEN_RES-1,SCREEN_RES-1};lv_draw_img(ctx,&d,&a,&liteBackdrop);}
   else {
@@ -197,6 +198,7 @@ static void radarDraw(lv_event_t* e){
   if(radarTheme==28){locksportPinRim(ctx,uint64_t(sweepAt%6000)*10000);lpuEmblem(ctx,150);}
   if(radarTheme==dragon::PersonalThemeId)personalThemeSweep(ctx,angle);
   else if(radarTheme==LawLockToolsTheme)lltRadarSweep(ctx,angle/6.28318530718f+.25f);
+  else if(radarTheme==Delta44Theme)delta44RadarSweep(ctx,angle/6.28318530718f+.25f);
   else if(radarTheme==MokiTheme)mokiRadarSweep(ctx,angle/6.28318530718f+.25f);
   else if(radarTheme==ArgyleTheme)argyleRadarSweep(ctx,angle/6.28318530718f+.25f);
   else if(radarTheme==CanCommanderTheme)canRadarSweep(ctx,angle/6.28318530718f+.25f);
@@ -277,7 +279,7 @@ static void radarDraw(lv_event_t* e){
     disc(ctx,dot.x,dot.y,S(5),contactColor(c));
   }
   // Decorative center cursor, not a compass. Keep it above the sweep/labels.
-  if(radarTheme==CanCommanderTheme||radarTheme==ArgyleTheme||radarTheme==LawLockToolsTheme||radarTheme==MokiTheme)return;
+  if(radarTheme==CanCommanderTheme||radarTheme==ArgyleTheme||radarTheme==LawLockToolsTheme||radarTheme==MokiTheme||radarTheme==Delta44Theme)return;
 #ifdef BOARD_RADAR_LITE
   for(int sign:{-1,1}){line(ctx,CENTER+sign*3,CENTER,CENTER+sign*8,CENTER,theme.ring,1);line(ctx,CENTER,CENTER+sign*3,CENTER,CENTER+sign*8,theme.ring,1);}
   disc(ctx,CENTER,CENTER,1,theme.text);

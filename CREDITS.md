@@ -334,3 +334,13 @@ WiGLE/WDGoWars uploads. Dragon Detector's wardrive dashboard, LC76G transport,
 recording and upload implementation are original
 code; no Piglet code or assets are included. Piglet's LICENSE at that revision is
 CC BY-NC-SA 4.0. Its ESP32-C5 radio capabilities differ from this ESP32-S3 board.
+
+## 44Delta · 0.13.41
+
+The project owner supplied the 44 DELTA cyan skull/wordmark banner and the black
+spider-engraved padlock photograph. The originals are preserved under
+`media/theme-logos/delta44-*-source.webp`; firmware retains the banner geometry.
+The padlock is an imagegen background-extraction derivative, and clock hands
+are original vector illustrations. See [44Delta artwork notes](docs/44DELTA.md)
+and the [source hashes](docs/THEME-ARTWORK.json). Branding belongs to 44Delta;
+inclusion does not imply endorsement.

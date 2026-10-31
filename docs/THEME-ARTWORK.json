@@ -155,7 +155,7 @@
   },
   {
     "file": "media/theme-logos/seeed-studio-source.avif",
-    "supplied_name": "2015新LOGO04.original.avif",
+    "supplied_name": "2015\u65b0LOGO04.original.avif",
     "sha256": "950247a3477492fd901c55a34a018b8945a868ffd0b4ac73450f02d721c3ef95",
     "source_bytes_match": true,
     "direct_copy_before_source_replacement": false
@@ -310,5 +310,26 @@
     "sha256": "3ff763d9f568093364c01184521ebfeb1e233f6f8225c8739f735f0e40573b68",
     "source_bytes_match": true,
     "derivation": "Unchanged user-supplied artwork. Native firmware copies use resizing and palette encoding only; the full emblem and wordmark are retained."
+  },
+  {
+    "file": "media/theme-logos/delta44-padlock-source.webp",
+    "supplied_name": "IMG_2930.webp",
+    "sha256": "ae1e4ba561664c55b7e79c9db36201b02a9f0cf2430beb1a3ebc1fe2398adf67",
+    "source_bytes_match": true,
+    "derivation": "Unchanged user-supplied original; logo geometry retained."
+  },
+  {
+    "file": "media/theme-logos/delta44-logo-source.webp",
+    "supplied_name": "banner_logo_1200x628_0e45ac6f-2910-4016-9f09-b4322a322f85.webp",
+    "sha256": "47a34a51ce26687efae593d96c8c1c5a8ac9355aaa7f09c4b5e3dd336e19671c",
+    "source_bytes_match": true,
+    "derivation": "Unchanged user-supplied original; logo geometry retained."
+  },
+  {
+    "file": "media/theme-logos/delta44-padlock.png",
+    "supplied_name": "exec-1bacbd59-7f69-40f3-a1ea-ed92c639b72e.png",
+    "sha256": "c20dadf9da7491b64d002ab707f6b162faa6479c157460a9dff378fac495e18d",
+    "source_bytes_match": false,
+    "derivation": "Imagegen background extraction of supplied padlock photograph; prompt in docs/44DELTA.md."
   }
 ]
