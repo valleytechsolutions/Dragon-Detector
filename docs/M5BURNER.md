@@ -2,6 +2,22 @@
 
 The M5Burner project is **Dragon Detector - M5Stack StopWatch C152**, with **StopWatch** as its only supported device. Its package contains only the C152 build.
 
+## 0.13.41 release package
+
+The current C152 package adds [44Delta](44DELTA.md): cyan-on-black branding,
+an analog-only lockpick-hand clock, a padlock radar and a Locksport Timer.
+Download the [current C152 factory BIN](https://valleytech-dragon-detector.pages.dev/firmware/stopwatch/factory-0x0.bin)
+and [checksums](https://valleytech-dragon-detector.pages.dev/firmware/stopwatch/SHA256SUMS.txt).
+The checked upload filename is
+`Dragon-Detector-0.13.41-M5Stack-StopWatch-C152-FACTORY-0x0.bin`.
+
+Catalog upload/approval is separate from publication on the web flasher. The
+0.13.41 upload has not yet been confirmed: browser automation was blocked by
+its URL-verification safety check. Update existing project `2111312268664066049`
+with this merged BIN at 0x0; keep StopWatch as the only supported device.
+
+## Earlier factory installation validation
+
 **Hardware tested October 19, 2026:** the complete **0.13.20 C152 factory image** was installed on a physical StopWatch using M5Burner's bundled esptool 4.10.0, at **0x0 / 460800 baud**. The full 16 MB write passed hash verification. After a power cycle, the device booted, all 23 self-tests passed, and the owner confirmed the display, yellow/blue timing buttons and touchscreen Home control worked.
 
 The live web flasher's **Update matching Dragon Detector** installation also passed on this C152. It automatically set local date, time and timezone, verified hardware RTC readback and ticking, and retained the correct time after a software restart. The original device data was backed up privately and restored.
@@ -12,7 +28,7 @@ M5Stack rejected **0.13.15** for failing to boot during review. Its download mat
 
 ## Installation
 
-1. Download the [**v0.13.20 StopWatch C152 factory BIN**](https://valleytech-dragon-detector.pages.dev/firmware/stopwatch/factory-0x0.bin) and its [SHA-256 checksums](https://valleytech-dragon-detector.pages.dev/firmware/stopwatch/SHA256SUMS.txt). This image is for **C152 only**.
+1. Download the [**current StopWatch C152 factory BIN**](https://valleytech-dragon-detector.pages.dev/firmware/stopwatch/factory-0x0.bin) and its [SHA-256 checksums](https://valleytech-dragon-detector.pages.dev/firmware/stopwatch/SHA256SUMS.txt). This image is for **C152 only**.
 2. Back up saved files and settings. A factory image replaces them. For a compatible existing installation, use **Update matching Dragon Detector** in the [web flasher](https://valleytech-dragon-detector.pages.dev/#install).
 3. Connect USB. Hold the StopWatch power button for about two seconds until the green LED lights, then release. Burn at **0x0**, **ESP32-S3**, **16 MB**, **DIO / 80 MHz**. **460800 baud** was verified with the bundled desktop tool. Leave all buttons untouched until writing and verification finish. No separate filesystem upload is needed.
 4. Briefly press the power button to restart. **If the display stays blank:** close the serial connection, unplug USB, double-press power to turn it off, wait five seconds, then press power once. Reconnect USB after the logo appears.

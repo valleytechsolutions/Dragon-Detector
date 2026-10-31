@@ -38,3 +38,7 @@ Validation covers native LVGL renders at four resolutions, bounded logo decoder
 CRC checks, web theme readback and firmware gating, and each board's build,
 partition layout, flash reserve and package hashes. Physical validation of this
 release is limited to the connected StopWatch; other profiles are build-validated.
+
+The StopWatch passed all 23 self-tests, RTC readback, saved selection after a
+software restart, and USB-injected timer control checks. See the
+[validation record](VALIDATION-0.13.41.md) for methods and limits.
