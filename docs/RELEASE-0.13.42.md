@@ -17,7 +17,25 @@ applicable. This revision is checked with native LVGL renders, artwork decoder
 checks, the existing web checks and the eleven-board build matrix. Build checks
 do not constitute physical testing of every board.
 
+The [eleven-board CI run](https://github.com/valleytechsolutions/Dragon-Detector/actions/runs/41220658748)
+passed from clean source `bf309d741a0ef6496492787b7b9dac74cf6639c7`.
+All 231 artwork variants decoded to their expected pixel CRCs, 142 web tests
+passed, and native clock renders were inspected at 240, 360, 466 and 480 pixels.
+Every release package passed its checksums, flash budget and manifest checks.
+
+On October 31, a full private 16 MB backup of the connected C152 was saved
+before updating its boot/application segments. NVS and LittleFS were preserved.
+The write passed hash verification; the device booted 0.13.42 with theme 45 and
+clock 48. Its 466px clock capture passed the USB CRC check and showed the larger
+logo with the footer removed. USB transfers were then stopped. This cosmetic
+revision does not claim another physical touch or factory-reset installation test.
+
+The StopWatch package uses that locally built, device-tested application
+(3,468,208 bytes; 17.31% application-slot space free). The other ten packages use
+the verified CI artifacts. Their metadata records the clean source above.
+
 See the [44Delta guide](44DELTA.md). Use **Update matching Dragon Detector** in
 the [web flasher](https://valleytech-dragon-detector.pages.dev/#install) for a
-compatible existing installation. The separate M5Burner candidate is the clean
-0.13.42 StopWatch C152 factory BIN at 0x0; catalog upload/approval is separate.
+compatible existing installation. The clean 0.13.42 StopWatch C152 factory BIN
+at 0x0 was also uploaded to M5Burner on October 31 and is **Pending / Public**.
+M5Stack's catalog review is separate from the live web-flasher release.

@@ -11,10 +11,17 @@ and [checksums](https://valleytech-dragon-detector.pages.dev/firmware/stopwatch/
 The checked upload filename is
 `Dragon-Detector-0.13.42-M5Stack-StopWatch-C152-FACTORY-0x0.bin`.
 
-Catalog upload/approval is separate from publication on the web flasher. The
-0.13.42 upload has not yet been confirmed: browser automation was blocked by
-its URL-verification safety check. Update existing project `2111312268664066049`
-with this merged BIN at 0x0; keep StopWatch as the only supported device.
+On October 31, 2026, the clean **0.13.42** merged BIN was uploaded to existing
+project `2111312268664066049`. M5Burner confirms **Pending / Public**, with
+**StopWatch** as its only supported device. Catalog approval is separate from
+publication on the web flasher; the previously approved version remains available
+while M5Stack reviews the new release. The upload uses offset 0x0.
+
+The 16,777,216-byte uploaded factory image has SHA-256
+`ce4c87213fbf83ab1ffd597632e6aebd867184acd77a28db45688de748d9c7fe`.
+Its application was flashed and boot-checked on the connected C152. See the
+[0.13.42 validation notes](RELEASE-0.13.42.md) for the distinction between this
+update test and a complete factory installation.
 
 ## Earlier factory installation validation
 
@@ -22,7 +29,11 @@ with this merged BIN at 0x0; keep StopWatch as the only supported device.
 
 The live web flasher's **Update matching Dragon Detector** installation also passed on this C152. It automatically set local date, time and timezone, verified hardware RTC readback and ticking, and retained the correct time after a software restart. The original device data was backed up privately and restored.
 
-The public-review package is labeled **0.13.20-c152.1** in M5Burner; it contains the same firmware **0.13.20** and factory BIN as the website. The earlier **0.13.20 Private** upload remains the test candidate. [M5Burner StopWatch catalog](https://burner.m5stack.com/device/stopwatch). M5Stack's catalog approval is separate from these hardware checks.
+The earlier **0.13.20-c152.1** version is now **Published / Public** in M5Burner;
+it contains firmware **0.13.20** and the factory BIN tested at that time. The
+**0.13.20 Private** upload also remains available to the owner.
+[M5Burner StopWatch catalog](https://burner.m5stack.com/device/stopwatch).
+M5Stack's catalog approval is separate from these hardware checks.
 
 M5Stack rejected **0.13.15** for failing to boot during review. Its download matched the original upload; a corrupt file or incorrect extension was not established as the cause. During the current test, the C152 remained in download mode after a verified write and a brief reset. A full power cycle recovered it. This is an observed recovery for this device, not a confirmed diagnosis of M5Stack's earlier test.
 

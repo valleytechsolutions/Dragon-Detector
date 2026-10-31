@@ -36,7 +36,7 @@ firmware to the web flasher.
 
 ## M5Burner
 
-The 0.13.42 C152 factory package is prepared. Upload to the separate M5Burner
-catalog has not been confirmed because browser automation was blocked by its
-URL-verification safety check. The current BIN remains available from the web
-flasher. [M5Burner details](M5BURNER.md).
+The clean 0.13.42 C152 factory package was uploaded on October 31, 2026.
+M5Burner shows **Pending / Public** for the existing StopWatch project; M5Stack's
+catalog review is still pending. The current BIN is available from the web
+flasher immediately. [M5Burner details](M5BURNER.md).

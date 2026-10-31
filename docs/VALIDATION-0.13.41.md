@@ -46,5 +46,6 @@ they were not physically exercised for this theme release.
 The StopWatch website package uses the locally built, device-tested application.
 The other ten packages use the clean GitHub build artifacts from the source
 commit above. Each package carries its own provenance and SHA-256 checksums.
-M5Burner's separate catalog upload remains unconfirmed; see [M5Burner](M5BURNER.md).
+The initial M5Burner upload was superseded by the corrected 0.13.42 package,
+which is now submitted for catalog review; see [M5Burner](M5BURNER.md).
 Existing hardware beta labels and Waveshare field-test limitations still apply.
