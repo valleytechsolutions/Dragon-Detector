@@ -1,5 +1,5 @@
-import {crc32} from './ble-lab.js?v=0.13.21';
-import {exportReconFile} from './recon-transfer.js?v=0.13.21';
+import {crc32} from './ble-lab.js?v=0.14.0';
+import {exportReconFile} from './recon-transfer.js?v=0.14.0';
 export function sessionName(name){if(!/^[a-z0-9_-]{1,32}$/i.test(name))throw new Error('Use 1–32 letters, digits, dashes or underscores.');return name;}
 export const missionFiles=['session.json','obs.rlog','probes.rlog','relations.rlog'];
 export function missionCommand(name,file){sessionName(name);if(!missionFiles.includes(file))throw new Error('Unknown mission file.');return `mission get ${name} ${file}`;}

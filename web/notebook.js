@@ -1,4 +1,5 @@
-export const hasNotebook=version=>/^0\.(?:12|13)\.\d+$/.test(version);
+import {firmwareAtLeast,knownFirmware} from './firmware-version.js?v=0.14.0';
+export const hasNotebook=version=>firmwareAtLeast(version,'0.12.0');
 export function customAdvertCommand(text){
  const hex=String(text).replace(/[ :\-]/g,'');
  if(!/^(?:[a-f0-9]{2}){1,31}$/i.test(hex))throw new Error('Enter 1–31 bytes of advertisement data in hex.');

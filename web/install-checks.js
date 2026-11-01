@@ -1,4 +1,4 @@
-import {validateManifest} from './board-profiles.js?v=2026-10-31-44delta-01341';
+import {validateManifest} from './board-profiles.js?v=0.14.0';
 
 // Check availability before asking for USB access. The installer downloads the
 // binaries itself before erasing; these HEAD requests do not verify their hash.

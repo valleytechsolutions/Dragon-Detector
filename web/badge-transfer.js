@@ -1,4 +1,4 @@
-import {crc32} from './badge-codec.js?v=2026-10-31-44delta-01341';
+import {crc32} from './badge-codec.js?v=0.14.0';
 
 // End each write with a short USB packet, avoiding intermittent native
 // USB-JTAG stalls at exact 64-byte boundaries. Also fits legacy 256-byte queues.

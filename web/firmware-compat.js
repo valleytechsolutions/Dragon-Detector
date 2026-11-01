@@ -1,52 +1,54 @@
+import {firmwareAtLeast,knownFirmware} from './firmware-version.js?v=0.14.0';
 // Only protocol versions with a known compatible USB contract are accepted.
 export function parseBadgeInfo(line){
-  const match=/^BADGE_INFO (0\.(?:[3456789]|10|11|12|13)\.\d+) (240|360|412|466|480) (READY|RADAR_ONLY|LITE) (.+)$/.exec(line);
-  if(match&&match[2]==='412'&&(match[4]!=='Seeed SenseCAP Watcher'||!/^0\.13\.(?:29|[3-9]\d|[1-9]\d{2,})$/.test(match[1])))return null;
-  if(match&&match[2]==='480'&&(match[4]!=='Elecrow CrowPanel 2.1 Rotary'||!/^0\.13\.(?:[2-9]\d|[1-9]\d{2,})$/.test(match[1])))return null;
-  if(match&&match[2]==='240'&&!/^0\.(?:9\.([2-9]|\d{2,})|(?:10|11|12|13)\.\d+)$/.test(match[1]))return null;
+  const match=/^BADGE_INFO (0\.(?:[3456789]|10|11|12|13|14)\.\d+) (240|360|412|466|480) (READY|RADAR_ONLY|LITE) (.+)$/.exec(line);
+  if(match&&match[2]==='412'&&(match[4]!=='Seeed SenseCAP Watcher'||!firmwareAtLeast(match[1],'0.13.29')))return null;
+  if(match&&match[2]==='480'&&(match[4]!=='Elecrow CrowPanel 2.1 Rotary'||!firmwareAtLeast(match[1],'0.13.20')))return null;
+  if(match&&match[2]==='240'&&!firmwareAtLeast(match[1],'0.9.2'))return null;
+  if(match&&!knownFirmware(match[1]))return null;
   if(match){
     const lite=['Waveshare ESP32-S3-LCD-1.28 Lite','M5Stack Dial Beta','M5Stack Dial'].includes(match[4]);
-    if(match[4]==='M5Stack Dial Beta'&&(match[3]!=='LITE'||!/^0\.13\.(?:2[6-9]|[3-9]\d|[1-9]\d{2,})$/.test(match[1])))return null;
-    if(match[4]==='M5Stack Dial'&&(match[3]!=='LITE'||!/^0\.13\.(?:2[7-9]|[3-9]\d|[1-9]\d{2,})$/.test(match[1])))return null;
+    if(match[4]==='M5Stack Dial Beta'&&(match[3]!=='LITE'||!firmwareAtLeast(match[1],'0.13.26')))return null;
+    if(match[4]==='M5Stack Dial'&&(match[3]!=='LITE'||!firmwareAtLeast(match[1],'0.13.27')))return null;
     if((match[3]!=='READY')!==lite)return null;
     if(match[3]==='LITE'&&!hasRetainedClock(match[1]))return null;
-    if(lite&&(match[2]!=='240'||!/^0\.(?:9\.([4-9]|\d{2,})|(?:10|11|12|13)\.\d+)$/.test(match[1])))return null;
+    if(lite&&(match[2]!=='240'||!firmwareAtLeast(match[1],'0.9.4')))return null;
   }
   return match?{version:match[1],size:Number(match[2]),board:match[4]}:null;
 }
-export function hasDetectorTools(version){return /^0\.(?:[456789]|10|11|12|13)\.\d+$/.test(version);}
-export function hasActivityTools(version){return /^0\.(?:[6789]|10|11|12|13)\.\d+$/.test(version);}
-export function hasRadarTools(version){return /^0\.(?:[789]|10|11|12|13)\.\d+$/.test(version);}
+export function hasDetectorTools(version){return firmwareAtLeast(version,'0.4.0');}
+export function hasActivityTools(version){return firmwareAtLeast(version,'0.6.0');}
+export function hasRadarTools(version){return firmwareAtLeast(version,'0.7.0');}
 
-export function hasWearableTools(version){return /^0\.(?:9|10|11|12|13)\.\d+$/.test(version);}
-export function hasRetainedClock(version){return /^0\.13\.(?:9|[1-9]\d+)$/.test(version);}
-export function hasHardwareClockCheck(version){return /^0\.13\.[1-9]\d+$/.test(version);}
+export function hasWearableTools(version){return firmwareAtLeast(version,'0.9.0');}
+export function hasRetainedClock(version){return firmwareAtLeast(version,'0.13.9');}
+export function hasHardwareClockCheck(version){return firmwareAtLeast(version,'0.13.10');}
 export function hasClockTools(board,version){return board==='waveshare_lite'?hasRetainedClock(version):hasWearableTools(version);}
 export function hasWifiClock(board,version){return ['watcher','lilygo_175','waveshare','waveshare_175','waveshare_175_gps','stopwatch','spotpear','xiao_round','elecrow_21'].includes(board)&&hasRetainedClock(version);}
 
 // Branded radar assets and indices 3..5 first shipped in 0.13.1.
-export function hasBrandedThemes(version){return /^0\.13\.[1-9]\d*$/.test(version);}
-export function hasCommunityThemes(version){return /^0\.13\.(?:[6-9]|[1-9]\d+)$/.test(version);}
+export function hasBrandedThemes(version){return firmwareAtLeast(version,'0.13.1');}
+export function hasCommunityThemes(version){return firmwareAtLeast(version,'0.13.6');}
 
 // The CI / LockPickingLawyer theme first shipped in 0.13.8.
-export function hasLplTheme(version){return /^0\.13\.(?:[89]|[1-9]\d+)$/.test(version);}
+export function hasLplTheme(version){return firmwareAtLeast(version,'0.13.8');}
 
 // Appended persistent theme IDs 29 and 30.
-export function hasRunnerThemes(version){const m=/^0\.13\.(0|[1-9]\d*)$/.exec(version);return !!m&&Number(m[1])>=12;}
+export function hasRunnerThemes(version){return firmwareAtLeast(version,'0.13.12');}
 
-export function hasGreenArtThemes(version){const m=/^0\.13\.(0|[1-9]\d*)$/.exec(version);return !!m&&Number(m[1])>=23;}
+export function hasGreenArtThemes(version){return firmwareAtLeast(version,'0.13.23');}
 
-export function hasCanCommanderTheme(version){const m=/^0\.13\.(0|[1-9]\d*)$/.exec(version);return !!m&&Number(m[1])>=18;}
+export function hasCanCommanderTheme(version){return firmwareAtLeast(version,'0.13.18');}
 
-export function hasCapsuleSparrowsThemes(version){const m=/^0\.13\.(0|[1-9]\d*)$/.exec(version);return !!m&&Number(m[1])>=15;}
+export function hasCapsuleSparrowsThemes(version){return firmwareAtLeast(version,'0.13.15');}
 
-export function hasMuldersRevengeTheme(version){const m=/^0\.13\.(0|[1-9]\d*)$/.exec(version);return !!m&&Number(m[1])>=24;}
+export function hasMuldersRevengeTheme(version){return firmwareAtLeast(version,'0.13.24');}
 
 export function hasHypnoticTheme(version){return hasMitmTheme(version);}
-export function hasMitmTheme(version){const m=/^0\.13\.(0|[1-9]\d*)$/.exec(version);return !!m&&Number(m[1])>=26;}
+export function hasMitmTheme(version){return firmwareAtLeast(version,'0.13.26');}
 
 // Persistent ID 45: 44Delta, including its analog-only clock.
-export function hasDelta44Theme(version){const m=/^0\.13\.(0|[1-9]\d*)$/.exec(version);return !!m&&Number(m[1])>=41;}
+export function hasDelta44Theme(version){return firmwareAtLeast(version,'0.13.41');}
 
 // Persistent IDs 41..44: VectorPotential, Argyle, Law Lock Tools and Moki.
-export function hasLocksportCollection(version){const m=/^0\.13\.(0|[1-9]\d*)$/.exec(version);return !!m&&Number(m[1])>=38;}
+export function hasLocksportCollection(version){return firmwareAtLeast(version,'0.13.38');}

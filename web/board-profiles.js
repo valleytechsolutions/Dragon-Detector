@@ -1,4 +1,5 @@
-import {resourceSetup} from "./sd-resources.js?v=2026-10-31-44delta-01341";
+import {firmwareAtLeast,knownFirmware} from './firmware-version.js?v=0.14.0';
+import {resourceSetup} from "./sd-resources.js?v=0.14.0";
 export const boardProfiles=Object.freeze({
   watcher:{name:'Seeed SenseCAP Watcher · Beta',firmwareName:'Seeed SenseCAP Watcher',size:412,display:'Round LCD · touch + rotary · RTC · speaker · microSD',filesystemOffset:0xc10000,minVersion:'0.13.29',experimental:true,storage:'32 MB flash · 8 MB PSRAM · 19.94 MiB internal files · FAT32 microSD preferred for logs and captures. Optional SD vendor pack.',features:'Full radar, themes, badge, clocks, timers, radio tools, BLE Lab and passive wardriving with an external UART GPS. Turn to navigate, click to select, hold to open the menu. AT6668 needs separate GPIO19/20 UART wiring and regulated 5 V power; do not plug UART GPS into the shared I²C Grove socket. Camera, microphone and Himax AI are not enabled. Hardware validation in progress.'},
   m5dial:{name:'M5Stack Dial v1.1',firmwareName:'M5Stack Dial',legacyNames:['M5Stack Dial Beta'],size:240,display:'Round LCD · touch + encoder · RTC · buzzer',filesystemOffset:0x610000,minVersion:'0.13.27',experimental:false,lite:true,storage:'8 MB flash, no PSRAM. Compact passive detector with 32 contact slots. No saved captures, SD, GPS, badge uploads or active labs.',features:'Tested on Dial v1.1. Wi-Fi/BLE detection, priority radar, dot actions, RSSI hunting, buzzer alerts, 44 built-in themes, RTC clock and stopwatch. Turn to browse; press to select; hold to go back. Separate Time and Date settings. Clock and timer pause scanning. Original K130 has not been physically tested; onboard RFID is not enabled.'},
@@ -21,19 +22,19 @@ export function validateManifest(data,board,mode){
   if(!profile||!['factory','update'].includes(mode))throw new Error('Choose a supported board and installation type.');
   const expected=[['bootloader.bin',0],['partitions.bin',0x8000],['boot_app0.bin',0xe000],['firmware.bin',0x10000]];
   if(mode==='factory')expected.push(['littlefs.bin',profile.filesystemOffset]);
-  if(mode==='factory'&&board==='waveshare'&&/^0\.(?:9\.(?:[8-9]|\d{2,})|(?:10|11|12|13)\.\d+)$/.test(data?.version))expected.push(['reconfs.bin',profile.reconOffset]);
-  if(board==='waveshare_175'&&!/^0\.13\.(?:19|[2-9]\d|[1-9]\d{2,})$/.test(data?.version))throw new Error('This non-C AMOLED manifest requires firmware 0.13.19 or newer.');
-  if(board==='elecrow_21'&&!/^0\.13\.(?:[2-9]\d|[1-9]\d{2,})$/.test(data?.version))throw new Error('The Elecrow 2.1 rotary manifest requires firmware 0.13.20 or newer.');
+  if(mode==='factory'&&board==='waveshare'&&firmwareAtLeast(data?.version,'0.9.8'))expected.push(['reconfs.bin',profile.reconOffset]);
+  if(board==='waveshare_175'&&!firmwareAtLeast(data?.version,'0.13.19'))throw new Error('This non-C AMOLED manifest requires firmware 0.13.19 or newer.');
+  if(board==='elecrow_21'&&!firmwareAtLeast(data?.version,'0.13.20'))throw new Error('The Elecrow 2.1 rotary manifest requires firmware 0.13.20 or newer.');
 
-  if(board==='waveshare_175_gps'&&!/^0\.13\.(?:2[1-9]|[3-9]\d|[1-9]\d{2,})$/.test(data?.version))throw new Error('GPS manifest requires firmware 0.13.21 or newer.');
-  if(board==='lilygo_175'&&!/^0\.13\.(?:2[5-9]|[3-9]\d|[1-9]\d{2,})$/.test(data?.version))throw new Error('LILYGO 1.75 manifest requires firmware 0.13.25 or newer.');
-  if(board==='m5dial'&&!/^0\.13\.(?:2[7-9]|[3-9]\d|[1-9]\d{2,})$/.test(data?.version))throw new Error('M5Stack Dial manifest requires firmware 0.13.27 or newer.');
-  if(board==='watcher'&&!/^0\.13\.(?:29|[3-9]\d|[1-9]\d{2,})$/.test(data?.version))throw new Error('Watcher manifest requires firmware 0.13.29 or newer.');
+  if(board==='waveshare_175_gps'&&!firmwareAtLeast(data?.version,'0.13.21'))throw new Error('GPS manifest requires firmware 0.13.21 or newer.');
+  if(board==='lilygo_175'&&!firmwareAtLeast(data?.version,'0.13.25'))throw new Error('LILYGO 1.75 manifest requires firmware 0.13.25 or newer.');
+  if(board==='m5dial'&&!firmwareAtLeast(data?.version,'0.13.27'))throw new Error('M5Stack Dial manifest requires firmware 0.13.27 or newer.');
+  if(board==='watcher'&&!firmwareAtLeast(data?.version,'0.13.29'))throw new Error('Watcher manifest requires firmware 0.13.29 or newer.');
   const build=data?.builds?.[0];
-  const verifiedClock=/^0\.13\.[1-9]\d+$/.test(data?.version);
-  if(board==='waveshare_lite'&&!/^0\.(?:9\.([4-9]|\d{2,})|(?:10|11|12|13)\.\d+)$/.test(data?.version))throw new Error('Waveshare Lite requires a 0.9.4 or newer matching manifest.');
-  if(board==='xiao_round'&&!/^0\.(?:9\.([2-9]|\d{2,})|(?:10|11|12|13)\.\d+)$/.test(data?.version))throw new Error('XIAO Round Display requires a 0.9.2 or newer matching manifest.');
-  if(data?.name!==`Dragon Detector — ${profile.firmwareName} (${mode})`||!/^0\.(?:[3-9]|10|11|12|13)\.\d+$/.test(data.version)||data.new_install_prompt_erase!==(verifiedClock||mode==='factory')||(verifiedClock&&data.new_install_improv_wait_time!==0)||data.builds?.length!==1||build?.chipFamily!=='ESP32-S3'||build.parts?.length!==expected.length||expected.some(([path,offset],i)=>build.parts[i]?.path!==path||build.parts[i]?.offset!==offset))throw new Error('Firmware manifest does not match this exact board and installation type.');
+  const verifiedClock=firmwareAtLeast(data?.version,'0.13.10');
+  if(board==='waveshare_lite'&&!firmwareAtLeast(data?.version,'0.9.4'))throw new Error('Waveshare Lite requires a 0.9.4 or newer matching manifest.');
+  if(board==='xiao_round'&&!firmwareAtLeast(data?.version,'0.9.2'))throw new Error('XIAO Round Display requires a 0.9.2 or newer matching manifest.');
+  if(data?.name!==`Dragon Detector — ${profile.firmwareName} (${mode})`||!knownFirmware(data.version)||data.new_install_prompt_erase!==(verifiedClock||mode==='factory')||(verifiedClock&&data.new_install_improv_wait_time!==0)||data.builds?.length!==1||build?.chipFamily!=='ESP32-S3'||build.parts?.length!==expected.length||expected.some(([path,offset],i)=>build.parts[i]?.path!==path||build.parts[i]?.offset!==offset))throw new Error('Firmware manifest does not match this exact board and installation type.');
   resourceSetup(board,data);
   return data;
 }

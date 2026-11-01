@@ -9,7 +9,7 @@ test('local time conversion honors offsets, leap days, and invalid dates',()=>{
  for(const value of ['2023-02-29T00:00','2024-04-31T00:00','2024-02-29T24:00','2024-02-29T12:60','2100-01-01T00:00','2024-02-29',''])assert.throws(()=>localClockEpoch(value,0));
  for(const offset of [841,-721,NaN,0.5])assert.throws(()=>localClockEpoch('2024-02-29T00:00',offset));
  assert.throws(()=>localClockEpoch('2000-01-01T00:00',840));
- assert.ok(hasWearableTools('0.9.0'));for(const v of ['0.8.0','0.14.0','0.90.0','1.9.0'])assert.ok(!hasWearableTools(v));
+ assert.ok(hasWearableTools('0.9.0'));for(const v of ['0.8.0','0.15.0','0.90.0','1.9.0'])assert.ok(!hasWearableTools(v));
 });
 function linkWith(responses){const writes=[];return {writes,async write(line){writes.push(line);},async wait(predicate){const r=responses.shift();assert.ok(predicate(r),r);return r;}};}
 test('one-click sync copies the instant and current local offset, including fractional zones',async()=>{
@@ -36,7 +36,7 @@ test('hardware status and orientation commands are strictly bounded',async()=>{
 
 import {hasClockTools,hasWifiClock,hasRetainedClock,parseBadgeInfo} from '../web/firmware-compat.js';
 test('clock recovery and Lite timing capabilities reject unsupported boards and versions',()=>{
- for(const version of ['0.13.8','0.13.09','0.14.0','1.13.9','']){assert.equal(hasRetainedClock(version),false);assert.equal(hasClockTools('waveshare_lite',version),false);assert.equal(hasWifiClock('spotpear',version),false);}
+ for(const version of ['0.13.8','0.13.09','0.15.0','1.13.9','']){assert.equal(hasRetainedClock(version),false);assert.equal(hasClockTools('waveshare_lite',version),false);assert.equal(hasWifiClock('spotpear',version),false);}
  for(const board of ['waveshare','stopwatch','spotpear','xiao_round'])assert.equal(hasWifiClock(board,'0.13.9'),true);
  for(const board of ['waveshare_lite','other'])assert.equal(hasWifiClock(board,'0.13.9'),false);
  assert.equal(hasClockTools('waveshare_lite','0.13.9'),true);

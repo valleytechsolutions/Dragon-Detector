@@ -261,8 +261,8 @@ static void radarDraw(lv_event_t* e){
     else{unsigned pulse=radioEnabled?unsigned((now+contactHash(contactKey(c)))%1800):900;pulse=pulse>900?1800-pulse:pulse;disc(ctx,x,y,S(9),deviceColor,unsigned(opacity)*(25+pulse/20)/255);disc(ctx,x,y,S(5),deviceColor,opacity);disc(ctx,x-S(1),y-S(1),S(2),0xffffff,opacity);}
     if(dot.index==trackedContact || (detector.enabled(c.trafficFamily)&&trafficFresh(c,now))){auto lock=arc;lock.color=color(dot.index==trackedContact?theme.text:0xff5040);lock.opa=220;lock.width=2;lv_point_t point{(lv_coord_t)x,(lv_coord_t)y};lv_draw_arc(ctx,&lock,&point,S(12),0,359);}
   }
-  // Dots are never paginated. Named leaders belong to priority devices and
-  // the tapped contact; trackers otherwise consume no text or leader space.
+  // Dots are never paginated. Descriptions prioritize ALPR/cameras, then other
+  // device families. Find My and iBeacons consume leader space only when tapped.
   static dragon::RadarLabelCandidate candidates[MAX_CONTACTS];
   unsigned labels[RadarRenderLabelLimit];
   for(int i=0;i<dotCount;++i){auto& c=contacts[dots[i].index];candidates[i]={c.match.family,uint32_t(now-c.seen)>=30000,radarHasSelection&&dots[i].key==radarSelectedKey};}

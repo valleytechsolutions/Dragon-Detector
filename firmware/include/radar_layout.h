@@ -10,13 +10,24 @@ constexpr unsigned LiteRadarLabelLimit=4;
 struct RadarPoint {int x,y;};
 // All contacts are plotted. Only automatic callouts are bounded by panel area.
 struct RadarLabelCandidate {Family family;bool stale=false,selected=false;};
+// Find My/AirTag candidates and iBeacons can overwhelm busy venues. Keep
+// those as dots by default; an explicit tap can still reveal their evidence.
+inline bool automaticRadarLabel(Family family){return family!=Family::Tracker&&family!=Family::IBeacon&&family<Family::Count;}
 inline unsigned selectRadarLabels(const RadarLabelCandidate* candidates,unsigned count,unsigned* labels,unsigned limit,bool automatic=true){
   unsigned used=0;
   auto add=[&](unsigned i){if(used>=limit)return;for(unsigned j=0;j<used;++j)if(labels[j]==i)return;labels[used++]=i;};
-  // ALPR/Flock, then Axon, then cameras. A selected tracker keeps a second tag.
-  if(automatic){int best=-1;for(unsigned i=0;i<count;++i)if(!candidates[i].stale&&importantFamily(candidates[i].family)&&(best<0||familyPriority(candidates[i].family)>familyPriority(candidates[best].family)))best=i;if(best>=0)add(best);}
+  // ALPR/Flock, then Axon, then cameras. Reserve space for the tapped contact.
+  if(automatic){int best=-1;for(unsigned i=0;i<count;++i)if(!candidates[i].stale&&automaticRadarLabel(candidates[i].family)&&(best<0||familyPriority(candidates[i].family)>familyPriority(candidates[best].family)))best=i;if(best>=0)add(best);}
   for(unsigned i=0;i<count;++i)if(candidates[i].selected)add(i);
-  if(automatic)for(unsigned i=0;i<count&&used<limit;++i)if(!candidates[i].stale&&importantFamily(candidates[i].family))add(i);
+  if(automatic)while(used<limit){
+    int best=-1;
+    for(unsigned i=0;i<count;++i){
+      if(candidates[i].stale||!automaticRadarLabel(candidates[i].family))continue;
+      bool chosen=false;for(unsigned j=0;j<used;++j)if(labels[j]==i)chosen=true;
+      if(!chosen&&(best<0||familyPriority(candidates[i].family)>familyPriority(candidates[best].family)))best=i;
+    }
+    if(best<0)break;add(unsigned(best));
+  }
   return used;
 }
 // Keep markers clear of the logo/status and bottom controls. Only the

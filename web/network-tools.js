@@ -1,4 +1,5 @@
-export function hasNetworkTools(version){return /^0\.(?:11\.[1-9]\d*|(?:12|13)\.\d+)$/.test(version);}
+import {firmwareAtLeast,knownFirmware} from './firmware-version.js?v=0.14.0';
+export function hasNetworkTools(version){return firmwareAtLeast(version,'0.11.1');}
 export function networkProfileCommand(slot,ssid,password){
  if(!Number.isInteger(slot)||slot<0||slot>7)throw new Error('Choose profile slot 1–8.');
  if(!/^[ -~]{1,32}$/.test(ssid)||!(/^[ -~]{8,63}$/.test(password)||password===''))throw new Error('Use a 1–32 character SSID and an 8–63 character password, or leave it empty for an open network.');

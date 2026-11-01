@@ -1,18 +1,14 @@
 # Dragon Detector 0.14.0
 
-This release audits the current SquachWatch detection reference, fixes
-classification precedence, groups target pages and keeps detection popups on
-the radar screen. The shared detection code applies to all eleven supported
+This release improves classification precedence, groups target pages and
+keeps detection popups on the radar screen. The shared detection code applies to all eleven supported
 ESP32-S3 profiles.
 
 ## Detection evidence
 
-- SquachWatch-CYD master `3e9be6c02265b14c798e58da01a0913866143b0f`
-  was reviewed on 2026-11-01, including changes since the previous pinned
-  audit. All 158 table entries were already represented; no new signature
-  count is claimed. The signature tables and Remote ID decoder are unchanged
-  between those revisions. The recent receive-code refactor adds Tab5's
-  ESP-Hosted transport; these Dragon profiles use native ESP32-S3 radios.
+- Reviewed all 158 entries in the detection coverage ledger and the existing
+  Remote ID decoding paths. The audit confirmed current coverage; this
+  release does not claim 158 newly added signatures.
 - Existing Flock probe/name/accessory, ALPR/camera address, Axon manufacturer,
   service and address, tracker, glasses, radio-tool, traffic-anomaly and
   decoded BLE/Wi-Fi beacon/NAN Remote ID paths remain under regression tests.
@@ -38,6 +34,11 @@ hardware limitations. RF coverage and product identity cannot be guaranteed.
 - ALPR/Flock precede Axon and cameras for primary tags and priority ordering.
   Dial's Signals list uses the same category order.
 - Removed the radar's tap-a-dot instruction and target-priority subtitle.
+- Device-description callouts remain enabled. Find My/AirTag candidates and
+  iBeacons appear as dots by default; tapping still reveals details. Other
+  families, including SmartTag, Tile and Find Hub, can use available callouts.
+  Six full-screen or four compact-screen callouts prioritize ALPR/cameras;
+  all dots remain plotted even when the screen has more devices than labels.
 - Valleytech now uses a black field, gold trim, fine chapter/range rings and
   a restrained gold sweep. Detection colors remain consistent across themes.
 

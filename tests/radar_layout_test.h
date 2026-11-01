@@ -13,6 +13,16 @@ static void radarLayoutTests(){
   assert(selectRadarLabels(candidates,MAX_CONTACTS,labels,6,false)==1&&labels[0]==10);
   assert(selectRadarLabels(candidates,MAX_CONTACTS,labels,0)==0);
   for(auto& c:candidates)c={Family::Tracker};assert(selectRadarLabels(candidates,MAX_CONTACTS,labels,6)==0);
+  // Only Find My/AirTag and iBeacon suppress automatic descriptions. Other
+  // trackers and lower-priority device families still get available callouts.
+  for(unsigned f=0;f<unsigned(Family::Count);++f){
+    auto family=Family(f);RadarLabelCandidate one{family};
+    assert(selectRadarLabels(&one,1,labels,6)==unsigned(family!=Family::Tracker&&family!=Family::IBeacon));
+    one.selected=true;assert(selectRadarLabels(&one,1,labels,6)==1);
+  }
+  for(auto& item:candidates)item={Family::IBeacon};
+  candidates[0]={Family::Tile};candidates[1]={Family::Pineapple};candidates[2]={Family::Alpr};
+  assert(selectRadarLabels(candidates,MAX_CONTACTS,labels,6)==3&&labels[0]==2&&labels[1]==1&&labels[2]==0);
   Contact tracker,axon;tracker.used=axon.used=true;tracker.seen=axon.seen=100;tracker.rssi=-30;axon.rssi=-90;
   tracker.match={Family::Tracker,Confidence::Strong,"test"};axon.match={Family::Axon,Confidence::Low,"test"};assert(preferContact(axon,tracker,100));
   for(Family family:{Family::Flipper,Family::Flock,Family::Alpr,Family::Meta,Family::Ring,Family::Camera,Family::Drone}){

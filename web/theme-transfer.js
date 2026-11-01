@@ -1,7 +1,8 @@
-import {crc32} from './badge-codec.js?v=2026-10-31-44delta-01341';
+import {firmwareAtLeast,knownFirmware} from './firmware-version.js?v=0.14.0';
+import {crc32} from './badge-codec.js?v=0.14.0';
 import {decodeTheme,THEME_SIZE} from './theme-codec.js';
-import {deviceQuery} from './device-query.js?v=0.13.17';
-export function hasPersonalThemes(version){const m=/^0\.13\.(0|[1-9]\d*)$/.exec(version);return !!m&&Number(m[1])>=17;}
+import {deviceQuery} from './device-query.js?v=0.14.0';
+export function hasPersonalThemes(version){return firmwareAtLeast(version,'0.13.17');}
 export async function themeInfo(link){
   const line=await deviceQuery(link,'theme info',s=>s.startsWith('THEME_INFO '));
   const m=/^THEME_INFO format=1 saved=([01]) bytes=(\d+) crc=([a-f\d]{8}) storage=([01])$/.exec(line);
