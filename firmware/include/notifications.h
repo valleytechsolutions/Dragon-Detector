@@ -4,9 +4,10 @@ namespace dragon {
 struct DetectionNotice {
   char title[48]{},detail[128]{};DeviceKey key;
   Family family=Family::Wifi;bool hasKey=false,watched=false;uint32_t at=0;
-  unsigned priority()const{return family==Family::Axon?100:watched?95:familyPriority(family);}
+  unsigned priority()const{return watched?110:familyPriority(family);}
 };
-// Bounded bursts: preserve Axon, coalesce repeated device keys, and expire
+inline bool detectionPopupAllowed(bool radar,bool pendingRadar){return radar&&pendingRadar;}
+// Bounded bursts: preserve family priority, coalesce repeated device keys, and expire
 // queued cards rather than displaying an old encounter as a new detection.
 struct NoticeQueue {
   DetectionNotice entries[8];unsigned count=0;

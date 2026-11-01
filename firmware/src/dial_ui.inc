@@ -1,4 +1,5 @@
 // Dial's compact controls share the same contact identities and tap gestures as the full UI.
+#include "target_pages.h"
 static dragon::RadarPress dialPress;
 static bool dialBlankPress=false;
 static dragon::DeviceKey dialSignalKey;
@@ -8,8 +9,10 @@ static int dialTargetChoice=0;
 #include "dial_menu.inc"
 static void dialPick(int index){if(index<0)return;dialSignalKey=contactKey(contacts[index]);dialHasSignal=true;}
 static void dialNextSignal(){
-  int previous=dialHasSignal?findContact(dialSignalKey):-1;
-  for(size_t n=1;n<=MAX_CONTACTS;++n){int i=(previous+int(n))%MAX_CONTACTS;if(radarVisible(contacts[i],millis())){dialPick(i);return;}}
+  int previous=dialHasSignal?findContact(dialSignalKey):-1,order[MAX_CONTACTS];unsigned count=0;uint32_t now=millis();
+  for(size_t i=0;i<MAX_CONTACTS;++i)if(radarVisible(contacts[i],now))order[count++]=i;
+  std::sort(order,order+count,[now](int a,int b){auto ga=dragon::targetGroup(visibleFamily(contacts[a],now,detector.families)),gb=dragon::targetGroup(visibleFamily(contacts[b],now,detector.families));return ga!=gb?ga<gb:preferContact(contacts[a],contacts[b],now);});
+  if(!count){dialHasSignal=false;return;}unsigned next=0;for(unsigned i=0;i<count;++i)if(order[i]==previous){next=(i+1)%count;break;}dialPick(order[next]);
 }
 static void dialClearSelection(){radarHasSelection=false;dialPress.clear();dialBlankPress=false;lv_obj_add_flag(dialTargetPanel,LV_OBJ_FLAG_HIDDEN);lv_obj_invalidate(radar);}
 static void dialPageChanged(){if(dialTargetPanel&&litePage!=LitePage::Radar)dialClearSelection();}
@@ -86,7 +89,7 @@ static void dialSignalUpdate(){
   char value[180];lv_label_set_text(pageTitle,"SIGNAL DETAILS");
   if(i<0){lv_label_set_text(pageValue,dialHasSignal?"SIGNAL EXPIRED":"LISTENING");lv_label_set_text(pageSub,"Press for next signal");}
   else{
-    const auto& c=contacts[i];char mac[18];macText(c.mac,mac);
+    const auto& c=contacts[i];lv_label_set_text(pageTitle,dragon::targetGroupName(dragon::targetGroup(visibleFamily(c,millis(),detector.families))));char mac[18];macText(c.mac,mac);
     snprintf(value,sizeof(value),"%.24s\n%d dBm / %s\n%s",*c.name?c.name:radarFamilyName(c.match.family),c.rssi,c.ble?"BLE":"WI-FI",mac);lv_label_set_text(pageValue,value);
     snprintf(value,sizeof(value),"%s / %lus ago\n%s",radarFamilyName(c.match.family),uint32_t(millis()-c.seen)/1000,trackedContact==i?"HUNT ON / tap to stop":"Tap to hunt / RSSI only");lv_label_set_text(pageSub,value);
   }

@@ -7,27 +7,30 @@
 #include "remote_id.h"
 
 namespace dragon {
-enum class Family : uint8_t { Wifi, Ble, Flock, Axon, Meta, Pineapple, Pwnagotchi, Nyanbox, Halehound, Tracker, Skimmer, Flipper, Biscuit, SmartTag, Raven, GoogleTag, Tile, Ring, Camera, Alpr, Drone, IBeacon, Deauth, EvilTwin, BleSpam, Fox, Count };
+enum class Family : uint8_t { Wifi, Ble, Flock, Axon, Meta, Pineapple, Pwnagotchi, Nyanbox, Halehound, Tracker, Skimmer, Flipper, Biscuit, SmartTag, Raven, GoogleTag, Tile, Ring, Camera, Alpr, Drone, IBeacon, Deauth, EvilTwin, BleSpam, Fox, Adult, Count };
 enum class Confidence : uint8_t { None, Low, Medium, Strong };
 struct Match { Family family; Confidence confidence; const char* evidence; };
 inline const char* familyName(Family f) {
-  static const char* n[] = {"Wi-Fi", "BLE", "Flock", "Body cameras", "Camera glasses", "Pineapple", "Pwnagotchi", "Nyanbox", "HaleHound", "Find My / DULT", "Serial module", "Flipper", "Biscuit", "SmartTag", "Acoustic sensors", "Google Find Hub", "Tile", "Ring", "Camera vendor", "ALPR vendor", "Drone / Remote ID", "iBeacon", "Disconnect burst", "SSID conflict", "BLE advert burst", "Dragon fox"};
+  static const char* n[] = {"Wi-Fi", "BLE", "Flock", "Body cameras", "Camera glasses", "Pineapple", "Pwnagotchi", "Nyanbox", "HaleHound", "Find My / DULT", "Serial module", "Flipper", "Biscuit", "SmartTag", "Acoustic sensors", "Google Find Hub", "Tile", "Ring", "Camera vendor", "ALPR vendor", "Drone / Remote ID", "iBeacon", "Disconnect burst", "SSID conflict", "BLE advert burst", "Dragon fox", "Adult device"};
   return unsigned(f)<unsigned(Family::Count)?n[unsigned(f)]:"Unknown";
 }
 // Shared ordering for radar, contact retention, notification and sound queues.
 inline bool trackerFamily(Family f){return f==Family::Tracker||f==Family::SmartTag||f==Family::GoogleTag||f==Family::Tile||f==Family::IBeacon;}
 inline unsigned familyPriority(Family f){
   switch(f){
-    case Family::Axon:return 100;
-    case Family::Flipper:return 90;
-    case Family::Flock:case Family::Alpr:return 85;
-    case Family::Meta:case Family::Drone:return 80;
-    case Family::Ring:case Family::Camera:return 75;
+    case Family::Flock:case Family::Alpr:return 100;
+    case Family::Axon:return 95;
+    case Family::Ring:case Family::Camera:case Family::Meta:return 90;
+    case Family::Drone:return 85;
+    case Family::Flipper:return 75;
     case Family::Wifi:case Family::Ble:return 20;
     default:return trackerFamily(f)?10:50;
   }
 }
 inline bool importantFamily(Family f){return familyPriority(f)>=75;}
+inline bool strongerMatch(Match next,Match current){
+  return next.confidence>current.confidence || (next.confidence!=Confidence::None&&next.confidence==current.confidence&&familyPriority(next.family)>familyPriority(current.family));
+}
 #include "vendor_prefixes.h"
 inline const char* confidenceName(Confidence c) { return c==Confidence::Strong ? "strong signature" : c==Confidence::Medium ? "medium confidence" : c==Confidence::Low ? "weak indicator" : "unclassified"; }
 inline bool contains(const char* haystack, const char* needle) {
@@ -190,7 +193,9 @@ inline bool assignedUuid16(const uint8_t* d,size_t width,uint16_t& value){
   else if(width!=2)return false;
   value=d[0]|uint16_t(d[1])<<8;return true;
 }
-inline BleFrame parseBle(const uint8_t* p,size_t n,size_t advLength=0) {
+#include "adult_detection.inc"
+inline BleFrame parseBle(const uint8_t* p,size_t n,size_t advLength=0,bool adultMode=false) {
+  AdultEvidence adult;
   BleFrame f; if(!p || !n || advLength>n)return f; bool xuntong=false,lux=false,meta=false,findmy=false,flipper=false,metaService=false,dult=false,axonCompany=false,axonService=false,smarttag=false,biscuit=false,flockService=false;
   bool snap=false,snapService=false,vuzix=false,chipolo=false,axonBwc=false,raven=false,tile=false,google=false,ibeacon=false,serial=false,fox=false;
   bool googleService=false,droneService=false,applePairing=false,ibeaconExtra=false;uint8_t ravenServices=0;uint16_t appearance=0;
@@ -225,7 +230,7 @@ inline BleFrame parseBle(const uint8_t* p,size_t n,size_t advLength=0) {
     }
     const size_t width=(t==2||t==3||t==0x16)?2:(t==4||t==5||t==0x20)?4:(t==6||t==7||t==0x21)?16:0;
     const bool serviceData=t==0x16||t==0x20||t==0x21;
-    if(width)for(size_t j=0;j+width<=z;j+=width){uint16_t uuid;if(assignedUuid16(d+j,width,uuid))service(uuid);if(serviceData)break;}
+    if(width)for(size_t j=0;j+width<=z;j+=width){uint16_t uuid;if(assignedUuid16(d+j,width,uuid)){service(uuid);if(adultMode)adult.service16(uuid);}if(adultMode&&width==16)adult.service128(d+j);if(serviceData)break;}
     uint16_t dataUuid=0;
     if(serviceData && z>width && assignedUuid16(d,width,dataUuid)) {
       const uint8_t* body=d+width;const size_t size=z-width;
@@ -279,6 +284,7 @@ inline BleFrame parseBle(const uint8_t* p,size_t n,size_t advLength=0) {
     else if(droneService)f.match={Family::Drone,Confidence::Low,"FFFA service; no valid aircraft Remote ID decoded"};
     else if(applePairing)f.match={Family::Tracker,Confidence::Low,"Apple pairing-size advert; may be AirTag, AirPods or other accessory"};
   }
+  if(adultMode&&f.match.confidence==Confidence::None)f.match=adult.match(f.name);
   return f;
 }
 // Fixed observation window; an alert is traffic evidence, never proof of intent.

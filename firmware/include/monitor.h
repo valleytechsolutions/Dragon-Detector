@@ -3,12 +3,16 @@
 #include <algorithm>
 
 namespace dragon {
+inline uint32_t adultOptInMask(uint32_t families,bool optedIn){
+  const uint32_t bit=1u<<unsigned(Family::Adult);
+  return optedIn?families|bit:families&~bit;
+}
 struct DeviceKey {
   uint8_t mac[6]{};uint8_t radio=0,addressType=0;
   bool operator==(const DeviceKey& b)const {return radio==b.radio && addressType==b.addressType && !memcmp(mac,b.mac,6);}
 };
 struct DetectorSettings {
-  uint32_t families=(1u<<unsigned(Family::Count))-1u;
+  uint32_t families=((1u<<unsigned(Family::Count))-1u)&~(1u<<unsigned(Family::Adult));
   Confidence minimum=Confidence::Medium;
   uint8_t autoQuiet=5;
   bool privacy=false,history=true,wakeAlert=true,quiet=false;

@@ -56,7 +56,8 @@ static constexpr const char* defaultTones[]={
  "Camera:d=16,o=5,b=180:f,c6,f,8c6", "ALPR:d=16,o=6,b=180:d,a,d7,8a",
  "Drone:d=16,o=6,b=180:c,p,g,p,c7", "Beacon:d=16,o=5,b=180:b,e6,b",
  "Disconnect:d=16,o=5,b=180:a,a,p,d#,d#", "Conflict:d=16,o=5,b=180:c,f#,c,f#",
- "Burst:d=32,o=6,b=180:c,d,e,f,g", "Fox:d=16,o=6,b=180:g,e,8c"
+ "Burst:d=32,o=6,b=180:c,d,e,f,g", "Fox:d=16,o=6,b=180:g,e,8c",
+ "" // Adult candidates are deliberately silent and excluded from ToneQueue.
 };
 struct ToneQueue {
  uint32_t pending=0,played=0,requested[26]{},last[26]{};

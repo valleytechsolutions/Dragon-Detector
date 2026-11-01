@@ -44,10 +44,22 @@ bool toggleRule(const dragon::DeviceKey& key,DeviceRule flag){
   return true;
 }
 void detectorSave(){
+  prefs.putBool("adult-mode",detector.enabled(Family::Adult));
+#ifndef BOARD_RADAR_LITE
   prefs.putUInt("schema",1);prefs.putBytes("settings",&detector,sizeof(detector));
   prefs.putBool("sound",alertSound);prefs.putBool("vibrate",alertVibration);
   prefs.putBool("active-ble",activeBle);
   prefs.putBool("axon-priority",axonPriority);
+#endif
+}
+void setAdultMode(bool enabled){
+  detector.families=dragon::adultOptInMask(detector.families,enabled);
+  detectorSave();
+  // No previous opt-in classification may survive disabling the setting.
+  if(!enabled)for(size_t i=0;contacts.data&&i<MAX_CONTACTS;++i)if(contacts[i].used&&contacts[i].match.family==Family::Adult){
+    if(trackedContact==int(i))trackContact(-1);
+    contacts[i]={};
+  }
 }
 void displayMac(const uint8_t* mac,char* out){macText(mac,out);if(detector.privacy)strcpy(out+9,"XX:XX:XX");}
 String displayName(const char* name){if(!detector.privacy)return String(name);return strlen(name)>3?String(name).substring(0,3)+"...":String(name);}
@@ -58,10 +70,12 @@ static int historySlot(const dragon::DeviceKey& key,uint8_t family){
   historyRecords[oldest]={};dirty[oldest]=false;persistedAt[oldest]=0;return int(oldest);
 }
 void detectorBegin(){
+  prefs.begin("dd-detect",false);
 #ifdef BOARD_RADAR_LITE
   // Fixed passive radar. Never import old full-UI filters, ignore rules or
-  // display timers. No persistent history allocation or flash writes on Lite.
+  // display timers. No persistent history allocation on Lite; only explicit settings are saved.
   detector=dragon::DetectorSettings{};detector.history=false;
+  detector.families=dragon::adultOptInMask(detector.families,prefs.getBool("adult-mode",false));
   activeBle=false;axonPriority=true;
 #ifndef BOARD_M5DIAL
   alertSound=alertVibration=false;
@@ -69,15 +83,17 @@ void detectorBegin(){
   Serial.println("LITE detectors=all axon_priority=1 passive=1 history=off");
   return;
 #else
-  bootId=esp_random();prefs.begin("dd-detect",false);
+  bootId=esp_random();
   if(prefs.getUInt("schema",0)==1 && prefs.getBytesLength("settings")==sizeof(detector))prefs.getBytes("settings",&detector,sizeof(detector));
   // Upgrade the previous untouched default mask, preserving customized masks.
   if(!prefs.getBool("coverage-v05",false)){
-    const uint32_t oldDefault=((1u<<unsigned(Family::Count))-1u)&~(1u<<unsigned(Family::IBeacon));
+    const uint32_t oldDefault=dragon::DetectorSettings{}.families&~(1u<<unsigned(Family::IBeacon));
     if(detector.families==oldDefault)detector.families|=1u<<unsigned(Family::IBeacon);
     prefs.putBytes("settings",&detector,sizeof(detector));prefs.putUInt("schema",1);prefs.putBool("coverage-v05",true);
   }
   activeBle=prefs.getBool("active-ble",false);
+  // A historical all-bits mask never opts a user into this new category.
+  detector.families=dragon::adultOptInMask(detector.families,prefs.getBool("adult-mode",false));
   axonPriority=prefs.getBool("axon-priority",true);
   if(unsigned(detector.minimum)<1||unsigned(detector.minimum)>3)detector.minimum=Confidence::Medium;
   if(detector.autoQuiet!=0&&detector.autoQuiet!=5&&detector.autoQuiet!=10)detector.autoQuiet=5;
@@ -110,6 +126,7 @@ void detectorBegin(){
 #endif
 }
 void historyObserve(const Contact& c,Family family,Confidence confidence,const char* evidence){
+  if(family==Family::Adult)return; // Optional candidates are live-only, not persistent history.
   if(!historyReady||!detector.history||!detector.enabled(family))return;
   uint32_t now=millis(),epoch=wallTime();int i=historySlot(contactKey(c),unsigned(family));auto& r=historyRecords[i];
   bool first=!r.magic;bool encounter=first||r.boot!=bootId||uint32_t(now-r.lastUptime)>300000;
@@ -154,6 +171,7 @@ bool historyExport(){
   free(snapshot);Serial.println("HISTORY_END");return true;
 }
 bool emitDetection(Contact& c,Family family,Confidence confidence,const char* evidence,bool force){
+  if(family==Family::Adult)return false; // Quiet radar candidates: no popups, sound or event log.
   if(!detector.enabled(family))return false;
   // Bound the 512-record history search under high packet rates; first family
   // changes are immediate, continuing RSSI/encounter updates at most once/sec.
@@ -176,6 +194,7 @@ bool emitDetection(Contact& c,Family family,Confidence confidence,const char* ev
   return true;
 }
 bool detectorCommand(const String& cmd){
+  if(cmd=="detector adult on"||cmd=="detector adult off"){setAdultMode(cmd.endsWith("on"));Serial.printf("ADULT_MODE %u\n",detector.enabled(Family::Adult));return true;}
   if(cmd=="detector quiet on"||cmd=="detector quiet off"){detector.quiet=cmd.endsWith("on");detectorSave();audioStop();Serial.printf("DETECTOR_QUIET %u\n",detector.quiet);return true;}
   if(cmd=="axon status"){axonStatus();return true;}
   if(cmd=="axon priority on"||cmd=="axon priority off"){axonPriority=cmd.endsWith("on");detectorSave();Serial.printf("AXON_PRIORITY %u\n",axonPriority);return true;}

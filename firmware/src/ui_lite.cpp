@@ -155,7 +155,7 @@ void uiShow(const String& name){
   if(name=="menu"||name=="tools"||name=="settings"){dialMenuOpen(name=="menu"?DialMenu::Main:name=="tools"?DialMenu::Tools:DialMenu::Settings);return;}
   if(dialMenuVisible())dialMenuClose();
 #endif
-  if(name=="startup"){startLiteSplash();return;}for(unsigned i=0;i<5;++i)if(name==litePageNames[i]){setLitePage(LitePage(i));return;}}
+  if(name=="startup"){startLiteSplash();return;}for(unsigned i=0;i<6;++i)if(name==litePageNames[i]){setLitePage(LitePage(i));return;}}
 static void refreshLiteTheme(){
   themeDirty=true;themeChangedAt=millis();
   prepareLiteBackdrop(root);lv_obj_set_style_bg_color(root,color(radarPalette(radarTheme).bottom),0);

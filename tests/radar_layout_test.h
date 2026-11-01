@@ -9,7 +9,7 @@ static void radarLayoutTests(){
   for(unsigned limit:{RadarLabelLimit,LiteRadarLabelLimit}){auto count=selectRadarLabels(candidates,MAX_CONTACTS,labels,limit);
     assert(count==4&&labels[0]==383&&labels[1]==10&&labels[RadarLabelLimit]==999);
   }
-  candidates[383].stale=true;assert(selectRadarLabels(candidates,MAX_CONTACTS,labels,6)==3&&labels[0]==10);
+  candidates[383].stale=true;assert(selectRadarLabels(candidates,MAX_CONTACTS,labels,6)==3&&labels[0]==381&&labels[1]==10);
   assert(selectRadarLabels(candidates,MAX_CONTACTS,labels,6,false)==1&&labels[0]==10);
   assert(selectRadarLabels(candidates,MAX_CONTACTS,labels,0)==0);
   for(auto& c:candidates)c={Family::Tracker};assert(selectRadarLabels(candidates,MAX_CONTACTS,labels,6)==0);
@@ -17,7 +17,8 @@ static void radarLayoutTests(){
   tracker.match={Family::Tracker,Confidence::Strong,"test"};axon.match={Family::Axon,Confidence::Low,"test"};assert(preferContact(axon,tracker,100));
   for(Family family:{Family::Flipper,Family::Flock,Family::Alpr,Family::Meta,Family::Ring,Family::Camera,Family::Drone}){
     Match match{family,Confidence::Low,"test"};assert(signatureAlertReady(match,1,100,100,true)&&alertConfidenceAllowed(match,Confidence::Strong,true));
-    Contact important=axon;important.match=match;assert(preferContact(important,tracker,100)&&preferContact(axon,important,100));
+    Contact important=axon;important.match=match;assert(preferContact(important,tracker,100));
+    assert(preferContact(axon,important,100)==(familyPriority(Family::Axon)>familyPriority(family)));
   }
   NoticeQueue queue;DetectionNotice item;item.at=100;item.hasKey=true;item.family=Family::Camera;
   for(unsigned i=0;i<8;++i){item.key.mac[5]=i;queue.push(item);}item.key.mac[5]=9;item.family=Family::Axon;queue.push(item);

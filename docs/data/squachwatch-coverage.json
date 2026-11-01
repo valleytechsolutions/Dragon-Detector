@@ -1,6 +1,6 @@
 {
   "reference": "https://github.com/skizzophrenic/SquachWatch-CYD",
-  "commit": "1485b0122aa527f8309c3f4e6ba8dc1614be5bb1",
+  "commit": "3e9be6c02265b14c798e58da01a0913866143b0f",
   "note": "Public address/protocol facts for independent regression tests, not copied application code. Apple company ID is tested with a valid Find My payload. Shared identifiers remain weak candidates. Runtime predicates have separate fixtures.",
   "entries": [
     {
@@ -800,5 +800,6 @@
     "company": 8,
     "name": 7,
     "ssid": 8
-  }
+  },
+  "reviewed": "2026-11-01"
 }

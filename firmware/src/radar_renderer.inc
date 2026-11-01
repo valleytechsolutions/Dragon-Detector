@@ -33,7 +33,7 @@ static void disc(lv_draw_ctx_t* ctx,int x,int y,int r,uint32_t c,int opa=255){
 static lv_img_dsc_t radarBackdrop{};
 static unsigned backdropTheme=UINT32_MAX;
 static void prepareRadarBackdrop(lv_obj_t* parent,bool enabled){
-  if(!enabled||radarTheme>=6){
+  if(!enabled||radarTheme>=6||radarTheme==3){
     lv_img_cache_invalidate_src(&radarBackdrop);free((void*)radarBackdrop.data);radarBackdrop={};backdropTheme=UINT32_MAX;return;
   }
   if(radarBackdrop.data&&backdropTheme==radarTheme)return;
@@ -62,6 +62,7 @@ static void prepareRadarBackdrop(lv_obj_t* parent,bool enabled){
 }
 #endif
 #include "lpl_radar.inc"
+#include "valleytech_radar.inc"
 #include "containment_radar.inc"
 #include "cyber_runner.inc"
 #include "capsule_theme.inc"
@@ -123,7 +124,7 @@ static void radarDraw(lv_event_t* e){
   const uint32_t now=radarFrameAt;
   static uint32_t plotFrame=UINT32_MAX;const bool advancePlot=plotFrame!=now;plotFrame=now;
   lv_draw_arc_dsc_t arc;lv_draw_arc_dsc_init(&arc);arc.color=color(theme.ring);arc.width=std::max(1,S(1));arc.opa=160;
-  if(radarTheme==Delta44Theme)delta44RadarField(ctx);else if(radarTheme==LawLockToolsTheme)lltRadarField(ctx);else if(radarTheme==MokiTheme)mokiRadarField(ctx);else if(radarTheme==ArgyleTheme)argyleRadarField(ctx);else if(radarTheme==VectorPotentialTheme)vpRadarField(ctx);else if(radarTheme==HypnoticTheme)hypnoticField(ctx,now,true);else if(radarTheme==MuldersRevengeTheme)muldersRadarField(ctx);else if(greenArtTheme(radarTheme))greenRadarField(ctx,radarTheme==XombiTheme);else if(radarTheme==CanCommanderTheme)canRadarField(ctx,now,radioEnabled);else if(radarTheme==31)capsuleRadarField(ctx,now);else if(radarTheme==32)sparrowsRadarField(ctx);else{
+  if(radarTheme==3)valleyRadarField(ctx);else if(radarTheme==Delta44Theme)delta44RadarField(ctx);else if(radarTheme==LawLockToolsTheme)lltRadarField(ctx);else if(radarTheme==MokiTheme)mokiRadarField(ctx);else if(radarTheme==ArgyleTheme)argyleRadarField(ctx);else if(radarTheme==VectorPotentialTheme)vpRadarField(ctx);else if(radarTheme==HypnoticTheme)hypnoticField(ctx,now,true);else if(radarTheme==MuldersRevengeTheme)muldersRadarField(ctx);else if(greenArtTheme(radarTheme))greenRadarField(ctx,radarTheme==XombiTheme);else if(radarTheme==CanCommanderTheme)canRadarField(ctx,now,radioEnabled);else if(radarTheme==31)capsuleRadarField(ctx,now);else if(radarTheme==32)sparrowsRadarField(ctx);else{
 #ifdef BOARD_RADAR_LITE
   if(liteBackdrop.data){lv_draw_img_dsc_t d;lv_draw_img_dsc_init(&d);lv_area_t a{0,0,SCREEN_RES-1,SCREEN_RES-1};lv_draw_img(ctx,&d,&a,&liteBackdrop);}
   else {
@@ -196,7 +197,8 @@ static void radarDraw(lv_event_t* e){
   static uint32_t sweepAt=0;if(radioEnabled)sweepAt=now;
   float angle=(sweepAt%6000)*.00104719755f,dx=cosf(angle),dy=sinf(angle);
   if(radarTheme==28){locksportPinRim(ctx,uint64_t(sweepAt%6000)*10000);lpuEmblem(ctx,150);}
-  if(radarTheme==dragon::PersonalThemeId)personalThemeSweep(ctx,angle);
+  if(radarTheme==3)valleyRadarSweep(ctx,angle);
+  else if(radarTheme==dragon::PersonalThemeId)personalThemeSweep(ctx,angle);
   else if(radarTheme==LawLockToolsTheme)lltRadarSweep(ctx,angle/6.28318530718f+.25f);
   else if(radarTheme==Delta44Theme)delta44RadarSweep(ctx,angle/6.28318530718f+.25f);
   else if(radarTheme==MokiTheme)mokiRadarSweep(ctx,angle/6.28318530718f+.25f);

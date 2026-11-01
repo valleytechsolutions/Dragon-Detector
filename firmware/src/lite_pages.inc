@@ -1,7 +1,7 @@
 #include "lite_button.h"
-enum class LitePage {Radar,Clock,Timer,Signals,Status};
+enum class LitePage {Radar,Clock,Timer,Signals,Status,Settings};
 static LitePage litePage=LitePage::Radar;
-static const char* litePageNames[]={"radar","clock","stopwatch","signals","diagnostics"};
+static const char* litePageNames[]={"radar","clock","stopwatch","signals","diagnostics","settings"};
 static lv_obj_t *pageCanvas,*pageTitle,*pageValue,*pageSub,*pageHint;
 static unsigned signalIndex=0;
 static uint64_t timerFrame=0;
@@ -89,8 +89,8 @@ static void setLitePage(LitePage next){
   bool special=next==LitePage::Clock&&(radarTheme==0||radarTheme>=29);
   if(radarLogo(radarTheme)&&!special&&!(next==LitePage::Radar&&(radarTheme==LawLockToolsTheme||radarTheme==MokiTheme||radarTheme==Delta44Theme||radarTheme==ArgyleTheme||radarTheme==VectorPotentialTheme||radarTheme==32||radarTheme==CanCommanderTheme||radarTheme==MuldersRevengeTheme||greenArtTheme(radarTheme))))lv_obj_clear_flag(logo,LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(logo,LV_OBJ_FLAG_HIDDEN);
   lv_obj_align(logo,LV_ALIGN_TOP_MID,0,9);
-  lv_obj_set_style_img_recolor(logo,color(LltBlue),0);
-  lv_obj_set_style_img_recolor_opa(logo,radarTheme==LawLockToolsTheme?LV_OPA_COVER:LV_OPA_TRANSP,0);
+  lv_obj_set_style_img_recolor(logo,color(radarTheme==3?0xd6b46e:LltBlue),0);
+  lv_obj_set_style_img_recolor_opa(logo,(radarTheme==LawLockToolsTheme||radarTheme==3)?LV_OPA_COVER:LV_OPA_TRANSP,0);
   if(special){lv_obj_add_flag(pageTitle,LV_OBJ_FLAG_HIDDEN);lv_obj_set_y(pageValue,radarTheme==29?24:157);lv_obj_set_y(pageSub,radarTheme==29?48:188);}
   if(next==LitePage::Clock&&(radarTheme==HypnoticTheme||radarTheme==MitmTheme||radarTheme==31||radarTheme==32||radarTheme==VectorPotentialTheme||radarTheme==ArgyleTheme||radarTheme==LawLockToolsTheme||radarTheme==MokiTheme||radarTheme==Delta44Theme||radarTheme==33||radarTheme==CanCommanderTheme||radarTheme==MuldersRevengeTheme||greenArtTheme(radarTheme)||radarTheme==dragon::PersonalThemeId))for(auto* o:{pageTitle,pageValue,pageSub,pageHint})lv_obj_add_flag(o,LV_OBJ_FLAG_HIDDEN);
   lv_obj_invalidate(root);
@@ -124,6 +124,8 @@ static void updateLitePage(){
     snprintf(value,sizeof(value),"%02llu:%02llu.%02llu",ms/60000,(ms/1000)%60,(ms/10)%100);lv_label_set_text(pageValue,value);
     snprintf(value,sizeof(value),"%s / %lu %s",stopwatch.running?"RUNNING":stopwatch.finished?"OPEN":timerFrame?"PAUSED":"READY",stopwatch.lapCount,liteLocksport()?"SPLITS":"LAPS");lv_label_set_text(pageSub,value);
     lv_label_set_text(pageHint,stopwatch.running?(liteLocksport()?"TAP PAUSE / 2x OPEN":"TAP PAUSE / 2x LAP"):"TAP START / 2x RESET");
+  }else if(litePage==LitePage::Settings){
+    lv_label_set_text(pageTitle,"SETTINGS");lv_label_set_text(pageValue,detector.enabled(Family::Adult)?"Adult Mode: ON":"Adult Mode: OFF");lv_label_set_text(pageSub,"18+ / passive BLE candidates");lv_label_set_text(pageHint,"TAP TO TOGGLE / HOLD RADAR");
   }else if(litePage==LitePage::Signals){
 #ifdef BOARD_M5DIAL
     dialSignalUpdate();return;
@@ -138,7 +140,7 @@ static void updateLitePage(){
   }else{
     lv_label_set_text(pageTitle,"DETECTOR STATUS");
     snprintf(value,sizeof(value),"WI-FI  %lu\nBLE  %lu\nDROPS  %lu\nHEAP  %u KB\nPSRAM  %u KB",wifiFrames,bleFrames,queueDrops,ESP.getFreeHeap()/1024,ESP.getFreePsram()/1024);lv_label_set_text(pageValue,value);
-    snprintf(value,sizeof(value),"UP %lu MIN / CH %u\nCLOCK %s",millis()/60000,wifiChannel,wallTime()?"SET":"NEEDS SYNC");lv_label_set_text(pageSub,value);lv_label_set_text(pageHint,"HOLD TO RETURN TO RADAR");
+    snprintf(value,sizeof(value),"UP %lu MIN / CH %u\nCLOCK %s",millis()/60000,wifiChannel,wallTime()?"SET":"NEEDS SYNC");lv_label_set_text(pageSub,value);lv_label_set_text(pageHint,"HOLD FOR SETTINGS");
   }
 }
 void liteButtonEvent(dragon::LitePress event){
@@ -146,8 +148,9 @@ void liteButtonEvent(dragon::LitePress event){
 #ifdef BOARD_M5DIAL
   dialButton(event);return;
 #endif
-  if(event==dragon::LitePress::Hold){setLitePage(LitePage((unsigned(litePage)+1)%5));return;}
+  if(event==dragon::LitePress::Hold){setLitePage(LitePage((unsigned(litePage)+1)%6));return;}
   if(litePage==LitePage::Timer){if(event==dragon::LitePress::Tap)stopwatch.toggle(stopwatchNow());else if(event==dragon::LitePress::Double){if(stopwatch.running){if(liteLocksport())stopwatch.finish(stopwatchNow());else stopwatch.lap(stopwatchNow());}else stopwatch.reset();}}
+  else if(litePage==LitePage::Settings){if(event==dragon::LitePress::Tap)setAdultMode(!detector.enabled(Family::Adult));}
   else if(litePage==LitePage::Signals)++signalIndex;
   else if(litePage!=LitePage::Status)uiKey(false);
 }

@@ -83,12 +83,15 @@ inline AxonEvidence inspectAxonWifi(const uint8_t* p,size_t n){
 inline Match withAxon(Match current,AxonEvidence clue){
   auto next=clue.match();
   if(next.confidence==Confidence::None)return current;
-  return current.family==Family::Axon&&current.confidence>next.confidence?current:next;
+  // An address clue must not replace a stronger decoded protocol payload.
+  if(current.confidence>next.confidence)return current;
+  if(current.confidence==next.confidence&&familyPriority(current.family)>familyPriority(next.family))return current;
+  return next;
 }
 // Used by both the receive pipeline and host tests. Complete, bounded Axon
 // fields survive a damaged unrelated AD tail; malformed bytes never supply IDs.
-inline BleFrame parseBleObservation(const uint8_t* p,size_t n,size_t advLength,const uint8_t* mac,uint8_t addressType,bool& payloadValid){
-  auto frame=parseBle(p,n,advLength);payloadValid=frame.valid;
+inline BleFrame parseBleObservation(const uint8_t* p,size_t n,size_t advLength,const uint8_t* mac,uint8_t addressType,bool& payloadValid,bool adultMode=false){
+  auto frame=parseBle(p,n,advLength,adultMode);payloadValid=frame.valid;
   auto clue=inspectAxonBle(p,n,advLength,mac,addressType);
   if(!frame.valid){frame={};if(clue.signals)frame.valid=true;}
   if(frame.valid)frame.match=addressHint(mac,addressType==0||addressType==2,frame.match);

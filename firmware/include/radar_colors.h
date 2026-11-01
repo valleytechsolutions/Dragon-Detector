@@ -31,7 +31,8 @@ constexpr uint32_t FamilyColors[]={
   0xff8f91, // Deauthentication burst
   0xffc3a0, // SSID conflict
   0xa9b2ff, // BLE spam
-  0xfff4b5  // Dragon fox beacon
+  0xfff4b5, // Dragon fox beacon
+  0xd5b0ce  // Opt-in adult-device candidate
 };
 static_assert(sizeof(FamilyColors)/sizeof(FamilyColors[0])==unsigned(Family::Count),"Every family needs its own radar color");
 inline uint32_t familyColor(Family family){return unsigned(family)<unsigned(Family::Count)?FamilyColors[unsigned(family)]:0xffffff;}

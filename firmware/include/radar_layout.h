@@ -13,8 +13,8 @@ struct RadarLabelCandidate {Family family;bool stale=false,selected=false;};
 inline unsigned selectRadarLabels(const RadarLabelCandidate* candidates,unsigned count,unsigned* labels,unsigned limit,bool automatic=true){
   unsigned used=0;
   auto add=[&](unsigned i){if(used>=limit)return;for(unsigned j=0;j<used;++j)if(labels[j]==i)return;labels[used++]=i;};
-  // Axon owns the primary tag even while the user inspects a tracker.
-  if(automatic)for(unsigned i=0;i<count;++i)if(candidates[i].family==Family::Axon&&!candidates[i].stale){add(i);break;}
+  // ALPR/Flock, then Axon, then cameras. A selected tracker keeps a second tag.
+  if(automatic){int best=-1;for(unsigned i=0;i<count;++i)if(!candidates[i].stale&&importantFamily(candidates[i].family)&&(best<0||familyPriority(candidates[i].family)>familyPriority(candidates[best].family)))best=i;if(best>=0)add(best);}
   for(unsigned i=0;i<count;++i)if(candidates[i].selected)add(i);
   if(automatic)for(unsigned i=0;i<count&&used<limit;++i)if(!candidates[i].stale&&importantFamily(candidates[i].family))add(i);
   return used;

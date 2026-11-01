@@ -46,6 +46,7 @@ inline bool trafficFresh(const Contact& c,uint32_t now){return c.wifiAlerts && u
 // Visibility is deliberately independent of audible-alert confidence and the
 // repeat-evidence gate. A fleeting, valid observation still deserves a dot.
 inline bool candidateVisible(const Contact& c,uint32_t now,const dragon::DetectorSettings& settings,bool all,bool ignore,bool watch){
+  if(c.match.family==dragon::Family::Adult&&!settings.enabled(dragon::Family::Adult))return false;
   if(!c.used || !c.packets || ignore || uint32_t(now-c.seen)>=30000)return false;
   bool signature=c.match.confidence!=dragon::Confidence::None && c.matchHits && uint32_t(now-c.matchedAt)<30000;
   return watch || (settings.enabled(c.match.family)&&(all||signature)) || (trafficFresh(c,now)&&settings.enabled(c.trafficFamily));
@@ -53,6 +54,7 @@ inline bool candidateVisible(const Contact& c,uint32_t now,const dragon::Detecto
 // Retain an intermittent, previously classified signal as an explicitly stale
 // marker. This never refreshes evidence or qualifies it for alerts/hunt audio.
 inline bool recentCandidateVisible(const Contact& c,uint32_t now,const dragon::DetectorSettings& settings,bool ignore,bool watch){
+  if(c.match.family==dragon::Family::Adult&&!settings.enabled(dragon::Family::Adult))return false;
   const uint32_t age=uint32_t(now-c.seen);
   if(!c.used||!c.packets||ignore||age<30000||age>=120000)return false;
   return watch || (settings.enabled(c.match.family)&&c.match.confidence!=dragon::Confidence::None&&c.matchHits&&uint32_t(now-c.matchedAt)<120000);

@@ -95,6 +95,7 @@ bool toggleRule(const dragon::DeviceKey& key,DeviceRule flag);
 bool ruleAt(size_t i,dragon::DeviceKey& key,uint8_t& flags);
 void detectorBegin();
 void detectorSave();
+void setAdultMode(bool enabled);
 void detectorLoop();
 bool detectorCommand(const String& command);
 bool emitDetection(Contact& c,Family family,Confidence confidence,const char* evidence,bool force=false);

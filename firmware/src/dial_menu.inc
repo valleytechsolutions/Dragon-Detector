@@ -9,14 +9,14 @@ static void dialMenuRefresh();
 static void dialMenuSelect();
 static unsigned dialThemeAt(int choice){for(unsigned i=0;i<RadarThemeCount;++i)if(i!=dragon::PersonalThemeId&&choice--==0)return i;return 0;}
 static const char* dialThemeLabel(unsigned theme){return theme==9?"CI / McNally":theme==26?"CI / LPL":radarThemeNames[theme];}
-static int dialMenuCount(){switch(dialMenu){case DialMenu::Main:return 6;case DialMenu::Tools:return 4;case DialMenu::Settings:return 5;case DialMenu::Themes:return RadarThemeCount-1;case DialMenu::Time:case DialMenu::Date:return 5;default:return 1;}}
+static int dialMenuCount(){switch(dialMenu){case DialMenu::Main:return 6;case DialMenu::Tools:return 4;case DialMenu::Settings:return 6;case DialMenu::Themes:return RadarThemeCount-1;case DialMenu::Time:case DialMenu::Date:return 5;default:return 1;}}
 static bool dialMenuVisible(){return dialMenu!=DialMenu::Closed;}
 static void dialMenuClose(){
   if(dialMenu==DialMenu::Brightness){dialBrightness=dialOldBrightness;set_brightness(dialBrightness);}
   dialMenu=DialMenu::Closed;dialEditing=false;lv_obj_add_flag(dialPanel,LV_OBJ_FLAG_HIDDEN);lv_obj_invalidate(root);
 }
 static void dialMenuOpen(DialMenu menu){
-  dialMenu=menu;dialChoice=0;dialEditing=false;
+  dialMenu=menu;dialChoice=0;dialEditing=false;noticeAt=0;if(notice)lv_obj_add_flag(notice,LV_OBJ_FLAG_HIDDEN);
   if(menu==DialMenu::Time||menu==DialMenu::Date){clockLocal(dialEditDate);if(!wallTime())dialEditDate={2026,1,1,12,0,0};}
   if(menu==DialMenu::Brightness)dialOldBrightness=dialBrightness;
   if(menu==DialMenu::Themes)for(int i=0;i<dialMenuCount();++i)if(dialThemeAt(i)==radarTheme)dialChoice=i;
@@ -47,11 +47,11 @@ static void dialMenuRefresh(){
   dialFirstRow=std::max(0,std::min(dialChoice-2,dialMenuCount()-5));
   static const char* mainItems[]={"Radar","Clock","Tools","Themes","Settings","Close"};
   static const char* toolItems[]={"Stopwatch","Signals / Hunt","Device status","Back"};
-  static const char* settingItems[]={"Time","Date","Brightness","Sound","Back"};
+  static const char* settingItems[]={"Time","Date","Brightness","Sound","Adult Mode (18+)","Back"};
   for(int row=0;row<5;++row){int item=dialFirstRow+row;auto* button=dialMenuRows[row];if(item>=dialMenuCount()){lv_obj_add_flag(button,LV_OBJ_FLAG_HIDDEN);continue;}lv_obj_clear_flag(button,LV_OBJ_FLAG_HIDDEN);
     const char* name="";
     if(dialMenu==DialMenu::Main)name=mainItems[item];else if(dialMenu==DialMenu::Tools)name=item==0&&liteLocksport()?"Locksport timer":toolItems[item];
-    else if(dialMenu==DialMenu::Settings){name=settingItems[item];if(item==3){snprintf(value,sizeof(value),"Sound: %s",alertSound?"on":"muted");name=value;}}
+    else if(dialMenu==DialMenu::Settings){name=settingItems[item];if(item==3){snprintf(value,sizeof(value),"Sound: %s",alertSound?"on":"muted");name=value;}if(item==4){snprintf(value,sizeof(value),"18+ Mode: %s",detector.enabled(Family::Adult)?"ON":"OFF");name=value;}}
     else if(dialMenu==DialMenu::Themes)name=dialThemeLabel(dialThemeAt(item));
     else if(dialMenu==DialMenu::Brightness){snprintf(value,sizeof(value),"%d%%  /  press to save",dialBrightness);name=value;}
     else if(item==3)name=dialMenu==DialMenu::Time?"Save time":"Save date";
@@ -75,7 +75,7 @@ static void dialMenuSelect(){
   int item=dialChoice;
   if(dialMenu==DialMenu::Main){if(item==0||item==1){dialMenuClose();setLitePage(item==0?LitePage::Radar:LitePage::Clock);}else if(item==2)dialMenuOpen(DialMenu::Tools);else if(item==3)dialMenuOpen(DialMenu::Themes);else if(item==4)dialMenuOpen(DialMenu::Settings);else dialMenuClose();}
   else if(dialMenu==DialMenu::Tools){if(item==3)dialMenuBack();else{dialMenuClose();setLitePage(item==0?LitePage::Timer:item==1?LitePage::Signals:LitePage::Status);}}
-  else if(dialMenu==DialMenu::Settings){if(item==0)dialMenuOpen(DialMenu::Time);else if(item==1)dialMenuOpen(DialMenu::Date);else if(item==2)dialMenuOpen(DialMenu::Brightness);else if(item==3){alertSound=!alertSound;audioSave();if(!alertSound)audioStop();dialMenuRefresh();}else dialMenuBack();}
+  else if(dialMenu==DialMenu::Settings){if(item==0)dialMenuOpen(DialMenu::Time);else if(item==1)dialMenuOpen(DialMenu::Date);else if(item==2)dialMenuOpen(DialMenu::Brightness);else if(item==3){alertSound=!alertSound;audioSave();if(!alertSound)audioStop();dialMenuRefresh();}else if(item==4){setAdultMode(!detector.enabled(Family::Adult));dialMenuRefresh();}else dialMenuBack();}
   else if(dialMenu==DialMenu::Themes){unsigned theme=dialThemeAt(item);dialMenuClose();radarTheme=theme;refreshLiteTheme();}
   else if(dialMenu==DialMenu::Brightness){if(prefsReady)litePrefs.putUChar("brightness",dialBrightness);dialOldBrightness=dialBrightness;dialMenuOpen(DialMenu::Settings);}
   else if(item<3){dialEditing=!dialEditing;dialMenuRefresh();}

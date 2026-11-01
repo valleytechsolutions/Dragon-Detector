@@ -204,14 +204,14 @@ static void update(Contact& c,const Observation& o,const char* name,dragon::Matc
   if(o.rssi<0 && o.rssi>=-127){c.signal.add(o.rssi,o.at,detector.smoothingMs);c.rssi=c.signal.value();c.trace.add(c.rssi,o.at);}c.seen=o.at;c.channel=o.channel;++c.packets;
   if(*name)strlcpy(c.name,name,sizeof(c.name));
   if(c.matchHits && uint32_t(o.at-c.matchedAt)>30000){c.matchHits=0;c.signatureAlerted=false;c.match={c.ble?Family::Ble:Family::Wifi,Confidence::None,"expired evidence"};}
-  bool changed=(m.family==Family::Axon&&m.confidence!=Confidence::None&&c.match.family!=Family::Axon)||(m.confidence>c.match.confidence&&c.match.family!=Family::Axon)||(m.family==c.match.family&&m.confidence>c.match.confidence);
+  bool changed=dragon::strongerMatch(m,c.match);
   if(m.confidence!=Confidence::None && (changed || (m.family==c.match.family && m.confidence>=c.match.confidence))){
     if(changed){c.match=m;c.matchHits=0;c.signatureAlerted=false;}
     else c.match.evidence=m.evidence;
     if(!c.matchHits)c.matchSince=o.at;
     if(c.matchHits<65535)++c.matchHits;c.matchedAt=o.at;
   }
-  if(detector.enabled(c.match.family) && (c.packets==1 || changed || uint32_t(o.at-c.lastLog)>30000)){logContact(c,changed?"signature":"seen");c.lastLog=o.at;}
+  if(c.match.family!=Family::Adult && detector.enabled(c.match.family) && (c.packets==1 || changed || uint32_t(o.at-c.lastLog)>30000)){logContact(c,changed?"signature":"seen");c.lastLog=o.at;}
   // Save the first valid match too: short encounters remain inspectable even
   // when they have not earned a repeat-confirmed audible alert.
   if(c.match.confidence!=Confidence::None && (c.matchHits==1 || changed))historyObserve(c,c.match.family,c.match.confidence,c.match.evidence);
@@ -284,7 +284,7 @@ static void process(const Observation& o){
     if(reconOwnsRadio())return;
     ++bleFrames;bleLabObserve(o.mac,o.addressType,o.rssi,o.data,o.len,o.advLength,o.at);if(o.len!=o.original){++malformedFrames;return;}
     notebookBle(o.mac,o.addressType,o.rssi,o.data,o.len,o.advLength,o.at);
-    bool payloadValid=false;auto f=dragon::parseBleObservation(o.data,o.len,o.advLength,o.mac,o.addressType,payloadValid);
+    bool payloadValid=false;auto f=dragon::parseBleObservation(o.data,o.len,o.advLength,o.mac,o.addressType,payloadValid,detector.enabled(Family::Adult));
     if(!payloadValid)++malformedFrames;if(!f.valid)return;
     countAxon(dragon::inspectAxonBle(o.data,o.len,o.advLength,o.mac,o.addressType),true,payloadValid,o.at);
     auto* contact=getContact(o.mac,true,o.addressType,o.at,f.match);if(!contact)return;Contact& c=*contact;if(c.packets&&int32_t(o.at-c.seen)<0)return;
