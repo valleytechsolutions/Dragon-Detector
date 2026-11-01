@@ -2,9 +2,27 @@
 
 The M5Burner project is **Dragon Detector - M5Stack StopWatch C152**, with **StopWatch** as its only supported device. Its package contains only the C152 build.
 
-## 0.13.42 release package
+## 0.14.0 release packages
 
-The current C152 package adds [44Delta](44DELTA.md): cyan-on-black branding,
+The current release adds improved classification precedence, category target
+pages, radar-only detection popups, retained device labels, the refined
+black-and-gold Valleytech radar and optional Adult Mode (18+, off by default).
+See [0.14.0 validation and limits](RELEASE-0.14.0.md).
+
+- **StopWatch C152:** [16 MB factory BIN](https://valleytech-dragon-detector.pages.dev/firmware/stopwatch/factory-0x0.bin),
+  offset **0x0**, SHA-256 `e26855e1d6c07282a3f2e34706dc9062498e4360f19aeed27a9efa0515ecadc1`.
+- **M5Stack Dial:** [8 MB factory BIN](https://valleytech-dragon-detector.pages.dev/firmware/m5dial/factory-0x0.bin),
+  offset **0x0**. See [Dial setup and hardware-test limits](M5STACK-DIAL.md).
+
+These are separate, clean board-specific factory images. A fresh installation
+replaces saved settings/files. Use the web flasher's matching Update option
+to preserve a compatible installation. M5Burner catalog approval is separate
+from package verification and from availability on the web flasher.
+
+## Previous 0.13.42 release package
+
+
+The 0.13.42 C152 package added [44Delta](44DELTA.md): cyan-on-black branding,
 an analog-only lockpick-hand clock, a padlock radar and a Locksport Timer.
 Download the [current C152 factory BIN](https://valleytech-dragon-detector.pages.dev/firmware/stopwatch/factory-0x0.bin)
 and [checksums](https://valleytech-dragon-detector.pages.dev/firmware/stopwatch/SHA256SUMS.txt).

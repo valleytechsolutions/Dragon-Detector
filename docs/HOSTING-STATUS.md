@@ -1,12 +1,12 @@
 # Installation and hosting status
 
-Updated October 31, 2026.
+Updated November 1, 2026.
 
 ## Working web flasher
 
 **[Open Dragon Detector](https://valleytech-dragon-detector.pages.dev/)**
 
-This independently hosted copy includes the 0.13.42 firmware for all eleven board profiles, the 44Delta locksport theme, USB date/time setup, device tools and the optional personal-theme creator. Guides and screenshots are served here too. The firmware on an already-installed device is unaffected by a website outage.
+This independently hosted copy includes the 0.14.0 firmware for all eleven board profiles, the 44Delta locksport theme, USB date/time setup, device tools and the optional personal-theme creator. Guides and screenshots are served here too. The firmware on an already-installed device is unaffected by a website outage.
 
 Public GitHub repository access is restored. The [repository](https://github.com/valleytechsolutions/Dragon-Detector)
 links directly to this working flasher. The original
@@ -22,7 +22,7 @@ Cloudflare remains the primary installer, so there is one public firmware source
 
 The Custom theme tab is optional. Its personal-theme slot stays hidden on the device unless a design is explicitly installed.
 
-[Full installation guide](FLASHING.md) · [Clock setup](CLOCK-SETUP.md) · [Custom theme guide](CUSTOM-THEME.md) · [Release notes](RELEASE-0.13.42.md)
+[Full installation guide](FLASHING.md) · [Clock setup](CLOCK-SETUP.md) · [Custom theme guide](CUSTOM-THEME.md) · [Release notes](RELEASE-0.14.0.md)
 
 ## GitHub and Gitea
 
@@ -30,13 +30,13 @@ GitHub now contains the source changes made while access was unavailable. The
 Gitea repository remains a separate copy; its commits and releases can differ.
 The GitHub Pages workflow publishes only the forwarding page. Firmware CI builds
 remain validation artifacts until explicitly released to the primary flasher.
-The 0.13.42 release includes the documented Waveshare development changes and
+The 0.14.0 release includes the documented Waveshare development changes and
 retains their beta/field-validation limits. A Git push alone does not deploy
 firmware to the web flasher.
 
 ## M5Burner
 
-The clean 0.13.42 C152 factory package was uploaded on October 31, 2026.
-M5Burner shows **Pending / Public** for the existing StopWatch project; M5Stack's
-catalog review is still pending. The current BIN is available from the web
-flasher immediately. [M5Burner details](M5BURNER.md).
+Clean 0.14.0 factory packages are available for StopWatch C152 (16 MB) and
+M5Stack Dial (8 MB), both at offset 0x0. M5Burner submissions require M5Stack
+catalog review independently of web-flasher availability; a pending submission
+is not an approved catalog release. [M5Burner details](M5BURNER.md).

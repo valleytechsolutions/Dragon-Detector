@@ -52,3 +52,25 @@ boards. M5Burner submissions remain subject to M5Stack review.
 Update images preserve the existing partition layout, NVS and badge files.
 Fresh factory images are generated from repository assets, never device
 backups. The approved public showcase and GitHub front page are unchanged.
+
+The [release build matrix](https://github.com/valleytechsolutions/Dragon-Detector/actions/runs/41352610543)
+passed for all eleven profiles from clean source
+`57c832e7f761098434e8f833b135cc1cc623c6e5`. The web suite
+contains 145 passing tests, including all eleven 0.14.0 board handshakes,
+factory/update manifests and USB feature gates. Unknown release series remain
+rejected. Native positive/negative fixtures, malformed-packet fuzzing,
+sanitizers and artwork CRC checks cover the shared code.
+
+On November 1, a private 16 MB backup preceded the C152 update. The final
+3,470,768-byte application passed flash hash verification and all 23 on-device
+self-tests. RTC readback was valid, existing history/settings survived, and
+injected normal/watch-list notifications confirmed radar-only behavior.
+Adult Mode persisted through a restart when enabled, and was then disabled
+and verified off after another restart. The owner confirmed touchscreen,
+Targets navigation and clock/badge behavior before the final label refinement;
+that refinement additionally passed shared label fixtures and boot checks.
+
+The StopWatch release contains the locally built application tested on that
+device. The other ten release packages use matching CI artifacts from the
+same source revision. A full factory-reset installation and field reception
+of every detector family were not repeated on all eleven physical boards.

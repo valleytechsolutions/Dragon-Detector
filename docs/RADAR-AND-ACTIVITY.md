@@ -1,6 +1,6 @@
-# Radar, hunt and traffic evidence · 0.7
+# Radar, hunt and traffic evidence · 0.14
 
-The same implementation runs on Spotpear / Guition JC3636W518 (360×360), Waveshare ESP32-S3-Touch-AMOLED-1.75C and M5Stack StopWatch C152 (466×466). Each board retains its own display, touch, audio and button adapter. The exact Spotpear model matters; similarly shaped boards are not interchangeable.
+The shared detection and radar code runs across all eleven supported ESP32-S3 profiles. Each board retains its own display, input, storage and audio capabilities. Choose the exact hardware profile; similarly shaped boards are not interchangeable.
 
 ## Reading the radar
 
@@ -8,7 +8,9 @@ The owner-supplied BWM1 emblem replaces the heading. RX mode, target count and a
 
 Choose **Settings → Theme & radar labels** for **Green radar** (default), **Dragon Ball**, or **Black / gold / red**. Each has an animated sweep and pulsing live targets. Green and gold include unnumbered signal rings; Dragon Ball keeps the emerald square grid and yellow dots. The BWM1 logo and RX/count/battery row stay in every theme. The sweep and red center marker are decorative, not direction sensors.
 
-Every visible contact stays on one radar as a family-colored dot; there are no radar pages. Axon receives the primary tag and leader line. Flipper, Flock/ALPR, camera glasses, Ring, other cameras and drones receive automatic tags next. Up to six tags fit on full boards (four on Lite); additional contacts remain visible as dots. AirTag/Find My, SmartTag, Google tags, Tile and iBeacon have smaller dots and no automatic tags or sounds. Tap any dot to reveal its tag and leader for ten seconds; tap the selected dot/tag again for details and Hunt. Tapping a tracker does not displace Axon's primary tag. Details retain the actual received evidence and its specificity; the radar has no CLUE or hint labels.
+Every visible contact stays on one radar as a family-colored dot. ALPR/Flock receive the primary tag before Axon and cameras. Other device families use remaining description callouts, including SmartTag, Google Find Hub and Tile. Up to six tags fit on full boards (four on compact profiles); additional contacts remain visible as dots. AirTag/Find My and iBeacon have no automatic tags. All tracker families remain silent. Tap any dot to reveal its tag and leader for ten seconds; tap the selected dot/tag again for details and Hunt. A selected tracker does not displace the primary priority tag. Details retain the actual received evidence and its specificity.
+
+**Targets** uses separate nonempty category pages, beginning with ALPR/Flock, Axon and cameras and ending with trackers. Use the arrows to change page. Detection popups appear only on Radar, including watch-list popups; leaving Radar clears queued cards so badge, clock, menus and tools stay uninterrupted. The instruction to tap a dot has been removed from the radar itself; device descriptions remain.
 
 Radius follows filtered RSSI: stronger signals move inward. Values stronger than -35 or weaker than -100 dBm clamp at the plotting limits internally; this is not a distance calibration. Angle is a decorative address arrangement, **not bearing**. Markers are kept clear of the logo and controls while preserving their RSSI radius. Live dots use family colors; tags display measured dBm.
 
@@ -41,6 +43,6 @@ Crowded environments and address rotation can trigger these heuristics. Identica
 
 Open **Tools → Activity**, or tap a recent-activity banner on the radar. Events stores the alert detail; contact evidence explains the matched participant. Family toggles, confidence controls and quiet mode continue to apply to alerts. The web tool's **Show radio activity** shortcut requires 0.6.x or 0.7.x. USB `traffic status` returns aggregate counters; `screen activity` opens the panel.
 
-Balanced reception alternates Wi-Fi and BLE; hunting prioritizes one radio, so other activity can be missed. Only the currently received Wi-Fi channel is observed. These are decoded-frame detectors, not RF jamming measurements. All 134 pinned SquachWatch signature checks remain enforced. See [coverage](COVERAGE-AUDIT.md), [validation](VALIDATION.md) and [credits](../CREDITS.md).
+Balanced reception alternates Wi-Fi and BLE; hunting prioritizes one radio, so other activity can be missed. Only the currently received Wi-Fi channel is observed. These are decoded-frame detectors, not RF jamming measurements. All 158 pinned signature-table checks remain enforced. See [coverage](COVERAGE-AUDIT.md), [validation](VALIDATION.md) and [credits](../CREDITS.md).
 
 The three branded themes require firmware 0.13.1 or newer. [Previews and logos](THEMES.md).

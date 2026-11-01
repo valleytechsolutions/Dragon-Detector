@@ -2,6 +2,12 @@
 
 Dragon Detector 0.13.27 is verified on **M5Stack Dial v1.1**, with 8 MB flash and no PSRAM. Display, touch, ring/front-button navigation, menus and radar actions passed physical checks. The hardware clock was set over USB and retained the correct time across a firmware restart without another sync. The original K130 shares this profile but has not been physically tested. Time retention while completely unplugged depends on the RTC power supply.
 
+The current [0.14.0 release](RELEASE-0.14.0.md) is compiled and package-checked
+for this profile. It adds the shared detection/label improvements, radar-only
+popups, Valleytech radar refinement and a default-off Adult Mode setting.
+The physical checks above describe the tested 0.13.27 hardware baseline;
+0.14.0 has not been re-flashed to a physical Dial during this release.
+
 ## Install
 
 1. Open the [web flasher](https://valleytech-dragon-detector.pages.dev/#install) in desktop Chrome or Edge and choose **M5Stack Dial v1.1**.
