@@ -15,7 +15,7 @@ GitHub source access is restored. The Cloudflare address above remains the prima
 installer; the [original GitHub Pages link](https://valleytechsolutions.github.io/Dragon-Detector/)
 forwards there. [Hosting status](docs/HOSTING-STATUS.md).
 
-[**Install firmware**](https://valleytech-dragon-detector.pages.dev/#install) · [Latest release](docs/RELEASE-0.13.42.md) · [User guides](docs/GUI.md) · [Clock setup](docs/CLOCK-SETUP.md)
+[**Install firmware**](https://valleytech-dragon-detector.pages.dev/#install) · [Latest release](docs/RELEASE-0.14.1.md) · [User guides](docs/GUI.md) · [Clock setup](docs/CLOCK-SETUP.md)
 
 **M5Stack Dial v1.1:** [Version 0.13.27](docs/M5STACK-DIAL.md) adds ring navigation, touch menus, radar dot actions and separate Time/Date settings. Display, controls and RTC restart checks passed on Dial v1.1. See the guide for the compact profile’s feature limits; original K130 remains untested.
 
