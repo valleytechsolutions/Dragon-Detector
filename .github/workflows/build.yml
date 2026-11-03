@@ -66,6 +66,22 @@ jobs:
           path: ~/.platformio
           key: pio-${{ runner.os }}-${{ matrix.board }}-${{ hashFiles('platformio.ini') }}
       - run: pip install platformio==6.2.0 esptool==5.4.0
+      - name: Repair relocated ESP-IDF Python cache
+        if: matrix.board == 'elecrow_21'
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          # Restored virtualenvs can point at a Python installation that is no
+          # longer on this runner. Invalidate only their completion marker;
+          # PlatformIO then recreates its own environment before compiling.
+          for environment in (Path.home() / '.platformio' / 'penv').glob('.espidf-*'):
+              marker = environment / 'pio-idf-venv.json'
+              if environment.is_symlink():
+                  raise RuntimeError('Unexpected symlink for cached ESP-IDF environment')
+              if marker.is_file() and not (environment / 'bin' / 'python').is_file():
+                  marker.unlink()
+                  print('Rebuilding unavailable cached ESP-IDF Python:', environment.name)
+          PY
       - run: python tools/build_release.py --board ${{ matrix.board }}
       - run: node tools/check_web_manifests.mjs ${{ matrix.board }}
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
