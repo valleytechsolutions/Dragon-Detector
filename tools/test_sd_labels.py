@@ -19,7 +19,15 @@ assert {(x['kind'],int(x['id'],16)):x['name'] for x in document['labels']}==expe
 assert len(expected)==44
 source=root/'web/resources/dragon-resources-v1-20261023.zip';pack=root/'web/resources/dragon-resources-v1-20261103.zip'
 extend_pack(source,labels_path,work/'first.zip');extend_pack(source,labels_path,work/'second.zip')
-assert (work/'first.zip').read_bytes()==(work/'second.zip').read_bytes()==pack.read_bytes()
+assert (work/'first.zip').read_bytes()==(work/'second.zip').read_bytes()
+# ZIP creator-OS metadata and the deflate implementation can differ between
+# Windows packaging and Linux CI. The installed files must be byte-identical;
+# authenticate the reviewed downloadable container against its pinned hash.
+with zipfile.ZipFile(work/'first.zip') as generated,zipfile.ZipFile(pack) as committed:
+    assert generated.namelist()==committed.namelist()
+    for name in generated.namelist():assert generated.read(name)==committed.read(name),name
+pack_hashes={name:digest for digest,name in (line.split() for line in (pack.parent/'SHA256SUMS.txt').read_text().splitlines())}
+assert hashlib.sha256(pack.read_bytes()).hexdigest()==pack_hashes[pack.name]
 with zipfile.ZipFile(source) as old,zipfile.ZipFile(pack) as new:
     assert old.read('dragon/resources/vendors.ddr')==new.read('dragon/resources/vendors.ddr')
     meta=json.loads(new.read('dragon/resources/manifest.json'))
