@@ -8,6 +8,8 @@ Updated November 3, 2026.
 
 This independently hosted copy includes the 0.14.2 firmware for all twelve board profiles, including the Waveshare ESP32-S3-Touch-LCD-1.85B, USB date/time setup, device tools and the optional personal-theme creator. Guides, SD resource packs and screenshots are served here too. The firmware on an already-installed device is unaffected by a website outage.
 
+A separate [Guition / Surenoo JC3636W518 Beta 1](GUITION-SURENOO-BETA.md) installer uses a newer manufacturer panel sequence. It is physically unverified and does not replace or modify the twelve released firmware packages, including the original Spotpear profile.
+
 Public GitHub repository access is restored. The [repository](https://github.com/valleytechsolutions/Dragon-Detector)
 links directly to this working flasher. The original
 [GitHub Pages address](https://valleytechsolutions.github.io/Dragon-Detector/)
