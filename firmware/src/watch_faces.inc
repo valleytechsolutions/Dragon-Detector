@@ -51,14 +51,14 @@ static const WatchPalette watches[]={
   {"XomBi",0x090f0b,0xdceccc,0xa7e76b,0xabc49b,false},
   {"MuldersreVenge",0x000000,0xffe8bc,0xf2b95f,0xcab48e,false},
   {"MITM",0x050719,0xf5f7ff,0x00eaff,0xc6badf,false},
-  {"Hypnotic",0x030509,0xf5f3ed,0xc5b4eb,0xbab6c6,false},
+  {nullptr,0,0,0,0,false}, // Retired ID 43; preserve later saved selections.
   {"VectorPotential",0x02070c,0xe4faff,0x66d9ee,0xa2c9d4,true},
   {"Argyle",0xf5f5f2,0x111417,0x111417,0x525e65,true},
   {"Law Lock Tools",0xffffff,0x074567,0x008bc9,0x376783,true},
   {"Moki",0x000000,0xe2ffdd,0x34ff16,0x9dcf99,true},
   {"44Delta",0x000000,0xe0f7fa,0x00dce4,0x9dbec5,true}
 };
-static constexpr uint8_t WatchFaces[]={0,1,2,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48};
+static constexpr uint8_t WatchFaces[]={0,1,2,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,44,45,46,47,48};
 static constexpr unsigned WatchCount=sizeof(WatchFaces)/sizeof(WatchFaces[0]);
 static bool watchFaceAllowed(unsigned face){if(face==dragon::PersonalWatchId&&!personalThemeReady())return false;for(auto id:WatchFaces)if(id==face)return true;return false;}
 static unsigned watchFacePosition(){for(unsigned i=0;i<WatchCount;++i)if(WatchFaces[i]==watchFace)return i;return 0;}
@@ -301,7 +301,6 @@ static void watchDraw(lv_event_t* e){
   if(watchFace==MokiWatch){mokiWatch(ctx,d,valid);return;}
   if(watchFace==ArgyleWatch){argyleWatch(ctx,d,valid);return;}
   if(watchFace==VectorPotentialWatch){vpWatch(ctx,d,valid);return;}
-  if(watchFace==HypnoticWatch){hypnoticWatch(ctx,d,valid,watchFrameAt);return;}
   if(watchFace==MitmWatch){mitmWatch(ctx,d,valid,watchFrameAt);return;}
   if(watchFace==OggWatch||watchFace==XombiWatch){greenWatch(ctx,d,valid,watchFace==XombiWatch);return;}
   if(watchFace==CanCommanderWatch){canCommanderWatch(ctx,d,valid,watchFrameAt);return;}
@@ -374,9 +373,9 @@ static void buildWatch(){
 static void watchTick(){
   if(!watchDial)return;
   if(watchFace==27)pigTick(millis());
-  static uint32_t lastEpoch=0;uint32_t epoch=wallTime(),now=millis();bool mechanism=watchFace==HypnoticWatch||watchFace==MitmWatch||watchFace==8||watchFace==18||watchFace==CanCommanderWatch||(watchFace>=30&&watchFace<36);
+  static uint32_t lastEpoch=0;uint32_t epoch=wallTime(),now=millis();bool mechanism=watchFace==MitmWatch||watchFace==8||watchFace==18||watchFace==CanCommanderWatch||(watchFace>=30&&watchFace<36);
   if(epoch!=lastEpoch){lastEpoch=epoch;watchFrameAt=now;lv_obj_invalidate(watchDial);}
-  else if(mechanism&&now-watchFrameAt>=((watchFace==32||watchFace==HypnoticWatch)?100u:200u)){watchFrameAt=now;
+  else if(mechanism&&now-watchFrameAt>=(watchFace==32?100u:200u)){watchFrameAt=now;
     // The clock hands are redrawn over animated ornament in the same clipped pass.
     if(watchFace==18){
       for(int x:{61,247}){lv_area_t flame{(lv_coord_t)S(x),(lv_coord_t)S(132),(lv_coord_t)S(x+52),(lv_coord_t)S(253)};lv_obj_invalidate_area(watchDial,&flame);}return;

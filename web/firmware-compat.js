@@ -1,4 +1,4 @@
-import {firmwareAtLeast,knownFirmware} from './firmware-version.js?v=0.14.1';
+import {firmwareAtLeast,knownFirmware} from './firmware-version.js?v=0.14.2';
 // Only protocol versions with a known compatible USB contract are accepted.
 export function parseBadgeInfo(line){
   const match=/^BADGE_INFO (0\.(?:[3456789]|10|11|12|13|14)\.\d+) (240|360|412|466|480) (READY|RADAR_ONLY|LITE) (.+)$/.exec(line);
@@ -45,7 +45,6 @@ export function hasCapsuleSparrowsThemes(version){return firmwareAtLeast(version
 
 export function hasMuldersRevengeTheme(version){return firmwareAtLeast(version,'0.13.24');}
 
-export function hasHypnoticTheme(version){return hasMitmTheme(version);}
 export function hasMitmTheme(version){return firmwareAtLeast(version,'0.13.26');}
 
 // Persistent ID 45: 44Delta, including its analog-only clock.

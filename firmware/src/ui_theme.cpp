@@ -63,7 +63,7 @@ const lv_font_t* uiFont(const lv_font_t* standard){
   return &dragon_ascii_heading;
 }
 void uiApplyTheme(unsigned index){
-  selected=index<dragon::UiPaletteCount?index:1;const auto& p=uiColors();
+  selected=dragon::uiThemeIndex(index);const auto& p=uiColors();
   if(!initialized){for(auto* s:{&panel,&ink,&button,&selection,&disabled,&scrollbar})lv_style_init(s);initialized=true;}
   auto style=[](lv_style_t* s,uint32_t bg,uint32_t fg,uint32_t border){lv_style_set_bg_color(s,lv_color_hex(bg));lv_style_set_text_color(s,lv_color_hex(fg));lv_style_set_border_color(s,lv_color_hex(border));};
   style(&panel,p.bg,p.ink,p.border);style(&button,p.surface,p.ink,p.border);style(&selection,p.raised,p.ink,p.accent);

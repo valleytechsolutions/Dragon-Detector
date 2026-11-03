@@ -9,7 +9,7 @@
 #ifdef BOARD_M5DIAL
 bool personalThemeReady(){return false;}
 const dragon::PersonalTheme& personalTheme(){static dragon::PersonalTheme value;return value;}
-const dragon::UiPalette& themeUiColors(unsigned i){return dragon::UiPalettes[i<dragon::UiPaletteCount?i:1];}
+const dragon::UiPalette& themeUiColors(unsigned i){return dragon::UiPalettes[dragon::uiThemeIndex(i)];}
 const lv_img_dsc_t* personalThemeLogo(bool){return nullptr;}
 void personalThemeBegin(){LittleFS.begin(false,"/littlefs",2,"spiffs");}
 bool personalThemeCommand(const String& c){if(!c.startsWith("theme "))return false;Serial.println("THEME_ERROR personal uploads unavailable on Dial beta");return true;}
@@ -63,7 +63,7 @@ void install(Prepared& next,bool invalidate){
 }
 bool personalThemeReady(){return loaded;}
 const dragon::PersonalTheme& personalTheme(){return config;}
-const dragon::UiPalette& themeUiColors(unsigned i){return i==dragon::PersonalThemeId&&loaded?palette:dragon::UiPalettes[i<dragon::UiPaletteCount?i:1];}
+const dragon::UiPalette& themeUiColors(unsigned i){return i==dragon::PersonalThemeId&&loaded?palette:dragon::UiPalettes[dragon::uiThemeIndex(i)];}
 const lv_img_dsc_t* personalThemeLogo(bool clock){return loaded?&logos[clock?1:0]:nullptr;}
 void personalThemeBegin(){
   storage=LittleFS.begin(false,"/littlefs",8,"spiffs");if(!storage)return;

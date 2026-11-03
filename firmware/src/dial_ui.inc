@@ -111,7 +111,7 @@ static void dialUiUpdate(){
     lv_label_set_text(pageHint,i>=0?"TAP SUMMARY FOR DETAILS":"TAP DOT / TURN FOR PAGES");
   }else if(litePage==LitePage::Clock)lv_label_set_text(pageHint,"PRESS MENU / TURN PAGE");
   else if(litePage==LitePage::Status){
-    char value[160];snprintf(value,sizeof(value),"WI-FI %lu / BLE %lu\nDROPS %lu\nHEAP %u KB\nSOUND %s",wifiFrames,bleFrames,queueDrops,ESP.getFreeHeap()/1024,alertSound?"ON":"MUTED");lv_label_set_text(pageValue,value);
+    char value[160];snprintf(value,sizeof(value),"WI-FI %lu / BLE %lu\nDROPS %lu\nHEAP %u KB\nSOUND %s",wifiFrames,bleFrames,queueDrops,ESP.getFreeHeap()/1024,dragon::audioLevelLabel(audioLevel()));lv_label_set_text(pageValue,value);
     lv_label_set_text(pageHint,"PRESS MENU / HOLD RADAR");
   }
 }
@@ -123,7 +123,7 @@ static bool dialUiCommand(const String& c){
   if(c=="touch status"||c=="rotary status"){dialInputStatus();return true;}
   if(c=="dial hunt stop"){if(dialMenuVisible())dialMenuClose();setLitePage(LitePage::Radar);trackContact(-1);audioStop();Serial.println("DIAL_OK");return true;}
   if(c.startsWith("radar theme ")){
-    String name=c.substring(12);for(unsigned i=0;i<RadarThemeCount;++i)if(i!=dragon::PersonalThemeId&&name==radarThemeCommands[i]){radarTheme=i;refreshLiteTheme();dialMenuRefresh();Serial.println("RADAR_OK");return true;}
+    String name=c.substring(12);for(unsigned i=0;i<RadarThemeCount;++i)if(dialThemeAllowed(i)&&name==radarThemeCommands[i]){radarTheme=i;refreshLiteTheme();dialMenuRefresh();Serial.println("RADAR_OK");return true;}
     Serial.println("RADAR_ERROR unknown or unavailable theme");return true;
   }
   if(c=="dial status"){Serial.printf("DIAL_STATUS beta=0 contacts=%u rtc=%u touch=FT3267 encoder=1 psram=0 minimum_heap=%u largest_block=%u\n",unsigned(MAX_CONTACTS),rtcAvailable,ESP.getMinFreeHeap(),heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL|MALLOC_CAP_8BIT));return true;}

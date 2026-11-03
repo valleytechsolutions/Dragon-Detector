@@ -13,6 +13,8 @@ bool alertSound=false,alertVibration=false,huntSound=false;
 int audioFocus=-1;
 void audioBegin(){} void audioLoop(){} void audioSave(){} void audioStop(){}
 void audioPlay(const String&){} void audioRecord(){} void audioVolume(int){}
+dragon::AudioLevel audioLevel(){return dragon::AudioLevel::Silent;}
+void audioSetLevel(dragon::AudioLevel){}
 void audioBeep(){} void audioAlert(Family){}
 bool audioReady(){return false;}
 bool audioCommand(const String&){return false;}

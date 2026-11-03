@@ -22,7 +22,7 @@ No SD pack or external assets are required. The Dial has no onboard SD slot. Bui
 
 Turn the ring to cycle **Radar → Clock → Stopwatch → Signals → Status**; reverse to go back. Tap the visible **MENU** button on any page, or press the front button on Radar, Clock or Status, to open the menu. Turn the ring to highlight an option, then press to select it. Menu rows also respond to touch.
 
-The main menu contains **Radar, Clock, Tools, Themes, Settings and Close**. Tools opens the stopwatch/locksport timer, signal details or device status. Settings has separate **Time** and **Date** editors, brightness and alert sound. Themes change only when selected in the Themes menu. Hold the front button about 0.8 seconds to go back in a menu; outside menus, holding stops hunting and returns to Radar.
+The main menu contains **Radar, Clock, Tools, Themes, Settings and Close**. Tools opens the stopwatch/locksport timer, signal details or device status. Settings has separate **Time** and **Date** editors, brightness and **Sound level**. From 0.14.2, select Sound level to cycle Silent → Medium → High → Silent. Themes change only when selected in the Themes menu. Hold the front button about 0.8 seconds to go back in a menu; outside menus, holding stops hunting and returns to Radar.
 
 | Screen | Front button | Touch |
 | --- | --- | --- |
@@ -36,7 +36,7 @@ A selected radar tag stays selected until dismissed or removed from the contact 
 
 If a contact is evicted while its details are open, the page says **SIGNAL EXPIRED**. Press to select another. Hunting is signal strength only: dot position is not a compass bearing or measured distance. A target that has not been heard for 30 seconds cannot start a new hunt. Hunt chirps stop after three seconds without reception. Hold the front button to stop hunting and return to Radar, or double press on the Signals page (USB: `dial hunt stop`).
 
-Clock and Stopwatch pause radio scans to keep time screens quiet. They restore the previous radio/hunt state when leaving. Stopwatch timing is software based and is not retained across power loss. Status mute affects detection melodies; hunt chirps are controlled by starting/stopping the hunt.
+Clock and Stopwatch pause radio scans to keep time screens quiet. They restore the previous radio/hunt state when leaving. Stopwatch timing is software based and is not retained across power loss. Silent mutes detection melodies, previews and hunt chirps. Medium and High select separate buzzer levels; hunt chirps also require an active hunt. These new levels have host-test coverage, but physical Dial loudness was not retested for 0.14.2. Web audio controls remain unavailable for the compact Dial profile.
 
 ## RTC and power
 
@@ -52,7 +52,7 @@ For the first physical test: set time once, check `clock hardware`, restart and 
 
 The Dial uses the same passive detection signatures and family priorities as the main firmware, with a bounded **32-contact pool** and **16 packet buffers**, four reserved for Axon traffic. High-priority camera/drone/device families remain ahead of tracking tags. Reception is time-shared between 2.4 GHz Wi-Fi and BLE; it cannot receive both continuously. Congested environments may drop observations, which are counted in Status.
 
-Included: touch radar, unique device colors, priority labels, signal details, RSSI hunting, nonblocking buzzer melodies, 40 built-in radar/clock themes, stopwatch/locksport timer, RTC and USB diagnostics. An 11.5 KiB display tile and one indexed artwork image at a time avoid depending on PSRAM.
+Included: touch radar, unique device colors, priority labels, signal details, RSSI hunting, nonblocking buzzer melodies, 44 built-in radar themes with matching clocks, stopwatch/locksport timer, RTC and USB diagnostics. An 11.5 KiB display tile and one indexed artwork image at a time avoid depending on PSRAM.
 
 Not included in this compact profile: active BLE/GATT toolkit, FindMy beeping, active Wi-Fi tools, badge/personal-theme uploads, audio recording, file browser, persistent captures/history, wardriving, GPS, SD support or RFID reader operations. These controls stay unavailable in USB Studio. Firmware detection cannot prove a device is recording; the shared evidence/confidence rules still apply.
 

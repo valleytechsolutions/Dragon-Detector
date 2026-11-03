@@ -19,14 +19,14 @@ void toneOutput(uint16_t hz,uint16_t ms,uint8_t volume);
 static_assert(sizeof(dragon::defaultTones)/sizeof(*dragon::defaultTones)==unsigned(Family::Count),"Every detector needs a tone");
 static String toneText(unsigned f){char key[12];snprintf(key,sizeof(key),"tone%u",f);return prefs.isKey(key)?custom[f]:String(dragon::defaultTones[f]);}
 static bool start(const char* text,bool isPreview=false){
- dragon::Melody next;if(!ready||!dragon::parseTone(text,next))return false;
+ dragon::Melody next;if(!ready||!alertSound||!status.volume||!dragon::parseTone(text,next))return false;
  toneOutput(0,0,0);melody=next;cursor=0;noteAt=millis();playing=next.count>0;preview=isPreview;
  status.mode=playing?AudioMode::Playing:AudioMode::Idle;return true;
 }
 void audioBegin(){
  prefs.begin("dd-tones",false);status.volume=constrain(prefs.getUChar("volume",
 #ifdef BOARD_WAVESHARE_185B
- 35
+ 50
 #else
  100
 #endif
@@ -39,8 +39,13 @@ void audioBegin(){
  #endif
  Serial.printf("AUDIO_READY %u\n",ready);
 }
-void audioSave(){prefs.putUChar("volume",status.volume);prefs.putBool("hunt",huntSound);prefs.putInt("focus",audioFocus);detectorSave();}
+void audioSave(){if(!alertSound||!status.volume)audioStop();prefs.putUChar("volume",status.volume);prefs.putBool("hunt",huntSound);prefs.putInt("focus",audioFocus);detectorSave();}
 void audioVolume(int v){status.volume=constrain(v,0,100);audioSave();}
+dragon::AudioLevel audioLevel(){return dragon::audioLevelFor(ready&&alertSound,status.volume);}
+void audioSetLevel(dragon::AudioLevel level){
+ unsigned volume=dragon::audioLevelVolume(level);if(volume&&!ready)return;
+ audioStop();status.volume=volume;alertSound=volume!=0;audioSave();
+}
 void audioStop(){playing=preview=false;queue.clear();toneOutput(0,0,0);
 #if defined(BOARD_LILYGO_175) || defined(BOARD_XIAO_ROUND) || defined(BOARD_CROWPANEL_21)
  status.mode=AudioMode::Idle;
@@ -82,6 +87,7 @@ static int target(uint32_t now){
  cached=best;return best;
 }
 void audioLoop(){
+ if(!ready||!alertSound||!status.volume){hadSignal=false;lastTarget=-1;audioStop();return;}
  uint32_t now=millis();bool enabled=ready&&alertSound&&!detector.quiet&&radioEnabled&&status.volume;
  if(!enabled){queue.clear();hadSignal=false;lastTarget=-1;if(!preview)audioStop();}
  if(playing&&int32_t(now-noteAt)>=0){
@@ -102,10 +108,11 @@ void audioLoop(){
  melody.notes[2]={uint16_t(c.match.family==Family::Axon?hz:c.signal.trend>0?hz*5/4:c.signal.trend<0?hz*4/5:hz),70};
  cursor=0;noteAt=now;playing=true;status.mode=AudioMode::Playing;snprintf(status.message,sizeof(status.message),"Hunt %s / %d dBm",dragon::familyName(c.match.family),c.signal.value());
 }
-static void settings(){Serial.printf("TONE_SETTINGS ready=%u enabled=%u volume=%u hunt=%u focus=%d quiet=%u\n",ready,alertSound,status.volume,huntSound,audioFocus,detector.quiet);}
+static void settings(){Serial.printf("TONE_SETTINGS ready=%u enabled=%u volume=%u hunt=%u focus=%d quiet=%u level=%s\n",ready,alertSound,status.volume,huntSound,audioFocus,detector.quiet,dragon::audioLevelName(audioLevel()));}
 bool audioCommand(const String& c){
  if(c=="tone settings"){settings();return true;}
  if(c=="tone stop"){audioStop();Serial.println("TONE_OK");return true;}
+ if(c.startsWith("tone level ")){dragon::AudioLevel level;if(!dragon::parseAudioLevel(c.c_str()+11,level)){Serial.println("TONE_ERROR level");return true;}if(level!=dragon::AudioLevel::Silent&&!ready){Serial.println("TONE_ERROR output");return true;}audioSetLevel(level);Serial.println("TONE_OK");return true;}
  if(c.startsWith("tone config ")){unsigned enabled,v,hunt;int focus;char extra;if(sscanf(c.c_str(),"tone config %u %u %u %d %c",&enabled,&v,&hunt,&focus,&extra)==4&&enabled<=1&&v<=100&&hunt<=1&&focus>=-1&&focus<int(Family::Count)){alertSound=enabled;status.volume=v;huntSound=hunt;audioFocus=focus;audioStop();audioSave();Serial.println("TONE_OK");}else Serial.println("TONE_ERROR settings");return true;}
  if(!c.startsWith("tone "))return false;
  unsigned f;char action[12];int offset=0;

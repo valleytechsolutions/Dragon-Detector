@@ -100,8 +100,9 @@ test('Community themes require firmware 0.13.6 while preserving older branded th
 });
 
 test('radar settings read back every write, including when USB acknowledgment is held',async()=>{
-  const themes=['dragon','green','gold','valleytech','biscuit','marauder','toool','church','toool-dark','covert','awok','baph0mau5','wdgwars','ghoststrats','n3rdsec','halehound','waveshare','m5stack','lab5','sasquach','nyan','dmac','seeed','dagnazty','octo-pig','deflock','lpl','ghostbusters','lpu','hackazillarex','m33k-t3ch','capsule-corp','sparrows','dzaz','custom','can-commander','ogg','xombi','muldersrevenge','mitm','hypnotic','vectorpotential','argyle','lawlocktools','moki','44delta'];
+  const themes=['dragon','green','gold','valleytech','biscuit','marauder','toool','church','toool-dark','covert','awok','baph0mau5','wdgwars','ghoststrats','n3rdsec','halehound','waveshare','m5stack','lab5','sasquach','nyan','dmac','seeed','dagnazty','octo-pig','deflock','lpl','ghostbusters','lpu','hackazillarex','m33k-t3ch','capsule-corp','sparrows','dzaz','custom','can-commander','ogg','xombi','muldersrevenge','mitm',null,'vectorpotential','argyle','lawlocktools','moki','44delta'];
   for(const [index,theme] of themes.entries()){
+    if(theme===null)continue;
     const writes=[];let current={theme:index,labels:0,recent:1};
     const link={write:async s=>{writes.push(s);if(s.startsWith('radar labels '))current.labels=Number(s.endsWith('on'));if(s.startsWith('radar recent '))current.recent=Number(s.endsWith('on'));},wait:async match=>{const line=`RADAR_SETTINGS theme=${current.theme} labels=${current.labels} recent=${current.recent} pages=1 plotted=6 primary=-1`;assert.ok(match(line));return line;}};
     assert.equal((await readRadarSettings(link)).theme,theme);
@@ -282,10 +283,48 @@ test('MITM theme is offered only on compatible firmware',async()=>{
   for(const v of ['0.13.24','0.13.25','0.13.026','0.13.26junk',''])assert.equal(hasMitmTheme(v),false);
 });
 
-test('Hypnotic theme requires its first supported firmware version',async()=>{
-  const {hasHypnoticTheme}=await import('../web/firmware-compat.js');
-  for(const v of ['0.13.26','0.13.27'])assert.equal(hasHypnoticTheme(v),true);
-  for(const v of ['0.13.25','0.13.026','0.13.26junk',''])assert.equal(hasHypnoticTheme(v),false);
+test('retired theme is absent from active controls and 44 built-in choices match firmware IDs',async()=>{
+  const compat=await import('../web/firmware-compat.js');
+  assert.equal('hasHypnoticTheme' in compat,false);
+  const html=readFileSync(new URL('../web/index.html',import.meta.url),'utf8');
+  const select=html.match(/<select id="radar-theme">([\s\S]*?)<\/select>/)[1];
+  const options=[...select.matchAll(/<option\b[^>]*\bvalue="([^"]+)"/g)].map(m=>m[1]);
+  const catalog=readFileSync(new URL('../firmware/include/radar_theme_catalog.h',import.meta.url),'utf8');
+  const commands=JSON.parse('['+catalog.split('radarThemeCommands[]={')[1].split('};')[0].replace(/\bnullptr\b/g,'null')+']');
+  assert.ok(commands[40]===null||commands[40]==='','slot 40 must stay reserved without an active command');
+  assert.deepEqual(commands.slice(41),['vectorpotential','argyle','lawlocktools','moki','44delta']);
+  assert.equal(options.filter(x=>x!=='custom').length,44);
+  assert.deepEqual(options.sort(),commands.filter(Boolean).sort());
+  assert.doesNotMatch(html,/hypnotic|45 built-in themes/i);
+  assert.doesNotMatch(readFileSync(new URL('../web/app.js',import.meta.url),'utf8'),/hypnotic/i);
+});
+
+test('legacy retired ID remains readable and is never mistaken for a saved Green theme',async()=>{
+  for(const tail of ['page=0 pages=2 plotted=6','pages=1 plotted=37 primary=-1']){
+    const writes=[];
+    const link={async write(command){writes.push(command);},async wait(match){const line=`RADAR_SETTINGS theme=40 labels=1 recent=0 ${tail}`;assert.ok(match(line));return line;}};
+    assert.deepEqual(await readRadarSettings(link),{theme:null,labels:true,recent:false});
+    assert.deepEqual(writes,['radar status'],'reading a retired theme must not change device settings');
+    writes.length=0;
+    await assert.rejects(saveRadarSettings(link,{theme:'green',labels:false,recent:true}),/not saved/);
+    assert.deepEqual(writes,['radar theme green','radar status','radar status'],'a failed theme save must stop before later preferences');
+  }
+});
+
+test('retired and missing theme commands are rejected before any USB writes',async()=>{
+  const writes=[];const link={async write(command){writes.push(command);},async wait(){throw new Error('Must not read for an invalid theme');}};
+  for(const theme of ['hypnotic','40',null,undefined,'',40,{},['green']]){
+    await assert.rejects(saveRadarSettings(link,{theme,labels:true,recent:true}),/Invalid radar preferences/);
+    assert.deepEqual(writes,[]);
+  }
+});
+
+test('explicitly saving an active theme can replace legacy retired ID 40',async()=>{
+  const writes=[];let theme=40,labels=0,recent=0;
+  const link={async write(command){writes.push(command);if(command==='radar theme green')theme=1;if(command==='radar labels on')labels=1;if(command==='radar recent on')recent=1;},async wait(){return `RADAR_SETTINGS theme=${theme} labels=${labels} recent=${recent} pages=1 plotted=0 primary=-1`;}};
+  await saveRadarSettings(link,{theme:'green',labels:true,recent:true});
+  assert.deepEqual(writes,['radar theme green','radar status','radar labels on','radar status','radar recent on','radar status']);
+  assert.deepEqual(await readRadarSettings(link),{theme:'green',labels:true,recent:true});
 });
 
 

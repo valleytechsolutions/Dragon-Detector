@@ -2,7 +2,7 @@
 
 Choose **Waveshare LCD 1.85B** in the [web flasher](https://valleytech-dragon-detector.pages.dev/#install). The build profile is `waveshare_185b`, first available in **0.14.1**. Match the complete **ESP32-S3-Touch-LCD-1.85B** name: the 1.85, 1.85C, AMOLED 1.75 variants and similarly sized Spotpear boards use different wiring.
 
-[Buy the exact 1.85B model](https://www.waveshare.com/esp32-s3-touch-lcd-1.85b.htm?&aff_id=122099) · [Waveshare hardware documentation](https://docs.waveshare.com/ESP32-S3-Touch-LCD-1.85B) · [Release validation](RELEASE-0.14.1.md)
+[Buy the exact 1.85B model](https://www.waveshare.com/esp32-s3-touch-lcd-1.85b.htm?&aff_id=122099) · [Waveshare hardware documentation](https://docs.waveshare.com/ESP32-S3-Touch-LCD-1.85B) · [Initial port validation](RELEASE-0.14.1.md) · [Sound update](RELEASE-0.14.2.md)
 
 ## Hardware and installation
 
@@ -59,6 +59,22 @@ After connecting a compatible NMEA receiver, open **SYSTEM → GPS setup**, choo
 The **Wardrive** menu stays hidden until GPS is enabled and the board is receiving recent, checksum-valid recognized NMEA sentences. A satellite fix is not needed just to reveal the menu. Located records still require a valid fix. If a receiver stops responding during a run, the active Wardrive screen remains available so **End & return to menu** can finalize the files. Disable GPS to return to ordinary operation without the Wardrive entry.
 
 Wardriving dedicates the radio workflow to Wi-Fi and BLE collection. Logs use the existing WiGLE CSV format. [Wardrive format and upload setup](WARDRIVE-UPLOADS.md) describes the explicit SD-configured upload workflow; successful live service upload and moving-route accuracy require their own checks.
+
+## Sound levels
+
+In 0.14.2, open **Settings → Sound level** or **Audio & hunt tones** and choose
+**High, Medium or Silent**. Each tap on the device cycles Silent → Medium → High
+→ Silent. The web audio editor offers the same three choices and applies them
+only when **Save audio settings** is pressed. Medium uses application gain 50;
+High uses 100. Fresh installations start at Medium. Silent disables audio and sets gain to zero, including preview and
+hunt sounds. Quiet mode remains separate and mutes automatic feedback.
+
+The 1.85B's ES8311 codec uses unity gain from 0.14.2. The owner approved the
+Medium and High test beeps on November 3, 2026. Medium remained saved after
+restart, while Silent set zero gain and rejected a preview request. The initial silent state had
+alerts disabled with saved gain 10; the subsequent low-output report was resolved
+by the 1.85B-specific codec gain adjustment. Existing saved gains remain intact
+until a level is explicitly selected. [Audio controls and USB commands](USER-GUIDE.md#audio-alerts-and-foxhunting).
 
 ## Port reference
 

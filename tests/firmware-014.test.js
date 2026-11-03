@@ -32,7 +32,7 @@ test('0.14 keeps every exact board handshake and installation contract',()=>{
  }
 });
 test('0.14 enables existing studio features, including repeat beeper with patch zero',()=>{
- const featureNames=['hasDetectorTools','hasActivityTools','hasRadarTools','hasWearableTools','hasRetainedClock','hasHardwareClockCheck','hasBrandedThemes','hasCommunityThemes','hasLplTheme','hasRunnerThemes','hasGreenArtThemes','hasCanCommanderTheme','hasCapsuleSparrowsThemes','hasMuldersRevengeTheme','hasHypnoticTheme','hasMitmTheme','hasDelta44Theme','hasLocksportCollection'];
+ const featureNames=['hasDetectorTools','hasActivityTools','hasRadarTools','hasWearableTools','hasRetainedClock','hasHardwareClockCheck','hasBrandedThemes','hasCommunityThemes','hasLplTheme','hasRunnerThemes','hasGreenArtThemes','hasCanCommanderTheme','hasCapsuleSparrowsThemes','hasMuldersRevengeTheme','hasMitmTheme','hasDelta44Theme','hasLocksportCollection'];
  const gates=[...featureNames.map(k=>compat[k]),hasNetworkTools,hasNotebook,hasReconTools,hasPersonalThemes];
  for(const gate of gates){assert.equal(gate('0.14.0'),true);for(const v of ['0.15.0','1.0.0','0.14.00','0.14.0-beta'])assert.equal(gate(v),false);}
  for(const [board,p] of Object.entries(boardProfiles))for(const gate of [hasFullLab,hasFullRecon,hasSessionTools])assert.equal(gate(board,board==='waveshare_185b'?'0.14.1':'0.14.0'),!p.lite);

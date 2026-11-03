@@ -1,35 +1,36 @@
-import {firmwareAtLeast,knownFirmware} from './firmware-version.js?v=0.14.1';
-import {resourceSetup} from "./sd-resources.js?v=0.14.1";
-import {hasRepeatingBeeper,hasBleTools,observedAddress,iBeaconCommand,parseIBeacon} from './ble-tools.js?v=0.14.1';
-import {maintainComputerClock} from './clock-maintenance.js?v=0.14.1';
-import {startRadarBackground} from './radar-background.js?v=0.14.1';
-import {completeInstallSession,syncInstalledClock} from './install-clock.js?v=0.14.1';
-import {checkRelease,usbErrorText,installDiagnostics} from './install-checks.js?v=0.14.1';
-import {createInstallCounter} from './install-counter.js?v=0.14.1';
-import {hasFullLab,hasFullRecon,hasSessionTools} from './lab-capabilities.js?v=0.14.1';
-import {sessionName,downloadMission,recipePutCommand,sourceMacCommand} from './mission-tools.js?v=0.14.1';
-import {hasNetworkTools,networkProfileCommand,networkResultsCsv} from './network-tools.js?v=0.14.1';
-import {normalizeHex,probeRows,probeCsv} from './recon-analysis.js?v=0.14.1';
-import {hasReconTools,reconLines,exportCapture,exportReconFile,captureName,importPortalHtml} from './recon-transfer.js?v=0.14.1';
-import {decodeProfile,exportProfile,exportLog,importProfile,labLines,safeProfileName} from './ble-lab.js?v=0.14.1';
-import {localClockEpoch,setClock,readWearable,setOrientation} from './wearable-transfer.js?v=0.14.1';
-import {syncVerifiedClock,clockResultText} from './clock-verification.js?v=0.14.1';
-import {clockInstallDialogClass} from './clock-install-dialog.js?v=0.14.1';
+import {firmwareAtLeast,knownFirmware} from './firmware-version.js?v=0.14.2';
+import {hasWebAudio,readAudioSettings,saveAudioSettings,previewAudioTone} from './audio-transfer.js?v=0.14.2';
+import {resourceSetup} from "./sd-resources.js?v=0.14.2";
+import {hasRepeatingBeeper,hasBleTools,observedAddress,iBeaconCommand,parseIBeacon} from './ble-tools.js?v=0.14.2';
+import {maintainComputerClock} from './clock-maintenance.js?v=0.14.2';
+import {startRadarBackground} from './radar-background.js?v=0.14.2';
+import {completeInstallSession,syncInstalledClock} from './install-clock.js?v=0.14.2';
+import {checkRelease,usbErrorText,installDiagnostics} from './install-checks.js?v=0.14.2';
+import {createInstallCounter} from './install-counter.js?v=0.14.2';
+import {hasFullLab,hasFullRecon,hasSessionTools} from './lab-capabilities.js?v=0.14.2';
+import {sessionName,downloadMission,recipePutCommand,sourceMacCommand} from './mission-tools.js?v=0.14.2';
+import {hasNetworkTools,networkProfileCommand,networkResultsCsv} from './network-tools.js?v=0.14.2';
+import {normalizeHex,probeRows,probeCsv} from './recon-analysis.js?v=0.14.2';
+import {hasReconTools,reconLines,exportCapture,exportReconFile,captureName,importPortalHtml} from './recon-transfer.js?v=0.14.2';
+import {decodeProfile,exportProfile,exportLog,importProfile,labLines,safeProfileName} from './ble-lab.js?v=0.14.2';
+import {localClockEpoch,setClock,readWearable,setOrientation} from './wearable-transfer.js?v=0.14.2';
+import {syncVerifiedClock,clockResultText} from './clock-verification.js?v=0.14.2';
+import {clockInstallDialogClass} from './clock-install-dialog.js?v=0.14.2';
 import {deviceQuery} from './device-query.js';
-import {BadgeSerial} from './serial.js?v=0.14.1';
-import {encodeBadge} from './badge-codec.js?v=0.14.1';
-import {uploadBadge} from './badge-transfer.js?v=0.14.1';
+import {BadgeSerial} from './serial.js?v=0.14.2';
+import {encodeBadge} from './badge-codec.js?v=0.14.2';
+import {uploadBadge} from './badge-transfer.js?v=0.14.2';
 import {readHistory} from './detector-transfer.js';
-import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasBrandedThemes,hasCommunityThemes,hasRunnerThemes,hasCapsuleSparrowsThemes,hasCanCommanderTheme,hasGreenArtThemes,hasMuldersRevengeTheme,hasMitmTheme,hasHypnoticTheme,hasLocksportCollection,hasDelta44Theme,hasLplTheme,hasWearableTools,hasClockTools,hasWifiClock,hasRetainedClock} from './firmware-compat.js?v=0.14.1';
-import {readRadarSettings,saveRadarSettings} from './radar-transfer.js?v=0.14.1';
-import {boardProfiles,connectedProfile,supportsBadge} from './board-profiles.js?v=0.14.1';
-import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan,drawBadgeText} from './badge-editor.js?v=0.14.1';
-import {hasNotebook,readNotebook,customAdvertCommand} from './notebook.js?v=0.14.1';
-import {revealLocation} from './navigation.js?v=0.14.1';
-import {createThemeStudio} from './theme-studio.js?v=0.14.1';
-import {setupWorkspaceTabs} from './workspace-tabs.js?v=0.14.1';
-import {installPersonalTheme} from './theme-install.js?v=0.14.1';
-import {hasPersonalThemes} from './theme-transfer.js?v=0.14.1';
+import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasBrandedThemes,hasCommunityThemes,hasRunnerThemes,hasCapsuleSparrowsThemes,hasCanCommanderTheme,hasGreenArtThemes,hasMuldersRevengeTheme,hasMitmTheme,hasLocksportCollection,hasDelta44Theme,hasLplTheme,hasWearableTools,hasClockTools,hasWifiClock,hasRetainedClock} from './firmware-compat.js?v=0.14.2';
+import {readRadarSettings,saveRadarSettings} from './radar-transfer.js?v=0.14.2';
+import {boardProfiles,connectedProfile,supportsBadge} from './board-profiles.js?v=0.14.2';
+import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan,drawBadgeText} from './badge-editor.js?v=0.14.2';
+import {hasNotebook,readNotebook,customAdvertCommand} from './notebook.js?v=0.14.2';
+import {revealLocation} from './navigation.js?v=0.14.2';
+import {createThemeStudio} from './theme-studio.js?v=0.14.2';
+import {setupWorkspaceTabs} from './workspace-tabs.js?v=0.14.2';
+import {installPersonalTheme} from './theme-install.js?v=0.14.2';
+import {hasPersonalThemes} from './theme-transfer.js?v=0.14.2';
 setupWorkspaceTabs();
 revealLocation();
 const $ = id => document.getElementById(id);
@@ -37,7 +38,7 @@ const installCounter=createInstallCounter($('install-count'));
 void installCounter.refresh();
 startRadarBackground($('radar-background'),$('radar-motion'));
 const models = Object.fromEntries(Object.entries(boardProfiles).map(([id,p])=>[id,p.name]));
-let serial=null;
+let serial=null,savedAudio=null;
 let board = '', releaseReady = false, request = 0;
 let releaseController,releaseVersion='';
 let installerReady=false,installerFailed=false,installActive=false;
@@ -191,7 +192,7 @@ function setBadgeProfile(id){
 }
 function controls(){
   themeStudio.update();
-  for(const option of $('radar-theme').options){if(option.value==='44delta')option.disabled=!!serial&&!hasDelta44Theme(firmwareVersion);if(['vectorpotential','argyle','lawlocktools','moki'].includes(option.value))option.disabled=!!serial&&!hasLocksportCollection(firmwareVersion);if(option.dataset.personal)option.disabled=!serial||!hasPersonalThemes(firmwareVersion);if(['ogg','xombi'].includes(option.value))option.disabled=!!serial&&!hasGreenArtThemes(firmwareVersion);if(option.value==='hypnotic')option.disabled=!!serial&&!hasHypnoticTheme(firmwareVersion);if(option.value==='mitm')option.disabled=!!serial&&!hasMitmTheme(firmwareVersion);if(option.value==='muldersrevenge')option.disabled=!!serial&&!hasMuldersRevengeTheme(firmwareVersion);if(option.value==='can-commander')option.disabled=!!serial&&!hasCanCommanderTheme(firmwareVersion);}
+  for(const option of $('radar-theme').options){if(option.value==='44delta')option.disabled=!!serial&&!hasDelta44Theme(firmwareVersion);if(['vectorpotential','argyle','lawlocktools','moki'].includes(option.value))option.disabled=!!serial&&!hasLocksportCollection(firmwareVersion);if(option.dataset.personal)option.disabled=!serial||!hasPersonalThemes(firmwareVersion);if(['ogg','xombi'].includes(option.value))option.disabled=!!serial&&!hasGreenArtThemes(firmwareVersion);if(option.value==='mitm')option.disabled=!!serial&&!hasMitmTheme(firmwareVersion);if(option.value==='muldersrevenge')option.disabled=!!serial&&!hasMuldersRevengeTheme(firmwareVersion);if(option.value==='can-commander')option.disabled=!!serial&&!hasCanCommanderTheme(firmwareVersion);}
   const labReady=!!serial&&hasFullLab(deviceProfile,firmwareVersion),reconReady=!!serial&&hasFullRecon(deviceProfile,firmwareVersion);
   document.querySelectorAll('#ble-lab button').forEach(b=>b.disabled=busy||!labReady);
   document.querySelectorAll('#radio-tools button').forEach(b=>b.disabled=busy||!reconReady);
@@ -216,7 +217,10 @@ function controls(){
   $('radar-save').disabled=busy||!serial||lite||!hasRadarTools(firmwareVersion);
   for(const id of ['history-export','show-radar','sync-time','display-save','sound-save','tone-load','tone-save','tone-preview','tone-reset','tone-stop'])$(id).disabled=busy||!serial||lite||!hasDetectorTools(firmwareVersion);
   $('show-radar').disabled=busy||!serial;
-  if(['lilygo_175','xiao_round','elecrow_21'].includes(deviceProfile)||lite)for(const id of ['sound-save','tone-load','tone-save','tone-preview','tone-reset','tone-stop'])$(id).disabled=true;
+  const webAudio=!!serial&&hasWebAudio(deviceProfile,firmwareVersion);
+  for(const id of ['sound-level','sound-hunt','sound-focus','sound-save','tone-family','tone-text','tone-load','tone-save','tone-preview','tone-reset','tone-stop'])$(id).disabled=busy||!webAudio||!savedAudio?.ready;
+  if(webAudio&&savedAudio?.ready)$('tone-preview').disabled=busy||$('sound-level').value==='silent'||savedAudio.level==='silent';
+  if(serial&&!webAudio)$('sound-status').textContent=lite?'Web audio controls are unavailable for this compact profile. Use its on-device controls where audio is supported.':'This profile has no speaker configured. Visual alerts and on-screen signal hunting remain available.';
   $('connect').disabled=$('detector-connect').disabled=busy||!!serial;
   $('disconnect').disabled=$('detector-disconnect').disabled=busy;
   $('disconnect').hidden=$('detector-disconnect').hidden=!serial;
@@ -290,7 +294,7 @@ $('badge-drop').ondragleave=()=>$('badge-drop').classList.remove('drag-over');
 $('badge-drop').ondrop=e=>{e.preventDefault();$('badge-drop').classList.remove('drag-over');loadImage(e.dataTransfer.files[0]);};
 $('download-badge').onclick=()=>{if(!photo)return;const output=document.createElement('canvas');output.width=output.height=size;const c=output.getContext('2d');c.beginPath();c.arc(size/2,size/2,size/2,0,Math.PI*2);c.clip();c.drawImage(canvas,0,0);output.toBlob(blob=>{const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`dragon-badge-${badgeProfile}-${size}.png`;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);},'image/png');};
 
-async function disconnect(){const old=serial;serial=null;firmwareVersion='';deviceProfile='';if(old)await old.close();$('disconnect').hidden=true;$('device-label').textContent='USB NOT CONNECTED';$('detector-status').textContent='USB disconnected.';draw();installEnabled();}
+async function disconnect(){const old=serial;serial=null;savedAudio=null;firmwareVersion='';deviceProfile='';if(old)await old.close();$('disconnect').hidden=true;$('device-label').textContent='USB NOT CONNECTED';$('detector-status').textContent='USB disconnected.';draw();installEnabled();}
 $('connect').onclick=async()=>{
   if(!navigator.serial){$('detector-status').textContent=$('studio-status').textContent='Web Serial needs desktop Chrome or Edge on HTTPS or localhost.';return;}
   if(busy||serial)return;busy=true;controls();$('studio-status').textContent=$('detector-status').textContent='Choose your detector’s USB port in the browser prompt. Cancel the prompt to keep editing.';
@@ -301,7 +305,7 @@ $('connect').onclick=async()=>{
     const match=parseBadgeInfo(line);
     if(!match)throw new Error('Install the current firmware using the matching board profile first.');
     const profile=connectedProfile(match);if(!profile)throw new Error('This board identity or resolution is not supported. Use its exact matching firmware.');
-    serial=link;firmwareVersion=match.version;deviceProfile=profile;setBadgeProfile(profile);
+    serial=link;savedAudio=null;firmwareVersion=match.version;deviceProfile=profile;setBadgeProfile(profile);
     $('device-label').textContent=`${match.size} × ${match.size} · ${boardProfiles[profile].lite?'LITE':'CONNECTED'}`;$('disconnect').hidden=false;
     if(boardProfiles[profile].lite){
       if(hasClockTools(profile,firmwareVersion)){await syncVerifiedClock(link,deviceProfile,firmwareVersion);await loadWearable(link);}
@@ -310,7 +314,7 @@ $('connect').onclick=async()=>{
     }
     $('studio-status').textContent=`${match.board} is ready. Choose and position your image.`;draw();
     if(hasDetectorTools(firmwareVersion)){
-      let clockSynced=false,clockMessage='';
+      let clockSynced=false,clockMessage='',radarMessage='';
       if(hasWearableTools(firmwareVersion)){try{clockMessage=clockResultText(await syncVerifiedClock(link,deviceProfile,firmwareVersion));clockSynced=true;}catch(error){clockMessage=error.message;}}
       else{await link.write(`time ${Math.floor(Date.now()/1000)}`);clockSynced=await link.wait(s=>s==='TIME_OK'||s==='TIME_ERROR')==='TIME_OK';}
       const config=await deviceQuery(link,'display status',s=>s.startsWith('DISPLAY_SETTINGS '));
@@ -318,10 +322,10 @@ $('connect').onclick=async()=>{
       if(values)for(const [i,id] of ['display-brightness','display-dim','display-off','display-level'].entries()){const value=values[i+1];if(!Array.from($(id).options).some(o=>o.value===value))$(id).add(new Option(value,value));$(id).value=value;}
       await loadAudio(link);
       if(hasWearableTools(firmwareVersion))await loadWearable(link);
-      if(hasRadarTools(firmwareVersion)){const radar=await readRadarSettings(link);$('radar-theme').value=radar.theme;$('radar-labels').checked=radar.labels;$('radar-recent').checked=radar.recent;}
-      $('detector-status').textContent=`${match.board} connected. ${clockMessage||(clockSynced?'Local date and time synchronized.':'Clock sync unavailable; badge upload is ready.')} History stays on your device until you download it.`;
+      if(hasRadarTools(firmwareVersion)){const radar=await readRadarSettings(link);$('radar-theme').value=radar.theme??'green';if(radar.theme===null)radarMessage=' This device has a retired theme selected. Green is shown as an unsaved choice; save radar preferences to change it.';$('radar-labels').checked=radar.labels;$('radar-recent').checked=radar.recent;}
+      $('detector-status').textContent=`${match.board} connected. ${clockMessage||(clockSynced?'Local date and time synchronized.':'Clock sync unavailable; badge upload is ready.')} History stays on your device until you download it.${radarMessage}`;
     }else $('detector-status').textContent='Connected to 0.3.x. Update to the current firmware for history and detector controls.';
-  }catch(error){if(link)await link.close();serial=null;firmwareVersion='';deviceProfile='';$('studio-status').textContent=error.message;$('detector-status').textContent=error.message;}
+  }catch(error){if(link)await link.close();serial=null;savedAudio=null;firmwareVersion='';deviceProfile='';$('studio-status').textContent=error.message;$('detector-status').textContent=error.message;}
   finally{busy=false;draw();installEnabled();}
 };
 $('detector-connect').onclick=()=>$('connect').onclick();
@@ -359,7 +363,7 @@ $('sync-time').onclick=()=>detectorAction(async link=>{
 });
 $('show-radar').onclick=()=>detectorAction(async link=>{await link.write('screen radar');$('detector-status').textContent='Radar view selected.';});
 $('show-activity').onclick=()=>detectorAction(async link=>{await link.write('screen activity');$('detector-status').textContent='Radio Activity selected on the board: deauthentication and BLE spam evidence.';});
-$('radar-save').onclick=()=>detectorAction(async link=>{if($('radar-theme').value==='44delta'&&!hasDelta44Theme(firmwareVersion))throw new Error('Update to firmware 0.13.41 to use 44Delta.');if(['vectorpotential','argyle','lawlocktools','moki'].includes($('radar-theme').value)&&!hasLocksportCollection(firmwareVersion))throw new Error('Update to firmware 0.13.38 to use VectorPotential, Argyle, Law Lock Tools or Moki.');if($('radar-theme').value==='hypnotic'&&!hasHypnoticTheme(firmwareVersion))throw new Error('Update to firmware 0.13.26 to use Hypnotic.');if($('radar-theme').value==='mitm'&&!hasMitmTheme(firmwareVersion))throw new Error('Update to firmware 0.13.26 to use MITM.');if($('radar-theme').value==='muldersrevenge'&&!hasMuldersRevengeTheme(firmwareVersion))throw new Error('Update to firmware 0.13.24 to use MuldersreVenge.');if(['ogg','xombi'].includes($('radar-theme').value)&&!hasGreenArtThemes(firmwareVersion))throw new Error('Update to firmware 0.13.23 to use Ogg or XomBi.');if($('radar-theme').value==='can-commander'&&!hasCanCommanderTheme(firmwareVersion))throw new Error('Update to firmware 0.13.18 to use Can Commander.');if(['custom','dzaz'].includes($('radar-theme').value)&&!hasPersonalThemes(firmwareVersion))throw new Error('Update to firmware 0.13.17 to use this theme.');if(['capsule-corp','sparrows'].includes($('radar-theme').value)&&!hasCapsuleSparrowsThemes(firmwareVersion))throw new Error('Update to firmware 0.13.15 to use Capsule Corp or Sparrows.');if(['hackazillarex','m33k-t3ch'].includes($('radar-theme').value)&&!hasRunnerThemes(firmwareVersion))throw new Error('Update to firmware 0.13.12 for Hackazillarex and m33k_t3ch.');if(['ghostbusters','lpu'].includes($('radar-theme').value)&&!hasRetainedClock(firmwareVersion))throw new Error('Update to firmware 0.13.9 for Ghostbusters and Lockpickers United.');if($('radar-theme').value==='lpl'&&!hasLplTheme(firmwareVersion))throw new Error('Update to firmware 0.13.8 to use Covert Instruments / LockPickingLawyer.');if(['toool','church','toool-dark','covert','awok','baph0mau5','wdgwars','ghoststrats','n3rdsec','halehound','waveshare','m5stack','lab5','sasquach','nyan','dmac','seeed','dagnazty','octo-pig','deflock'].includes($('radar-theme').value)&&!hasCommunityThemes(firmwareVersion))throw new Error('Update to firmware 0.13.6 to use the community themes.');if($('radar-theme').selectedOptions[0].dataset.branded&&!hasBrandedThemes(firmwareVersion))throw new Error('Update to firmware 0.13.1 to use branded themes.');await saveRadarSettings(link,{theme:$('radar-theme').value,labels:$('radar-labels').checked,recent:$('radar-recent').checked});$('detector-status').textContent='Radar theme, labels and recent-signal preferences saved on your detector.';});
+$('radar-save').onclick=()=>detectorAction(async link=>{if($('radar-theme').value==='44delta'&&!hasDelta44Theme(firmwareVersion))throw new Error('Update to firmware 0.13.41 to use 44Delta.');if(['vectorpotential','argyle','lawlocktools','moki'].includes($('radar-theme').value)&&!hasLocksportCollection(firmwareVersion))throw new Error('Update to firmware 0.13.38 to use VectorPotential, Argyle, Law Lock Tools or Moki.');if($('radar-theme').value==='mitm'&&!hasMitmTheme(firmwareVersion))throw new Error('Update to firmware 0.13.26 to use MITM.');if($('radar-theme').value==='muldersrevenge'&&!hasMuldersRevengeTheme(firmwareVersion))throw new Error('Update to firmware 0.13.24 to use MuldersreVenge.');if(['ogg','xombi'].includes($('radar-theme').value)&&!hasGreenArtThemes(firmwareVersion))throw new Error('Update to firmware 0.13.23 to use Ogg or XomBi.');if($('radar-theme').value==='can-commander'&&!hasCanCommanderTheme(firmwareVersion))throw new Error('Update to firmware 0.13.18 to use Can Commander.');if(['custom','dzaz'].includes($('radar-theme').value)&&!hasPersonalThemes(firmwareVersion))throw new Error('Update to firmware 0.13.17 to use this theme.');if(['capsule-corp','sparrows'].includes($('radar-theme').value)&&!hasCapsuleSparrowsThemes(firmwareVersion))throw new Error('Update to firmware 0.13.15 to use Capsule Corp or Sparrows.');if(['hackazillarex','m33k-t3ch'].includes($('radar-theme').value)&&!hasRunnerThemes(firmwareVersion))throw new Error('Update to firmware 0.13.12 for Hackazillarex and m33k_t3ch.');if(['ghostbusters','lpu'].includes($('radar-theme').value)&&!hasRetainedClock(firmwareVersion))throw new Error('Update to firmware 0.13.9 for Ghostbusters and Lockpickers United.');if($('radar-theme').value==='lpl'&&!hasLplTheme(firmwareVersion))throw new Error('Update to firmware 0.13.8 to use Covert Instruments / LockPickingLawyer.');if(['toool','church','toool-dark','covert','awok','baph0mau5','wdgwars','ghoststrats','n3rdsec','halehound','waveshare','m5stack','lab5','sasquach','nyan','dmac','seeed','dagnazty','octo-pig','deflock'].includes($('radar-theme').value)&&!hasCommunityThemes(firmwareVersion))throw new Error('Update to firmware 0.13.6 to use the community themes.');if($('radar-theme').selectedOptions[0]?.dataset.branded&&!hasBrandedThemes(firmwareVersion))throw new Error('Update to firmware 0.13.1 to use branded themes.');await saveRadarSettings(link,{theme:$('radar-theme').value,labels:$('radar-labels').checked,recent:$('radar-recent').checked});$('detector-status').textContent='Radar theme, labels and recent-signal preferences saved on your detector.';});
 $('display-save').onclick=()=>detectorAction(async link=>{const values=['display-brightness','display-dim','display-off','display-level'].map(id=>Number($(id).value));await link.write('display set '+values.join(' '));const reply=await link.wait(s=>s==='DISPLAY_OK'||s==='DISPLAY_ERROR');if(reply!=='DISPLAY_OK')throw new Error('Display settings were rejected.');$('detector-status').textContent='Display preferences saved on your detector.';});
 draw();loadStock();
 
@@ -368,18 +372,34 @@ for(const [i,label] of toneFamilies.entries()){$('tone-family').add(new Option(l
 $('tone-family').value='3';
 $('tone-text').dataset.family='';
 $('tone-family').onchange=()=>{$('tone-text').value='';$('tone-text').dataset.family='';$('sound-status').textContent='Load this family’s saved tone before editing.';};
-$('sound-volume').oninput=()=>{$('sound-volume-label').textContent=$('sound-volume').value+'%';};
+$('sound-level').onchange=()=>{$('sound-status').textContent='Sound level changed in the browser. Save audio settings to apply it.';controls();};
 async function loadTone(link){const id=$('tone-family').value;const value=await deviceQuery(link,'tone get '+id,s=>s.startsWith(`TONE_VALUE ${id} `)||s===`TONE_VALUE ${id}`||s.startsWith('TONE_ERROR'));if(value.startsWith('TONE_ERROR'))throw new Error(value);$('tone-text').value=value.slice(('TONE_VALUE '+id).length).trim();$('tone-text').dataset.family=id;}
-async function loadAudio(link){const value=await deviceQuery(link,'tone settings',s=>s.startsWith('TONE_SETTINGS '));const m=/ready=(\d+) enabled=(\d+) volume=(\d+) hunt=(\d+) focus=(-?\d+) quiet=(\d+)/.exec(value);if(!m)throw new Error('Invalid audio settings response.');$('sound-enabled').checked=m[2]==='1';$('sound-volume').value=m[3];$('sound-volume').oninput();$('sound-hunt').checked=m[4]==='1';$('sound-focus').value=m[5];$('sound-status').textContent=m[1]==='1'?(m[6]==='1'?'Speaker ready. Quiet mode is ON; automatic audio is muted.':'Speaker ready. Audio preferences loaded.'):['lilygo_175','xiao_round','elecrow_21'].includes(deviceProfile)?'This profile has no speaker configured. Visual alerts and on-screen signal hunting remain available.':'The board could not initialize its speaker output.';await loadTone(link);}
+function audioStateText(state){
+  if(!state.ready)return 'The board could not initialize its speaker output.';
+  const label=state.level==='high'?'High':state.level==='medium'?'Medium':'Silent';
+  const exact=state.level==='silent'?!state.enabled&&state.volume===0:state.enabled&&state.volume===(state.level==='high'?100:50);
+  if(!exact)return `${label} is selected for the next save. The existing saved gain is unchanged.${state.level==='silent'?' Web previews are blocked; save Silent to set the device gain to zero.':''}`;
+  return state.level==='silent'?'Silent is saved. Alerts, hunt sounds and previews are muted.':`${label} is saved.${state.quiet?' Quiet mode is ON; automatic audio is muted.':''}`;
+}
+async function loadAudio(link){
+  savedAudio=null;
+  if(!hasWebAudio(deviceProfile,firmwareVersion))return;
+  const state=await readAudioSettings(link);savedAudio=state;
+  $('sound-level').value=state.level;$('sound-hunt').checked=state.hunt;
+  if(!Array.from($('sound-focus').options).some(option=>option.value===String(state.focus)))$('sound-focus').add(new Option('Saved device focus',String(state.focus)));
+  $('sound-focus').value=String(state.focus);
+  $('sound-status').textContent=audioStateText(state);
+  if(state.ready)await loadTone(link);
+}
 async function toneReply(link,command){await link.write(command);const reply=await link.wait(s=>s==='TONE_OK'||s.startsWith('TONE_ERROR'));if(reply!=='TONE_OK')throw new Error(reply.replace('TONE_ERROR ','Tone rejected: '));}
-async function audioAction(action){await detectorAction(async link=>{try{await action(link);}catch(error){$('sound-status').textContent=error.message;throw error;}});}
-$('sound-save').onclick=()=>audioAction(async link=>{await toneReply(link,`tone config ${Number($('sound-enabled').checked)} ${$('sound-volume').value} ${Number($('sound-hunt').checked)} ${$('sound-focus').value}`);$('sound-status').textContent='Audio preferences saved on the detector.';});
+async function audioAction(action){await detectorAction(async link=>{try{if(!hasWebAudio(deviceProfile,firmwareVersion))throw new Error('Web audio controls are unavailable for this profile.');await action(link);}catch(error){$('sound-status').textContent=error.message;throw error;}});}
+$('sound-save').onclick=()=>audioAction(async link=>{savedAudio=await saveAudioSettings(link,{level:$('sound-level').value,hunt:$('sound-hunt').checked,focus:Number($('sound-focus').value)});$('sound-status').textContent='Audio preferences verified on the detector. '+audioStateText(savedAudio);});
 $('tone-load').onclick=()=>audioAction(async link=>{await loadTone(link);$('sound-status').textContent='Saved family tone loaded.';});
 function editorTone(){if($('tone-text').dataset.family!==$('tone-family').value)throw new Error('Load the selected family first.');const value=$('tone-text').value.trim();if(value.length>512||/[^\x20-\x7e]/.test(value))throw new Error('Use a single ASCII RTTTL line, up to 512 characters.');return value||'-';}
 $('tone-save').onclick=()=>audioAction(async link=>{const value=editorTone();await toneReply(link,`tone set ${$('tone-family').value} ${value}`);$('sound-status').textContent=value==='-'?'This family is now silent.':'Family tone saved. It will survive a restart.';});
-$('tone-preview').onclick=()=>audioAction(async link=>{await toneReply(link,`tone preview ${$('tone-family').value} ${editorTone()}`);$('sound-status').textContent='Preview requested on the board speaker at its saved volume.';});
+$('tone-preview').onclick=()=>audioAction(async link=>{savedAudio=await previewAudioTone(link,{level:$('sound-level').value,family:Number($('tone-family').value),tone:editorTone()});$('sound-status').textContent='Preview requested at the saved '+(savedAudio.level==='high'?'High':'Medium')+' level.';});
 $('tone-reset').onclick=()=>audioAction(async link=>{await toneReply(link,`tone reset ${$('tone-family').value}`);await loadTone(link);$('sound-status').textContent='Default melody restored.';});
-$('tone-stop').onclick=()=>audioAction(async link=>{await toneReply(link,'tone stop');$('sound-status').textContent='Current sound stopped. Disable automatic alerts to stay silent.';});
+$('tone-stop').onclick=()=>audioAction(async link=>{await toneReply(link,'tone stop');$('sound-status').textContent='Current sound stopped. Choose Silent and save audio settings to stay silent.';});
 
 async function loadWearable(link){
   const state=await readWearable(link);$('clock-offset').value=state.offset;

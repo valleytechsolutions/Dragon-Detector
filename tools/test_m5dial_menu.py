@@ -15,7 +15,9 @@ if not library.exists():
     if not library.exists():
         library = root / '.work/can-commander/native/lvgl.lib'
 catalog = (root/'firmware/include/radar_theme_catalog.h').read_text()
-names = re.search(r'static const char\* radarThemeNames\[\]=\{.*?\};', catalog).group()
+names = '\n'.join(re.search(r'static const char\* '+name+r'\[\]=\{.*?\};', catalog).group() for name in ['radarThemeNames','radarThemeCommands'])
+count = re.search(r'static constexpr unsigned RadarThemeCount=.*?;', catalog).group()
+active = re.search(r'static bool radarThemeActive\(unsigned i\)\{.*?\}', catalog).group()
 source = r'''
 #include <lvgl.h>
 #include <algorithm>
@@ -25,10 +27,12 @@ source = r'''
 #include <vector>
 #include "wearable.h"
 #include "ui_palette.h"
+#include "audio_levels.h"
 #define constrain(v,a,b) std::clamp(int(v),int(a),int(b))
 namespace dragon {constexpr unsigned PersonalThemeId=34;}
 NAMES
-constexpr unsigned RadarThemeCount=41;
+COUNT
+ACTIVE
 static unsigned radarTheme=1,themeChanges=0,savedBrightness=100,outputBrightness=100;
 static bool prefsReady=true,alertSound=true,rtcWrite=true;
 static int clockOffsetMinutes=-240;
@@ -40,15 +44,20 @@ static uint32_t wallTime(){return savedEpoch;}
 static void clockLocal(dragon::Calendar& d){d=liveDate;}
 static bool configureClock(uint32_t epoch){if(!rtcWrite)return false;savedEpoch=epoch;return true;}
 static void set_brightness(uint8_t n){outputBrightness=n;}
-static void audioSave(){} static void audioStop(){}
+static unsigned soundVolume=100;
+static dragon::AudioLevel audioLevel(){return dragon::audioLevelFor(alertSound,soundVolume);}
+static void audioSetLevel(dragon::AudioLevel level){soundVolume=dragon::audioLevelVolume(level);alertSound=soundVolume!=0;}
 static void refreshLiteTheme(){++themeChanges;}
 static bool liteLocksport(){return radarTheme==6;}
+enum class Family{Adult};struct Detector{bool adult=false;bool enabled(Family){return adult;}};static Detector detector;static void setAdultMode(bool enabled){detector.adult=enabled;}
 enum class LitePage{Radar,Clock,Timer,Signals,Status};
 static LitePage litePage=LitePage::Radar;
 static void setLitePage(LitePage p){litePage=p;}
 struct Prefs {unsigned getUChar(const char*,unsigned n){return savedBrightness;}void putUChar(const char*,unsigned n){savedBrightness=n;}};
 static Prefs litePrefs;
 static lv_obj_t* root;
+static lv_obj_t* notice=nullptr;
+static uint32_t noticeAt=0;
 #include "MENU_SOURCE"
 static std::vector<uint8_t> pixels(240*240*3);
 static void flush(lv_disp_drv_t* d,const lv_area_t* a,lv_color_t* b){for(int y=a->y1;y<=a->y2;++y)for(int x=a->x1;x<=a->x2;++x){auto c=lv_color_to32(*b++);auto n=(y*240+x)*3;pixels[n]=c>>16;pixels[n+1]=c>>8;pixels[n+2]=c;}lv_disp_flush_ready(d);}
@@ -62,13 +71,13 @@ int main(int argc,char** argv){
  dialMenuOpen(DialMenu::Date);dialEditDate={2028,1,31,1,1,1};dialChoice=1;dialMenuSelect();dialMenuRotate(1);assert(dialEditDate.month==2&&dialEditDate.day==29);dialMenuSelect();render(argv[1],"05-date");dialChoice=3;dialMenuSelect();assert(savedEpoch==dragon::dateEpoch({2028,2,29,15,45,12})+240*60);
  dialMenuOpen(DialMenu::Date);dialChoice=3;rtcWrite=false;dialMenuSelect();assert(dialMenu==DialMenu::Date&&strstr(lv_label_get_text(dialMenuNote),"failed"));rtcWrite=true;
  dialMenuOpen(DialMenu::Brightness);dialMenuRotate(-1);assert(outputBrightness==95);dialMenuBack();assert(outputBrightness==100&&savedBrightness==100);dialMenuOpen(DialMenu::Brightness);dialMenuRotate(-1);dialMenuSelect();assert(savedBrightness==95&&outputBrightness==95);
- dialMenuOpen(DialMenu::Themes);assert(dialMenuCount()==40);for(int i=0;i<40;++i){assert(dialThemeAt(i)!=34);dialMenuRotate(1);}assert(radarTheme==theme&&themeChanges==0);dialChoice=9;dialMenuRefresh();render(argv[1],"06-themes");dialMenuSelect();assert(themeChanges==1&&!dialMenuVisible());
- radarTheme=23;dialMenuOpen(DialMenu::Settings);render(argv[1],"07-light-settings");dialChoice=3;bool sound=alertSound;dialMenuSelect();assert(alertSound!=sound);
+ dialMenuOpen(DialMenu::Themes);std::vector<unsigned> activeIds;for(unsigned id=0;id<46;++id)if(id!=34&&id!=40)activeIds.push_back(id);assert(dialMenuCount()==int(activeIds.size()));for(int i=0;i<dialMenuCount();++i){unsigned id=dialThemeAt(i);assert(id==activeIds[i]&&dialThemeLabel(id)[0]);dialMenuRotate(1);}assert(dialThemeAt(-1)==0&&dialThemeAt(dialMenuCount())==0);assert(!dialThemeLabel(40)[0]&&!dialThemeLabel(999)[0]);assert(radarTheme==theme&&themeChanges==0);dialChoice=9;dialMenuRefresh();render(argv[1],"06-themes");dialMenuSelect();assert(themeChanges==1&&!dialMenuVisible());
+ radarTheme=23;dialMenuOpen(DialMenu::Settings);render(argv[1],"07-light-settings");dialChoice=3;dialMenuSelect();assert(audioLevel()==dragon::AudioLevel::Silent);dialMenuSelect();assert(audioLevel()==dragon::AudioLevel::Medium);dialMenuSelect();assert(audioLevel()==dragon::AudioLevel::High);
  lv_obj_update_layout(root);for(auto* row:dialMenuRows){lv_area_t a;lv_obj_get_coords(row,&a);for(int x:{a.x1,a.x2})for(int y:{a.y1,a.y2})assert((x-120)*(x-120)+(y-120)*(y-120)<=120*120);}
  dialMenuBack();assert(dialMenu==DialMenu::Main);dialMenuBack();assert(!dialMenuVisible());
  puts("PASS Dial menu routes, explicit theme selection, time/date saves, RTC failures, leap dates, brightness save/cancel and round-screen bounds");
 }
-'''.replace('NAMES', names).replace('MENU_SOURCE', (root/'firmware/src/dial_menu.inc').as_posix())
+'''.replace('NAMES', names).replace('COUNT', count).replace('ACTIVE', active).replace('MENU_SOURCE', (root/'firmware/src/dial_menu.inc').as_posix())
 cpp = work/'menus.cpp'
 cpp.write_text(source)
 exe = work/'menus.exe'

@@ -69,8 +69,9 @@ Battery percentage is available through Waveshare AXP2101 and M5Stack power APIs
 | Spotpear | Original 16 kHz I2S PCM synthesis | BCLK 18, WS 16, DOUT 17, amplifier enable 48 |
 | Waveshare 1.75C | ES8311 codec, original 16 kHz I2S PCM synthesis | MCLK 16, BCLK 9, WS 45, DOUT 8, amplifier enable 46; codec I2C address 0x18 on the display/touch bus |
 | StopWatch | M5Unified speaker | Board-specific wiring managed by the pinned library; vibration is independent |
+| Waveshare LCD 1.85B | ES8311 codec, original 16 kHz I2S PCM synthesis | MCLK2, BCLK48, LRCK38, DOUT47, amplifier enable9; codec I²C address0x18 |
 
-Use the board's suitable speaker connection; a bare board with no speaker connected cannot produce sound. The Waveshare owner confirmed audible output. StopWatch speaker initialization and a 100% preview were exercised during the 0.8 hardware checks. Spotpear audio remains build-verified only. RTTTL melodies are synthesized locally, and no microphone input is enabled. Fresh installs use 100% speaker volume and 100% display brightness with no dim/off timers; both remain configurable.
+Use the board's suitable speaker connection; a bare board with no speaker connected cannot produce sound. The Waveshare owner confirmed audible output. StopWatch speaker initialization and a 100% preview were exercised during the 0.8 hardware checks. Spotpear audio remains build-verified only. RTTTL melodies are synthesized locally, and no microphone input is enabled. From 0.14.2, supported audio profiles offer High, Medium and Silent. Medium selects application gain 50, High selects 100, and Silent sets zero gain and disables alerts, hunt sounds and previews. Updates retain prior saved gains until a level is selected. The 1.85B's board-specific codec unity-gain setting and Medium/High test beeps were approved by its owner; other boards were not physically retested for this change. Display brightness remains configurable with no default dim/off timers.
 
 ## StopWatch input diagnostics
 

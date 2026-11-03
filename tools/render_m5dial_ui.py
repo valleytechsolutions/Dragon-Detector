@@ -70,6 +70,7 @@ using dragon::Family;
 static Contact entries[MAX_CONTACTS];
 static ContactStore contacts{entries};
 static dragon::DetectorSettings detector;
+static void setAdultMode(bool enabled){detector.families=dragon::adultOptInMask(detector.families,enabled);}
 static dragon::TrafficStatus trafficStatus;
 static dragon::Stopwatch stopwatch;
 static bool radioEnabled=true,blePhase=true,candidatesOnly=false,radarRecent=false,alertSound=true,rtcAvailable=true,standby=false;
@@ -94,6 +95,10 @@ static bool radarVisible(const Contact& c,uint32_t now){return c.used&&now-c.see
 static dragon::DeviceKey contactKey(const Contact& c){return keyOf(c);}
 static int findContact(const dragon::DeviceKey& key){for(int i=0;i<MAX_CONTACTS;++i)if(contacts[i].used&&keyOf(contacts[i])==key)return i;return -1;}
 static void trackContact(int i){trackedContact=i;}
+#include "audio_levels.h"
+static unsigned soundVolume=100;
+static dragon::AudioLevel audioLevel(){return dragon::audioLevelFor(alertSound,soundVolume);}
+static void audioSetLevel(dragon::AudioLevel level){soundVolume=dragon::audioLevelVolume(level);alertSound=soundVolume!=0;}
 static void audioSave(){} static void audioStop(){}
 static void macText(const uint8_t* m,char* out){snprintf(out,18,"%02X:%02X:%02X:%02X:%02X:%02X",m[0],m[1],m[2],m[3],m[4],m[5]);}
 void set_brightness(uint8_t){} void dialInputStatus(){}
@@ -131,7 +136,7 @@ int main(int argc,char** argv){
  dialButton(dragon::LitePress::Hold);assert(litePage==LitePage::Radar&&!standby);dialRotate(-1);assert(litePage==LitePage::Status);tick+=200;uiLoop();render(argv[1],"06-status");
  contacts[0].seen=tick;dialOpen(keyOf(contacts[0]));tick+=200;uiLoop();render(argv[1],"07-signal");lv_event_send(pageValue,LV_EVENT_SHORT_CLICKED,nullptr);assert(trackedContact==0);lv_event_send(pageValue,LV_EVENT_SHORT_CLICKED,nullptr);assert(trackedContact==-1);
  lv_event_send(dialMenuButton,LV_EVENT_SHORT_CLICKED,nullptr);assert(dialMenu==DialMenu::Main);dialChoice=4;dialButton(dragon::LitePress::Tap);assert(dialMenu==DialMenu::Settings);render(argv[1],"08-settings");
- for(unsigned theme:{0,3,9,23,28,29,31,35,39,40}){uiShow("clock");radarTheme=theme;refreshLiteTheme();tick+=200;uiLoop();char label[40];snprintf(label,sizeof(label),"clock-theme-%02u",theme);render(argv[1],label);}
+ for(unsigned theme:{0,3,9,23,28,29,31,35,39}){uiShow("clock");radarTheme=theme;refreshLiteTheme();tick+=200;uiLoop();char label[40];snprintf(label,sizeof(label),"clock-theme-%02u",theme);render(argv[1],label);}
  uiShow("radar");assert(!standby&&!dialMenuVisible());
  puts("PASS production Dial pages, ring/button menu navigation, timer, radio standby and matching tile/full-frame rendering");
 }

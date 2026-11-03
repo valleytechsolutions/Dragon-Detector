@@ -26,7 +26,6 @@ static void litePageDraw(lv_event_t* e){
   if(litePage==LitePage::Clock&&radarTheme==MokiTheme){mokiWatch(ctx,clockFrame,clockValid);return;}
   if(litePage==LitePage::Clock&&radarTheme==ArgyleTheme){argyleWatch(ctx,clockFrame,clockValid);return;}
   if(litePage==LitePage::Clock&&radarTheme==VectorPotentialTheme){vpWatch(ctx,clockFrame,clockValid);return;}
-  if(litePage==LitePage::Clock&&radarTheme==HypnoticTheme){hypnoticWatch(ctx,clockFrame,clockValid,radarFrameAt);return;}
   if(litePage==LitePage::Clock&&radarTheme==MitmTheme){mitmWatch(ctx,clockFrame,clockValid,radarFrameAt);return;}
   if(litePage==LitePage::Clock&&radarTheme==MuldersRevengeTheme){muldersWatch(ctx,clockFrame,clockValid);return;}
   if(litePage==LitePage::Clock&&greenArtTheme(radarTheme)){greenWatch(ctx,clockFrame,clockValid,radarTheme==XombiTheme);return;}
@@ -92,7 +91,7 @@ static void setLitePage(LitePage next){
   lv_obj_set_style_img_recolor(logo,color(radarTheme==3?0xd6b46e:LltBlue),0);
   lv_obj_set_style_img_recolor_opa(logo,(radarTheme==LawLockToolsTheme||radarTheme==3)?LV_OPA_COVER:LV_OPA_TRANSP,0);
   if(special){lv_obj_add_flag(pageTitle,LV_OBJ_FLAG_HIDDEN);lv_obj_set_y(pageValue,radarTheme==29?24:157);lv_obj_set_y(pageSub,radarTheme==29?48:188);}
-  if(next==LitePage::Clock&&(radarTheme==HypnoticTheme||radarTheme==MitmTheme||radarTheme==31||radarTheme==32||radarTheme==VectorPotentialTheme||radarTheme==ArgyleTheme||radarTheme==LawLockToolsTheme||radarTheme==MokiTheme||radarTheme==Delta44Theme||radarTheme==33||radarTheme==CanCommanderTheme||radarTheme==MuldersRevengeTheme||greenArtTheme(radarTheme)||radarTheme==dragon::PersonalThemeId))for(auto* o:{pageTitle,pageValue,pageSub,pageHint})lv_obj_add_flag(o,LV_OBJ_FLAG_HIDDEN);
+  if(next==LitePage::Clock&&(radarTheme==MitmTheme||radarTheme==31||radarTheme==32||radarTheme==VectorPotentialTheme||radarTheme==ArgyleTheme||radarTheme==LawLockToolsTheme||radarTheme==MokiTheme||radarTheme==Delta44Theme||radarTheme==33||radarTheme==CanCommanderTheme||radarTheme==MuldersRevengeTheme||greenArtTheme(radarTheme)||radarTheme==dragon::PersonalThemeId))for(auto* o:{pageTitle,pageValue,pageSub,pageHint})lv_obj_add_flag(o,LV_OBJ_FLAG_HIDDEN);
   lv_obj_invalidate(root);
 }
 static void createLitePages(){

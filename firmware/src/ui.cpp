@@ -252,8 +252,8 @@ static void asciiMark(lv_draw_ctx_t* ctx,const char* text,int x,int y,uint32_t i
 static void radarPick(lv_draw_ctx_t* ctx,float radians){
   watchPick(ctx,radians/WatchTau+.25f,pickMcTickler,pickMcTicklerTriangles,true,1.16f);
 }
-static void selectRadarTheme(uint8_t selected){
-  if(selected==dragon::PersonalThemeId&&!personalThemeReady())return;
+static void selectRadarTheme(unsigned selected){
+  if(!radarThemeAllowed(selected))return;
   radarTheme=selected;dismissNotice();uiApplyTheme(radarTheme);settings.putUChar("radar-theme",radarTheme);
   if(radarTheme==dragon::PersonalThemeId){watchFace=dragon::PersonalWatchId;settings.putUChar("watch-face",watchFace);return;}
   if(radarTheme==0){watchFace=0;settings.putUChar("watch-face",watchFace);}
@@ -561,12 +561,11 @@ static void build(){
     title("AUDIO / HUNT",audioReady()?"Device melodies & signal feedback":"Speaker unavailable");body=scrollBody();int n=0;
     if(!audioReady()){label(body,"No speaker on this board.\nRadar, visual alerts and\nRSSI hunting remain available.",6,12,244);}
     else {
-    row(body,alertSound?"Alert tones: ON":"Alert tones: OFF","Unique RTTTL melody per detector family",n++,78);
-    String volume=String("Volume: ")+audioStatus().volume+"%";row(body,volume.c_str(),"Tap: 0 / 10 / 25 / 50 / 75 / 100%",n++,85);
+    String sound=String("Sound level: ")+dragon::audioLevelLabel(audioLevel());row(body,sound.c_str(),"Tap: Silent / Medium / High",n++,85);
     row(body,huntSound?"Hunt feedback: ON":"Hunt feedback: OFF","Pitch & cadence follow signal strength",n++,86);
     String focus=audioFocus<0?"Audio focus: OFF":String("Focus: ")+dragon::familyName(Family(audioFocus));row(body,focus.c_str(),"Off / Axon / ALPR + Flock + Raven / Glasses",n++,87);
-    row(body,"Preview Axon alert","Plays once at the selected volume",n++,88);
-    row(body,"Preview glasses alert","Short, simple chime",n++,94);
+    row(body,"Preview Axon alert",audioLevel()==dragon::AudioLevel::Silent?"Choose Medium or High first":"Plays once at the selected sound level",n++,88);
+    row(body,"Preview glasses alert",audioLevel()==dragon::AudioLevel::Silent?"Choose Medium or High first":"Short, simple chime",n++,94);
     row(body,"Customize with USB web UI","RTTTL editor beside Badge Studio",n++,95);
     row(body,"Stop current sound","Quiet mode mutes automatic feedback",n++,34);
     }
@@ -581,7 +580,8 @@ static void build(){
     row(body,"Orientation","Choose a saved fixed angle",n++,135);
     row(body,"Display & timeouts","Brightness, dimming and screen off",n++,71);
     row(body,"Theme & radar labels",radarThemeNames[radarTheme],n++,117);
-    row(body,"Audio & hunt tones","Volume, target focus and RTTTL alerts",n++,31);
+    if(audioReady()){String sound=String("Sound level: ")+dragon::audioLevelLabel(audioLevel());row(body,sound.c_str(),"Tap: Silent / Medium / High",n++,85);}
+    row(body,"Audio & hunt tones","Sound level, target focus and RTTTL alerts",n++,31);
     row(body,"Detection filters","Radar families / audible alert threshold",n++,61);
     row(body,activeBle?"BLE scan: ACTIVE":"BLE scan: PASSIVE",activeBle?"Requests scan-response names; transmits":"Listen only; tap for scan-response names",n++,98);
     row(body,"Radio health","Queue, memory and reception diagnostics",n++,99);
@@ -659,7 +659,7 @@ static void build(){
     for(unsigned i=0,n=0;i<unsigned(Family::Count);++i){if(Family(i)==Family::Adult&&!detector.enabled(Family::Adult))continue;row(body,dragon::familyName(Family(i)),"Each device gets its own shade",n++,0,dragon::familyColor(Family(i)));}
   }else if(page==RadarStyle){
     title("THEME & RADAR","Menus / utilities / radar");body=scrollBody();int n=0;
-    for(unsigned i=0;i<RadarThemeCount;++i){if(i==dragon::PersonalThemeId&&!personalThemeReady())continue;String name=String(radarTheme==i?LV_SYMBOL_OK "  ":"")+radarThemeNames[i];row(body,name.c_str(),radarThemeDescriptions[i],n++,9000+i);}
+    for(unsigned i=0;i<RadarThemeCount;++i){if(!radarThemeAllowed(i))continue;String name=String(radarTheme==i?LV_SYMBOL_OK "  ":"")+radarThemeNames[i];row(body,name.c_str(),radarThemeDescriptions[i],n++,9000+i);}
     row(body,"Device color legend","Unique family colors in every theme",n++,150);
     row(body,radarLabels?"Device labels: ON":"Device labels: OFF",radarLabels?"Priority tags + tapped dot / all dots visible":"All dots together / tap for evidence",n++,121);
     row(body,radarRecent?"Recent signals: 2 minutes":"Recent signals: OFF","Stale dots show last-seen age, not live RSSI",n++,124);
@@ -790,13 +790,12 @@ static void action(lv_event_t* e){
     case 75:detector.privacy=!detector.privacy;detectorSave();go(Settings);page=Boot;break;
     case 76:detector.smoothingMs=detector.smoothingMs==600?1800:detector.smoothingMs==1800?4000:600;detectorSave();go(Settings);page=Boot;break;
     case 77:setFoxTransmit(!foxTransmit());go(Settings);page=Boot;break;
-    case 85:{const int levels[]={0,10,25,50,75,100};int next=0;for(int v:levels)if(v>audioStatus().volume){next=v;break;}audioVolume(next);go(Audio);page=Boot;break;}
+    case 78:case 85:audioSetLevel(dragon::nextAudioLevel(audioLevel()));go(page==Settings?Settings:Audio);page=Boot;break;
     case 86:huntSound=!huntSound;audioSave();go(Audio);page=Boot;break;
     case 87:audioFocus=audioFocus<0?int(Family::Axon):audioFocus==int(Family::Axon)?int(Family::Flock):audioFocus==int(Family::Flock)?int(Family::Meta):-1;audioSave();go(Audio);page=Boot;break;
     case 88:audioCommand("tone play 3");break;
     case 94:audioCommand("tone play 4");break;
     case 95:uiNotify("USB TONE EDITOR","Open Detector tools on the Dragon Detector web flasher.",nullptr,false);break;
-    case 78:alertSound=!alertSound;audioSave();audioStop();go(Audio);page=Boot;break;
     case 79:alertVibration=!alertVibration;detectorSave();go(Settings);page=Boot;break;
     case 80:{const uint16_t choices[]={0,15,30,60,120,300};size_t i=0;while(i<5&&choices[i]!=detector.dimSeconds)++i;detector.dimSeconds=choices[(i+1)%6];detectorSave();go(Display);page=Boot;break;}
     case 81:detector.idleBrightness=detector.idleBrightness==5?8:detector.idleBrightness==8?15:detector.idleBrightness==15?25:5;detectorSave();go(Display);page=Boot;break;
@@ -917,7 +916,7 @@ void uiBegin(){
   if(!settings.getBool("panel-v04",false)){settings.putUChar("brightness",100);settings.putBool("panel-v04",true);}
   brightness=settings.getUChar("brightness",100);if(brightness<25||brightness>100)brightness=100;candidatesOnly=settings.getBool("candidates",true);
   if(!settings.getBool("radar-v07",false)){settings.putBool("radar-labels",true);settings.putUChar("radar-theme",1);settings.putBool("radar-v07",true);}
-  radarLabels=settings.getBool("radar-labels",true);radarRecent=settings.getBool("radar-recent",true);radarTheme=settings.getUChar("radar-theme",1);if(radarTheme>=RadarThemeCount||(radarTheme==dragon::PersonalThemeId&&!personalThemeReady()))radarTheme=1;
+  radarLabels=settings.getBool("radar-labels",true);radarRecent=settings.getBool("radar-recent",true);radarTheme=settings.getUChar("radar-theme",1);if(!radarThemeAllowed(radarTheme)){radarTheme=1;settings.putUChar("radar-theme",radarTheme);}
   scr_lvgl_init();uiApplyTheme(radarTheme);set_brightness(brightness);lastInteraction=millis();root=lv_scr_act();lv_obj_clear_flag(root,LV_OBJ_FLAG_SCROLLABLE);lv_obj_set_style_bg_color(root,color(uiColors().bg),0);
 #ifndef BOARD_RADAR_LITE
   pinMode(BTN_PIN,INPUT_PULLUP);
@@ -1064,7 +1063,7 @@ bool uiCommand(const String& cmd){
   if(cmd=="radar labels on"||cmd=="radar labels off"){radarLabels=cmd.endsWith("on");settings.putBool("radar-labels",radarLabels);Serial.printf("RADAR_LABELS %u\n",radarLabels);return true;}
   if(cmd=="radar recent on"||cmd=="radar recent off"){radarRecent=cmd.endsWith("on");settings.putBool("radar-recent",radarRecent);Serial.printf("RADAR_RECENT %u\n",radarRecent);return true;}
   if(cmd=="radar next"||cmd=="radar previous"){Serial.println("RADAR_ALL_CONTACTS no pages");return true;}
-  if(cmd.startsWith("radar theme ")){for(unsigned i=0;i<RadarThemeCount;++i)if(cmd.substring(12)==radarThemeCommands[i]){if(i==dragon::PersonalThemeId&&!personalThemeReady()){Serial.println("RADAR_THEME_ERROR upload a personal theme first");return true;}selectRadarTheme(i);go(Radar);page=Boot;Serial.printf("RADAR_THEME %u\n",radarTheme);return true;}Serial.println("RADAR_THEME_ERROR unknown theme");return true;}
+  if(cmd.startsWith("radar theme ")){for(unsigned i=0;i<RadarThemeCount;++i)if(radarThemeActive(i)&&cmd.substring(12)==radarThemeCommands[i]){if(i==dragon::PersonalThemeId&&!personalThemeReady()){Serial.println("RADAR_THEME_ERROR upload a personal theme first");return true;}selectRadarTheme(i);go(Radar);page=Boot;Serial.printf("RADAR_THEME %u\n",radarTheme);return true;}Serial.println("RADAR_THEME_ERROR unknown theme");return true;}
   if(cmd=="display status"){Serial.printf("DISPLAY_SETTINGS brightness=%d output=%d dim=%u off=%u dim_level=%u wake=%u\n",brightness,outputBrightness,detector.dimSeconds,detector.offSeconds,detector.idleBrightness,detector.wakeAlert);return true;}
   if(cmd.startsWith("display set ")){
     unsigned b=0,dim=0,off=0,level=0;char extra;

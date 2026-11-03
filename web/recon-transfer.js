@@ -1,5 +1,5 @@
-import {firmwareAtLeast,knownFirmware} from './firmware-version.js?v=0.14.1';
-import {crc32} from './ble-lab.js?v=0.14.1';
+import {firmwareAtLeast,knownFirmware} from './firmware-version.js?v=0.14.2';
+import {crc32} from './ble-lab.js?v=0.14.2';
 export function hasReconTools(version){return firmwareAtLeast(version,'0.10.0');}
 export function captureName(value){if(!/^(wifi-[a-f0-9]{8}(?:-\d{4,10})?\.pcap|(?:ble|portal|net|wigle)-[a-f0-9]{8}(?:-\d{4,10})?\.csv)$/.test(value))throw new Error('Choose a saved capture.');return value;}
 export async function reconLines(link,command){

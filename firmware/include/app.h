@@ -23,6 +23,7 @@
 #include "dragon_version.h"
 #include "traffic.h"
 #include "wearable.h"
+#include "audio_levels.h"
 extern dragon::TrafficStatus trafficStatus;
 unsigned recentDisconnects();
 
@@ -66,6 +67,8 @@ void audioPlay(const String& path);
 void audioRecord();
 void audioStop();
 void audioVolume(int value);
+dragon::AudioLevel audioLevel();
+void audioSetLevel(dragon::AudioLevel level);
 enum class AudioMode:uint8_t {Idle,Playing,Recording,Error};
 struct AppAudioStatus { AudioMode mode=AudioMode::Idle; char message[100]{}; uint32_t seconds=0; uint16_t peak=0; uint8_t volume=50; };
 AppAudioStatus audioStatus();

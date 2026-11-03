@@ -95,7 +95,7 @@ void uiBegin(){
   if(!prepareThemeLogos())Serial.println("THEME_LOGOS PSRAM allocation failed / fallback logos");
   #endif
   prefsReady=litePrefs.begin("lite-ui",false);
-  if(prefsReady){unsigned saved=litePrefs.getUChar("theme",1);radarTheme=saved<RadarThemeCount&&(saved!=dragon::PersonalThemeId||personalThemeReady())?saved:1;}
+  if(prefsReady){unsigned saved=litePrefs.getUChar("theme",1);radarTheme=savedRadarTheme(saved);if(radarTheme!=saved)litePrefs.putUChar("theme",radarTheme);}
   candidatesOnly=true;radarRecent=true;scr_lvgl_init();
 #ifdef BOARD_M5DIAL
   prepareThemeLogos();
@@ -157,6 +157,7 @@ void uiShow(const String& name){
 #endif
   if(name=="startup"){startLiteSplash();return;}for(unsigned i=0;i<6;++i)if(name==litePageNames[i]){setLitePage(LitePage(i));return;}}
 static void refreshLiteTheme(){
+  radarTheme=savedRadarTheme(radarTheme);
   themeDirty=true;themeChangedAt=millis();
   prepareLiteBackdrop(root);lv_obj_set_style_bg_color(root,color(radarPalette(radarTheme).bottom),0);
   lv_obj_set_style_text_color(status,color(radarPalette(radarTheme).text),0);
@@ -168,7 +169,7 @@ static void refreshLiteTheme(){
   lv_obj_align(logo,LV_ALIGN_TOP_MID,0,9);setLitePage(litePage);lv_obj_invalidate(root);
   Serial.printf("LITE_THEME theme=%u name=%s\n",radarTheme,radarThemeCommands[radarTheme]);
 }
-void uiKey(bool held){if(held||!root)return;do{radarTheme=(radarTheme+1)%RadarThemeCount;}while(radarTheme==dragon::PersonalThemeId&&!personalThemeReady());refreshLiteTheme();}
+void uiKey(bool held){if(held||!root)return;do{radarTheme=(radarTheme+1)%RadarThemeCount;}while(!radarThemeAllowed(radarTheme));refreshLiteTheme();}
 void uiPersonalThemeChanged(){radarTheme=dragon::PersonalThemeId;refreshLiteTheme();if(prefsReady)litePrefs.putUChar("theme",radarTheme);themeDirty=false;setLitePage(LitePage::Clock);}
 void uiPersonalThemeRemoved(){if(radarTheme==dragon::PersonalThemeId)radarTheme=1;refreshLiteTheme();if(prefsReady)litePrefs.putUChar("theme",radarTheme);themeDirty=false;setLitePage(LitePage::Radar);}
 bool uiStopwatchKey(bool,uint64_t){return false;}

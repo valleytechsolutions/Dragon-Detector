@@ -1,4 +1,4 @@
-import {firmwareAtLeast} from './firmware-version.js?v=0.14.1';
+import {firmwareAtLeast} from './firmware-version.js?v=0.14.2';
 const sdBoards=new Set(['waveshare_185b','watcher','spotpear','waveshare_175','waveshare_175_gps','xiao_round','lilygo_175']);
 export function hasSd(board){return sdBoards.has(board);}
 export function hasGpsAndSd(board){return ['waveshare_185b','watcher','waveshare_175_gps'].includes(board);}

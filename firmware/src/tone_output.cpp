@@ -59,7 +59,11 @@ bool toneOutputBegin(){
 #endif
  auto codec=es8311_create(0,ES8311_ADDRESS_0);if(!codec)return false;
  es8311_clock_config_t clock{};clock.mclk_from_mclk_pin=true;clock.mclk_frequency=4096000;clock.sample_frequency=16000;
-#if defined(BOARD_WATCHER) || defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
+#ifdef BOARD_WAVESHARE_185B
+ // This board needs the codec's unity-gain DAC setting. 75 maps to 0xBF
+ // (0 dB); app volume still controls PCM amplitude below full scale.
+ constexpr int codecVolume=75;
+#elif defined(BOARD_WATCHER) || defined(BOARD_AMOLED_175)
  // Driver percent maps directly to DAC register: 100 -> 0xFF (+32 dB).
  // 65 -> 0xA5 (-13 dB), keeping headroom even at full application volume.
  constexpr int codecVolume=65;
