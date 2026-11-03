@@ -1,0 +1,78 @@
+# Generated SD overlay: tools/guition/sd_boards.py
+peripherals:
+  - name: i2s_audio_out
+    type: i2s
+    role: master
+    format: std-out
+    config:
+      port: 1
+      sample_rate_hz: 48000
+      data_bit_width: 16
+      slot_mode: I2S_SLOT_MODE_STEREO
+      slot_mask: I2S_STD_SLOT_BOTH
+      ws_width: 16
+      bit_shift: true
+      pins:
+        mclk: 21
+        bclk: 18
+        ws: 16
+        dout: 17
+        din: -1
+
+  - name: gpio_pa_control
+    type: gpio
+    role: io
+    config:
+      pin: 48
+      mode: GPIO_MODE_OUTPUT
+      default_level: 0
+
+  # PDM-to-PCM conversion is available on I2S0.
+  - name: i2s_audio_in
+    type: i2s
+    role: master
+    format: pdm-in
+    config:
+      port: 0
+      sample_rate_hz: 16000
+      data_bit_width: 16
+      slot_mode: I2S_SLOT_MODE_STEREO
+      slot_mask: I2S_PDM_SLOT_BOTH
+      data_fmt: I2S_PDM_DATA_FMT_PCM
+      dn_sample_mode: I2S_PDM_DSR_8S
+      pins:
+        clk: 45
+        din: 46
+
+  - name: spi_display
+    type: spi
+    config:
+      spi_bus_config:
+        spi_port: 1
+        mosi_io_num: 11
+        miso_io_num: 12
+        quadwp_io_num: 13
+        quadhd_io_num: 14
+        sclk_io_num: 9
+        max_transfer_sz: 7200
+
+  - name: ledc_backlight
+    type: ledc
+    config:
+      gpio_num: 15
+      channel: LEDC_CHANNEL_0
+      timer_sel: LEDC_TIMER_0
+      freq_hz: 5000
+      duty_resolution: LEDC_TIMER_10_BIT
+      duty: 0
+      speed_mode: LEDC_LOW_SPEED_MODE
+      output_invert: false
+
+  - name: i2c_touch
+    type: i2c
+    config:
+      port: 0
+      pins:
+        scl: 8
+        sda: 7
+      enable_internal_pullup: true

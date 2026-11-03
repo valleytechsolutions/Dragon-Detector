@@ -3,7 +3,7 @@ from pathlib import Path
 import argparse, csv, hashlib, json, os, re, shutil, subprocess, sys, zipfile
 from flash_budget import report as flash_report
 ROOT=Path(__file__).resolve().parents[1]
-BOARDS={'waveshare_185b':('Waveshare ESP32-S3-Touch-LCD-1.85B','waveshare-lcd-185b'),'watcher':('Seeed SenseCAP Watcher','seeed-watcher'),'m5dial':('M5Stack Dial','m5stack-dial'),'lilygo_175':('LilyGo T-Display-S3-AMOLED-1.75','lilygo-amoled-175'),'elecrow_21':('Elecrow CrowPanel 2.1 Rotary','elecrow-rotary-21'),'waveshare_175_gps':('Waveshare ESP32-S3-Touch-AMOLED-1.75-G','waveshare-amoled-175'),'waveshare_175':('Waveshare ESP32-S3-Touch-AMOLED-1.75','waveshare-amoled-175'),'spotpear':('Spotpear JC3636W518','spotpear'),'waveshare':('Waveshare ESP32-S3-Touch-AMOLED-1.75C','waveshare-amoled'),'stopwatch':('M5Stack StopWatch C152','m5stack-stopwatch'),'xiao_round':('Seeed XIAO ESP32-S3 + Round Display','xiao-round'),'waveshare_lite':('Waveshare ESP32-S3-LCD-1.28 Lite','waveshare-lite')}
+BOARDS={'guition_185_beta':('Guition / Surenoo JC3636W518 Beta 1','spotpear'),'waveshare_185b':('Waveshare ESP32-S3-Touch-LCD-1.85B','waveshare-lcd-185b'),'watcher':('Seeed SenseCAP Watcher','seeed-watcher'),'m5dial':('M5Stack Dial','m5stack-dial'),'lilygo_175':('LilyGo T-Display-S3-AMOLED-1.75','lilygo-amoled-175'),'elecrow_21':('Elecrow CrowPanel 2.1 Rotary','elecrow-rotary-21'),'waveshare_175_gps':('Waveshare ESP32-S3-Touch-AMOLED-1.75-G','waveshare-amoled-175'),'waveshare_175':('Waveshare ESP32-S3-Touch-AMOLED-1.75','waveshare-amoled-175'),'spotpear':('Spotpear JC3636W518','spotpear'),'waveshare':('Waveshare ESP32-S3-Touch-AMOLED-1.75C','waveshare-amoled'),'stopwatch':('M5Stack StopWatch C152','m5stack-stopwatch'),'xiao_round':('Seeed XIAO ESP32-S3 + Round Display','xiao-round'),'waveshare_lite':('Waveshare ESP32-S3-LCD-1.28 Lite','waveshare-lite')}
 VERSION=re.search(r'#define DRAGON_VERSION "([0-9.]+)"',(ROOT/'firmware/include/dragon_version.h').read_text()).group(1)
 
 def run(*args):subprocess.run([sys.executable,*args],cwd=ROOT,check=True)
@@ -30,6 +30,18 @@ def build(board,skip):
     # Each standalone board ZIP also carries the embedded fonts' license.
     shutil.copyfile(ROOT/'docs/licenses/Montserrat-OFL.txt',out/'FONT-LICENSE.txt')
     shutil.copyfile(ROOT/'docs/licenses/Unscii-NOTICE.txt',out/'ASCII-FONT-NOTICE.txt')
+    if board=='guition_185_beta':
+        (out/'BOARD-STATUS.txt').write_text(
+            'BETA 1: Guition / Surenoo JC3636W518, 360 x 360, 16 MB flash, PSRAM.\n'
+            'Physically UNVERIFIED. This separate target needs testing on the affected board.\n'
+            'Explicit manufacturer initialization: Guition-JC/Guition dbadb44943658338602c5f5a584b2af026fb32da, 184 commands, 20 MHz QSPI.\n'
+            'A bounded 3 MHz raw ID read is diagnostic only; it never selects a panel revision or another table.\n'
+            'Do not use this profile on Waveshare 1.85B/1.85C/AMOLED hardware. Stable Spotpear keeps its original driver.\n'
+            'Back up factory firmware first. Use Fresh installation when changing from another profile.\n'
+            'Run display hardware over USB and report both GUITION_DISPLAY and GUITION_ID lines with physical results.\n'
+            'Display, colors, touch, SD, radio, audio and power behavior remain physically unverified for this beta.\n',encoding='utf-8')
+        for name in ('SOURCE.md','NOTICE','LICENSE-APACHE-2.0.txt','LICENSE-MIT.txt','SHA256SUMS.txt'):
+            shutil.copyfile(ROOT/'third_party/guition-jc3636w518'/name,out/('DISPLAY-'+name))
     if board=='elecrow_21':
         shutil.copyfile(ROOT/'docs/licenses/Arduino-GFX-license.txt',out/'DISPLAY-LICENSE.txt')
         (out/'BOARD-STATUS.txt').write_text(
@@ -91,9 +103,10 @@ def build(board,skip):
     for mode in ('factory','update'):
         selected=segments+(filesystem_segments if mode=='factory' else [])
         manifest={'name':f'Dragon Detector — {BOARDS[board][0]} ({mode})','version':VERSION,'new_install_prompt_erase':True,'new_install_improv_wait_time':0,'builds':[{'chipFamily':'ESP32-S3','parts':[{'path':name,'offset':offset} for name,offset in selected]}]}
-        if board in ('watcher','spotpear','waveshare_185b','waveshare_175','waveshare_175_gps','xiao_round','lilygo_175'):
+        if board in ('guition_185_beta','watcher','spotpear','waveshare_185b','waveshare_175','waveshare_175_gps','xiao_round','lilygo_175'):
             manifest['sdResources']={'schema':1,'required':False,'path':'resources/dragon-resources-v1-20261023.zip','placement':'/dragon/resources/vendors.ddr'}
             if board=='waveshare_185b':manifest['sdResources'].update(required=True,path='resources/dragon-resources-v1-20261103.zip')
+        if board=='guition_185_beta':manifest.update(release_channel='beta',beta_iteration=1,hardware_validation='physically-unverified')
         (out/f'{mode}.json').write_text(json.dumps(manifest,indent=2)+'\n',encoding='utf-8')
     # A merged factory image is also provided for esptool/M5Burner-style tools.
     args=['-m','esptool','--chip','esp32s3','merge-bin','-o',str(out/'factory-0x0.bin')]
@@ -112,12 +125,13 @@ def build(board,skip):
     (out/'SHA256SUMS.txt').write_text(''.join(checks),encoding='ascii')
     metadata={'version':VERSION,'board':board,'name':BOARDS[board][0],'source_commit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),'source_dirty':bool(subprocess.check_output(['git','status','--porcelain','--untracked-files=normal'],cwd=ROOT,text=True).strip()),'filesystem_offset':fs_offset,'filesystem_size':fs_size,'factory_resets_badges':True,'update_preserves_nvs_and_filesystem':True}
     metadata['hardware_validation']='dial-v11-display-controls-rtc-restart-verified' if board=='m5dial' else 'lilygo-baseline-reported-rtc-sd-pending' if board=='lilygo_175' else 'initial-unit-verified' if board=='elecrow_21' else 'new-sd-gps-features-pending' if board in ('waveshare_175','waveshare_175_gps') else 'existing-profile'
-    if board in ('watcher','spotpear','waveshare_185b','waveshare_175','waveshare_175_gps','xiao_round','lilygo_175'):
+    if board in ('guition_185_beta','watcher','spotpear','waveshare_185b','waveshare_175','waveshare_175_gps','xiao_round','lilygo_175'):
         metadata['hardware_validation']='sd-resource-beta-unverified'
         metadata['sd_resources']={'schema':1,'required':False,'snapshot':20261023}
         if board=='waveshare_185b':metadata['sd_resources'].update(required=True,pack_date=20261103,ble_labels_snapshot=20261103,compiled_registry=False)
     if board=='watcher':metadata['hardware_validation']='display-rtc-sd-controls-verified'
     if board=='waveshare_185b':metadata['hardware_validation']='185b-display-touch-sd-rtc-restart-verified'
+    if board=='guition_185_beta':metadata.update(release_channel='beta',beta_iteration=1,hardware_validation='physically-unverified',display_source='Guition-JC/Guition@dbadb44943658338602c5f5a584b2af026fb32da',display_commands=184,display_qspi_hz=20000000,display_id_probe_hz=3000000,display_id_autodetection=False)
     metadata['flash_size']=0x2000000 if board in ('watcher','waveshare') else 0x800000 if board in ('m5dial','xiao_round') else 0x1000000
     metadata['memory']=flash_report(entries,(build/'firmware.bin').stat().st_size,metadata['flash_size'])
     (out/'memory-budget.json').write_text(json.dumps(metadata['memory'],indent=2)+'\n',encoding='utf-8')
@@ -129,6 +143,9 @@ def build(board,skip):
             if file.is_file() and file.suffix!='.zip':archive.write(file,file.name)
     with zipfile.ZipFile(bundle) as archive:
         assert archive.testzip() is None,'Corrupt board ZIP'
+        if board=='guition_185_beta':
+            for name in ('DISPLAY-SOURCE.md','DISPLAY-NOTICE','DISPLAY-LICENSE-APACHE-2.0.txt','DISPLAY-LICENSE-MIT.txt','DISPLAY-SHA256SUMS.txt','BOARD-STATUS.txt'):
+                assert archive.read(name)==(out/name).read_bytes(),f'Missing or altered beta notice: {name}'
         if board=='waveshare_185b':
             for name in ('DISPLAY-NOTICE.md','DISPLAY-LICENSE','ES8311-UPSTREAM.md','ES8311-LICENSE'):
                 assert archive.read(name)==(out/name).read_bytes(),f'Missing or altered package notice: {name}'
@@ -138,4 +155,4 @@ def build(board,skip):
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser();parser.add_argument('--board',choices=BOARDS,action='append');parser.add_argument('--skip-build',action='store_true');args=parser.parse_args()
-    for board in args.board or BOARDS:build(board,args.skip_build)
+    for board in args.board or [name for name in BOARDS if not name.endswith('_beta')]:build(board,args.skip_build)

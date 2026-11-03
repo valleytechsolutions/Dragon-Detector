@@ -72,7 +72,7 @@ test('every board is installable; only full boards have badge preview controls',
 test('firmware CI keeps an independent artifact for every selectable board',()=>{
   const workflow=readFileSync(new URL('../.github/workflows/build.yml',import.meta.url),'utf8');
   const boards=workflow.match(/board: \[([^\]]+)\]/)[1].split(',').map(x=>x.trim());
-  assert.deepEqual(boards.sort(),Object.keys(boardProfiles).sort());
+  assert.deepEqual(boards.sort(),Object.keys(boardProfiles).filter(id=>boardProfiles[id].releaseChannel!=='beta').sort());
   assert.ok(workflow.includes('name: dragon-detector-${{ matrix.board }}'));
   assert.ok(workflow.includes('path: web/firmware/${{ matrix.board }}'));
 });
@@ -220,6 +220,7 @@ test('flasher rejects wrong boards, partitions, remote paths and destructive upd
   const parts=[{path:'bootloader.bin',offset:0},{path:'partitions.bin',offset:0x8000},{path:'boot_app0.bin',offset:0xe000},{path:'firmware.bin',offset:0x10000}];
   if(mode==='factory')parts.push({path:'littlefs.bin',offset:p.filesystemOffset});
   const good={name:`Dragon Detector — ${p.firmwareName} (${mode})`,version:p.minVersion||'0.9.4',new_install_prompt_erase:!!p.minVersion||mode==='factory',...(p.minVersion?{new_install_improv_wait_time:0}:{}),builds:[{chipFamily:'ESP32-S3',parts}]};
+  if(p.releaseChannel==='beta')Object.assign(good,{release_channel:'beta',beta_iteration:p.betaIteration,hardware_validation:'physically-unverified'});
   assert.equal(validateManifest(good,board,mode),good);
   if(board==='waveshare_lite'){const old=structuredClone(good);old.version='0.9.3';assert.throws(()=>validateManifest(old,board,mode),/0.9.4/);}
   if(board==='xiao_round'){const old=structuredClone(good);old.version='0.9.1';assert.throws(()=>validateManifest(old,board,mode),/0.9.2/);}

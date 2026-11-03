@@ -7,7 +7,7 @@ test('all exact board profiles gate SD resources and GPS independently',()=>{
   assert.equal(hasGpsAndSd(board),['waveshare_185b','watcher','waveshare_175_gps'].includes(board));
   assert.equal(resourceSetup(board,{version:'0.13.26'}),null);
   if(board==='waveshare_185b')continue;
-  const m={version:'0.13.28',sdResources:{...resourcePack}};
+  const m={version:board==='guition_185_beta'?'0.14.2':'0.13.28',sdResources:{...resourcePack}};
   if(hasSd(board)){assert.match(resourceSetup(board,m).title,/Optional/);m.sdResources.required=true;assert.match(resourceSetup(board,m).title,/REQUIRED/);}
   else assert.throws(()=>resourceSetup(board,m),/no SD/);
  }

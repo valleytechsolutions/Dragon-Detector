@@ -1,0 +1,133 @@
+# Generated SD overlay: tools/guition/sd_boards.py
+devices:
+  - name: audio_dac
+    type: audio_codec
+    chip: internal
+    config:
+      adc_enabled: false
+      dac_enabled: true
+    peripherals:
+      - i2s_name: i2s_audio_out
+      - pa_name: gpio_pa_control
+        active_level: 1
+
+  - name: audio_adc
+    type: audio_codec
+    chip: internal
+    config:
+      adc_enabled: true
+      dac_enabled: false
+    peripherals:
+      - i2s_name: i2s_audio_in
+
+  - name: display_lcd
+    type: display_lcd
+    version: 1.0.0
+    sub_type: spi
+    chip: st77916
+    config:
+      x_max: 360
+      y_max: 360
+      swap_xy: false
+      mirror_x: false
+      mirror_y: false
+      invert_color: true
+      need_reset: true
+      frame_format: RGB565_BE
+      io_spi_config:
+        cs_gpio_num: 10
+        dc_gpio_num: -1
+        spi_mode: 0
+        pclk_hz: 80000000
+        trans_queue_depth: 10
+        lcd_cmd_bits: 32
+        lcd_param_bits: 8
+        flags:
+          quad_mode: true
+      lcd_panel_config:
+        reset_gpio_num: 47
+        bits_per_pixel: 16
+        rgb_ele_order: LCD_RGB_ELEMENT_ORDER_RGB
+        data_endian: LCD_RGB_DATA_ENDIAN_BIG
+        flags:
+          reset_active_high: false
+    peripherals:
+      - spi_name: spi_display
+    dependencies:
+      espressif/esp_lcd_st77916: ==2.0.2
+
+  - name: lcd_touch
+    type: lcd_touch
+    sub_type: i2c
+    chip: cst816s
+    init_skip: true
+    config:
+      touch_config:
+        x_max: 360
+        y_max: 360
+        rst_gpio_num: 40
+        int_gpio_num: -1
+        levels:
+          reset: 0
+          interrupt: 0
+        flags:
+          swap_xy: false
+          mirror_x: false
+          mirror_y: false
+      io_i2c_config:
+        scl_speed_hz: 400000
+        control_phase_bytes: 1
+        dc_bit_offset: 0
+        lcd_cmd_bits: 8
+        lcd_param_bits: 0
+        transaction_timeout_ms: 0
+        flags:
+          dc_low_on_data: false
+          disable_control_phase: true
+    peripherals:
+      - i2c_name: i2c_touch
+        i2c_addr: [0x2A]
+    dependencies:
+      espressif/esp_lcd_touch:
+        version: ==1.2.1
+        public: true
+      espressif/esp_lcd_touch_cst816s:
+        version: ==1.1.1~1
+        public: true
+        matches:
+          - if: $CONFIG{GUITION_TOUCH_CAPACITIVE} == True
+
+  - name: lcd_brightness
+    type: ledc_ctrl
+    config:
+      default_percent: 100
+    peripherals:
+      - ledc_name: ledc_backlight
+
+  - name: fs_sdcard
+    type: fs_fat
+    sub_type: sdmmc
+    config:
+      mount_point: "/sdcard"
+      vfs_config:
+        format_if_mount_failed: false
+        max_files: 5
+        allocation_unit_size: 16384
+      sub_config:
+        slot: SDMMC_HOST_SLOT_1
+        frequency: SDMMC_FREQ_DEFAULT
+        bus_width: 4
+        pins:
+          clk: 3
+          cmd: 4
+          d0: 2
+          d1: 1
+          d2: 6
+          d3: 5
+          d4: -1
+          d5: -1
+          d6: -1
+          d7: -1
+          cd: -1
+          wp: -1
+        ldo_chan_id: -1

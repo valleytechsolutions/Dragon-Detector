@@ -9,7 +9,10 @@ for md in [ROOT/'README.md',ROOT/'CREDITS.md',*ROOT.glob('docs/*.md')]:
     for target in re.findall(r'!?\[[^\]]*\]\(([^\s)]+)',md.read_text(encoding='utf-8')):
         if '://' in target or target.startswith('#'):continue
         file=unquote(target.split('#')[0]);assert (md.parent/file).exists(),f'{md.name}: missing {file}'
-for board in ('waveshare_185b','watcher','m5dial','spotpear','waveshare','stopwatch','xiao_round','waveshare_lite','waveshare_175','waveshare_175_gps','elecrow_21','lilygo_175'):
+boards=['waveshare_185b','watcher','m5dial','spotpear','waveshare','stopwatch','xiao_round','waveshare_lite','waveshare_175','waveshare_175_gps','elecrow_21','lilygo_175']
+# The separately requested beta is not part of the default stable build set.
+if (ROOT/'web/firmware/guition_185_beta').exists():boards.append('guition_185_beta')
+for board in boards:
     folder=ROOT/'web/firmware'/board
     records={name:sha for sha,name in (line.split() for line in (folder/'SHA256SUMS.txt').read_text().splitlines())}
     budget=json.loads((folder/'memory-budget.json').read_text(encoding='utf-8'))
@@ -21,6 +24,18 @@ for board in ('waveshare_185b','watcher','m5dial','spotpear','waveshare','stopwa
     assert budget['app_slot_free_bytes']==budget['app_slot_bytes']-budget['app_bytes']
     assert budget['app_slot_free_bytes']>=(budget['app_slot_bytes']*RESERVE_PERCENT+99)//100
     assert budget['physical_flash_bytes']==info['flash_size']
+    if board=='guition_185_beta':
+        assert info['release_channel']=='beta' and info['beta_iteration']==1
+        assert info['hardware_validation']=='physically-unverified'
+        assert info['display_commands']==184 and info['display_qspi_hz']==20000000
+        assert info['display_id_autodetection'] is False
+        assert info['filesystem_offset']==0xc10000 and info['flash_size']==0x1000000
+        with zipfile.ZipFile(folder/f'dragon-detector-{board}.zip') as archive:
+            for name in ('SOURCE.md','NOTICE','LICENSE-APACHE-2.0.txt','LICENSE-MIT.txt','SHA256SUMS.txt'):
+                expected=(ROOT/'third_party/guition-jc3636w518'/name).read_bytes()
+                packaged='DISPLAY-'+name
+                assert (folder/packaged).read_bytes()==expected,f'Altered beta notice: {packaged}'
+                assert archive.read(packaged)==expected,f'Missing beta ZIP notice: {packaged}'
     if board=='waveshare_185b':
         with zipfile.ZipFile(folder/f'dragon-detector-{board}.zip') as archive:
             for source,prefix,names in ((ROOT/'third_party/waveshare-185b','DISPLAY-',('NOTICE.md','LICENSE')),(ROOT/'lib/es8311','ES8311-',('UPSTREAM.md','LICENSE'))):
@@ -31,6 +46,9 @@ for board in ('waveshare_185b','watcher','m5dial','spotpear','waveshare','stopwa
     for mode in ('factory','update'):
         manifest=json.loads((folder/f'{mode}.json').read_text(encoding='utf-8'))
         assert manifest['version']==info['version']
+        if board=='guition_185_beta':
+            assert manifest['release_channel']=='beta' and manifest['beta_iteration']==1
+            assert manifest['hardware_validation']=='physically-unverified'
         parts=manifest['builds'][0]['parts'];end=0
         for part in parts:
             file=folder/part['path'];assert file.parent==folder and file.exists()

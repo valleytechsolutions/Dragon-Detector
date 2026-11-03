@@ -1,0 +1,8 @@
+ESP32-S3 lcd_init_commands.h files preserve initialization sequences from:
+- demo_arduino/JC3636K518, JC3636K718, JC3636W518, JC4827W543 custom headers;
+- ESP32_Display_Panel 1.0.4, BOARD_JINGCAI_ESP32_4848S040C_I_Y_3.h.
+These files retain the 2023-2025 Espressif Systems (Shanghai) CO LTD copyright
+and Apache-2.0 license, reproduced in LICENSES/Apache-2.0.txt.
+
+Third-party drivers are declared as registry dependencies and retain their
+own licenses. They are not bundled in this board component.

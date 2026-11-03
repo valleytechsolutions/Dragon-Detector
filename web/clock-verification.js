@@ -1,6 +1,6 @@
-import {readWearable,syncComputerClock} from './wearable-transfer.js?v=0.14.2';
-import {hasHardwareClockCheck} from './firmware-compat.js?v=0.14.2';
-import {deviceQuery} from './device-query.js?v=0.14.2';
+import {readWearable,syncComputerClock} from './wearable-transfer.js?v=0.14.2-guition-beta1';
+import {hasHardwareClockCheck} from './firmware-compat.js?v=0.14.2-guition-beta1';
+import {deviceQuery} from './device-query.js?v=0.14.2-guition-beta1';
 
 export async function readHardwareClock(link){
   const line=await deviceQuery(link,'clock hardware',s=>s.startsWith('CLOCK_HARDWARE '));

@@ -167,7 +167,11 @@
 
 #else
 
+#ifdef BOARD_GUITION_185_BETA
+#define BOARD_NAME "Guition / Surenoo JC3636W518 Beta 1"
+#else
 #define BOARD_NAME "Spotpear JC3636W518"
+#endif
 #define SCREEN_RES 360
 #define BOARD_HAS_AUDIO 0
 #define BOARD_HAS_SD 1

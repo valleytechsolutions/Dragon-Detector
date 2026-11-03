@@ -10,6 +10,7 @@ test('verified-clock manifests require safe erase prompting and skip unused Impr
     if(mode==='factory')parts.push(['littlefs.bin',p.filesystemOffset]);
     if(mode==='factory'&&p.reconOffset)parts.push(['reconfs.bin',p.reconOffset]);
     const m={name:`Dragon Detector — ${p.firmwareName} (${mode})`,version:p.minVersion||'0.13.10',new_install_prompt_erase:true,new_install_improv_wait_time:0,builds:[{chipFamily:'ESP32-S3',parts:parts.map(([path,offset])=>({path,offset}))}]};
+    if(p.releaseChannel==='beta')Object.assign(m,{release_channel:'beta',beta_iteration:p.betaIteration,hardware_validation:'physically-unverified'});
     assert.equal(validateManifest(m,board,mode),m);
     for(const bad of [{new_install_prompt_erase:false},{new_install_improv_wait_time:10}])assert.throws(()=>validateManifest({...m,...bad},board,mode),/manifest/);
   }

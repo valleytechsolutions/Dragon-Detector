@@ -1,5 +1,9 @@
 #include <Arduino.h>
+#ifdef BOARD_GUITION_185_BETA
+#include "guition_display.h"
+#else
 #include "vendor_display.h"
+#endif
 #include "app.h"
 // No fuel gauge on this board.
 int batteryPercent(){return -1;}
