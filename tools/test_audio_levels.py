@@ -24,7 +24,8 @@ compiler = [args.cxx] if args.cxx else [sys.executable, '-m', 'ziglang', 'c++']
 #include <cassert>
 class String:public std::string {public:using std::string::string;String(const std::string& s):std::string(s){}String substring(size_t n)const{return substr(n);}bool startsWith(const char* s)const{return rfind(s,0)==0;}bool endsWith(const char* s)const{size_t n=strlen(s);return size()>=n&&compare(size()-n,n,s)==0;}};
 template<class T,class A,class B>T constrain(T value,A a,B b){return std::clamp(value,T(a),T(b));}
-inline size_t strlcpy(char* out,const char* in,size_t size){size_t n=strlen(in);if(size){memcpy(out,in,std::min(n,size-1));out[std::min(n,size-1)]=0;}return n;}
+inline size_t testStrlcpy(char* out,const char* in,size_t size){size_t n=strlen(in);if(size){memcpy(out,in,std::min(n,size-1));out[std::min(n,size-1)]=0;}return n;}
+#define strlcpy testStrlcpy
 inline uint32_t now=10000;
 inline uint32_t millis(){return now;}
 struct SerialStub {std::string last;void println(const char* s){last=s;}template<class... A>void printf(const char* f,A... a){char s[512];snprintf(s,sizeof(s),f,a...);last=s;}};
