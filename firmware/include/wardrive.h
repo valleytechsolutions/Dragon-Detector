@@ -14,6 +14,8 @@ WardriveSnapshot wardriveSnapshot();
 void wardriveBegin();
 void wardriveLoop();
 bool wardriveStart();
+// New optional-GPS boards expose Wardrive only after a receiver is responding.
+bool wardriveAvailable();
 void wardriveStop();
 bool wardriveActive();
 bool wardriveI2cBusy();
@@ -31,13 +33,14 @@ inline WardriveSnapshot wardriveSnapshot(){return {};}
 inline void wardriveBegin(){}
 inline void wardriveLoop(){}
 inline bool wardriveStart(){return false;}
+inline bool wardriveAvailable(){return false;}
 inline void wardriveStop(){}
 inline bool wardriveActive(){return false;}
 inline bool wardriveI2cBusy(){return false;}
 inline bool wardriveBusy(){return false;}
 inline bool wardriveCommand(const String&){return false;}
 inline bool wardriveSyncClock(){return false;}
-inline void wardriveStatus(char* out,size_t cap){snprintf(out,cap,"Requires AMOLED 1.75-G GPS profile");}
+inline void wardriveStatus(char* out,size_t cap){snprintf(out,cap,"Requires a supported GPS and SD profile");}
 inline void wardriveWifi(const uint8_t*,size_t,int,uint8_t,uint32_t){}
 inline void wardriveBle(const uint8_t*,uint8_t,int,const uint8_t*,size_t,uint32_t){}
 #endif

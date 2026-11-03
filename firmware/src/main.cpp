@@ -94,7 +94,7 @@ static void health(){
 }
 static uint32_t loopLastUs[6]{},loopMaxUs[6]{};
 static void command(const String& c){
-#ifdef BOARD_AMOLED_175
+#if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
   // The removable card is the deliberate credential-editing surface. Do not
   // expose its secrets through generic Web Serial/USB file previews or dumps.
   if(c.startsWith("get ")){String path=c.substring(4);path.toLowerCase();
@@ -148,6 +148,9 @@ static void command(const String& c){
 #endif
 #if defined(BOARD_AMOLED_175) || defined(BOARD_AMOLED_175C)
   else if(c=="touch status"||c=="amoled status"){extern void amoledHardwareStatus();amoledHardwareStatus();}
+#endif
+#ifdef BOARD_WAVESHARE_185B
+  else if(c=="touch status"||c=="185b status"){extern void waveshare185bDiagnostics();waveshare185bDiagnostics();}
 #endif
 #ifdef BOARD_STOPWATCH
   else if(c=="touch status"){extern void stopwatchTouchStatus();stopwatchTouchStatus();}

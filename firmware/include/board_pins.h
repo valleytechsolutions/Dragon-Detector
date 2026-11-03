@@ -3,7 +3,37 @@
 
 #define BTN_PIN 0
 
-#if defined(BOARD_WATCHER)
+#if defined(BOARD_WAVESHARE_185B)
+#define BOARD_NAME "Waveshare ESP32-S3-Touch-LCD-1.85B"
+#define SCREEN_RES 360
+#define BOARD_HAS_AUDIO 1
+#define BOARD_HAS_SD 1
+#define LCD_SDIO0 46
+#define LCD_SDIO1 45
+#define LCD_SDIO2 42
+#define LCD_SDIO3 41
+#define LCD_SCLK 40
+#define LCD_CS 21
+#define LCD_RESET 3
+#define LCD_BACKLIGHT 5
+#define LCD_TE 18
+#define IIC_SDA 11
+#define IIC_SCL 10
+#define TP_RESET 1
+#define TP_INT 4
+#define TP_I2C_ADDR 0x15
+#define SD_MMC_CLK_PIN 15
+#define SD_MMC_CMD_PIN 14
+#define SD_MMC_D0_PIN 16
+#define SD_MMC_D1_PIN 17
+#define SD_MMC_D2_PIN 12
+#define SD_MMC_D3_PIN 13
+#define AUDIO_I2S_MCK_IO 2
+#define AUDIO_I2S_BCK_IO 48
+#define AUDIO_I2S_WS_IO 38
+#define AUDIO_I2S_DO_IO 47
+#define AUDIO_MUTE_PIN 9
+#elif defined(BOARD_WATCHER)
 #define BOARD_NAME "Seeed SenseCAP Watcher"
 #define SCREEN_RES 412
 #define BOARD_HAS_AUDIO 1
@@ -176,11 +206,11 @@
 
 #endif
 
-#if defined(BOARD_AMOLED_175) && !defined(BOARD_GPS_LC76G)
+#if (defined(BOARD_AMOLED_175) && !defined(BOARD_GPS_LC76G)) || defined(BOARD_WAVESHARE_185B)
 // Optional, user-enabled NMEA input on the non-C expansion header.
 #define BOARD_GPS_UART 1
 #endif
-#if (defined(BOARD_WATCHER) || defined(BOARD_AMOLED_175)) && BOARD_HAS_SD
+#if (defined(BOARD_WATCHER) || defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)) && BOARD_HAS_SD
 #define BOARD_HAS_GPS 1
 #else
 #define BOARD_HAS_GPS 0

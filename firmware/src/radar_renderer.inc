@@ -29,7 +29,7 @@ static void line(lv_draw_ctx_t* ctx,int x1,int y1,int x2,int y2,uint32_t c,int w
 static void disc(lv_draw_ctx_t* ctx,int x,int y,int r,uint32_t c,int opa=255){
   lv_draw_rect_dsc_t d;lv_draw_rect_dsc_init(&d);d.radius=LV_RADIUS_CIRCLE;d.bg_color=color(c);d.bg_opa=opa;lv_area_t a{(lv_coord_t)(x-r),(lv_coord_t)(y-r),(lv_coord_t)(x+r),(lv_coord_t)(y+r)};lv_draw_rect(ctx,&d,&a);
 }
-#if defined(BOARD_AMOLED_175)
+#if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
 static lv_img_dsc_t radarBackdrop{};
 static unsigned backdropTheme=UINT32_MAX;
 static void prepareRadarBackdrop(lv_obj_t* parent,bool enabled){
@@ -138,7 +138,7 @@ static void radarDraw(lv_event_t* e){
   }
 
 #else
-#ifdef BOARD_AMOLED_175
+#if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
   if(radarBackdrop.data&&backdropTheme==radarTheme){lv_draw_img_dsc_t d;lv_draw_img_dsc_init(&d);lv_area_t a{0,0,SCREEN_RES-1,SCREEN_RES-1};lv_draw_img(ctx,&d,&a,&radarBackdrop);}
   else{
 #endif
@@ -182,7 +182,7 @@ static void radarDraw(lv_event_t* e){
   lv_point_t center{(lv_coord_t)CENTER,(lv_coord_t)CENTER};
   if(radarTheme&&radarTheme!=24)for(int radius=42;radius<169;radius+=42)lv_draw_arc(ctx,&arc,&center,S(radius),0,359);
   if(radarTheme!=24){arc.width=S(2);lv_draw_arc(ctx,&arc,&center,S(170),0,359);}
-#ifdef BOARD_AMOLED_175
+#if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
   }
 #endif
 #endif

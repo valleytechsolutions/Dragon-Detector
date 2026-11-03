@@ -7,7 +7,7 @@ struct WardriveUploadSnapshot {
   int http=0;
   char file[48]{},message[144]{},service[16]{};
 };
-#ifdef BOARD_AMOLED_175
+#if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
 void wardriveUploadBegin();
 void wardriveUploadLoop();
 bool wardriveUploadBusy();

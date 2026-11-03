@@ -24,7 +24,13 @@ static bool start(const char* text,bool isPreview=false){
  status.mode=playing?AudioMode::Playing:AudioMode::Idle;return true;
 }
 void audioBegin(){
- prefs.begin("dd-tones",false);status.volume=constrain(prefs.getUChar("volume",100),0,100);huntSound=prefs.getBool("hunt",true);audioFocus=prefs.getInt("focus",-1);if(audioFocus<-1||audioFocus>=int(Family::Count))audioFocus=-1;
+ prefs.begin("dd-tones",false);status.volume=constrain(prefs.getUChar("volume",
+#ifdef BOARD_WAVESHARE_185B
+ 35
+#else
+ 100
+#endif
+ ),0,100);huntSound=prefs.getBool("hunt",true);audioFocus=prefs.getInt("focus",-1);if(audioFocus<-1||audioFocus>=int(Family::Count))audioFocus=-1;
  for(unsigned i=0;i<unsigned(Family::Count);++i){char key[12];snprintf(key,sizeof(key),"tone%u",i);String value=prefs.getString(key,"");dragon::Melody test;if(value.length()<=dragon::TONE_TEXT_MAX&&dragon::parseTone(value.c_str(),test))custom[i]=value;else prefs.remove(key);}
  #if defined(BOARD_LILYGO_175) || defined(BOARD_XIAO_ROUND) || defined(BOARD_CROWPANEL_21)
  ready=false;strlcpy(status.message,"No onboard speaker / visual alerts",sizeof(status.message));
@@ -117,7 +123,7 @@ bool audioCommand(const String& c){
  Serial.println("TONE_ERROR command");return true;
 }
 #if !defined(BOARD_STOPWATCH) && !defined(BOARD_CROWPANEL_21)
-#if !defined(BOARD_WATCHER) && !defined(BOARD_LILYGO_175) && !defined(BOARD_AMOLED_175C) && !defined(BOARD_AMOLED_175) && !defined(BOARD_XIAO_ROUND)
+#if !defined(BOARD_WATCHER) && !defined(BOARD_LILYGO_175) && !defined(BOARD_AMOLED_175C) && !defined(BOARD_AMOLED_175) && !defined(BOARD_XIAO_ROUND) && !defined(BOARD_WAVESHARE_185B)
 void boardBegin(){}
 void boardLoop(){}
 #endif

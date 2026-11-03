@@ -3,7 +3,7 @@ from pathlib import Path
 import argparse, csv, hashlib, json, os, re, shutil, subprocess, sys, zipfile
 from flash_budget import report as flash_report
 ROOT=Path(__file__).resolve().parents[1]
-BOARDS={'watcher':('Seeed SenseCAP Watcher','seeed-watcher'),'m5dial':('M5Stack Dial','m5stack-dial'),'lilygo_175':('LilyGo T-Display-S3-AMOLED-1.75','lilygo-amoled-175'),'elecrow_21':('Elecrow CrowPanel 2.1 Rotary','elecrow-rotary-21'),'waveshare_175_gps':('Waveshare ESP32-S3-Touch-AMOLED-1.75-G','waveshare-amoled-175'),'waveshare_175':('Waveshare ESP32-S3-Touch-AMOLED-1.75','waveshare-amoled-175'),'spotpear':('Spotpear JC3636W518','spotpear'),'waveshare':('Waveshare ESP32-S3-Touch-AMOLED-1.75C','waveshare-amoled'),'stopwatch':('M5Stack StopWatch C152','m5stack-stopwatch'),'xiao_round':('Seeed XIAO ESP32-S3 + Round Display','xiao-round'),'waveshare_lite':('Waveshare ESP32-S3-LCD-1.28 Lite','waveshare-lite')}
+BOARDS={'waveshare_185b':('Waveshare ESP32-S3-Touch-LCD-1.85B','waveshare-lcd-185b'),'watcher':('Seeed SenseCAP Watcher','seeed-watcher'),'m5dial':('M5Stack Dial','m5stack-dial'),'lilygo_175':('LilyGo T-Display-S3-AMOLED-1.75','lilygo-amoled-175'),'elecrow_21':('Elecrow CrowPanel 2.1 Rotary','elecrow-rotary-21'),'waveshare_175_gps':('Waveshare ESP32-S3-Touch-AMOLED-1.75-G','waveshare-amoled-175'),'waveshare_175':('Waveshare ESP32-S3-Touch-AMOLED-1.75','waveshare-amoled-175'),'spotpear':('Spotpear JC3636W518','spotpear'),'waveshare':('Waveshare ESP32-S3-Touch-AMOLED-1.75C','waveshare-amoled'),'stopwatch':('M5Stack StopWatch C152','m5stack-stopwatch'),'xiao_round':('Seeed XIAO ESP32-S3 + Round Display','xiao-round'),'waveshare_lite':('Waveshare ESP32-S3-LCD-1.28 Lite','waveshare-lite')}
 VERSION=re.search(r'#define DRAGON_VERSION "([0-9.]+)"',(ROOT/'firmware/include/dragon_version.h').read_text()).group(1)
 
 def run(*args):subprocess.run([sys.executable,*args],cwd=ROOT,check=True)
@@ -63,6 +63,20 @@ def build(board,skip):
             'Not compatible with the 32 MB 1.75C profile. Use Fresh installation for a new board.\n'
             'Installation and validation checklist:\n'
             'https://valleytech-dragon-detector.pages.dev/guides/WAVESHARE-AMOLED-175.html\n',encoding='utf-8')
+    if board=='waveshare_185b':
+        (out/'BOARD-STATUS.txt').write_text(
+            'Waveshare ESP32-S3-Touch-LCD-1.85B, 360 x 360, 16 MB flash, 8 MB PSRAM.\n'
+            'Dedicated profile: not interchangeable with 1.85, 1.85C, AMOLED 1.75 or Spotpear.\n'
+            'FAT32 microSD is preferred for supported logs, profiles and captures; the vendor pack is optional.\n'
+            'External UART GPS is off by default. Wardrive appears only while enabled with recent valid NMEA data.\n'
+            'J8 is SH1.0, not standard Grove: pin1 RX44, pin2 TX43, pin3 3.3V, pin4 GND. Use compatible logic and supply.\n'
+            'PWR is hardware-controlled. RTC retention requires a connected, charged battery.\n'
+            'See the hardware guide for physical validation and remaining GPS/field limits.\n'
+            'https://valleytech-dragon-detector.pages.dev/guides/WAVESHARE-LCD-185B.html\n',encoding='utf-8')
+        for name in ('NOTICE.md','LICENSE'):
+            shutil.copyfile(ROOT/'third_party/waveshare-185b'/name,out/('DISPLAY-'+name))
+        for name in ('UPSTREAM.md','LICENSE'):
+            shutil.copyfile(ROOT/'lib/es8311'/name,out/('ES8311-'+name))
     filesystem_segments=[('littlefs.bin',fs_offset)]
     if board=='waveshare':
         # A second independent LittleFS. Updates NEVER write either filesystem.
@@ -77,7 +91,7 @@ def build(board,skip):
     for mode in ('factory','update'):
         selected=segments+(filesystem_segments if mode=='factory' else [])
         manifest={'name':f'Dragon Detector — {BOARDS[board][0]} ({mode})','version':VERSION,'new_install_prompt_erase':True,'new_install_improv_wait_time':0,'builds':[{'chipFamily':'ESP32-S3','parts':[{'path':name,'offset':offset} for name,offset in selected]}]}
-        if board in ('watcher','spotpear','waveshare_175','waveshare_175_gps','xiao_round','lilygo_175'):
+        if board in ('watcher','spotpear','waveshare_185b','waveshare_175','waveshare_175_gps','xiao_round','lilygo_175'):
             manifest['sdResources']={'schema':1,'required':False,'path':'resources/dragon-resources-v1-20261023.zip','placement':'/dragon/resources/vendors.ddr'}
         (out/f'{mode}.json').write_text(json.dumps(manifest,indent=2)+'\n',encoding='utf-8')
     # A merged factory image is also provided for esptool/M5Burner-style tools.
@@ -97,10 +111,11 @@ def build(board,skip):
     (out/'SHA256SUMS.txt').write_text(''.join(checks),encoding='ascii')
     metadata={'version':VERSION,'board':board,'name':BOARDS[board][0],'source_commit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),'source_dirty':bool(subprocess.check_output(['git','status','--porcelain','--untracked-files=normal'],cwd=ROOT,text=True).strip()),'filesystem_offset':fs_offset,'filesystem_size':fs_size,'factory_resets_badges':True,'update_preserves_nvs_and_filesystem':True}
     metadata['hardware_validation']='dial-v11-display-controls-rtc-restart-verified' if board=='m5dial' else 'lilygo-baseline-reported-rtc-sd-pending' if board=='lilygo_175' else 'initial-unit-verified' if board=='elecrow_21' else 'new-sd-gps-features-pending' if board in ('waveshare_175','waveshare_175_gps') else 'existing-profile'
-    if board in ('watcher','spotpear','waveshare_175','waveshare_175_gps','xiao_round','lilygo_175'):
+    if board in ('watcher','spotpear','waveshare_185b','waveshare_175','waveshare_175_gps','xiao_round','lilygo_175'):
         metadata['hardware_validation']='sd-resource-beta-unverified'
         metadata['sd_resources']={'schema':1,'required':False,'snapshot':20261023}
     if board=='watcher':metadata['hardware_validation']='display-rtc-sd-controls-verified'
+    if board=='waveshare_185b':metadata['hardware_validation']='185b-display-touch-sd-rtc-restart-verified'
     metadata['flash_size']=0x2000000 if board in ('watcher','waveshare') else 0x800000 if board in ('m5dial','xiao_round') else 0x1000000
     metadata['memory']=flash_report(entries,(build/'firmware.bin').stat().st_size,metadata['flash_size'])
     (out/'memory-budget.json').write_text(json.dumps(metadata['memory'],indent=2)+'\n',encoding='utf-8')
@@ -110,7 +125,11 @@ def build(board,skip):
     with zipfile.ZipFile(bundle,'w',zipfile.ZIP_DEFLATED) as archive:
         for file in sorted(out.iterdir()):
             if file.is_file() and file.suffix!='.zip':archive.write(file,file.name)
-    with zipfile.ZipFile(bundle) as archive:assert archive.testzip() is None,'Corrupt board ZIP'
+    with zipfile.ZipFile(bundle) as archive:
+        assert archive.testzip() is None,'Corrupt board ZIP'
+        if board=='waveshare_185b':
+            for name in ('DISPLAY-NOTICE.md','DISPLAY-LICENSE','ES8311-UPSTREAM.md','ES8311-LICENSE'):
+                assert archive.read(name)==(out/name).read_bytes(),f'Missing or altered package notice: {name}'
     with (out/'SHA256SUMS.txt').open('a',encoding='ascii') as checksums:
         checksums.write(f'{hashlib.sha256(bundle.read_bytes()).hexdigest()}  {bundle.name}\n')
     print(f'PACKAGED {board}: {len(merged)} bytes, verified offsets and SHA-256')

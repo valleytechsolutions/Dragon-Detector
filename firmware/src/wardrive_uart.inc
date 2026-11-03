@@ -27,14 +27,14 @@ void gpsLoop(){
   uint32_t now=millis();unsigned waiting=externalGpsSerial.available();
   if(externalGpsOverflow.exchange(false)||waiting>2048){
     // A queued position from before a stall/error must not become a fresh fix.
-    gps.fix.position=false;gps.discardPartial();++gpsErrors;
+    gps.invalidateReceiver();++gpsErrors;
     unsigned discard=waiting;while(discard--&&externalGpsSerial.available())externalGpsSerial.read();
     waiting=0;
   }
   unsigned budget=512;while(budget--&&externalGpsSerial.available()){
     int c=externalGpsSerial.read();if(c<0)break;gps.feed(char(c),now);externalGpsLastByte=now;++externalGpsBytes;
   }
-  present=externalGpsBytes&&uint32_t(now-externalGpsLastByte)<3000;
+  present=gps.receiverPresent(now);
   if(!present)gps.fix.position=false;
 }
 #endif

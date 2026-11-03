@@ -124,7 +124,7 @@ static bool connectProfile(const Profile& profile,bool clockOnly){using namespac
  // setup failure or disconnect; settings stay saved and fixes are invalidated.
  struct GpsLease {bool keep=false;GpsLease(){gpsExternalSuspend(true);}~GpsLease(){if(!keep)gpsExternalSuspend(false);}} gpsLease;
 #endif
-#ifdef BOARD_AMOLED_175
+#if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
  // Initialize the resident TCP/IP task before measuring headroom. Its roughly
  // 6 KiB stays allocated after disconnect; checking a pre-init budget on later
  // joins incorrectly rejects them. TLS buffers use this board's 8 MiB PSRAM.
@@ -134,7 +134,7 @@ static bool connectProfile(const Profile& profile,bool clockOnly){using namespac
  constexpr unsigned minimumHeap=35000;
 #endif
  if(ESP.getFreeHeap()<minimumHeap){note("Not enough free memory to join Wi-Fi");return false;}
-#ifndef BOARD_AMOLED_175
+#if !defined(BOARD_AMOLED_175) && !defined(BOARD_WAVESHARE_185B)
  esp_err_t err=esp_netif_init();if(err!=ESP_OK&&err!=ESP_ERR_INVALID_STATE)return false;
 #endif
  iface=esp_netif_create_default_wifi_sta();if(!iface){note("Network interface unavailable");return false;}

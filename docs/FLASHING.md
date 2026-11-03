@@ -14,6 +14,7 @@
 |---|---|
 | Spotpear JC3636W518 | This profile's 0.3.x–0.13.x layout |
 | M5Stack StopWatch C152 | This profile's 0.3.x–0.13.x layout |
+| Waveshare LCD **1.85B** | Exact `waveshare_185b` profile, **0.14.1 or newer**; Fresh installation for the factory demo |
 | Waveshare AMOLED **1.75C** | This profile's 0.3.x–0.13.x layout; older 16 MB builds need the one-time recon initialization below |
 | XIAO ESP32-S3 + Round Display | This profile's **0.9.2 or newer**, 8 MB layout |
 | Waveshare non-touch LCD 1.28 Lite | This profile's **0.9.4 or newer** layout; unrelated/older ports are not assumed compatible |

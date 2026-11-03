@@ -15,12 +15,14 @@ const fixture=name=>JSON.parse(readFileSync(new URL(`./fixtures/${name}`,import.
 const manifests=fixture('release-0.13.26-manifests.json');
 manifests.m5dial=fixture('dial-0.13.27-manifests.json');
 manifests.watcher=fixture('watcher-0.13.29-manifests.json');
+manifests.waveshare_185b=fixture('waveshare-185b-0.14.1-manifests.json');
 
 test('0.14 keeps every exact board handshake and installation contract',()=>{
  for(const [board,p] of Object.entries(boardProfiles)){
-  assert.equal(connectedProfile(compat.parseBadgeInfo(`BADGE_INFO 0.14.0 ${p.size} ${p.lite?'LITE':'READY'} ${p.firmwareName}`)),board);
+  const version=board==='waveshare_185b'?'0.14.1':'0.14.0';
+  assert.equal(connectedProfile(compat.parseBadgeInfo(`BADGE_INFO ${version} ${p.size} ${p.lite?'LITE':'READY'} ${p.firmwareName}`)),board);
   for(const mode of ['factory','update']){
-   const m=structuredClone(manifests[board][mode]);m.version='0.14.0';
+   const m=structuredClone(manifests[board][mode]);m.version=version;
    assert.equal(validateManifest(m,board,mode),m,board);
    for(const mutate of [x=>x.version='0.15.0',x=>x.builds[0].parts[3].offset=0x20000,x=>x.name+=' wrong',x=>x.new_install_prompt_erase=false,x=>x.builds[0].chipFamily='ESP32']){
     const bad=structuredClone(m);mutate(bad);assert.throws(()=>validateManifest(bad,board,mode),board);
@@ -33,7 +35,7 @@ test('0.14 enables existing studio features, including repeat beeper with patch 
  const featureNames=['hasDetectorTools','hasActivityTools','hasRadarTools','hasWearableTools','hasRetainedClock','hasHardwareClockCheck','hasBrandedThemes','hasCommunityThemes','hasLplTheme','hasRunnerThemes','hasGreenArtThemes','hasCanCommanderTheme','hasCapsuleSparrowsThemes','hasMuldersRevengeTheme','hasHypnoticTheme','hasMitmTheme','hasDelta44Theme','hasLocksportCollection'];
  const gates=[...featureNames.map(k=>compat[k]),hasNetworkTools,hasNotebook,hasReconTools,hasPersonalThemes];
  for(const gate of gates){assert.equal(gate('0.14.0'),true);for(const v of ['0.15.0','1.0.0','0.14.00','0.14.0-beta'])assert.equal(gate(v),false);}
- for(const [board,p] of Object.entries(boardProfiles))for(const gate of [hasFullLab,hasFullRecon,hasSessionTools])assert.equal(gate(board,'0.14.0'),!p.lite);
+ for(const [board,p] of Object.entries(boardProfiles))for(const gate of [hasFullLab,hasFullRecon,hasSessionTools])assert.equal(gate(board,board==='waveshare_185b'?'0.14.1':'0.14.0'),!p.lite);
  assert.ok(hasBleTools('stopwatch','0.14.0'));assert.ok(hasRepeatingBeeper('stopwatch','0.14.0'));
  assert.ok(!hasRepeatingBeeper('stopwatch','0.13.21'));assert.ok(!hasBleTools('m5dial','0.14.0'));
 });

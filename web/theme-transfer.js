@@ -1,7 +1,7 @@
-import {firmwareAtLeast,knownFirmware} from './firmware-version.js?v=0.14.0';
-import {crc32} from './badge-codec.js?v=0.14.0';
+import {firmwareAtLeast,knownFirmware} from './firmware-version.js?v=0.14.1';
+import {crc32} from './badge-codec.js?v=0.14.1';
 import {decodeTheme,THEME_SIZE} from './theme-codec.js';
-import {deviceQuery} from './device-query.js?v=0.14.0';
+import {deviceQuery} from './device-query.js?v=0.14.1';
 export function hasPersonalThemes(version){return firmwareAtLeast(version,'0.13.17');}
 export async function themeInfo(link){
   const line=await deviceQuery(link,'theme info',s=>s.startsWith('THEME_INFO '));

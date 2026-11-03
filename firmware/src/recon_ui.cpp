@@ -25,8 +25,12 @@ bool redraw=true;uint32_t updated=0;AttackMode chosen=AttackMode::Beacon;
 bool wardriveExitRequested=false;
 lv_obj_t *driveTime=nullptr,*driveWifi=nullptr,*driveBle=nullptr,*driveGps=nullptr,*driveRows=nullptr,*driveSd=nullptr,*driveNotice=nullptr;
 bool driveWasRunning=false,driveWasBusy=false,driveWasFailed=false;
+#ifdef BOARD_WAVESHARE_185B
+bool toolsWardriveAvailable=false;
+bool gpsMenuInputReleased(){for(auto* input=lv_indev_get_next(nullptr);input;input=lv_indev_get_next(input))if(input->proc.state==LV_INDEV_STATE_PRESSED)return false;return true;}
 #endif
-#ifdef BOARD_AMOLED_175
+#endif
+#if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
 lv_obj_t *uploadMessage=nullptr,*uploadFile=nullptr,*uploadProgress=nullptr,*uploadCounts=nullptr,*uploadConfig=nullptr;
 bool uploadWasBusy=false,uploadWasCancelling=false;
 lv_obj_t* gpsSetupStatus=nullptr;
@@ -75,9 +79,9 @@ void drawWardrive(){
   driveNotice=centered("",65,329,336,font14(),uiColors().ink);
   auto* end=btn(root,s.running?"END & RETURN TO MENU":s.busy?"SAVING...":"START WARDRIVE",92,365,282,44,s.running?72:71);
   lv_obj_set_style_text_font(lv_obj_get_child(end,0),uiFont(font16()),0);
-  if(s.busy&&!s.running)lv_obj_add_state(end,LV_STATE_DISABLED);
+  if((s.busy&&!s.running)||(!s.busy&&!wardriveAvailable()))lv_obj_add_state(end,LV_STATE_DISABLED);
   if(!s.busy){
-#ifdef BOARD_AMOLED_175
+#if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
     auto* gps=btn(root,"GPS",138,414,48,30,81);lv_obj_set_style_text_font(lv_obj_get_child(gps,0),uiFont(font14()),0);
     auto* uploads=btn(root,"UPLOADS",192,414,82,30,75);lv_obj_set_style_text_font(lv_obj_get_child(uploads,0),uiFont(font14()),0);
     auto* menu=btn(root,"MENU",280,414,48,30,74);lv_obj_set_style_text_font(lv_obj_get_child(menu,0),uiFont(font14()),0);
@@ -88,7 +92,7 @@ void drawWardrive(){
   updateWardrive();redraw=false;updated=millis();
 }
 #endif
-#ifdef BOARD_AMOLED_175
+#if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
 void updateGpsSetup(){
 #ifdef BOARD_GPS_UART
   auto c=gpsExternalConfig();if(c.enabled!=gpsSetupRendered.enabled||c.rx!=gpsSetupRendered.rx||c.baud!=gpsSetupRendered.baud){redraw=true;return;}
@@ -110,9 +114,17 @@ void drawGpsSetup(){
 #ifdef BOARD_GPS_UART
   auto c=gpsExternalConfig();gpsSetupRendered=c;char line[120];
   btn(root,c.enabled?"EXTERNAL GPS: ON":"EXTERNAL GPS: OFF",83,91,300,44,82);
+#ifdef BOARD_WAVESHARE_185B
+  centered("UART RX GPIO44 / fixed connector",154,350,font16());
+#else
   snprintf(line,sizeof(line),"RX GPIO%d / header pin %u",c.rx,dragon::gpsuart::headerPin(c.rx));btn(root,line,83,145,300,44,83);
+#endif
   snprintf(line,sizeof(line),"BAUD %lu",(unsigned long)c.baud);btn(root,line,83,199,300,44,84);
+#ifdef BOARD_WAVESHARE_185B
+  centered("GPS TX to RX44; common GND\nJ8 power and UART: 3.3 V only\nGPS RX unused; not a 5 V Grove port",254,350,font14());
+#else
   snprintf(line,sizeof(line),"GPS TX to GPIO%d; common GND\n3.3 V signal only; GPS RX unconnected\nPower module at its rated voltage",c.rx);centered(line,254,350,font14());
+#endif
 #else
   centered("BUILT-IN LC76G",100,330,font18());
   centered("Onboard GPS over I2C\nConnect the GPS antenna\nA fresh fix can restore an unset clock",157,330,font16());
@@ -151,7 +163,7 @@ void drawUploads(){
 void updateStatus(){if(!info)return;char line[520];if(view==Wardrive){wardriveStatus(line,sizeof(line));}else if(view==Recipes){recipeStatus(line,sizeof(line));}else if(view==Missions){missionStatus(line,sizeof(line));}else if(view==Network){networkStatus(line,sizeof(line),true);}else if(view==Csi){csiStatus(line,sizeof(line));}else if(view==Portal){portalStatus(line,sizeof(line),true);}else if(view==Statistics){snprintf(line,sizeof(line),"PASSIVE WI-FI OBSERVATIONS\n\nFrames: %lu   Retries: %lu\nBeacons: %lu   Probes: %lu\nDisconnects: %lu\nEAPOL: %lu   Protected: %lu\nPwnagotchi: %lu   Detections: %lu\n\nEAPOL key-message candidates\nM1 %lu  M2 %lu  M3 %lu  M4 %lu\nCounts do not prove a complete\nhandshake. Export PCAP to inspect.",counters.frames,counters.retries,counters.beacons,counters.probes,counters.disconnect,counters.eapol,counters.protectedFrames,counters.peers,counters.detections,counters.keyMessages[1],counters.keyMessages[2],counters.keyMessages[3],counters.keyMessages[4]);}else if(view==Running){unsigned left=status.active?std::max<int>(0,int(seconds)-int((millis()-status.started)/1000)):0;snprintf(line,sizeof(line),"%s\n\n%s\n\n%us remaining\nAccepted: %lu   Errors: %lu\nAuth replies: %lu   EAPOL: %lu\n\nAccepted = driver accepted.\nEffect requires receiver verification.",attackDefinitions[unsigned(status.attack)].name,status.message,left,status.accepted,status.errors,status.responses,status.eapol);}else{snprintf(line,sizeof(line),"%s\n\n%s\n%lu records / %u KB\n\n%s\nStorage: %s",status.recording?"RECORDING":status.saving?"SAVING":"CAPTURE IDLE",status.message,status.records,unsigned(status.bytes/1024),bleLabStorageOnCard()?"64 KB queue / 32 MB SD segments.\nStop finalizes automatically.":"RAM capture / Stop then Save.",bleLabStorageName());}if(strcmp(lv_label_get_text(info),line))lv_label_set_text(info,line);}
 void draw(){
  lv_obj_clean(root);info=nullptr;lv_obj_set_style_bg_color(root,lv_color_hex(uiColors().bg),0);
-#ifdef BOARD_AMOLED_175
+#if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
  uploadMessage=uploadFile=uploadProgress=uploadCounts=uploadConfig=nullptr;
  gpsSetupStatus=nullptr;
  if(view==Uploads){body=nullptr;drawUploads();return;}
@@ -171,8 +183,11 @@ void draw(){
  else if(view==Attacks){row("Wi-Fi attacks","Select network / client / timed session",n++,20);row("BLE attacks","Pairing advertisements / timed session",n++,21);row("Radio toolkit","Capture / recon sessions / network tools",n++,14);}
  else if(view==Tools){
 #if BOARD_HAS_GPS
- row("GPS wardrive","WiFi + BLE / GPS-tagged SD / WiGLE",n++,70);
-#ifdef BOARD_AMOLED_175
+#ifdef BOARD_WAVESHARE_185B
+ toolsWardriveAvailable=wardriveAvailable();
+#endif
+ if(wardriveAvailable())row("GPS wardrive","WiFi + BLE / GPS-tagged SD / WiGLE",n++,70);
+#if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
  row("GPS setup","Receiver settings / restore clock from GPS",n++,81);
 #endif
 #endif
@@ -217,20 +232,28 @@ if(id==1){recipeStop();reconStop();uiShow("radar");return;}
  case 12:uiShow("targets");break;case 13:reconStop();uiShow("lab");break;case 14:change(Tools);break;
  case 73:{char name[24];snprintf(name,sizeof(name),"survey-%08lx",esp_random());say(surveySave(name)?"Survey saved in /surveys":"Survey save failed");uiNotify("Wi-Fi survey",status.message,nullptr,false);break;}
 #if BOARD_HAS_GPS
- case 70:change(Wardrive);break;
- case 71:wardriveExitRequested=false;wardriveStart();redraw=true;break;
+ case 70:
+#ifdef BOARD_WAVESHARE_185B
+   if(!wardriveBusy()&&!wardriveAvailable()){change(GpsSetup);break;}
+#endif
+   change(Wardrive);break;
+ case 71:
+#ifdef BOARD_WAVESHARE_185B
+   if(!wardriveAvailable()){change(GpsSetup);break;}
+#endif
+   wardriveExitRequested=false;wardriveStart();redraw=true;break;
  case 72:reconEndWardrive();break;
  case 74:wardriveExitRequested=false;uiShow("menu");break;
 #endif
-#ifdef BOARD_AMOLED_175
+#if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
  case 75:change(Uploads);break;
  case 81:change(GpsSetup);break;
 #ifdef BOARD_GPS_UART
  case 82:case 83:case 84:{auto c=gpsExternalConfig();
    if(id==82)c.enabled=!c.enabled;
-   if(id==83)c.rx=dragon::gpsuart::Pins[(dragon::gpsuart::index(dragon::gpsuart::Pins,c.rx)+1)%4];
-   if(id==84)c.baud=dragon::gpsuart::Bauds[(dragon::gpsuart::index(dragon::gpsuart::Bauds,c.baud)+1)%6];
-   strlcpy(gpsSetupMessage,gpsExternalConfigure(c)?"Saved. Use NMEA RMC + GGA at the selected baud.":"Cannot apply GPS settings; stop sessions and retry.",sizeof(gpsSetupMessage));redraw=true;break;}
+   if(id==83)c.rx=dragon::gpsuart::Pins[(dragon::gpsuart::index(dragon::gpsuart::Pins,c.rx)+1)%dragon::gpsuart::PinCount];
+   if(id==84)c.baud=dragon::gpsuart::Bauds[(dragon::gpsuart::index(dragon::gpsuart::Bauds,c.baud)+1)%dragon::gpsuart::BaudCount];
+   strlcpy(gpsSetupMessage,gpsExternalConfigure(c)?"Saved. NMEA data enables Wardrive; RMC + GGA supplies GPS fixes.":"Cannot apply GPS settings; stop sessions and retry.",sizeof(gpsSetupMessage));redraw=true;break;}
 #endif
  case 85:gpsClockPending=true;gpsClockRequestedAt=millis();strlcpy(gpsSetupMessage,"Waiting for a fresh GPS fix and free RTC bus...",sizeof(gpsSetupMessage));redraw=true;break;
  case 76:case 77:wardriveUploadStart(id==77);redraw=true;break;
@@ -262,9 +285,12 @@ if(id==1){recipeStop();reconStop();uiShow("radar");return;}
 }
 void reconView(void* p,bool tools){root=(lv_obj_t*)p;view=pageRequested?requested:tools?Tools:Modes;pageRequested=false;redraw=true;draw();}
 void reconPage(const String& name){
-#ifdef BOARD_AMOLED_175
+#if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
  if(name=="wardrive-upload"){requested=Uploads;pageRequested=true;return;}
  if(name=="gps-setup"){requested=GpsSetup;pageRequested=true;return;}
+#endif
+#ifdef BOARD_WAVESHARE_185B
+ if(name=="wardrive"&&!wardriveBusy()&&!wardriveAvailable()){requested=GpsSetup;pageRequested=true;return;}
 #endif
 #if !BOARD_HAS_GPS
  if(name=="wardrive")return;
@@ -286,8 +312,12 @@ void reconViewLoop(){
  }
 #endif
  if(pageRequested){view=requested;redraw=true;pageRequested=false;}
+#ifdef BOARD_WAVESHARE_185B
+ if(view==Wardrive&&!wardriveBusy()&&!wardriveSnapshot().failed&&!wardriveAvailable()&&gpsMenuInputReleased())change(GpsSetup);
+ if(view==Tools&&toolsWardriveAvailable!=wardriveAvailable()&&gpsMenuInputReleased())redraw=true;
+#endif
  if(redraw)draw();else if(millis()-updated>=300){updated=millis();
-#ifdef BOARD_AMOLED_175
+#if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
  if(view==Uploads){updateUploads();return;}
  if(view==GpsSetup){updateGpsSetup();return;}
 #endif
@@ -297,7 +327,7 @@ void reconViewLoop(){
  if(view==Running||view==Capture||view==Statistics||view==Portal||view==Csi||view==Network||view==Missions||view==Recipes)updateStatus();}
 }
 void reconLeave(){reconStop();root=body=info=nullptr;
-#ifdef BOARD_AMOLED_175
+#if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
  gpsSetupStatus=nullptr;gpsClockPending=false;
 #endif
 #if BOARD_HAS_GPS

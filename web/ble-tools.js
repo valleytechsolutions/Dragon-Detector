@@ -1,6 +1,6 @@
-import {firmwareAtLeast,knownFirmware} from './firmware-version.js?v=0.14.0';
+import {firmwareAtLeast,knownFirmware} from './firmware-version.js?v=0.14.1';
 export function hasRepeatingBeeper(board,version){return hasBleTools(board,version)&&firmwareAtLeast(version,'0.13.22');}
-export function hasBleTools(board,version){return ['watcher','lilygo_175','waveshare','waveshare_175','waveshare_175_gps','stopwatch','spotpear','xiao_round'].includes(board)&&firmwareAtLeast(version,'0.13.20');}
+export function hasBleTools(board,version){return ['waveshare_185b','watcher','lilygo_175','waveshare','waveshare_175','waveshare_175_gps','stopwatch','spotpear','xiao_round'].includes(board)&&firmwareAtLeast(version,board==='waveshare_185b'?'0.14.1':'0.13.20');}
 export function observedAddress(value){if(!/^[0-9a-f]{2}(?::[0-9a-f]{2}){5} [0-3]$/i.test(value))throw new Error('Refresh nearby devices and choose your peripheral.');return value;}
 export function iBeaconCommand(uuid,major,minor,power){
  uuid=String(uuid).trim().toLowerCase();if(!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(uuid))throw new Error('Enter a UUID in 8-4-4-4-12 format.');

@@ -1,7 +1,7 @@
-import {firmwareAtLeast,knownFirmware} from './firmware-version.js?v=0.14.0';
-const sdBoards=new Set(['watcher','spotpear','waveshare_175','waveshare_175_gps','xiao_round','lilygo_175']);
+import {firmwareAtLeast,knownFirmware} from './firmware-version.js?v=0.14.1';
+const sdBoards=new Set(['waveshare_185b','watcher','spotpear','waveshare_175','waveshare_175_gps','xiao_round','lilygo_175']);
 export function hasSd(board){return sdBoards.has(board);}
-export function hasGpsAndSd(board){return ['watcher','waveshare_175_gps'].includes(board);}
+export function hasGpsAndSd(board){return ['waveshare_185b','watcher','waveshare_175_gps'].includes(board);}
 export const resourcePack=Object.freeze({schema:1,required:false,path:'resources/dragon-resources-v1-20261023.zip',placement:'/dragon/resources/vendors.ddr'});
 export function resourceSetup(board,manifest){
   const value=manifest?.sdResources;

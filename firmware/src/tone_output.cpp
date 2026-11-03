@@ -1,6 +1,9 @@
 // Original MIT PCM generator; ES8311 driver is separately Apache-2.0.
 #include "app.h"
 #include "board_pins.h"
+#ifdef BOARD_WAVESHARE_185B
+#include "board_waveshare_185b.h"
+#endif
 #if defined(BOARD_LILYGO_175) || defined(BOARD_XIAO_ROUND) || defined(BOARD_CROWPANEL_21)
 // These boards have no configured speaker, codec or buzzer.
 bool toneOutputBegin(){return false;}
@@ -12,7 +15,7 @@ void toneOutput(uint16_t hz,uint16_t ms,uint8_t volume){M5.Speaker.setVolume(uns
 #else
 #include <driver/i2s_std.h>
 #include <math.h>
-#if defined(BOARD_WATCHER) || defined(BOARD_AMOLED_175C) || defined(BOARD_AMOLED_175)
+#if defined(BOARD_WATCHER) || defined(BOARD_AMOLED_175C) || defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
 #include <es8311.h>
 #endif
 static i2s_chan_handle_t tx=nullptr;
@@ -48,10 +51,15 @@ bool toneOutputBegin(){
  i2s_std_config_t cfgStd{};cfgStd.clk_cfg=I2S_STD_CLK_DEFAULT_CONFIG(16000);cfgStd.slot_cfg=I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT,I2S_SLOT_MODE_STEREO);
  cfgStd.gpio_cfg.mclk=gpio_num_t(AUDIO_I2S_MCK_IO);cfgStd.gpio_cfg.bclk=gpio_num_t(AUDIO_I2S_BCK_IO);cfgStd.gpio_cfg.ws=gpio_num_t(AUDIO_I2S_WS_IO);cfgStd.gpio_cfg.dout=gpio_num_t(AUDIO_I2S_DO_IO);cfgStd.gpio_cfg.din=GPIO_NUM_NC;
  if(i2s_channel_init_std_mode(tx,&cfgStd)!=ESP_OK||i2s_channel_enable(tx)!=ESP_OK)return false;
-#if defined(BOARD_WATCHER) || defined(BOARD_AMOLED_175C) || defined(BOARD_AMOLED_175)
+#if defined(BOARD_WATCHER) || defined(BOARD_AMOLED_175C) || defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
+#ifdef BOARD_WAVESHARE_185B
+ // Touch polling shares I2C0. Serialize codec setup with its bounded reads.
+ if(!waveshare185bI2cLock(100))return false;
+ struct CodecBusLease {~CodecBusLease(){waveshare185bI2cUnlock();}} codecBusLease;
+#endif
  auto codec=es8311_create(0,ES8311_ADDRESS_0);if(!codec)return false;
  es8311_clock_config_t clock{};clock.mclk_from_mclk_pin=true;clock.mclk_frequency=4096000;clock.sample_frequency=16000;
-#if defined(BOARD_WATCHER) || defined(BOARD_AMOLED_175)
+#if defined(BOARD_WATCHER) || defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
  // Driver percent maps directly to DAC register: 100 -> 0xFF (+32 dB).
  // 65 -> 0xA5 (-13 dB), keeping headroom even at full application volume.
  constexpr int codecVolume=65;
@@ -59,6 +67,11 @@ bool toneOutputBegin(){
  constexpr int codecVolume=100;
 #endif
  bool ok=es8311_init(codec,&clock,ES8311_RESOLUTION_16,ES8311_RESOLUTION_16)==ESP_OK&&es8311_voice_volume_set(codec,codecVolume,nullptr)==ESP_OK&&es8311_voice_mute(codec,false)==ESP_OK;es8311_delete(codec);if(!ok)return false;
+#endif
+ // Queue silence before enabling the amplifier, avoiding stale DMA startup.
+#ifdef BOARD_WAVESHARE_185B
+ int16_t silence[128]{};size_t silentBytes=0;
+ if(i2s_channel_write(tx,silence,sizeof(silence),&silentBytes,100)!=ESP_OK||silentBytes!=sizeof(silence))return false;
 #endif
  if(xTaskCreate(outputTask,"dragon-tone",3072,nullptr,2,nullptr)!=pdPASS)return false;
 #ifdef BOARD_WATCHER

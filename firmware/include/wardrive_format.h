@@ -61,6 +61,28 @@ inline bool clockFields(const char* text,Calendar& date,unsigned& seconds) {
 }
 class Nmea {
   char line_[128]{};size_t length_=0;bool collecting_=false;
+  static bool validGsv(char* const* fields,unsigned count){
+    // GSV can prove a cold receiver is alive before UTC or a fix is known.
+    // Validate its numbered set and satellite groups, including the optional
+    // NMEA 4.10 hexadecimal signal ID. Blank angles/SNR are valid while cold.
+    unsigned messages=0,part=0,visible=0,value=0;
+    if(count<4||!integer(fields[1],messages,9)||!messages||
+       !integer(fields[2],part,messages)||!part||!integer(fields[3],visible,36)||
+       messages!=std::max(1u,(visible+3)/4))return false;
+    const unsigned groups=std::min(4u,visible-std::min(visible,(part-1)*4));
+    const unsigned expected=4+groups*4;
+    if(count!=expected&&count!=expected+1)return false;
+    if(count==expected+1&&*fields[expected]&&
+       (fields[expected][1]||nibble(fields[expected][0])<0))return false;
+    for(unsigned i=4;i<expected;i+=4){
+      if(!integer(fields[i],value,999)||!value)return false;
+      const char* elevation=fields[i+1];if(*elevation=='-')++elevation;
+      if(*fields[i+1]&&!integer(elevation,value,90))return false;
+      if(*fields[i+2]&&!integer(fields[i+2],value,359))return false;
+      if(*fields[i+3]&&!integer(fields[i+3],value,99))return false;
+    }
+    return true;
+  }
   void sentence(uint32_t now) {
     char* star=std::strchr(line_,'*');
     if(!star||std::strlen(star)!=3)return;
@@ -71,6 +93,7 @@ class Nmea {
     for(char* p=line_+1;*p;++p)if(*p==','){*p=0;if(count==22)return;fields[count++]=p+1;}
     if(std::strlen(fields[0])!=5)return;
     if(!std::strcmp(fields[0]+2,"GSV")&&count>=4){
+      if(validGsv(fields,count)){receiverSeen=true;receiverAt=now;}
       unsigned visible=0;if(integer(fields[3],visible,99)){
         if(uint32_t(now-viewAt)>5000){inView=0;bestSnr=0;}
         inView=std::max(inView,visible);viewAt=now;++gsvSentences;
@@ -80,6 +103,9 @@ class Nmea {
     Calendar date;unsigned seconds;
     if(!std::strcmp(fields[0]+2,"RMC")&&count>=10) {
       ++rmcSentences;rmcStatus=fields[2][0];
+      // A receiver can be alive without a satellite fix. Noise, unknown
+      // sentences and invalid checksums must never advertise GPS readiness.
+      if(clockFields(fields[1],date,seconds)&&(!std::strcmp(fields[2],"A")||!std::strcmp(fields[2],"V"))){receiverSeen=true;receiverAt=now;}
       if(std::strcmp(fields[2],"A")){fix.position=false;return;}
       double latitude,longitude;
       if(!clockFields(fields[1],date,seconds)||
@@ -97,6 +123,7 @@ class Nmea {
     } else if(!std::strcmp(fields[0]+2,"GGA")&&count>=11) {
       ++ggaSentences;
       unsigned quality,satellites;double hdop,altitude;
+      if(clockFields(fields[1],date,seconds)&&integer(fields[6],quality,8)){receiverSeen=true;receiverAt=now;}
       if(!clockFields(fields[1],date,seconds)||!integer(fields[6],quality,8)||
          !integer(fields[7],satellites,99)||!number(fields[8],hdop)||hdop<0||
          !number(fields[9],altitude)||std::strcmp(fields[10],"M")){fix.quality=0;return;}
@@ -109,7 +136,10 @@ class Nmea {
 public:
   Fix fix;uint32_t badChecksum=0,overlong=0,positions=0,sentences=0;
   uint32_t rmcSentences=0,ggaSentences=0,gsvSentences=0,viewAt=0;
+  uint32_t receiverAt=0;bool receiverSeen=false;
   unsigned inView=0,bestSnr=0;char rmcStatus='?';
+  bool receiverPresent(uint32_t now) const{return receiverSeen&&uint32_t(now-receiverAt)<FixMaxAgeMs;}
+  void invalidateReceiver(){receiverSeen=false;fix.position=false;discardPartial();}
   void discardPartial(){length_=0;collecting_=false;}
   void feed(char c,uint32_t now) {
     if(c=='$'){length_=0;collecting_=true;line_[length_++]=c;return;}

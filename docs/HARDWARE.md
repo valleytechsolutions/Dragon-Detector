@@ -94,3 +94,7 @@ All four full profiles compile the [mode launcher and radio toolkit](RADIO-TOOLK
 ## Seeed SenseCAP Watcher beta
 
 The `watcher` environment targets 412×412, 32 MB flash and 8 MB PSRAM with full-board software, touch/rotary controls, RTC, speaker and FAT32 SD. Optional UART AT6668 GPS support uses expansion GPIO19/20, not the shared I²C Grove socket. Camera, microphone recording and Himax AI are not enabled. [Setup, wiring and current physical validation](SEEED-WATCHER.md).
+
+## Waveshare LCD 1.85B
+
+The `waveshare_185b` profile adds the full 360 px touch UI, 16 MB flash, 8 MB PSRAM, four-bit SDMMC storage, PCF85063 RTC and ES8311 speaker. SD is preferred for supported logs, captures and recon files. External UART GPS is off by default; Wardrive remains hidden until enabled with recent valid receiver data. The SH1.0 UART connector supplies 3.3 V and requires the correct adapter for Grove modules. BOOT is programmable and PWR is hardware-controlled. [Exact model, wiring and validation](WAVESHARE-LCD-185B.md).

@@ -1,7 +1,7 @@
 #include "app.h"
 #include "background_radio.h"
 #include "board_pins.h"
-#if defined(BOARD_AMOLED_175) || defined(BOARD_WATCHER)
+#if defined(BOARD_AMOLED_175) || defined(BOARD_WATCHER) || defined(BOARD_WAVESHARE_185B)
 #include "recon_internal.h"
 #endif
 #include <esp_timer.h>
@@ -26,6 +26,10 @@ static bool openLog(){
 static void mount(){
 #if defined(BOARD_SD_SPI)
   extern bool boardMountCard();bool mounted=boardMountCard();
+#elif defined(BOARD_WAVESHARE_185B)
+  // Dedicated four-bit SDMMC bus; never format a user's card on mount failure.
+  CardFS.setPins(SD_MMC_CLK_PIN,SD_MMC_CMD_PIN,SD_MMC_D0_PIN,SD_MMC_D1_PIN,SD_MMC_D2_PIN,SD_MMC_D3_PIN);
+  bool mounted=CardFS.begin("/sdcard",false,false,SDMMC_FREQ_DEFAULT,12);
 #else
   CardFS.setPins(SD_MMC_CLK_PIN,SD_MMC_CMD_PIN,SD_MMC_D0_PIN);
   bool mounted=CardFS.begin("/sdcard",true,false,SDMMC_FREQ_DEFAULT,12);
@@ -76,7 +80,7 @@ void addAlert(const char* title,const char* detail,const uint8_t* mac){
 }
 #if BOARD_HAS_SD
 bool setCapture(bool enabled){
-#if defined(BOARD_AMOLED_175) || defined(BOARD_WATCHER)
+#if defined(BOARD_AMOLED_175) || defined(BOARD_WATCHER) || defined(BOARD_WAVESHARE_185B)
   if(enabled)return dragon::toolkit::captureStart(false);
   dragon::toolkit::captureStop();return false;
 #else

@@ -17,7 +17,7 @@ for name,expected in hashes.items():
 
 src=(root/'firmware/src/wardrive_upload.cpp').read_text()
 production='namespace {'+src.split('namespace {',1)[1].split('\nWardriveUploadSnapshot wardriveUploadSnapshot()',1)[0]
-snapshot=(root/'firmware/include/wardrive_upload.h').read_text().split('struct WardriveUploadSnapshot',1)[1].split('#ifdef',1)[0]
+snapshot=(root/'firmware/include/wardrive_upload.h').read_text().split('struct WardriveUploadSnapshot',1)[1].split('#if',1)[0]
 source=r'''
 #include <algorithm>
 #include <atomic>

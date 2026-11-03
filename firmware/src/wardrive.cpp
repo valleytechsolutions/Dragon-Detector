@@ -34,7 +34,7 @@ bool allow(const uint8_t* mac,uint8_t kind,uint32_t now){
     if(!seen[i].used){slot=i;break;}
     if(seen[i].kind==kind&&!memcmp(seen[i].mac,mac,6)){
       if(now-seen[i].at<
-#ifdef BOARD_AMOLED_175
+#if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
          1500
 #else
          5000
@@ -163,6 +163,13 @@ bool wardriveI2cBusy(){
 #endif
 }
 bool wardriveBusy(){return owned;}
+bool wardriveAvailable(){
+#ifdef BOARD_WAVESHARE_185B
+  return externalGpsConfig.enabled&&externalGpsOpen&&!externalGpsSuspended&&gps.receiverPresent(millis());
+#else
+  return true;
+#endif
+}
 bool wardriveSyncClock(){
   if(wardriveI2cBusy()||!located(millis()))return false;
   const auto& fix=recordingFix();
@@ -212,6 +219,7 @@ bool wardriveStart(){
 #ifdef BOARD_GPS_UART
   if(!externalGpsConfig.enabled||!externalGpsOpen){strlcpy(notice,"Enable external GPS in GPS setup before wardriving",sizeof(notice));return false;}
 #endif
+  if(!wardriveAvailable()){strlcpy(notice,"Connect a powered GPS with valid NMEA data before wardriving",sizeof(notice));return false;}
   radioFailed=false;
   if(stopwatch.running){strlcpy(notice,"Pause the timer before starting a wardrive",sizeof(notice));return false;}
   if(radioStandby()||!radioEnabled||bleLabOwnsRadio()||reconOwnsRadio()||reconStorageBusy()||
@@ -226,6 +234,8 @@ bool wardriveStart(){
   snprintf(header,sizeof(header),"WigleWifi-1.6,appRelease=" DRAGON_VERSION ",model=SenseCAP-Watcher,release=" DRAGON_VERSION ",device=DragonDetector,display=LCD,board=watcher,brand=Seeed\n%s",dragon::wardrive::Columns);
 #elif defined(BOARD_GPS_LC76G)
   snprintf(header,sizeof(header),"WigleWifi-1.6,appRelease=" DRAGON_VERSION ",model=ESP32-S3-Touch-AMOLED-1.75-G,release=" DRAGON_VERSION ",device=DragonDetector,display=AMOLED,board=waveshare_175_gps,brand=Waveshare\n%s",dragon::wardrive::Columns);
+#elif defined(BOARD_WAVESHARE_185B)
+  snprintf(header,sizeof(header),"WigleWifi-1.6,appRelease=" DRAGON_VERSION ",model=ESP32-S3-Touch-LCD-1.85B,release=" DRAGON_VERSION ",device=DragonDetector,display=LCD,board=waveshare_185b,brand=Waveshare\n%s",dragon::wardrive::Columns);
 #else
   snprintf(header,sizeof(header),"WigleWifi-1.6,appRelease=" DRAGON_VERSION ",model=ESP32-S3-Touch-AMOLED-1.75,release=" DRAGON_VERSION ",device=DragonDetector,display=AMOLED,board=waveshare_175,brand=Waveshare\n%s",dragon::wardrive::Columns);
 #endif
@@ -244,7 +254,7 @@ void wardriveLoop(){
 #if defined(BOARD_GPS_LC76G) || defined(BOARD_WATCHER) || defined(BOARD_GPS_UART)
   gpsLoop();
 #endif
-#ifdef BOARD_AMOLED_175
+#if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
   // USB-only power loss invalidates the RTC. A checked fresh GNSS pair can
   // recover UTC after acquisition, without rewriting an already-valid clock.
   static uint32_t clockAttempt=0;

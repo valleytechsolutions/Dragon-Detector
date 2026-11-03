@@ -1,6 +1,6 @@
 // Original Dragon Detector adapter. Piglet's asynchronous network scan workflow
 // is a behavior reference; the ESP-IDF driver owns and releases its AP list.
-#ifdef BOARD_AMOLED_175
+#if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
 namespace {
 enum class DriveScanPhase {Off,Wifi,Results,Ble};
 DriveScanPhase driveScanPhase=DriveScanPhase::Off;

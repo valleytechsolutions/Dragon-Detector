@@ -75,6 +75,7 @@ Some store links are affiliate links. Purchases through them may earn Valleytech
 
 | Board | Display | Controls and peripherals | Get the hardware |
 |---|---|---|---|
+| **Waveshare ESP32-S3-Touch-LCD-1.85B** | 360 × 360 LCD | Touch, BOOT/PWR, RTC, speaker, microSD; optional external UART GPS, off by default · [setup](docs/WAVESHARE-LCD-185B.md) | [Waveshare](https://www.waveshare.com/esp32-s3-touch-lcd-1.85b.htm?&aff_id=122099) |
 | **Waveshare ESP32-S3-Touch-AMOLED-1.75C** | 466 × 466 AMOLED | Touch, BOOT/PWR, 32 MB flash; choose the **C** model | [Waveshare](https://www.waveshare.com/esp32-s3-touch-amoled-1.75c.htm?&aff_id=122099) |
 | **Waveshare ESP32-S3-Touch-AMOLED-1.75 · SD beta** | 466 × 466 AMOLED | Touch, BOOT/PWR, RTC, microSD, 16 MB flash; select **Standard version** | [Waveshare](https://www.waveshare.com/esp32-s3-touch-amoled-1.75.htm?&aff_id=122099) |
 | **Waveshare ESP32-S3-Touch-AMOLED-1.75-G · GPS beta** | 466 × 466 AMOLED | RTC, microSD, onboard LC76G GPS; select **GPS version** | [Waveshare · choose GPS](https://www.waveshare.com/esp32-s3-touch-amoled-1.75.htm?&aff_id=122099) |
@@ -140,7 +141,7 @@ Detection matches observable radio signatures; it does not establish intent, own
 | `hardware/` | Board partitions and archived projects |
 | `docs/` | Setup guides, architecture, and validation |
 
-CI tests the firmware core and browser modules, builds all eleven ESP32 profiles, and publishes matching firmware, manifests, and SHA-256 checksums. Historical projects under `hardware/` retain their original licenses and are not current update targets.
+CI tests the firmware core and browser modules, builds all twelve ESP32 profiles, and publishes matching firmware, manifests, and SHA-256 checksums. Historical projects under `hardware/` retain their original licenses and are not current update targets.
 
 ## Credits and license
 

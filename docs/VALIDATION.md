@@ -62,3 +62,7 @@ The `waveshare_175` port is prepared from the official schematic and maintained 
 ## Seeed SenseCAP Watcher beta
 
 The `watcher` environment targets 412×412, 32 MB flash and 8 MB PSRAM with full-board software, touch/rotary controls, RTC, speaker and FAT32 SD. Optional UART AT6668 GPS support uses expansion GPIO19/20, not the shared I²C Grove socket. Camera, microphone recording and Himax AI are not enabled. [Setup, wiring and current physical validation](SEEED-WATCHER.md).
+
+## Waveshare LCD 1.85B · 0.14.1
+
+The new dedicated port has a separate [release validation record](RELEASE-0.14.1.md) and [hardware guide](WAVESHARE-LCD-185B.md). Do not infer 1.85B physical results from the similarly sized Spotpear or AMOLED models.

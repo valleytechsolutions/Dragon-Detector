@@ -1,8 +1,13 @@
 """Run production wardrive lifecycle/recording and UI exit logic with fake I/O."""
 from pathlib import Path
+import argparse
 import subprocess
 import sys
 
+parser = argparse.ArgumentParser()
+parser.add_argument('--cxx')
+args = parser.parse_args()
+compiler = [args.cxx] if args.cxx else [sys.executable, '-m', 'ziglang', 'c++']
 root = Path(__file__).resolve().parents[1]
 work = root / '.work' / 'wardrive-tests'
 work.mkdir(parents=True, exist_ok=True)
@@ -62,15 +67,17 @@ struct SdRecords {
 };
 ''' + snapshot
 source += driver[driver.index('dragon::wardrive::Nmea gps;'):driver.index('#ifdef BOARD_GPS_LC76G\nenum class Phase')]
-for name in ['const dragon::wardrive::Fix& recordingFix(', 'bool located(', 'bool wardriveSyncClock(', 'void record(', 'bool wardriveActive(', 'bool wardriveBusy(',
+for name in ['const dragon::wardrive::Fix& recordingFix(', 'bool located(', 'bool wardriveSyncClock(', 'void record(', 'bool wardriveActive(', 'bool wardriveBusy(', 'bool wardriveAvailable(',
              'WardriveSnapshot wardriveSnapshot(', 'bool wardriveStart(', 'void wardriveStop(', 'void wardriveLoop(']:
     source += '\n' + function(driver, name)
 source += r'''
 // The actual dashboard exit controller must wait for writer finalization.
 using String=std::string;
-enum View {Modes,Wardrive,Running,Capture,Statistics,Portal,Csi,Network,Missions,Recipes,Uploads,GpsSetup};
+enum View {Modes,Tools,Wardrive,Running,Capture,Statistics,Portal,Csi,Network,Missions,Recipes,Uploads,GpsSetup};
+bool toolsWardriveAvailable=false,inputReleased=true;bool gpsMenuInputReleased(){return inputReleased;}
 bool wardriveExitRequested=false,redraw=false,pageRequested=false;void* root=(void*)1;
 View view=Modes,requested=Modes;uint32_t updated=0;unsigned menuReturns=0,errorDraws=0;
+void change(View next){view=next;redraw=true;}
 void reconPage(const String&){requested=Wardrive;pageRequested=true;}
 void uiShow(const char* name){assert(std::string(name)=="menu");++menuReturns;}
 void draw(){++errorDraws;redraw=false;}void updateWardrive(){}void updateStatus(){}void updateUploads(){}void updateGpsSetup(){}
@@ -122,6 +129,49 @@ int main(){
 cpp = work / 'session.cpp'
 exe = work / 'session.exe'
 cpp.write_text(source)
-subprocess.run([sys.executable, '-m', 'ziglang', 'c++', '-UNDEBUG', '-std=c++17', '-O1',
+subprocess.run(compiler + ['-UNDEBUG', '-std=c++17', '-O1',
                 '-Ifirmware/include', str(cpp), '-o', str(exe)], cwd=root, check=True)
 subprocess.run([str(exe)], cwd=root, check=True)
+
+# Exercise the same production start/stop functions for optional UART hardware.
+# A disappearing receiver must block new sessions without trapping an active one.
+optional = source[:source.index('int main(){')]
+optional = optional.replace('#define BOARD_GPS_LC76G 1', '#define BOARD_GPS_UART 1\n#define BOARD_WAVESHARE_185B 1\n#include "gps_uart_config.h"\ndragon::gpsuart::Config externalGpsConfig;bool externalGpsOpen=false,externalGpsSuspended=false;')
+optional = optional.replace('#define BOARD_AMOLED_175 1', '')
+optional = optional.replace('char message[120]{};', 'char message[120]{};std::string header;')
+optional = optional.replace('const char*,size_t n){\n   error=false;', 'const char* text,size_t n){\n   header.assign(text,n);error=false;')
+optional += r"""
+void receiver(){
+ std::string body="GNRMC,123519,V,,,,,,,031126,,,N";uint8_t sum=0;for(char c:body)sum^=uint8_t(c);
+ char tail[8];snprintf(tail,sizeof(tail),"*%02X\r\n",sum);for(char c:"$"+body+tail)gps.feed(c,now);
+ present=gps.receiverPresent(now);
+}
+int main(){
+ assert(!externalGpsConfig.enabled&&externalGpsConfig.rx==44&&!wardriveAvailable());
+ view=Wardrive;inputReleased=false;reconViewLoop();assert(view==Wardrive);
+ inputReleased=true;reconViewLoop();assert(view==GpsSetup);view=Modes;
+ assert(!wardriveStart()&&!wardriveBusy()&&transitions.empty());
+ externalGpsConfig.enabled=true;assert(!wardriveStart());externalGpsOpen=true;
+ assert(!wardriveAvailable()&&!wardriveStart());
+ receiver();assert(wardriveAvailable()&&!located(now));
+ driveLog.missing=true;assert(!wardriveStart()&&!wardriveBusy());driveLog.missing=false;
+ assert(wardriveStart()&&wardriveBusy()&&wardriveActive());
+ assert(driveLog.header.find("model=ESP32-S3-Touch-LCD-1.85B")!=std::string::npos);
+ assert(driveLog.header.find("display=LCD,board=waveshare_185b")!=std::string::npos);
+ uint8_t mac[6]={1,2,3,4,5,6};fix();record(mac,nullptr,0,"",-40,1,false,0,now,false);
+ assert(wardriveSnapshot().wifi==1);
+ now+=3001;assert(!wardriveAvailable()&&!located(now)&&wardriveActive());
+ record(mac,nullptr,0,"",-40,1,false,0,now,false);assert(wardriveSnapshot().wifi==1&&wardriveSnapshot().noFix==1);
+ view=Wardrive;reconViewLoop();assert(menuReturns==0&&wardriveActive());
+ reconEndWardrive();assert(!wardriveActive()&&wardriveBusy());reconViewLoop();assert(menuReturns==0);
+ wardriveLoop();reconViewLoop();assert(menuReturns==1&&!wardriveBusy()&&!driveLog.pending());
+ assert(!wardriveStart());receiver();assert(wardriveAvailable());
+ externalGpsSuspended=true;assert(!wardriveAvailable()&&!wardriveStart());externalGpsSuspended=false;
+ assert(wardriveStart());reconEndWardrive();driveLog.failNext=true;wardriveLoop();reconViewLoop();
+ assert(menuReturns==1&&!wardriveBusy()&&wardriveSnapshot().failed);
+ free(seen);puts("PASS optional UART wardrive default-off/readiness gates, no-fix start, model header, GPS loss, safe End, SD failure");
+}
+"""
+cpp=work/'optional_session.cpp';exe=work/'optional_session.exe';cpp.write_text(optional)
+subprocess.run(compiler+['-UNDEBUG','-std=c++17','-O1','-Ifirmware/include',str(cpp),'-o',str(exe)],cwd=root,check=True)
+subprocess.run([str(exe)],cwd=root,check=True)

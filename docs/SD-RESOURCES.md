@@ -14,6 +14,7 @@ Download `dragon-resources-v1-20261023.zip`. Extract **the `dragon` directory to
 |---|---|---|
 | Seeed SenseCAP Watcher (0.13.29+) | Optional | External AT6668 via UART; GPS testing deferred; no automatic upload |
 | Spotpear / Guition JC3636W518 | Optional | No |
+| Waveshare ESP32-S3-Touch-LCD-1.85B | Optional | [External UART GPS](WAVESHARE-LCD-185B.md#optional-external-uart-gps), off by default; Wardrive requires valid receiver data |
 | Waveshare ESP32-S3-Touch-AMOLED-1.75 | Optional | 0.13.40 development: [optional external UART GPS](EXTERNAL-GPS-AMOLED175.md), off by default; explicit SD-configured uploads |
 | Waveshare ESP32-S3-Touch-AMOLED-1.75-G | Optional | LC76G; 0.13.39 development adds explicit [SD-configured uploads](WARDRIVE-UPLOADS.md), pending live service validation |
 | Waveshare ESP32-S3-Touch-AMOLED-1.75C | None | No |

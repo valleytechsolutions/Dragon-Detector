@@ -1,6 +1,6 @@
 """Validate current Markdown links and all generated flasher files before publication."""
 from pathlib import Path
-import hashlib,json,re
+import hashlib,json,re,zipfile
 from flash_budget import RESERVE_PERCENT
 from urllib.parse import unquote
 ROOT=Path(__file__).resolve().parents[1]
@@ -9,7 +9,7 @@ for md in [ROOT/'README.md',ROOT/'CREDITS.md',*ROOT.glob('docs/*.md')]:
     for target in re.findall(r'!?\[[^\]]*\]\(([^\s)]+)',md.read_text(encoding='utf-8')):
         if '://' in target or target.startswith('#'):continue
         file=unquote(target.split('#')[0]);assert (md.parent/file).exists(),f'{md.name}: missing {file}'
-for board in ('watcher','m5dial','spotpear','waveshare','stopwatch','xiao_round','waveshare_lite','waveshare_175','waveshare_175_gps','elecrow_21','lilygo_175'):
+for board in ('waveshare_185b','watcher','m5dial','spotpear','waveshare','stopwatch','xiao_round','waveshare_lite','waveshare_175','waveshare_175_gps','elecrow_21','lilygo_175'):
     folder=ROOT/'web/firmware'/board
     records={name:sha for sha,name in (line.split() for line in (folder/'SHA256SUMS.txt').read_text().splitlines())}
     budget=json.loads((folder/'memory-budget.json').read_text(encoding='utf-8'))
@@ -21,6 +21,13 @@ for board in ('watcher','m5dial','spotpear','waveshare','stopwatch','xiao_round'
     assert budget['app_slot_free_bytes']==budget['app_slot_bytes']-budget['app_bytes']
     assert budget['app_slot_free_bytes']>=(budget['app_slot_bytes']*RESERVE_PERCENT+99)//100
     assert budget['physical_flash_bytes']==info['flash_size']
+    if board=='waveshare_185b':
+        with zipfile.ZipFile(folder/f'dragon-detector-{board}.zip') as archive:
+            for source,prefix,names in ((ROOT/'third_party/waveshare-185b','DISPLAY-',('NOTICE.md','LICENSE')),(ROOT/'lib/es8311','ES8311-',('UPSTREAM.md','LICENSE'))):
+                for name in names:
+                    expected=(source/name).read_bytes();packaged=prefix+name
+                    assert (folder/packaged).read_bytes()==expected,f'Altered or missing notice: {packaged}'
+                    assert archive.read(packaged)==expected,f'Notice missing from board ZIP: {packaged}'
     for mode in ('factory','update'):
         manifest=json.loads((folder/f'{mode}.json').read_text(encoding='utf-8'))
         assert manifest['version']==info['version']

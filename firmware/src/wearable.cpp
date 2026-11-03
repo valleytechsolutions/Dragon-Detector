@@ -64,7 +64,7 @@ bool configureClock(uint32_t epoch){
   // A transient startup bus failure must not disable hardware saves until the
   // next reboot. Re-probe without resetting the retained calendar.
   if(!rtcAvailable)boardSensorsBegin();
-#if defined(BOARD_WATCHER) || defined(BOARD_LILYGO_175) || defined(BOARD_STOPWATCH) || defined(BOARD_XIAO_ROUND) || defined(BOARD_AMOLED_175)
+#if defined(BOARD_WATCHER) || defined(BOARD_LILYGO_175) || defined(BOARD_STOPWATCH) || defined(BOARD_XIAO_ROUND) || defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
   // These profiles promise a hardware clock. Never silently report a volatile
   // software-only write as successful if their RTC is disconnected or failed.
   if(!rtcAvailable)return false;
@@ -92,7 +92,7 @@ static void reply(const char* format,...){
 }
 bool wearableCommand(const String& c){
   if(c=="clock diagnostics"){
-#if defined(BOARD_WATCHER) || defined(BOARD_LILYGO_175) || defined(BOARD_STOPWATCH) || defined(BOARD_XIAO_ROUND) || defined(BOARD_AMOLED_175) || defined(BOARD_AMOLED_175C)
+#if defined(BOARD_WATCHER) || defined(BOARD_LILYGO_175) || defined(BOARD_STOPWATCH) || defined(BOARD_XIAO_ROUND) || defined(BOARD_AMOLED_175) || defined(BOARD_AMOLED_175C) || defined(BOARD_WAVESHARE_185B)
     boardRtcDiagnostics();
 #else
     Serial.println("CLOCK_DIAGNOSTICS chip=none");

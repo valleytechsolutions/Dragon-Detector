@@ -1,6 +1,8 @@
 """Exercise the production asynchronous WiFi/BLE wardrive adapter with fake IDF."""
 from pathlib import Path
-import subprocess, sys
+import argparse, subprocess, sys
+p=argparse.ArgumentParser();p.add_argument("--cxx");args=p.parse_args()
+compiler=[args.cxx] if args.cxx else [sys.executable,"-m","ziglang","c++"]
 root=Path(__file__).resolve().parents[1]
 work=root/'.work'/'wardrive-radio-tests';work.mkdir(parents=True,exist_ok=True)
 source=r'''
@@ -12,7 +14,6 @@ source=r'''
 #include <cstdio>
 #include <vector>
 #define BOARD_GPS_LC76G
-#define BOARD_AMOLED_175
 using esp_event_handler_instance_t=void*;using esp_event_base_t=int;using wifi_mode_t=int;using wifi_ps_type_t=int;
 constexpr int ESP_OK=0,WIFI_MODE_NULL=0,WIFI_MODE_STA=1,WIFI_PS_MIN_MODEM=1,WIFI_PS_NONE=0,WIFI_EVENT=0,WIFI_EVENT_SCAN_DONE=1,WIFI_SCAN_TYPE_ACTIVE=0;
 enum wifi_auth_mode_t {WIFI_AUTH_OPEN,WIFI_AUTH_WEP,WIFI_AUTH_WPA_PSK,WIFI_AUTH_WPA2_PSK,WIFI_AUTH_WPA_WPA2_PSK,WIFI_AUTH_WPA2_ENTERPRISE,WIFI_AUTH_WPA3_PSK,WIFI_AUTH_WPA2_WPA3_PSK};
@@ -55,6 +56,9 @@ int main(){
  puts("PASS async wardrive sweeps, 4-record budget, BLE gap, empty scans, timeout/recovery, cancellation, radio restore and rollover");
 }
 '''
-path=work/'radio.cpp';path.write_text(source);exe=work/'radio.exe'
-subprocess.run([sys.executable,'-m','ziglang','c++','-UNDEBUG','-std=c++17','-O1',str(path),'-o',str(exe)],cwd=root,check=True)
-subprocess.run([str(exe)],check=True)
+path=work/'radio.cpp';path.write_text(source)
+for board in ('BOARD_AMOLED_175','BOARD_WAVESHARE_185B'):
+    exe=work/(board+'.exe')
+    subprocess.run(compiler+['-UNDEBUG','-std=c++17','-O1','-D'+board,str(path),'-o',str(exe)],cwd=root,check=True)
+    subprocess.run([str(exe)],check=True)
+    print('PASS production wardrive radio profile',board)

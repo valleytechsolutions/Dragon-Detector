@@ -43,3 +43,7 @@ Run `pio run -e waveshare_175` and `python tools/build_release.py --board wavesh
 ## M5Stack Dial beta
 
 Build and package only this board with `python tools/build_release.py --board m5dial`. The profile uses 8 MB flash, two 3 MiB app slots and a 1.94 MiB internal filesystem. Do not rename another board image. Run `python tools/test_m5dial.py` and `python tools/test_rtc.py` for native checks; `python tools/render_m5dial.py` checks actual LVGL output against the normal indexed-image renderer. These do not substitute for the [first-unit hardware checklist](M5STACK-DIAL.md).
+
+## Waveshare LCD 1.85B
+
+Build with `python -m platformio run -e waveshare_185b` and package with `python tools/build_release.py --board waveshare_185b`. This dedicated profile uses `hardware/waveshare-lcd-185b/partitions.csv`: 16 MB flash, two 4 MiB application slots and 7.94 MiB internal storage. It does not inherit the AMOLED driver or require M5Unified. [Hardware and wiring](WAVESHARE-LCD-185B.md).

@@ -67,6 +67,10 @@ static dragon::notebook::Advert notebookSelection;
 static Page page=Boot,pending=Boot;
 static lv_obj_t *root,*body,*statusLabel,*audioLabel,*audioMeter,*radar,*micBadge;
 static bool openRadioTools=false;
+#ifdef BOARD_WAVESHARE_185B
+static bool menuWardriveAvailable=false;
+static bool gpsMenuInputReleased(){for(auto* input=lv_indev_get_next(nullptr);input;input=lv_indev_get_next(input))if(input->proc.state==LV_INDEV_STATE_PRESSED)return false;return true;}
+#endif
 static int menuTab=0,filter=0,selected=-1,filePage=0,brightness=100,historyPage=0;
 static bool radarLabels=true;
 static dragon::RadarTapGesture radarGesture;
@@ -316,7 +320,7 @@ static void build(){
   badgeUnload();page=pending;pageAt=millis();statusLabel=audioLabel=audioMeter=radar=trackingLabel=huntValue=huntMeta=huntGauge=huntGraph=diagnosticsLabel=activityLabel=radarActivity=nullptr;radarPrepared=0;
   setRadioStandby(page==Clock||page==Stopwatch||page==Laps||page==ClockSettings||page==ClockWheels||page==ClockEdit);
   lv_obj_clean(root);lv_obj_set_style_bg_color(root,color(uiColors().bg),0);
-#ifdef BOARD_AMOLED_175
+#if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
   prepareRadarBackdrop(root,page==Radar);
 #endif
   #ifndef BOARD_RADAR_LITE
@@ -345,6 +349,9 @@ static void build(){
     auto* quiet=button(root,detector.quiet?LV_SYMBOL_MUTE:LV_SYMBOL_VOLUME_MAX,270,257,38,34,97);
     for(auto* b:{targets,tools,quiet}){lv_obj_set_style_bg_color(b,color(theme.panel),0);lv_obj_set_style_bg_opa(b,LV_OPA_80,0);lv_obj_set_style_border_color(b,color(theme.ring),0);lv_obj_set_style_border_opa(b,LV_OPA_60,0);if(locksport()||radarTheme==31)lv_obj_set_style_text_color(lv_obj_get_child(b,0),color(theme.text),0);}
   }else if(page==Menu){
+#ifdef BOARD_WAVESHARE_185B
+    menuWardriveAvailable=wardriveAvailable();
+#endif
     title("DRAGON TOOLS");const char* tabs[]={"RECON","UTILITIES","SYSTEM"};
     for(int i=0;i<3;++i){
       auto* b=button(root,tabs[i],47+i*89,76,86,32,10+i);
@@ -359,16 +366,23 @@ static void build(){
     }
     #ifndef BOARD_RADAR_LITE
     if(menuTab==0){
-#ifdef BOARD_AMOLED_175
-#ifdef BOARD_GPS_UART
+#if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
+#ifdef BOARD_WAVESHARE_185B
+      if(menuWardriveAvailable)button(root,"START WARDRIVE",57,114,246,36,7109);
+#elif defined(BOARD_GPS_UART)
       button(root,gpsExternalConfig().enabled?"START WARDRIVE":"GPS SETUP",57,114,246,36,7109);
 #else
       button(root,"START WARDRIVE",57,114,246,36,7109);
 #endif
-      button(root,"Modes",57,156,119,32,7100);button(root,"Attacks",184,156,119,32,7103);
-      button(root,"Wi-Fi",57,194,119,32,20);button(root,"Bluetooth",184,194,119,32,21);
-      button(root,"History",57,232,119,32,60);button(root,"Hunt",184,232,119,32,57);
-      button(root,"Radio tools",57,270,119,32,7102);button(root,"BLE Lab",184,270,119,32,7000);
+#ifdef BOARD_WAVESHARE_185B
+      const int first=menuWardriveAvailable?156:115,step=menuWardriveAvailable?38:47,height=menuWardriveAvailable?32:40;
+#else
+      const int first=156,step=38,height=32;
+#endif
+      button(root,"Modes",57,first,119,height,7100);button(root,"Attacks",184,first,119,height,7103);
+      button(root,"Wi-Fi",57,first+step,119,height,20);button(root,"Bluetooth",184,first+step,119,height,21);
+      button(root,"History",57,first+2*step,119,height,60);button(root,"Hunt",184,first+2*step,119,height,57);
+      button(root,"Radio tools",57,first+3*step,119,height,7102);button(root,"BLE Lab",184,first+3*step,119,height,7000);
 #else
       button(root,"Modes",57,115,119,40,7100);button(root,"Attacks",184,115,119,40,7103);button(root,"Wi-Fi",57,162,119,40,20);button(root,"Bluetooth",184,162,119,40,21);button(root,"History",57,209,119,40,60);button(root,"Hunt",184,209,119,40,57);button(root,"Radio tools",57,257,119,39,7102);button(root,"BLE Lab",184,257,119,39,7000);
 #endif
@@ -388,7 +402,7 @@ static void build(){
 #ifdef BOARD_WATCHER
       button(root,"Settings",60,115,240,38,40);button(root,"Recon notebook",60,160,240,38,153);
       button(root,"Radio health",70,205,220,38,99);button(root,"Sleep",60,250,116,38,181);button(root,"Power off",184,250,116,38,180);
-#elif defined(BOARD_AMOLED_175)
+#elif defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
       button(root,"Settings",60,115,240,38,40);button(root,"GPS setup",60,160,240,38,7110);
       button(root,"Recon notebook",60,205,240,38,153);button(root,"Radio health",70,250,220,38,99);
 #else
@@ -528,6 +542,9 @@ static void build(){
     row(body,"Time","Set hours, minutes and AM / PM",n++,160);
     row(body,"Date","Set month, day and year",n++,162);
     row(body,"Clock sync & time zone","USB sync / local UTC offset",n++,163);
+#ifdef BOARD_WAVESHARE_185B
+    row(body,"External GPS",gpsExternalConfig().enabled?"UART enabled / receiver status and baud":"Off / optional GPS on the UART connector",n++,7110);
+#endif
     row(body,"Orientation","Choose a saved fixed angle",n++,135);
     row(body,"Display & timeouts","Brightness, dimming and screen off",n++,71);
     row(body,"Theme & radar labels",radarThemeNames[radarTheme],n++,117);
@@ -548,7 +565,7 @@ static void build(){
 #ifdef BOARD_STOPWATCH
     row(body,alertVibration?"Vibration: ON":"Vibration: OFF","Built-in StopWatch motor",n++,79);
 #endif
-#ifdef BOARD_WATCHER
+#if defined(BOARD_WATCHER) || defined(BOARD_WAVESHARE_185B)
     row(body,"Capture studio",sdReady?"Wi-Fi + BLE / SD streaming / Stop saves":"RAM capture / Stop then Save",n++,7105);
     row(body,"Saved captures",sdReady?"SD files / USB download":"Internal files / USB download",n++,7104);
 #else
@@ -559,7 +576,7 @@ static void build(){
     row(body,loggingEnabled&&sdReady?"SD event logging: ON":"SD event logging: OFF",sdReady?sessionPath.c_str():"Requires a mounted SD card",n++,43);
 #if defined(BOARD_AMOLED_175)
     row(body,"Capture studio",sdReady?"Wi-Fi + BLE / SD streaming / Stop saves":"RAM capture / Stop then Save",n++,7105);
-#elif !defined(BOARD_WATCHER)
+#elif !defined(BOARD_WATCHER) && !defined(BOARD_WAVESHARE_185B)
     row(body,captureEnabled?"SD PCAP: recording":"SD PCAP: stopped",sdReady?"Raw 802.11 / 16 MB per capture":"Requires a mounted SD card",n++,24);
 #endif
 #endif
@@ -648,11 +665,14 @@ static void action(lv_event_t* e){
   if(id>=201 && id<=211){trackedContact=-1;channelLock=id-200;setRadio(true);go(Channels);page=Boot;return;}
 #ifndef BOARD_RADAR_LITE
   if(id==7109){
+#ifdef BOARD_WAVESHARE_185B
+    if(!wardriveAvailable()){reconPage("gps-setup");go(Recon);return;}
+#endif
 #ifdef BOARD_GPS_UART
     if(!gpsExternalConfig().enabled){reconPage("gps-setup");go(Recon);return;}
 #endif
     reconPage("wardrive");go(Recon);wardriveStart();return;}
-#ifdef BOARD_AMOLED_175
+#if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
   if(id==7110){reconPage("gps-setup");go(Recon);return;}
 #endif
   if(id==7104||id==7105){reconPage(id==7104?"files":"captures");go(Recon);return;}
@@ -825,7 +845,7 @@ void uiShow(const String& name){if(name=="startup"){go(Startup);page=Boot;return
   if(name=="findmy-beeper"){bleLabBeeperPage();go(BleLab);return;}
   if(name=="lab"){go(BleLab);return;}
   if(
-#ifdef BOARD_AMOLED_175
+#if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
      name=="wardrive-upload"||name=="gps-setup"||
 #endif
 #if BOARD_HAS_GPS
@@ -886,6 +906,9 @@ void uiLoop(){
   if(!dragon::detectionPopupAllowed(page==Radar,pending==Radar)){if(noticeHasKey)dismissNotice();noticeQueue.count=0;}
   if(!clockPrompt&&!notice&&dragon::detectionPopupAllowed(page==Radar,pending==Radar)){dragon::DetectionNotice next;if(noticeQueue.take(millis(),next)&&detector.enabled(next.family)&&(!detector.quiet||next.watched)&&(!next.hasKey||!(deviceRules(next.key)&(RuleIgnore|RuleSnooze))))uiNotify(next.title,next.detail,next.hasKey?&next.key:nullptr,next.watched);}
   if(((page==Boot&&pending==Boot)||(page==Startup&&pending==Startup)) && millis()-pageAt>2200)pending=Radar;
+#ifdef BOARD_WAVESHARE_185B
+  if(page==Menu&&pending==Menu&&!clockPrompt&&!notice&&!resetBox&&menuWardriveAvailable!=wardriveAvailable()&&gpsMenuInputReleased())build();
+#endif
   if(page!=pending)build();
   if(!wardriveBusy()&&!wardriveUploadBusy())clockSetupPrompt();
 #ifndef BOARD_RADAR_LITE

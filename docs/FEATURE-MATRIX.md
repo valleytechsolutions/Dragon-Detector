@@ -93,3 +93,7 @@ All four full boards now support opt-in saved-Wi-Fi time recovery. Lite adds a c
 ## Seeed SenseCAP Watcher beta
 
 The `watcher` environment targets 412×412, 32 MB flash and 8 MB PSRAM with full-board software, touch/rotary controls, RTC, speaker and FAT32 SD. Optional UART AT6668 GPS support uses expansion GPIO19/20, not the shared I²C Grove socket. Camera, microphone recording and Himax AI are not enabled. [Setup, wiring and current physical validation](SEEED-WATCHER.md).
+
+## Waveshare LCD 1.85B · 0.14.1
+
+This full profile shares the detector, radio tools, BLE Lab, themes, badge and timing workflows. It has a 360 px touch LCD, 8 MB PSRAM, RTC, speaker and four-bit SDMMC. Supported recon files prefer SD. GPS is an optional external UART receiver, off by default, and its Wardrive entry requires recent valid NMEA. PWR is a hardware power button, not a second programmable input. [Setup and physical validation](WAVESHARE-LCD-185B.md).

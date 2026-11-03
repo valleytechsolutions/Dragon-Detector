@@ -344,3 +344,12 @@ The padlock is an imagegen background-extraction derivative, and clock hands
 are original vector illustrations. See [44Delta artwork notes](docs/44DELTA.md)
 and the [source hashes](docs/THEME-ARTWORK.json). Branding belongs to 44Delta;
 inclusion does not imply endorsement.
+
+## Waveshare LCD 1.85B panel initialization
+
+The two ST77916 initialization tables are adapted from the official Waveshare
+ESP32-S3-Touch-LCD-1.85B examples at revision `7232af4c501c64d34215b73e1d8319376dfd9c19`.
+Their [source and modification notice](third_party/waveshare-185b/NOTICE.md) and
+[Apache-2.0 license](third_party/waveshare-185b/LICENSE) are retained and included
+in the board package. The board's ES8311 codec driver retains its existing
+[upstream notice](lib/es8311/UPSTREAM.md) and [license](lib/es8311/LICENSE).

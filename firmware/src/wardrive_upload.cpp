@@ -1,5 +1,5 @@
 #include "wardrive_upload.h"
-#ifdef BOARD_AMOLED_175
+#if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
 #include "wardrive_upload_format.h"
 #include "wardrive.h"
 #include "app.h"

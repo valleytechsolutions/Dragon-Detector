@@ -9,6 +9,8 @@ published.m5dial=JSON.parse(readFileSync(new URL('./fixtures/dial-0.13.27-manife
 
 published.watcher=JSON.parse(readFileSync(new URL('./fixtures/watcher-0.13.29-manifests.json',import.meta.url)));
 
+published.waveshare_185b=JSON.parse(readFileSync(new URL('./fixtures/waveshare-185b-0.14.1-manifests.json',import.meta.url)));
+
 function rig(board='waveshare',mode='factory',badFile){
   const manifest=structuredClone(published[board][mode]);
   const requests=[];
