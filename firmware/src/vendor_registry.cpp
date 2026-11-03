@@ -1,12 +1,23 @@
 #include "vendor_registry.h"
 #include <stddef.h>
 #include <stdlib.h>
+#if defined(ARDUINO) || defined(BOARD_WAVESHARE_185B)
+#include "sd_resources.h"
+#endif
+#ifndef BOARD_WAVESHARE_185B
 #include "lz_block.h"
 #ifdef ARDUINO
 #include <esp32-hal-psram.h>
-#include "sd_resources.h"
+#endif
 #endif
 namespace dragon {
+#ifdef BOARD_WAVESHARE_185B
+// This SD-equipped profile deliberately omits the 462 KB compressed registry.
+// Radio detection signatures remain compiled independently of these labels.
+bool vendorRegistryBegin(){return sdResourcesReady();}
+unsigned vendorRegistryCount(){return sdResourceVendorCount();}
+const char* registeredVendor(const uint8_t* mac,bool ble,uint8_t type){return sdResourceVendor(mac,ble,type);}
+#else
 #include "vendor_registry_data.inc"
 static uint8_t* vendorData=nullptr;
 static bool vendorAttempted=false;
@@ -37,4 +48,5 @@ const char* registeredVendor(const uint8_t* mac,bool ble,uint8_t type){
  size_t offset=p[3]|size_t(p[4])<<8|size_t(p[5])<<16;
  return offset<VendorNamesBytes?reinterpret_cast<const char*>(vendorNames+offset):nullptr;
 }
+#endif
 }

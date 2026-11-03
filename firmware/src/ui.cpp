@@ -6,9 +6,15 @@
 #include "vendor_registry.h"
 #include "ble_lab.h"
 #include "recon.h"
+#ifdef BOARD_WAVESHARE_185B
+#include "recon_internal.h"
+#include "waveshare_185b_performance.h"
+#endif
 #include "recipes.h"
 #include "radar_colors.h"
 #include "board_pins.h"
+#include "board_waveshare_185b.h"
+#include "sd_resources.h"
 #include "radar_layout.h"
 #include "radar_interaction.h"
 #include "notifications.h"
@@ -308,6 +314,31 @@ static void loadFiles(){
 #endif
 #include "startup_logo.inc"
 static void drawStartup(){showStartupLogo(root);}
+#ifdef BOARD_WAVESHARE_185B
+static const char* ui185bResourceState(){
+  if(sdLookupNamesReady())return "ready";
+  for(const char* state:{sdResourceVendorState(),sdResourceBleLabelState()})
+    if(strstr(state,"invalid")||strstr(state,"corrupt")||strstr(state,"outdated")||!strcmp(state,"short read"))return "invalid";
+  for(const char* state:{sdResourceVendorState(),sdResourceBleLabelState()})
+    if(strcmp(state,"ready")&&strncmp(state,"missing",7))return "unavailable";
+  return "missing";
+}
+static void build185bSystem(){
+  button(root,"Settings",60,115,240,32,40);button(root,"GPS setup",60,151,240,32,7110);
+  char title[48];snprintf(title,sizeof(title),"SD resources: %s",ui185bResourceState());
+  button(root,title,60,187,240,32,7111);
+  button(root,"Recon notebook",60,223,240,32,153);button(root,"Radio health",70,259,220,32,99);
+}
+static void show185bResources(){
+  char message[400];snprintf(message,sizeof(message),
+    "IEEE names: %s\nBLE names: %s\n\nGet the 1.85B lookup pack from the web flasher. Extract dragon/ to the FAT32 card root:\nvendors.ddr + ble-labels.ddb\ninside /dragon/resources/\n\nRestart to load changed files. Core radar works without lookup names.",
+    sdResourceVendorState(),sdResourceBleLabelState());
+  auto* box=uiMessageBox(root,"SD RESOURCES",message,nullptr,true);lv_obj_set_size(box,S(260),S(244));lv_obj_center(box);
+  if(auto* heading=lv_msgbox_get_title(box))lv_obj_set_style_text_font(heading,uiFont(F16),0);
+  if(auto* text=lv_msgbox_get_text(box))lv_obj_set_style_text_font(text,uiFont(F12),0);
+  auto* content=lv_msgbox_get_content(box);lv_obj_set_height(content,S(172));lv_obj_set_scroll_dir(content,LV_DIR_VER);lv_obj_add_flag(content,LV_OBJ_FLAG_SCROLLABLE);
+}
+#endif
 static void build(){
 #ifdef BOARD_WATCHER
   rotaryUiReset();
@@ -402,7 +433,9 @@ static void build(){
 #ifdef BOARD_WATCHER
       button(root,"Settings",60,115,240,38,40);button(root,"Recon notebook",60,160,240,38,153);
       button(root,"Radio health",70,205,220,38,99);button(root,"Sleep",60,250,116,38,181);button(root,"Power off",184,250,116,38,180);
-#elif defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
+#elif defined(BOARD_WAVESHARE_185B)
+      build185bSystem();
+#elif defined(BOARD_AMOLED_175)
       button(root,"Settings",60,115,240,38,40);button(root,"GPS setup",60,160,240,38,7110);
       button(root,"Recon notebook",60,205,240,38,153);button(root,"Radio health",70,250,220,38,99);
 #else
@@ -675,6 +708,9 @@ static void action(lv_event_t* e){
 #if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
   if(id==7110){reconPage("gps-setup");go(Recon);return;}
 #endif
+#ifdef BOARD_WAVESHARE_185B
+  if(id==7111){show185bResources();return;}
+#endif
   if(id==7104||id==7105){reconPage(id==7104?"files":"captures");go(Recon);return;}
   if(id==7100||id==7102){openRadioTools=id==7102;go(Recon);return;}
   if(id==7103){reconPage("attacks");go(Recon);return;}
@@ -915,7 +951,13 @@ void uiLoop(){
   if(page==BleLab)bleLabViewLoop();
   if(page==Recon)reconViewLoop();
 #endif
-  if(millis()-lastUpdate>(page==Stopwatch?50:100)){lastUpdate=millis();if(micBadge){if(audioStatus().mode==AudioMode::Recording)lv_obj_clear_flag(micBadge,LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(micBadge,LV_OBJ_FLAG_HIDDEN);}
+  const uint32_t updateInterval=
+#ifdef BOARD_WAVESHARE_185B
+    waveshare185b::uiRefreshIntervalMs(page==Stopwatch,page==Radar,dragon::toolkit::status.recording);
+#else
+    page==Stopwatch?50:100;
+#endif
+  if(millis()-lastUpdate>updateInterval){lastUpdate=millis();if(micBadge){if(audioStatus().mode==AudioMode::Recording)lv_obj_clear_flag(micBadge,LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(micBadge,LV_OBJ_FLAG_HIDDEN);}
     if(page==Stopwatch)updateTimer();
     if(page==Clock)watchTick();
     if(page==ClockSettings)updateClockStatus();
@@ -967,6 +1009,38 @@ bool uiStopwatchKey(bool start,uint64_t at){
   if(!at)at=stopwatchNow();if(start)stopwatch.toggle(at);else if(stopwatch.running){if(locksport())stopwatch.finish(at);else stopwatch.lap(at);}else resetStopwatch();
   updateTimer();return true;
 }
+#ifdef BOARD_WAVESHARE_185B
+static bool ui185bHasMessageBox(lv_obj_t* object){
+  if(!object||lv_obj_has_flag(object,LV_OBJ_FLAG_HIDDEN))return false;
+  if(lv_obj_check_type(object,&lv_msgbox_class))return true;
+  for(unsigned i=0;i<lv_obj_get_child_cnt(object);++i)if(ui185bHasMessageBox(lv_obj_get_child(object,i)))return true;
+  return false;
+}
+static bool ui185bModalOpen(){return resetBox||clockPrompt||notice||ui185bHasMessageBox(root)||ui185bHasMessageBox(lv_layer_top());}
+bool ui185bTimerVisible(){return page==Stopwatch&&pending==Stopwatch&&!ui185bModalOpen();}
+void ui185bHome(){
+  lastInteraction=millis();if(ui185bModalOpen())return;
+  menuTab=0;go(Menu);
+  // Changing a tab stays on Menu, so explicitly rebuild its visible controls.
+  if(page==Menu&&pending==Menu)page=Boot;
+}
+void ui185bCycle(){
+  lastInteraction=millis();if(ui185bModalOpen()||page!=pending)return;
+  if(uiStopwatchKey(true))return;
+  // Use the visible page and tab so touchscreen navigation resets the cycle.
+  switch(page){
+    case Radar:ui185bHome();break;
+    case Menu:
+      if(menuTab==0){menuTab=1;go(Menu);if(pending==Menu)page=Boot;}
+      else if(menuTab==1)go(Badge);
+      else ui185bHome();
+      break;
+    case Badge:go(Clock);break;
+    case Clock:go(Radar);break;
+    default:ui185bHome();break;
+  }
+}
+#endif
 bool uiCommand(const String& cmd){
   if(cmd=="clock pig"){
     if(watchFace!=27||page!=Clock){Serial.println("CLOCK_PIG_ERROR select the Pig watch");return true;}

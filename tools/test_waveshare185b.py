@@ -46,12 +46,20 @@ source = r'''
 #include "board_pins.h"
 #include "wearable.h"
 #include "waveshare_185b_touch.h"
+#include "waveshare_185b_button.h"
+#include "waveshare_185b_performance.h"
 #include "waveshare_185b_lcd_init.h"
 #include <cassert>
 #include <cstring>
 #include <ctime>
 #include <initializer_list>
 static_assert(SCREEN_RES==360 && BOARD_HAS_SD && BOARD_HAS_AUDIO && BOARD_HAS_GPS && BOARD_GPS_UART);
+static_assert(waveshare185b::uiRefreshIntervalMs(false,true,true)==250);
+static_assert(waveshare185b::uiRefreshIntervalMs(false,true,false)==100);
+static_assert(waveshare185b::uiRefreshIntervalMs(false,false,true)==100);
+static_assert(waveshare185b::uiRefreshIntervalMs(true,false,true)==50);
+static_assert(waveshare185b::uiRefreshIntervalMs(true,false,false)==50);
+static_assert(waveshare185b::SdWriteBatchRecords==32);
 static_assert(LCD_SCLK==40 && LCD_CS==21 && LCD_RESET==3 && LCD_BACKLIGHT==5 && LCD_TE==18);
 static_assert(LCD_SDIO0==46 && LCD_SDIO1==45 && LCD_SDIO2==42 && LCD_SDIO3==41);
 static_assert(IIC_SDA==11 && IIC_SCL==10 && TP_RESET==1 && TP_INT==4 && TP_I2C_ADDR==0x15 && BTN_PIN==0);
@@ -151,7 +159,59 @@ static void touchChecks(){
     assert(table.first[table.second-1].command==0x29);
   }
 }
-int main(){rtcChecks();touchChecks();}
+static void buttonChecks(){
+  using waveshare185b::BootAction;
+  waveshare185b::BootClicks clicks;
+  assert(clicks.update(true,true,100,100000).action==BootAction::None);
+  assert(clicks.update(false,true,150,150000).action==BootAction::None);
+  assert(clicks.update(false,true,399,399000).action==BootAction::None);
+  auto single=clicks.update(false,true,400,400000);
+  assert(single.action==BootAction::Single&&single.at==100000&&single.queuedAt==400&&single.timer);
+  assert(waveshare185b::inputFresh(single.queuedAt,850)); // recognition delay must not consume queue-age budget
+  assert(!waveshare185b::inputFresh(single.queuedAt,901));
+  assert(clicks.update(false,true,450,450000).action==BootAction::None);
+
+  clicks={};
+  clicks.update(true,true,100,100000);clicks.update(false,true,150,150000);
+  assert(clicks.update(true,true,300,300000).action==BootAction::None);
+  auto twice=clicks.update(false,true,350,350000);
+  assert(twice.action==BootAction::Double&&twice.at==100000&&twice.queuedAt==350&&twice.timer);
+  assert(clicks.update(false,true,900,900000).action==BootAction::None); // no trailing single
+
+  clicks={};
+  clicks.update(true,true,100,100000);clicks.update(false,true,150,150000);
+  clicks.update(true,true,250,250000); // tap then hold: cancel the first pending single
+  assert(clicks.update(true,true,750,750000).action==BootAction::None);
+  auto home=clicks.update(true,true,950,950000);
+  assert(home.action==BootAction::Home&&home.at==250000);
+  assert(clicks.update(false,true,970,970000).action==BootAction::None);
+  assert(clicks.update(false,true,1500,1500000).action==BootAction::None);
+
+  clicks={};
+  clicks.update(true,false,100,100000);
+  auto nav1=clicks.update(false,false,140,140000);
+  assert(nav1.action==BootAction::Single&&!nav1.timer&&nav1.at==100000); // outside timer: immediate
+  clicks.update(true,false,200,200000);
+  auto nav2=clicks.update(false,false,230,230000);
+  assert(nav2.action==BootAction::Single&&!nav2.timer); // rapid navigation taps are two cycles
+  clicks.update(true,false,300,300000);
+  assert(clicks.update(true,false,1000,1000000).action==BootAction::Home);
+  assert(clicks.update(false,false,1010,1010000).action==BootAction::None);
+
+  clicks={};
+  clicks.update(true,true,100,100000);clicks.update(false,true,150,150000);
+  assert(clicks.update(false,false,200,200000).action==BootAction::None); // touch changed screen
+  assert(clicks.update(false,false,500,500000).action==BootAction::None);
+  clicks.update(true,false,600,600000);
+  assert(clicks.update(false,true,640,640000).action==BootAction::None); // changed during press
+
+  clicks={};
+  clicks.update(true,true,0xffffffe0u,100000);clicks.update(false,true,0xfffffff0u,120000);
+  assert(clicks.update(false,true,0xe9u,369000).action==BootAction::None);
+  auto wrapped=clicks.update(false,true,0xeau,370000);
+  assert(wrapped.action==BootAction::Single&&wrapped.at==100000&&wrapped.queuedAt==0xeau);
+}
+int main(){rtcChecks();touchChecks();buttonChecks();}
 '''
 source = source.replace('#include <initializer_list>', '#include <initializer_list>\n#include <utility>')
 path = WORK / 'protocol.cpp'
@@ -159,4 +219,4 @@ path.write_text(source, encoding='utf-8')
 exe = WORK / ('protocol.exe' if sys.platform == 'win32' else 'protocol')
 subprocess.run(compiler + flags + [str(path), '-o', str(exe)], check=True, env=build_env)
 subprocess.run([str(exe)], check=True)
-print('PASS 1.85B pin/bus isolation and 16 MB partitions; production RTC UTC/leap-date/oscillator/I2C checks; touch short-read, invalid-coordinate, stale-queue cancellation, held-finger suppression, overflow resync and rollover checks; both LCD tables')
+print('PASS 1.85B pin/bus isolation and 16 MB partitions; production RTC fault checks; touch stale/invalid/held/overflow checks; BOOT single/double/tap-hold/navigation/timestamp/stale/rollover checks; both LCD tables')

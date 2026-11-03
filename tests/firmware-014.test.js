@@ -10,7 +10,7 @@ import {hasNetworkTools} from '../web/network-tools.js';
 import {hasNotebook} from '../web/notebook.js';
 import {hasReconTools} from '../web/recon-transfer.js';
 import {hasPersonalThemes} from '../web/theme-transfer.js';
-import {resourcePack,resourceSetup,hasSd} from '../web/sd-resources.js';
+import {resourcePack,labelResourcePack,resourceSetup,hasSd} from '../web/sd-resources.js';
 const fixture=name=>JSON.parse(readFileSync(new URL(`./fixtures/${name}`,import.meta.url)));
 const manifests=fixture('release-0.13.26-manifests.json');
 manifests.m5dial=fixture('dial-0.13.27-manifests.json');
@@ -27,7 +27,7 @@ test('0.14 keeps every exact board handshake and installation contract',()=>{
    for(const mutate of [x=>x.version='0.15.0',x=>x.builds[0].parts[3].offset=0x20000,x=>x.name+=' wrong',x=>x.new_install_prompt_erase=false,x=>x.builds[0].chipFamily='ESP32']){
     const bad=structuredClone(m);mutate(bad);assert.throws(()=>validateManifest(bad,board,mode),board);
    }
-   if(hasSd(board))assert.ok(resourceSetup(board,{...m,sdResources:{...resourcePack}}));
+   if(hasSd(board))assert.ok(resourceSetup(board,{...m,sdResources:{...(board==='waveshare_185b'?labelResourcePack:resourcePack)}}));
   }
  }
 });

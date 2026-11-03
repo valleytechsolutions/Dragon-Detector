@@ -6,6 +6,7 @@
 #include "board_waveshare_185b.h"
 #include "waveshare_185b_lcd_init.h"
 #include "waveshare_185b_touch.h"
+#include "waveshare_185b_button.h"
 #include <Wire.h>
 #include <lvgl.h>
 #include <esp_heap_caps.h>
@@ -30,14 +31,16 @@ volatile bool touchIrq = false;
 std::atomic<uint32_t> i2cErrors{0}, touchSamples{0}, touchErrors{0};
 std::atomic<uint32_t> touchPresses{0}, inputDrops{0}, buttonPresses{0};
 std::atomic<bool> touchResync{false};
+std::atomic<bool> timerInputMode{false};
 volatile uint32_t flushes = 0, flushErrors = 0;
 struct TouchEvent { bool pressed; uint16_t x, y; uint32_t queuedAt; bool validSample; };
-struct KeyEvent { bool held; uint64_t at; uint32_t queuedAt; };
+using KeyEvent = waveshare185b::BootEvent;
 QueueHandle_t touchQueue = nullptr, keyQueue = nullptr;
 portMUX_TYPE inputMux = portMUX_INITIALIZER_UNLOCKED;
 TouchEvent latestTouch{};
 waveshare185b::TouchState physicalTouch;
 waveshare185b::TouchAgeGuard touchAgeGuard;
+waveshare185b::BootClicks bootClicks;
 int battery = -1;
 uint16_t batteryMv = 0;
 bool charging = false, gaugePresent = false;
@@ -101,25 +104,16 @@ void pollInputs() {
   }
   // BOOT is the only MCU button. The adjacent PWR key belongs to the hardware
   // latch and is deliberately not assigned a second firmware function.
-  static bool raw = false, stable = false, held = false;
-  static uint32_t changed = 0, downAt = 0;
-  static uint64_t stopwatchAt = 0;
+  static bool raw = false, stable = false;
+  static uint32_t changed = 0;
   const bool down = digitalRead(BTN_PIN) == LOW;
   if (down != raw) { raw = down; changed = now; }
   if (raw != stable && uint32_t(now - changed) >= 25) {
     stable = raw;
-    if (stable) { downAt = now; stopwatchAt = stopwatchNow(); held = false; }
-    else if (!held) {
-      KeyEvent event{false, stopwatchAt, now};
-      queueKey(event);
-      ++buttonPresses;
-    }
+    if (stable) ++buttonPresses;
   }
-  if (stable && !held && uint32_t(now - downAt) >= 700) {
-    held = true;
-    KeyEvent event{true, stopwatchAt, now};
-    queueKey(event);
-  }
+  const KeyEvent event = bootClicks.update(stable, timerInputMode.load(), now, stopwatchNow());
+  if (event.action != waveshare185b::BootAction::None) queueKey(event);
 }
 void inputTask(void*) {
   TickType_t wake = xTaskGetTickCount();
@@ -302,12 +296,21 @@ void scr_lvgl_init() {
   inputTaskReady = xTaskCreatePinnedToCore(inputTask, "185b-input", 3072, nullptr, 2, nullptr, ARDUINO_RUNNING_CORE) == pdPASS;
 }
 void boardLoop() {
+  timerInputMode.store(ui185bTimerVisible());
   if (!inputTaskReady) pollInputs();
   KeyEvent key;
   for (unsigned n = 0; n < 8 && xQueueReceive(keyQueue, &key, 0) == pdTRUE; ++n) {
     if (!waveshare185b::inputFresh(key.queuedAt, millis())) { ++inputDrops; continue; }
-    if (key.held || !uiStopwatchKey(true, key.at)) uiShow("menu");
+    if (key.action == waveshare185b::BootAction::Home) ui185bHome();
+    else if (key.timer) {
+      // A delayed timer click must never turn into navigation after a touch
+      // switched screens. The original first-press timestamp stays intact.
+      if (ui185bTimerVisible()) uiStopwatchKey(key.action == waveshare185b::BootAction::Single, key.at);
+      else ++inputDrops;
+    } else if (!ui185bTimerVisible()) ui185bCycle();
+    else ++inputDrops;
   }
+  timerInputMode.store(ui185bTimerVisible());
 }
 
 // RTC_IMPLEMENTATION_BEGIN: compiled directly by tools/test_waveshare185b.py.

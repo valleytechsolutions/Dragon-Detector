@@ -34,6 +34,9 @@ static void mount(){
   CardFS.setPins(SD_MMC_CLK_PIN,SD_MMC_CMD_PIN,SD_MMC_D0_PIN);
   bool mounted=CardFS.begin("/sdcard",true,false,SDMMC_FREQ_DEFAULT,12);
 #endif
+#ifdef BOARD_WAVESHARE_185B
+  mounted=sdMaintenanceBoot(mounted);
+#endif
   if(!mounted){Serial.println("SD: not mounted; insert FAT32 card and restart");return;}
   const char* dirs[]={"/dragon","/music","/recordings","/dragon/captures","/dragon/profiles","/dragon/events","/dragon/surveys","/dragon/missions","/dragon/wardrive","/dragon/resources"};
   for(const char* path:dirs){if(!CardFS.exists(path)&&!CardFS.mkdir(path)){Serial.printf("SD: cannot create %s; storage disabled\n",path);return;}}

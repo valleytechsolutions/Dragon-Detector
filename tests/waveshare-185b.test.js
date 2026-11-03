@@ -36,7 +36,7 @@ test('1.85B partition, manifest and resource contracts preserve update files and
     const manifest=fixture[mode];assert.equal(validateManifest(manifest,board,mode),manifest);
     assert.equal(manifest.builds[0].parts.some(p=>p.path==='littlefs.bin'),mode==='factory');
     assert.ok(!manifest.builds[0].parts.some(p=>p.offset===entries.nvs.offset));
-    assert.equal(resourceSetup(board,manifest).required,false);
+    assert.equal(resourceSetup(board,manifest).required,true);
     for(const wrong of ['spotpear','waveshare','waveshare_175','waveshare_175_gps'])assert.throws(()=>validateManifest(manifest,wrong,mode));
     assert.throws(()=>validateManifest({...manifest,version:'0.14.0'},board,mode));
   }

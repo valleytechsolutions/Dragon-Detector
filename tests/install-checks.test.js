@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {checkRelease,usbErrorText,installDiagnostics} from '../web/install-checks.js';
 import {boardProfiles} from '../web/board-profiles.js';
-import {resourcePack} from '../web/sd-resources.js';
+import {resourcePack,labelResourcePack} from '../web/sd-resources.js';
 const published=JSON.parse(readFileSync(new URL('./fixtures/release-0.13.26-manifests.json',import.meta.url)));
 published.m5dial=JSON.parse(readFileSync(new URL('./fixtures/dial-0.13.27-manifests.json',import.meta.url)));
 
@@ -33,8 +33,18 @@ test('all board profiles and both modes check every required file before allowin
   for(const board of Object.keys(boardProfiles))for(const mode of ['factory','update']){
     const r=rig(board,mode);const data=await checkRelease(board,mode,r);
     assert.equal(data.version,r.manifest.version);
-    assert.deepEqual(r.requests.slice(1).map(([url,opts])=>[url,opts.method]),r.manifest.builds[0].parts.map(p=>[`firmware/${board}/${p.path}`,'HEAD']));
+    const expected=r.manifest.builds[0].parts.map(p=>[`firmware/${board}/${p.path}`,'HEAD']);
+    if(r.manifest.sdResources?.required)expected.unshift([r.manifest.sdResources.path,'HEAD']);
+    assert.deepEqual(r.requests.slice(1).map(([url,opts])=>[url,opts.method]),expected);
   }
+});
+
+test('1.85B lookup pack must be published before its installer is offered',async()=>{
+ for(const mode of ['factory','update']){
+  const r=rig('waveshare_185b',mode),fetchBase=r.fetchImpl;
+  r.fetchImpl=async(url,opts)=>url===labelResourcePack.path?{ok:false,status:404}:fetchBase(url,opts);
+  await assert.rejects(checkRelease('waveshare_185b',mode,r),/Required SD resource pack/);
+ }
 });
 
 test('missing, empty, HTML fallback and oversized firmware keep installation unavailable',async()=>{

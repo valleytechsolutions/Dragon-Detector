@@ -1,4 +1,7 @@
 #include "sd_records.h"
+#ifdef BOARD_WAVESHARE_185B
+#include "waveshare_185b_performance.h"
+#endif
 #ifndef BOARD_RADAR_LITE
 void SdRecords::fail(const char* reason){
   accepting_=closing_=false;failed_=true;
@@ -53,7 +56,13 @@ void SdRecords::loop(){
   // Main task shares the card with the existing audio/logging adapter.
   if(!sdMutex||xSemaphoreTake(sdMutex,0)!=pdTRUE)return;
   uint8_t data[dragon::wardrive::Records::MaxRecord];uint32_t at=micros();
-  for(unsigned i=0;i<4;++i){
+  constexpr unsigned maxRecords=
+#ifdef BOARD_WAVESHARE_185B
+    waveshare185b::SdWriteBatchRecords;
+#else
+    4;
+#endif
+  for(unsigned i=0;i<maxRecords;++i){
     size_t n=queue_.front(data,sizeof(data));if(!n)break;
     if(segmentBytes_+n>SegmentBytes&&!finishSegment())break;
     if(!file_&&!openSegment())break;

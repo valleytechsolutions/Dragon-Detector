@@ -1,0 +1,227 @@
+{
+  "schema": 1,
+  "snapshot": 20261103,
+  "provenance": "Existing Dragon Detector BLE display metadata; display labels only, not detection rules. UUID and company IDs use separate Bluetooth namespaces.",
+  "labels": [
+    {
+      "kind": "uuid16",
+      "id": "1800",
+      "name": "Generic Access"
+    },
+    {
+      "kind": "uuid16",
+      "id": "1801",
+      "name": "Generic Attribute"
+    },
+    {
+      "kind": "uuid16",
+      "id": "180a",
+      "name": "Device Information"
+    },
+    {
+      "kind": "uuid16",
+      "id": "180d",
+      "name": "Heart Rate"
+    },
+    {
+      "kind": "uuid16",
+      "id": "180f",
+      "name": "Battery"
+    },
+    {
+      "kind": "uuid16",
+      "id": "1812",
+      "name": "Human Interface Device"
+    },
+    {
+      "kind": "uuid16",
+      "id": "1816",
+      "name": "Cycling Speed/Cadence"
+    },
+    {
+      "kind": "uuid16",
+      "id": "181a",
+      "name": "Environmental Sensing"
+    },
+    {
+      "kind": "uuid16",
+      "id": "1826",
+      "name": "Fitness Machine"
+    },
+    {
+      "kind": "uuid16",
+      "id": "2a00",
+      "name": "Device Name"
+    },
+    {
+      "kind": "uuid16",
+      "id": "2a19",
+      "name": "Battery Level"
+    },
+    {
+      "kind": "uuid16",
+      "id": "2a29",
+      "name": "Manufacturer Name"
+    },
+    {
+      "kind": "uuid16",
+      "id": "2a24",
+      "name": "Model Number"
+    },
+    {
+      "kind": "uuid16",
+      "id": "2a25",
+      "name": "Serial Number"
+    },
+    {
+      "kind": "uuid16",
+      "id": "2a26",
+      "name": "Firmware Revision"
+    },
+    {
+      "kind": "uuid16",
+      "id": "2a4a",
+      "name": "HID Information"
+    },
+    {
+      "kind": "uuid16",
+      "id": "2a4b",
+      "name": "HID Report Map"
+    },
+    {
+      "kind": "uuid16",
+      "id": "2a4c",
+      "name": "HID Control Point"
+    },
+    {
+      "kind": "uuid16",
+      "id": "2a4d",
+      "name": "HID Report"
+    },
+    {
+      "kind": "uuid16",
+      "id": "2a4e",
+      "name": "HID Protocol Mode"
+    },
+    {
+      "kind": "uuid16",
+      "id": "2901",
+      "name": "User Description"
+    },
+    {
+      "kind": "uuid16",
+      "id": "2902",
+      "name": "Notification Configuration"
+    },
+    {
+      "kind": "uuid16",
+      "id": "2908",
+      "name": "HID Report Reference"
+    },
+    {
+      "kind": "uuid16",
+      "id": "fe2c",
+      "name": "Google Fast Pair"
+    },
+    {
+      "kind": "uuid16",
+      "id": "feaa",
+      "name": "Eddystone / Find Hub"
+    },
+    {
+      "kind": "uuid16",
+      "id": "fcd2",
+      "name": "BTHome"
+    },
+    {
+      "kind": "uuid16",
+      "id": "fd6f",
+      "name": "Exposure Notification"
+    },
+    {
+      "kind": "uuid16",
+      "id": "fe95",
+      "name": "Xiaomi MiBeacon"
+    },
+    {
+      "kind": "uuid16",
+      "id": "feed",
+      "name": "Tile"
+    },
+    {
+      "kind": "uuid16",
+      "id": "feec",
+      "name": "Tile"
+    },
+    {
+      "kind": "uuid16",
+      "id": "fd84",
+      "name": "Tile"
+    },
+    {
+      "kind": "company16",
+      "id": "004c",
+      "name": "Apple"
+    },
+    {
+      "kind": "company16",
+      "id": "0006",
+      "name": "Microsoft"
+    },
+    {
+      "kind": "company16",
+      "id": "0075",
+      "name": "Samsung"
+    },
+    {
+      "kind": "company16",
+      "id": "00e0",
+      "name": "Google"
+    },
+    {
+      "kind": "company16",
+      "id": "034d",
+      "name": "Axon / TASER"
+    },
+    {
+      "kind": "company16",
+      "id": "01ab",
+      "name": "Meta"
+    },
+    {
+      "kind": "company16",
+      "id": "058e",
+      "name": "Meta Technologies"
+    },
+    {
+      "kind": "company16",
+      "id": "0d53",
+      "name": "Luxottica"
+    },
+    {
+      "kind": "company16",
+      "id": "03c2",
+      "name": "Snap"
+    },
+    {
+      "kind": "company16",
+      "id": "060c",
+      "name": "Vuzix"
+    },
+    {
+      "kind": "company16",
+      "id": "08c3",
+      "name": "Chipolo"
+    },
+    {
+      "kind": "company16",
+      "id": "0e29",
+      "name": "Flipper Devices (includes BUSY Bar)"
+    },
+    {
+      "kind": "company16",
+      "id": "09c8",
+      "name": "Xuntong module"
+    }
+  ]
+}

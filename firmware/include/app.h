@@ -6,6 +6,9 @@
 #if defined(BOARD_SD_SPI)
 #include <SD.h>
 #define CardFS SD
+#elif defined(BOARD_WAVESHARE_185B)
+#include "sd_maintenance.h"
+#define CardFS dragonSdMmc
 #else
 #include <SD_MMC.h>
 #define CardFS SD_MMC

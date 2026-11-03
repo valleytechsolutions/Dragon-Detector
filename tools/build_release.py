@@ -67,7 +67,7 @@ def build(board,skip):
         (out/'BOARD-STATUS.txt').write_text(
             'Waveshare ESP32-S3-Touch-LCD-1.85B, 360 x 360, 16 MB flash, 8 MB PSRAM.\n'
             'Dedicated profile: not interchangeable with 1.85, 1.85C, AMOLED 1.75 or Spotpear.\n'
-            'FAT32 microSD is preferred for supported logs, profiles and captures; the vendor pack is optional.\n'
+            'FAT32 microSD is preferred for supported logs, profiles and captures. Install the SD lookup pack for IEEE vendor and BLE UUID/company names; radar detection works without those labels.\n'
             'External UART GPS is off by default. Wardrive appears only while enabled with recent valid NMEA data.\n'
             'J8 is SH1.0, not standard Grove: pin1 RX44, pin2 TX43, pin3 3.3V, pin4 GND. Use compatible logic and supply.\n'
             'PWR is hardware-controlled. RTC retention requires a connected, charged battery.\n'
@@ -93,6 +93,7 @@ def build(board,skip):
         manifest={'name':f'Dragon Detector — {BOARDS[board][0]} ({mode})','version':VERSION,'new_install_prompt_erase':True,'new_install_improv_wait_time':0,'builds':[{'chipFamily':'ESP32-S3','parts':[{'path':name,'offset':offset} for name,offset in selected]}]}
         if board in ('watcher','spotpear','waveshare_185b','waveshare_175','waveshare_175_gps','xiao_round','lilygo_175'):
             manifest['sdResources']={'schema':1,'required':False,'path':'resources/dragon-resources-v1-20261023.zip','placement':'/dragon/resources/vendors.ddr'}
+            if board=='waveshare_185b':manifest['sdResources'].update(required=True,path='resources/dragon-resources-v1-20261103.zip')
         (out/f'{mode}.json').write_text(json.dumps(manifest,indent=2)+'\n',encoding='utf-8')
     # A merged factory image is also provided for esptool/M5Burner-style tools.
     args=['-m','esptool','--chip','esp32s3','merge-bin','-o',str(out/'factory-0x0.bin')]
@@ -114,6 +115,7 @@ def build(board,skip):
     if board in ('watcher','spotpear','waveshare_185b','waveshare_175','waveshare_175_gps','xiao_round','lilygo_175'):
         metadata['hardware_validation']='sd-resource-beta-unverified'
         metadata['sd_resources']={'schema':1,'required':False,'snapshot':20261023}
+        if board=='waveshare_185b':metadata['sd_resources'].update(required=True,pack_date=20261103,ble_labels_snapshot=20261103,compiled_registry=False)
     if board=='watcher':metadata['hardware_validation']='display-rtc-sd-controls-verified'
     if board=='waveshare_185b':metadata['hardware_validation']='185b-display-touch-sd-rtc-restart-verified'
     metadata['flash_size']=0x2000000 if board in ('watcher','waveshare') else 0x800000 if board in ('m5dial','xiao_round') else 0x1000000

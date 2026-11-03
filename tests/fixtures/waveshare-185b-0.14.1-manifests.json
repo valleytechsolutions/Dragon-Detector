@@ -33,8 +33,8 @@
     ],
     "sdResources": {
       "schema": 1,
-      "required": false,
-      "path": "resources/dragon-resources-v1-20261023.zip",
+      "required": true,
+      "path": "resources/dragon-resources-v1-20261103.zip",
       "placement": "/dragon/resources/vendors.ddr"
     }
   },
@@ -68,8 +68,8 @@
     ],
     "sdResources": {
       "schema": 1,
-      "required": false,
-      "path": "resources/dragon-resources-v1-20261023.zip",
+      "required": true,
+      "path": "resources/dragon-resources-v1-20261103.zip",
       "placement": "/dragon/resources/vendors.ddr"
     }
   }

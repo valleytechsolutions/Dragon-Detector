@@ -35,7 +35,11 @@ jobs:
       - run: python tools/test_m5dial.py --cxx g++
       - run: python tools/test_lilygo175.py --cxx g++
       - run: python tools/test_waveshare185b.py --cxx g++
+      - run: python tools/test_waveshare185b_ui.py --cxx g++
       - run: python tools/test_sd_records.py --cxx g++
+      - run: python tools/test_sd_labels.py --cxx g++
+      - run: python tools/test_sd_labels.py --cxx g++ --sanitize
+      - run: python tools/test_sd_maintenance.py --cxx g++
       - run: python tools/test_gps_transport.py --cxx g++
       - run: python tools/test_wardrive_radio.py --cxx g++
       - run: python tools/test_gps_uart.py --cxx g++

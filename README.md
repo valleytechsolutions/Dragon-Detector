@@ -67,7 +67,7 @@ Build your own clock, radar and counter in the [Custom theme tab](https://valley
 2. Select the exact board. Use **Update matching Dragon Detector** for a compatible installation, or **Fresh install** for a new board. Fresh install replaces saved files and settings.
 3. Choose **Connect & install** and keep USB connected until installation and automatic date/time verification finish.
 
-[Installation and recovery](docs/FLASHING.md) · [M5Burner package](docs/M5BURNER.md) · [Release checksums](https://git.churchofmalware.org/Valleytech/Dragon-Detector/releases/latest)
+[Installation and recovery](docs/FLASHING.md) · [M5Burner package](docs/M5BURNER.md) · [Firmware downloads and checksums](https://valleytech-dragon-detector.pages.dev/#install)
 
 ## Supported hardware
 

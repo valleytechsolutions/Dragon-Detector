@@ -1,12 +1,21 @@
-# SD resources beta — 0.13.28
+# SD lookup resources
 
-This is an optional resource edition. Radar and the internal MA-L registry still work without a card. No SD-required edition is being released: additional capacity is useful, but no physical SD latency or scan-continuity measurements are available yet. These changes are based on local commit `588ec4d`, preserving the Dial v1.1 release and approved showcase images. The production site is not automatically replaced by building this beta.
+**Waveshare LCD 1.85B, firmware 0.14.1:** general manufacturer and Bluetooth lookup names live on SD, reducing the application image. Its resource pack is required for those names. Firmware and core radar detections still operate without the pack; unresolved manufacturer, service, characteristic and company names do not disable the detector.
+
+**Other supported SD profiles:** the existing vendor pack remains optional and the internal registry remains available as fallback. Their published firmware/resource contract is unchanged. Select the download shown for your exact board in the web flasher.
 
 ## Install
 
-Download `dragon-resources-v1-20261023.zip`. Extract **the `dragon` directory to the FAT32 card root**, giving `/dragon/resources/vendors.ddr`. Do not copy only the ZIP or create another containing directory. Preserve captures and private configuration already on the card. Insert before powering on and restart after changing the pack. Firmware 0.13.28 reads schema 1; older firmware ignores this optional file. `manifest.json` records exact source and output SHA-256 values. Check the ZIP against the supplied SHA256SUMS before use.
+| Board profile | Download | Files under the card root |
+|---|---|---|
+| Waveshare LCD 1.85B, 0.14.1+ | `dragon-resources-v1-20261103.zip` | `/dragon/resources/vendors.ddr` and `/dragon/resources/ble-labels.ddb` |
+| Other supported SD profiles, 0.13.28+ | `dragon-resources-v1-20261023.zip` | `/dragon/resources/vendors.ddr` |
 
-`resources status` reports validation status, snapshot, entry count, allocated bytes, startup load time, maximum lookup time and lookup count. Missing cards/files, unsupported schema, old snapshots, truncation, failed allocation and malformed data leave internal lookup available. This command exists only on SD profiles. No card formatting, overwriting existing resources, or automatic downloads occur.
+Extract **the `dragon` directory to the FAT32 card root**. Do not copy only the ZIP or create another containing directory. Preserve captures and private configuration already on the card. Insert the card before powering on and **restart after installing or replacing the pack**: lookup data is loaded at startup, not refreshed while scanning. `manifest.json` records source and output hashes; check the ZIP against the supplied SHA256SUMS before use.
+
+`resources status` reports resource validation and loading information. On the 1.85B, missing cards/files, invalid data or failed allocation leave the affected lookup names unresolved. On the other profiles, the internal vendor lookup remains available. A valid resource stays in PSRAM after loading, so lookups do not depend on per-detection SD reads. This command exists only on SD profiles. Firmware never automatically formats the card or downloads resource packs.
+
+On the 1.85B, **SYSTEM → SD resources** also shows ready, missing, invalid or unavailable directly on the screen. Tap it for both file statuses and setup instructions. Missing or damaged resources do not trigger automatic popups during another task.
 
 ## Exact capability matrix
 
@@ -14,7 +23,7 @@ Download `dragon-resources-v1-20261023.zip`. Extract **the `dragon` directory to
 |---|---|---|
 | Seeed SenseCAP Watcher (0.13.29+) | Optional | External AT6668 via UART; GPS testing deferred; no automatic upload |
 | Spotpear / Guition JC3636W518 | Optional | No |
-| Waveshare ESP32-S3-Touch-LCD-1.85B | Optional | [External UART GPS](WAVESHARE-LCD-185B.md#optional-external-uart-gps), off by default; Wardrive requires valid receiver data |
+| Waveshare ESP32-S3-Touch-LCD-1.85B | Required for manufacturer and BLE lookup names; radar works without it | [External UART GPS](WAVESHARE-LCD-185B.md#optional-external-uart-gps), off by default; Wardrive requires valid receiver data |
 | Waveshare ESP32-S3-Touch-AMOLED-1.75 | Optional | 0.13.40 development: [optional external UART GPS](EXTERNAL-GPS-AMOLED175.md), off by default; explicit SD-configured uploads |
 | Waveshare ESP32-S3-Touch-AMOLED-1.75-G | Optional | LC76G; 0.13.39 development adds explicit [SD-configured uploads](WARDRIVE-UPLOADS.md), pending live service validation |
 | Waveshare ESP32-S3-Touch-AMOLED-1.75C | None | No |
@@ -28,13 +37,15 @@ Download `dragon-resources-v1-20261023.zip`. Extract **the `dragon` directory to
 
 The matrix follows the current board drivers and manufacturer references already pinned in the board guides. SD on the XIAO means the Round Display expansion, not the bare XIAO. No external GPS accessories are implicitly enabled. The T5-E1 has not been converted into an ESP32 target or given ESP32 capabilities. The original 0.13.28 beta removed GPS wardriving from the standard 1.75; 0.13.40 restores it only through explicitly enabled external GPS settings.
 
-## Architecture and measurements
+## Vendor pack architecture and measurements
 
-The pack adds IEEE MA-M (28-bit) and MA-S (36-bit) assignments to MA-L (24-bit). Its 54,282 records occupy **1,270,072 bytes**, including a sorted 10-byte index and deduplicated names. More specific prefixes win. Public/universal addresses only: randomized BLE, locally administered Wi-Fi and multicast addresses do not produce vendor claims. Registry labels never change detector confidence or infer product identity.
+Both downloads contain the same 2026-10-23 IEEE assignment snapshot. It includes MA-L (24-bit), MA-M (28-bit) and MA-S (36-bit) assignments. Its 54,282 records occupy **1,270,072 bytes**, including a sorted 10-byte index and deduplicated names. More specific prefixes win. Public/universal addresses only: randomized BLE, locally administered Wi-Fi and multicast addresses do not produce vendor claims. Registry labels never change detector confidence or infer product identity.
 
 The independent DDR1 reader accepts at most 3 MiB / 100,000 records, validates lengths, whole-file CRC32 (checksum field zeroed), sorted unique keys, permitted prefix widths, string boundaries and label lengths. Snapshots before 2026-10-15 are rejected. It does not claim authenticity: CRC detects accidental corruption, and trusted distribution SHA-256 checks remain important.
 
-The card is read sequentially in 4 KiB chunks before radio startup. A complete validated index is retained in PSRAM; lookups perform at most three binary searches with **zero SD calls**, no allocation and no pointer eviction. At least 2 MiB free PSRAM is required beyond the allocation at load time. The existing 709,215-byte decoded internal registry remains available as fallback. This trades about 1.27 MB extra PSRAM and startup cost for predictable steady-state lookup. A sector cache would save RAM but introduce card stalls and cache-pointer lifetimes into UI lookup; it is not justified without hardware measurements. No-SD full profiles retain their existing compact flash registry; Lite profiles retain their existing detector tables.
+The card is read sequentially in 4 KiB chunks before radio startup. A complete validated index is retained in PSRAM; lookups perform at most three binary searches with **zero SD calls**, no allocation and no pointer eviction. At least 2 MiB free PSRAM is required beyond the allocation at load time. Older SD profiles retain the existing 709,215-byte decoded internal registry as fallback; the 1.85B omits that internal database and uses the validated card index. No-SD full profiles retain their existing compact flash registry; Lite profiles retain their existing detector tables.
+
+The 1.85B download also includes `ble-labels.ddb`, a separate typed lookup file for Bluetooth service, characteristic and company names. It is loaded and validated independently of `vendors.ddr`. Numeric detector signatures, matching logic, firmware code and built-in artwork remain in the application. The pack is lookup data, not executable firmware, and installing it does not add new detection methods.
 
 One Windows host run validated the full pack in 5,110 microseconds and performed 100,000 lookups in 7,211 microseconds (`-O2`, assertions enabled). These are parser/CPU observations, **not ESP32 timing, filesystem throughput, or evidence of faster scanning**. Reproduce with `tools/test_sd_resources.py`; timings vary. Device counters provide the missing measurements.
 

@@ -112,6 +112,9 @@ static void command(const String& c){
     Serial.println("WARDRIVE_BUSY stop wardriving and wait for SD save first");return;
   }
   if(personalThemeCommand(c))return;
+#ifdef BOARD_WAVESHARE_185B
+  if(sdMaintenanceCommand(c))return;
+#endif
   if(c=="system restart"){
     if(stopwatch.running||reconOwnsRadio()||bleLabOwnsRadio()||reconStorageBusy()){Serial.println("SYSTEM_ERROR stop timing and radio sessions first");return;}
     Serial.println("SYSTEM_RESTARTING");Serial.flush();delay(50);ESP.restart();return;
@@ -136,7 +139,13 @@ static void command(const String& c){
 #if BOARD_HAS_SD
   if(c=="resources status"){sdResourcesStatus();return;}
 #endif
-  if(c=="registry status"){Serial.printf("REGISTRY entries=%u bits=24 source=IEEE_MA_L\n",dragon::vendorRegistryCount());return;}
+  if(c=="registry status"){
+#ifdef BOARD_WAVESHARE_185B
+    Serial.printf("REGISTRY entries=%u bits=24,28,36 source=SD_IEEE_MA_L_M_S fallback=unresolved ble_labels=%lu\n",dragon::vendorRegistryCount(),(unsigned long)sdResourceBleLabelCount());
+#else
+    Serial.printf("REGISTRY entries=%u bits=24 source=IEEE_MA_L\n",dragon::vendorRegistryCount());
+#endif
+    return;}
 #ifndef BOARD_RADAR_LITE
   if(notebookCommand(c))return;
 #endif
@@ -252,7 +261,13 @@ void setup(){
   uint32_t at=millis();while(millis()-at<1600){uiLoop();delay(5);}
   storageBegin();sdResourcesBegin();badgeInit();audioBegin();detectorBegin();notebookBegin();
 #ifndef BOARD_RADAR_LITE
-  if(!dragon::vendorRegistryBegin())Serial.println("REGISTRY unavailable: PSRAM allocation or integrity check");
+  if(!dragon::vendorRegistryBegin())Serial.println(
+#ifdef BOARD_WAVESHARE_185B
+    "REGISTRY labels unavailable: install SD lookup pack and restart; radar detection remains active"
+#else
+    "REGISTRY unavailable: PSRAM allocation or integrity check"
+#endif
+  );
 #endif
 #ifdef BOARD_CROWPANEL_21
   extern void crowInputStatus();crowInputStatus();
