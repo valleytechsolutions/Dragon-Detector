@@ -23,7 +23,7 @@
 #include "esp_log.h"
 #include "esp_check.h"
 #include "esp_lcd_panel_io.h"
-#include "esp_lcd_touch.h"
+#include "esp_lcd_touch_spd2010.h"
 
 static const char *TAG = "SPD2010";
 
@@ -68,6 +68,7 @@ typedef struct {
 typedef struct {
     tp_report_t rpt[10];
     uint8_t touch_num;
+    bool report_received; // Distinguish a healthy idle poll from an explicit release.
     uint8_t pack_code;
     uint8_t down;
     uint8_t up;
@@ -162,11 +163,25 @@ err:
 
 static esp_err_t read_data(esp_lcd_touch_handle_t tp)
 {
-    uint8_t touch_cnt = 0;
+    bool report_received = false;
+    return esp_lcd_touch_spd2010_read_sample(tp, &report_received);
+}
 
+esp_err_t esp_lcd_touch_spd2010_read_sample(esp_lcd_touch_handle_t tp, bool *report_received)
+{
+    ESP_RETURN_ON_FALSE(tp && report_received, ESP_ERR_INVALID_ARG, TAG, "Invalid sample arguments");
+    *report_received = false;
+    // Do not let a failed or idle poll expose coordinates from an older report.
+    portENTER_CRITICAL(&tp->data.lock);
+    tp->data.points = 0;
+    portEXIT_CRITICAL(&tp->data.lock);
     tp_touch_t touch = {0};
     ESP_RETURN_ON_ERROR(tp_read_data(tp, &touch), TAG, "read data failed");
-
+    if (!touch.report_received) {
+        return ESP_OK;
+    }
+    *report_received = true;
+    uint8_t touch_cnt = 0;
     portENTER_CRITICAL(&tp->data.lock);
     /* Expect Number of touched points */
     touch_cnt = (touch.touch_num > CONFIG_ESP_LCD_TOUCH_MAX_POINTS ? CONFIG_ESP_LCD_TOUCH_MAX_POINTS : touch.touch_num);
@@ -308,6 +323,11 @@ static esp_err_t read_tp_status_length(esp_lcd_touch_handle_t tp, tp_status_t *t
     esp_rom_delay_us(200);
     i2c_read(&sample_data[0], sizeof(sample_data));
     esp_rom_delay_us(200);
+    // A floating/all-ones read is not a BIOS boot indication. Never send a
+    // CPU-start command based on an invalid bus response.
+    ESP_RETURN_ON_FALSE(!(sample_data[0] == 0xff && sample_data[1] == 0xff &&
+                          sample_data[2] == 0xff && sample_data[3] == 0xff),
+                        ESP_ERR_INVALID_RESPONSE, TAG, "invalid all-ones status");
     tp_status->status_low.pt_exist = (sample_data[0] & 0x01);
     tp_status->status_low.gesture = (sample_data[0] & 0x02);
     tp_status->status_high.tic_busy = ((sample_data[1] & 0x80) >> 7);
@@ -327,7 +347,7 @@ static esp_err_t read_tp_hdp(esp_lcd_touch_handle_t tp, tp_status_t *tp_status, 
     uint8_t i, offset;
     uint8_t check_id;
 
-    ESP_RETURN_ON_FALSE(tp_status->read_len >= 5 && tp_status->read_len <= sizeof(sample_data),
+    ESP_RETURN_ON_FALSE(tp_status->read_len >= 4 && tp_status->read_len <= sizeof(sample_data),
                         ESP_ERR_INVALID_RESPONSE, TAG, "invalid HDP length: %" PRIu16, tp_status->read_len);
 
     sample_data[0] = 0x00;
@@ -338,6 +358,11 @@ static esp_err_t read_tp_hdp(esp_lcd_touch_handle_t tp, tp_status_t *tp_status, 
     i2c_read(&sample_data[0], tp_status->read_len);
     esp_rom_delay_us(200);
 
+    if (tp_status->read_len == 4 && tp_status->status_low.pt_exist) {
+        touch->report_received = true; // Empty point report releases all contacts.
+        return ESP_OK;
+    }
+    ESP_RETURN_ON_FALSE(tp_status->read_len >= 5, ESP_ERR_INVALID_RESPONSE, TAG, "missing HDP report ID");
     check_id = sample_data[4];
 
     if ((check_id <= 0x0A) && tp_status->status_low.pt_exist) {
@@ -347,9 +372,12 @@ static esp_err_t read_tp_hdp(esp_lcd_touch_handle_t tp, tp_status_t *tp_status, 
         ESP_RETURN_ON_FALSE(touch->touch_num <= SPD2010_MAX_TOUCH_POINTS,
                             ESP_ERR_INVALID_RESPONSE, TAG, "too many touch points: %u", touch->touch_num);
         touch->gesture = 0x00;
+        touch->report_received = true;
 
         for (i = 0; i < touch->touch_num; i++) {
             offset = i * 6;
+            ESP_RETURN_ON_FALSE(sample_data[4 + offset] <= 0x0a,
+                                ESP_ERR_INVALID_RESPONSE, TAG, "invalid contact ID");
             touch->rpt[i].id = sample_data[4 + offset];
             touch->rpt[i].x = (((sample_data[7 + offset] & 0xF0) << 4) | sample_data[5 + offset]);
             touch->rpt[i].y = (((sample_data[7 + offset] & 0x0F) << 8) | sample_data[6 + offset]);
@@ -388,8 +416,7 @@ static esp_err_t read_tp_hdp(esp_lcd_touch_handle_t tp, tp_status_t *tp_status, 
         touch->gesture = sample_data[6] & 0x07;
         ESP_LOGD(TAG, "gesture : 0x%02x\n", touch->gesture);
     } else {
-        touch->touch_num = 0x00;
-        touch->gesture = 0x00;
+        return ESP_ERR_INVALID_RESPONSE;
     }
     return ESP_OK;
 }
@@ -444,6 +471,13 @@ static esp_err_t read_fw_version(esp_lcd_touch_handle_t tp)
     i2c_read(&sample_data[0], 18);
     esp_rom_delay_us(200);
 
+    bool all_zero = true, all_ones = true;
+    for (size_t i = 0; i < sizeof(sample_data); ++i) {
+        all_zero = all_zero && sample_data[i] == 0;
+        all_ones = all_ones && sample_data[i] == 0xff;
+    }
+    ESP_RETURN_ON_FALSE(!all_zero && !all_ones, ESP_ERR_INVALID_RESPONSE, TAG, "invalid firmware version");
+
     Dummy = ((uint32_t)sample_data[0] << 24) | ((uint32_t)sample_data[1] << 16) |
             ((uint32_t)sample_data[2] << 8) | sample_data[3];
     DVer = ((uint16_t)sample_data[5] << 8) | sample_data[4];
@@ -459,53 +493,55 @@ static esp_err_t read_fw_version(esp_lcd_touch_handle_t tp)
     return ESP_OK;
 }
 
+// A malformed or unfinished report must be acknowledged once so the next
+// poll can recover. Keep the original error; an ACK is not a valid touch.
+static esp_err_t discard_report(esp_lcd_touch_handle_t tp, esp_err_t cause)
+{
+    (void)write_tp_clear_int_cmd(tp);
+    return cause;
+}
+
 static esp_err_t tp_read_data(esp_lcd_touch_handle_t tp, tp_touch_t *touch)
 {
     tp_status_t tp_status = {0};
     tp_hdp_status_t tp_hdp_status = {0};
-    unsigned drain_attempts = 0; // Dragon Detector: bound malformed/stuck controller responses.
 
     ESP_RETURN_ON_ERROR(read_tp_status_length(tp, &tp_status), TAG, "Read status length failed");
-
     if (tp_status.status_high.tic_in_bios) {
-        /* Write Clear TINT Command */
         ESP_RETURN_ON_ERROR(write_tp_clear_int_cmd(tp), TAG, "Write clear int cmd failed");
-
-        /* Write CPU Start Command */
         ESP_RETURN_ON_ERROR(write_tp_cpu_start_cmd(tp), TAG, "Write cpu start cmd failed");
-
     } else if (tp_status.status_high.tic_in_cpu) {
-        /* Write Touch Change Command */
         ESP_RETURN_ON_ERROR(write_tp_point_mode_cmd(tp), TAG, "Write point mode cmd failed");
-
-        /* Write Touch Start Command */
         ESP_RETURN_ON_ERROR(write_tp_start_cmd(tp), TAG, "Write start cmd failed");
-
-        /* Write Clear TINT Command */
         ESP_RETURN_ON_ERROR(write_tp_clear_int_cmd(tp), TAG, "Write clear int cmd failed");
-
     } else if (tp_status.status_high.cpu_run && tp_status.read_len == 0) {
         ESP_RETURN_ON_ERROR(write_tp_clear_int_cmd(tp), TAG, "Write clear int cmd failed");
+        touch->report_received = true; // Controller explicitly reports no contacts.
     } else if (tp_status.status_low.pt_exist || tp_status.status_low.gesture) {
-        /* Read HDP */
-        ESP_RETURN_ON_ERROR(read_tp_hdp(tp, &tp_status, touch), TAG, "Read hdp failed");
-
-hdp_done_check:
-        ESP_RETURN_ON_FALSE(++drain_attempts <= 4, ESP_ERR_TIMEOUT, TAG, "HDP drain limit");
-        /* Read HDP Status */
-        ESP_RETURN_ON_ERROR(read_tp_hdp_status(tp, &tp_hdp_status), TAG, "Read hdp status failed");
-
-        if (tp_hdp_status.status == 0x82) {
-            /* Clear INT */
-            ESP_RETURN_ON_ERROR(write_tp_clear_int_cmd(tp), TAG, "Write clear int cmd failed");
-        } else if (tp_hdp_status.status == 0x00) {
-            /* Read HDP Remain Data */
-            ESP_RETURN_ON_ERROR(Read_HDP_REMAIN_DATA(tp, &tp_hdp_status), TAG, "Read hdp remain data failed");
-            goto hdp_done_check;
+        esp_err_t err = read_tp_hdp(tp, &tp_status, touch);
+        if (err != ESP_OK) {
+            return discard_report(tp, err);
         }
+        // Bound malformed/stuck controller responses and release their IRQ.
+        for (unsigned attempt = 0; attempt < 4; ++attempt) {
+            err = read_tp_hdp_status(tp, &tp_hdp_status);
+            if (err != ESP_OK) {
+                return discard_report(tp, err);
+            }
+            if (tp_hdp_status.status == 0x82) {
+                return write_tp_clear_int_cmd(tp);
+            }
+            if (tp_hdp_status.status != 0x00) {
+                return discard_report(tp, ESP_ERR_INVALID_RESPONSE);
+            }
+            err = Read_HDP_REMAIN_DATA(tp, &tp_hdp_status);
+            if (err != ESP_OK) {
+                return discard_report(tp, err);
+            }
+        }
+        return discard_report(tp, ESP_ERR_TIMEOUT);
     } else if (tp_status.status_high.cpu_run && tp_status.status_low.aux) {
         ESP_RETURN_ON_ERROR(write_tp_clear_int_cmd(tp), TAG, "Write clear int cmd failed");
     }
-
     return ESP_OK;
 }

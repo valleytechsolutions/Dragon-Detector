@@ -10,5 +10,6 @@ bool uiRotaryWake();
 bool uiRotaryOpenMenu();
 void rotaryUiTouch(bool down);
 void rotaryUiReset();
+void rotaryUiDiagnostics();
 #endif
 #endif
