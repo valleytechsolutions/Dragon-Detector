@@ -1,5 +1,8 @@
 #include "app.h"
 #include "board_pins.h"
+#ifdef BOARD_WAVESHARE_185B
+#include "board_waveshare_185b.h"
+#endif
 #include <Preferences.h>
 #include <esp_timer.h>
 #include <lvgl.h>
@@ -31,6 +34,9 @@ static void rotatedFlush(lv_disp_drv_t* drv,const lv_area_t* a,lv_color_t* pixel
 static void applyRotation(){
   auto* display=lv_disp_get_default();
   if(display->driver->rotated==displayRotation)return;
+#ifdef BOARD_WAVESHARE_185B
+  waveshare185bResetPointer();
+#endif
   lv_disp_set_rotation(display,lv_disp_rot_t(displayRotation));
   for(auto* input=lv_indev_get_next(nullptr);input;input=lv_indev_get_next(input))lv_indev_reset(input,nullptr);
   lv_obj_invalidate(lv_scr_act());
@@ -45,6 +51,10 @@ void wearableBegin(){
   #if defined(BOARD_STOPWATCH) || defined(BOARD_XIAO_ROUND) || defined(BOARD_CROWPANEL_21)
   // These synchronous display transfers can read the persistent PSRAM frame.
   constexpr uint32_t rotationCaps=MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT;
+  #elif defined(BOARD_WAVESHARE_185B)
+  // The staged driver copies rotated pixels into its own internal DMA tile.
+  // The direct fallback transfers the rotation buffer itself.
+  const uint32_t rotationCaps=waveshare185bUsesStagedDisplay() ? (MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT) : (MALLOC_CAP_INTERNAL|MALLOC_CAP_DMA);
   #else
   constexpr uint32_t rotationCaps=MALLOC_CAP_INTERNAL|MALLOC_CAP_DMA;
   #endif

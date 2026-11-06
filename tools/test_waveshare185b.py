@@ -41,6 +41,7 @@ assert partitions == {'nvs': (0x9000, 0x5000), 'otadata': (0xe000, 0x2000),
 driver = (ROOT / 'firmware/src/board_waveshare_185b.cpp').read_text(encoding='utf-8')
 rtc = driver.split('// RTC_IMPLEMENTATION_BEGIN:', 1)[1].split('\n', 1)[1]
 rtc = rtc.split('// RTC_IMPLEMENTATION_END', 1)[0]
+touch_lifecycle = driver[driver.index('enum class TouchPhase'):driver.index('void touchTask(')]
 source = r'''
 #define BOARD_WAVESHARE_185B
 #include "board_pins.h"
@@ -53,6 +54,7 @@ source = r'''
 #include <cstring>
 #include <ctime>
 #include <initializer_list>
+#include <atomic>
 static_assert(SCREEN_RES==360 && BOARD_HAS_SD && BOARD_HAS_AUDIO && BOARD_HAS_GPS && BOARD_GPS_UART);
 static_assert(waveshare185b::uiRefreshIntervalMs(false,true,true)==250);
 static_assert(waveshare185b::uiRefreshIntervalMs(false,true,false)==100);
@@ -119,19 +121,7 @@ static void rtcChecks(){
   bus.present=false;assert(!boardReadRtc(result)&&!boardWriteRtc(epoch));
 }
 static void touchChecks(){
-  using waveshare185b::TouchDecision;
-  waveshare185b::TouchAgeGuard age;
   assert(waveshare185b::inputFresh(100,600)&&!waveshare185b::inputFresh(100,601));
-  assert(age.check(true,100,110)==TouchDecision::Accept);
-  assert(age.check(false,110,700)==TouchDecision::Reset); // old release must cancel, never click
-  assert(age.check(true,700,710)==TouchDecision::Suppress); // current held finger cannot become a new press
-  assert(age.check(false,710,710,false,false)==TouchDecision::Suppress&&age.waitForRelease); // I2C timeout is not physical release
-  assert(age.check(false,720,720)==TouchDecision::Suppress&&!age.waitForRelease);
-  assert(age.check(true,730,730)==TouchDecision::Accept);
-  assert(age.check(true,740,740,true)==TouchDecision::Reset); // queue overflow or UI stall
-  assert(age.check(true,750,750)==TouchDecision::Suppress);
-  assert(age.check(false,760,760)==TouchDecision::Suppress);
-  assert(age.check(true,770,770)==TouchDecision::Accept);
   assert(waveshare185b::inputFresh(0xfffffff0u,0x20)&&!waveshare185b::inputFresh(0xfffffff0u,0x200));
   waveshare185b::TouchState touch;
   uint8_t press[]={0,1,0,100,1,103}; // x100, y359
@@ -146,6 +136,12 @@ static void touchChecks(){
   assert(touch.update(press,6,true,250)&&touch.pressed);
   uint8_t release[]={5,0,0,100,1,103}; // gesture can persist while physical finger count is zero
   assert(touch.update(release,6,true,251)&&!touch.pressed);
+  uint8_t contact[]={0,0x81,0x80,54,0,28}; // contact, low nibble of finger count
+  assert(touch.update(contact,6,true,255)&&touch.pressed&&touch.x==54&&touch.y==28);
+  uint8_t liftWithCount[]={0,1,0x4f,255,0x0f,255};
+  assert(touch.update(liftWithCount,6,true,260)&&!touch.pressed&&touch.x==54&&touch.y==28);
+  uint8_t noEvent[]={0,1,0xc0,41,0,99};
+  assert(!touch.update(noEvent,6,true,261)&&!touch.pressed);
   assert(touch.update(press,6,true,0xfffffff0u)&&touch.pressed);
   assert(!touch.update(nullptr,0,false,0x20)&&touch.pressed);
   assert(!touch.update(nullptr,0,false,0x68)&&!touch.pressed); // millis rollover
@@ -211,7 +207,54 @@ static void buttonChecks(){
   auto wrapped=clicks.update(false,true,0xeau,370000);
   assert(wrapped.action==BootAction::Single&&wrapped.at==100000&&wrapped.queuedAt==0xeau);
 }
-int main(){rtcChecks();touchChecks();buttonChecks();}
+namespace touchHarness {
+  uint8_t registers[256]{};
+  bool transportUp=true, irqRegisterAvailable=true, resetHigh=false;
+  uint32_t clockMs=0, reads=0, writes=0, invalidCancels=0;
+  std::atomic<bool> touchReady{false}, reportIrqMode{false};
+  std::atomic<uint8_t> touchChip{0};
+  std::atomic<uint32_t> touchAttempts{0}, touchInitFailures{0}, touchRecoveries{0};
+  std::atomic<uint32_t> touchSamples{0}, touchErrors{0}, touchGoodAt{0};
+  waveshare185b::TouchState physicalTouch;
+  bool lastPressed=false;
+  enum { LOW=0, HIGH=1 };
+  void digitalWrite(int pin,int high){assert(pin==TP_RESET);resetHigh=high;}
+  uint32_t millis(){return clockMs;}
+  bool waveshare185bI2cRead(uint8_t address,uint8_t reg,uint8_t* dst,size_t n){
+    assert(address==TP_I2C_ADDR);++reads;
+    if (!transportUp || (reg==0xfa && !irqRegisterAvailable)) return false;
+    memcpy(dst,registers+reg,n);return true;
+  }
+  bool waveshare185bI2cWrite(uint8_t address,uint8_t reg,const uint8_t* src,size_t n){
+    assert(address==TP_I2C_ADDR && (reg==0xfe || reg==0xfa));++writes;
+    if(!transportUp)return false;memcpy(registers+reg,src,n);return true;
+  }
+  void publishTouchSample(bool pressed,uint16_t,uint16_t,bool valid,uint32_t){
+    if(lastPressed && !pressed && !valid) ++invalidCancels;
+    lastPressed=pressed;
+  }
+''' + touch_lifecycle + r'''
+  void poll(uint32_t now){clockMs=now;pollTouch(now);}
+  void checks(){
+    assert(waveshare185b::supportedTouchChip(0xb4)&&waveshare185b::supportedTouchChip(0xb5)&&waveshare185b::supportedTouchChip(0xb6));
+    registers[0xa7]=0xff;registers[0xfa]=0x11;
+    poll(0);poll(9);assert(!resetHigh&&!reads);poll(10);assert(resetHigh);poll(59);assert(!reads);
+    poll(60);assert(!touchReady&&touchAttempts==1&&touchInitFailures==1&&writes==0);
+    registers[0xa7]=0xb5;poll(2059);assert(reads==1);poll(2060);assert(!resetHigh);
+    poll(2070);poll(2120);assert(touchReady&&touchAttempts==2&&reportIrqMode);
+    assert(registers[0xfa]==0x71&&registers[0xfe]==1); // preserve unrelated IRQ flags
+    registers[2]=1;registers[4]=54;registers[6]=28;poll(2130);assert(lastPressed&&touchSamples==1);
+    transportUp=false;poll(2140);poll(2190);assert(lastPressed&&!invalidCancels&&touchReady);
+    poll(2250);assert(!lastPressed&&invalidCancels==1);poll(2260);assert(!touchReady&&touchRecoveries==1);
+    unsigned before=reads;poll(4259);assert(reads==before);transportUp=true;registers[2]=0;
+    irqRegisterAvailable=false;poll(4260);poll(4270);poll(4320);assert(touchReady&&!reportIrqMode);
+    poll(4330);assert(!lastPressed&&touchGoodAt==4330&&invalidCancels==1);
+    // Backoff and reset deadlines survive a millis rollover.
+    touchPhase=TouchPhase::Backoff;touchPhaseAt=0xffffff00u;
+    before=touchAttempts;poll(1743);assert(touchAttempts==before);poll(1744);assert(touchAttempts==before+1);
+  }
+}
+int main(){rtcChecks();touchChecks();buttonChecks();touchHarness::checks();}
 '''
 source = source.replace('#include <initializer_list>', '#include <initializer_list>\n#include <utility>')
 path = WORK / 'protocol.cpp'
@@ -219,4 +262,4 @@ path.write_text(source, encoding='utf-8')
 exe = WORK / ('protocol.exe' if sys.platform == 'win32' else 'protocol')
 subprocess.run(compiler + flags + [str(path), '-o', str(exe)], check=True, env=build_env)
 subprocess.run([str(exe)], check=True)
-print('PASS 1.85B pin/bus isolation and 16 MB partitions; production RTC fault checks; touch stale/invalid/held/overflow checks; BOOT single/double/tap-hold/navigation/timestamp/stale/rollover checks; both LCD tables')
+print('PASS 1.85B pins/partitions, RTC faults, CST816 count/event decoding and touch-only reset/retry/IRQ configuration, BOOT timer/navigation, LCD tables')

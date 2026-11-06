@@ -81,7 +81,7 @@ until a level is explicitly selected. [Audio controls and USB commands](USER-GUI
 | Peripheral | Connection |
 |---|---|
 | ST77916 LCD | QSPI CS21, CLK40, D0 46, D1 45, D2 42, D3 41; reset3; backlight5 |
-| CST816S touch | Internal I²C SDA11/SCL10, address0x15; reset1, interrupt4 |
+| CST816 family touch controller | Internal I²C SDA11/SCL10, address 0x15, reset GPIO1, interrupt GPIO4. The tested unit reports chip ID 0xB5. |
 | PCF85063 RTC | Internal I²C address0x51; interrupt6 |
 | BQ27220 gauge | Internal I²C address0x55 |
 | ES8311 speaker codec | Internal I²C address0x18; MCLK2, BCLK48, LRCK38, DOUT47; amplifier9 |
