@@ -2,7 +2,7 @@
 #include <stdint.h>
 
 namespace dragon {
-enum class Amoled175cButtonEvent { None, Tap, PowerOff };
+enum class Amoled175cButtonEvent { None, Tap, Sleep };
 
 class Amoled175cButton {
   bool raw_=true,stable_=true,armed_=false,pressed_=false;
@@ -19,8 +19,8 @@ public:
     armed_=true;
     if(!pressed_)return Amoled175cButtonEvent::None;
     pressed_=false;
-    // Release GPIO0 before shutdown so a USB-powered restart cannot enter ROM download mode.
-    return uint32_t(changed_-started_)>=2000?Amoled175cButtonEvent::PowerOff:Amoled175cButtonEvent::Tap;
+    // Enter sleep after release; GPIO0 must not remain held as a boot strap.
+    return uint32_t(changed_-started_)>=2000?Amoled175cButtonEvent::Sleep:Amoled175cButtonEvent::Tap;
   }
 };
 }

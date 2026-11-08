@@ -91,7 +91,7 @@ void boardLoop();
 void uiKey(bool home);
 #ifdef BOARD_AMOLED_175C
 void uiAmoled175cKey(bool primary);
-void uiAmoled175cPowerOff();
+void uiAmoled175cSleep(unsigned seconds=0);
 #endif
 bool uiCommand(const String& command);
 void audioBeep();

@@ -161,6 +161,9 @@ static void command(const String& c){
 #if defined(BOARD_AMOLED_175) || defined(BOARD_AMOLED_175C)
   else if(c=="touch status"||c=="amoled status"){extern void amoledHardwareStatus();amoledHardwareStatus();}
 #endif
+#ifdef BOARD_AMOLED_175C
+  else if(c=="amoled sleep test"){uiAmoled175cSleep(15);}
+#endif
 #ifdef BOARD_WAVESHARE_185B
   else if(c=="touch status"||c=="185b status"){extern void waveshare185bDiagnostics();waveshare185bDiagnostics();}
 #endif

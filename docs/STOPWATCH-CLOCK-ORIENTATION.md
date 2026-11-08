@@ -7,7 +7,7 @@ The timer uses a 64-bit monotonic microsecond clock and displays hundredths. Clo
 | Board | Start / pause while on Stopwatch | Lap while running / reset while paused | Clock hardware |
 |---|---|---|---|
 | M5Stack StopWatch C152 | Yellow button | Blue button | RX8130CE |
-| Waveshare ESP32-S3-Touch-AMOLED-1.75C · 0.14.4+ | Larger PWR button, short press | Smaller BOOT button | ESP32 system clock; USB / saved Wi-Fi after shutdown |
+| Waveshare ESP32-S3-Touch-AMOLED-1.75C · 0.14.4+ | Larger PWR button, short press | Smaller BOOT button | ESP32 system clock; retained during button sleep in 0.14.6+ |
 | Waveshare ESP32-S3-Touch-AMOLED-1.75 / 1.75-G | BOOT button | Short PWR press | PCF85063 when fitted and powered |
 | Spotpear / Guition JC3636W518 | Touch Start / Pause | Touch Lap / Reset | Software clock |
 | Seeed XIAO ESP32-S3 + Round Display | BOOT or touch | Touch Lap / Reset | BM8563 / PCF8563-compatible |
@@ -18,13 +18,21 @@ On the **32 MB Waveshare 1.75C from 0.14.4**, each short press of the larger **P
 
 The **16 MB non-C 1.75 / 1.75-G** keeps its existing mapping: BOOT opens Tools outside Stopwatch; short PWR returns to radar.
 
-On the **32 MB 1.75C from 0.14.5**, hold the smaller BOOT button for at least two
-seconds, then release it to power off. This long hold does not also record a lap
-or open Tools. Stop recordings and radio sessions first; shutdown waits for
-saving and confirmation dialogs. Use the larger PWR button to turn the board
-back on after full power off. The smaller GPIO0 button needs the ESP32 to be
-running. Full shutdown clears RAM-only timer results; USB or configured Wi-Fi
-restores the 1.75C's clock afterward.
+On the **32 MB 1.75C from 0.14.6**, hold the smaller BOOT button for at least two
+seconds, then release it to sleep. The display, touch controller and radios turn
+off while the ESP32 clock keeps ticking. Short-press the larger PWR button to
+wake. A charged battery or continuous USB power must remain connected.
+
+This replaces 0.14.5's smaller-button shutdown, which cut power to the clock.
+The long hold does not also record a lap or open Tools. Sleep is blocked while
+a timer, recording or radio session is running, while saving, or while a dialog
+is open. Pause the timer and finish those operations first. Waking from deep
+sleep restarts the firmware, so paused elapsed time and laps are cleared.
+
+Holding the larger PWR button still performs hardware power-off. That action,
+an empty/disconnected battery, or unplugging USB with no battery loses the
+1.75C's system time. Use USB synchronization or configured saved-Wi-Fi recovery
+after complete power loss. Reflashing also requires the flasher's clock setup.
 
 ## TOOOL Locksport Timer
 
@@ -84,7 +92,7 @@ On classic dials, a dot strip indicates the current face. The gear opens time se
 
 Clock and stopwatch pause ordinary scanning and suppress detection popups. An unset clock displays a setup prompt rather than invented time. Full-size touch profiles include separate time and date settings; Lite has compact themed clocks and USB time sync, without touch settings tabs.
 
-M5Stack and XIAO read their hardware RTC at boot; time settings write and read back that RTC. An RTC requires its backup supply to keep time when the main device is off. The tested Waveshare **1.75C**, Spotpear and Lite use the ESP32 system clock; 0.13.9+ retains time through powered software resets, but full shutdown needs USB or configured Wi-Fi synchronization (full boards only). Dates are limited to 2000–2099. See [clock setup](CLOCK-SETUP.md) for the verified hardware distinction and diagnostics.
+M5Stack and XIAO read their hardware RTC at boot; time settings write and read back that RTC. An RTC requires its backup supply to keep time when the main device is off. The tested Waveshare **1.75C**, Spotpear and Lite use the ESP32 system clock; 0.13.9+ retains time through powered software resets. The 1.75C also keeps time during smaller-button sleep in 0.14.6+. Full power loss needs USB or configured Wi-Fi synchronization (full boards only). The internal sleep clock can drift; USB sync refreshes time and the local offset. Dates are limited to 2000–2099. See [clock setup](CLOCK-SETUP.md) for the verified hardware distinction and diagnostics.
 
 ## Saved display orientation
 

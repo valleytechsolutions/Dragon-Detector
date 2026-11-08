@@ -3,6 +3,10 @@
 #include "board_pins.h"
 #ifdef BOARD_AMOLED_175C
 #include "amoled175c_button.h"
+#include <esp_sleep.h>
+#include <driver/rtc_io.h>
+#include <esp_wifi.h>
+#include <NimBLEDevice.h>
 #endif
 #include <lvgl.h>
 #include <Wire.h>
@@ -109,17 +113,37 @@ void scr_lvgl_init(){
   lv_indev_drv_register(&indev_drv);
 }
 
-void boardBegin(){pinMode(BTN_PIN,INPUT_PULLUP);}
+void boardBegin(){
+  pinMode(BTN_PIN,INPUT_PULLUP);
 #ifdef BOARD_AMOLED_175C
-bool amoled175cPowerOff(){
-  if(!powerReady)return false;
-  Serial.println("POWER_OFF_REQUEST");
+  rtc_gpio_deinit(GPIO_NUM_3);pinMode(3,INPUT);
+  Serial.printf("AMOLED_WAKE cause=%d epoch=%lu\n",esp_sleep_get_wakeup_cause(),wallTime());
+#endif
+}
+#ifdef BOARD_AMOLED_175C
+bool amoled175cSleep(unsigned seconds){
+  // SYS_OUT is the inverted PWR button: GPIO3 is high while pressed.
+  // Keep the PMU supply on so the ESP32 RTC timer continues across deep sleep.
+  if(!powerReady||!panel||!panelIo||digitalRead(3)==HIGH)return false;
+  if(esp_sleep_enable_ext0_wakeup(GPIO_NUM_3,1)!=ESP_OK)return false;
+  if(seconds&&esp_sleep_enable_timer_wakeup(uint64_t(seconds)*1000000)!=ESP_OK){
+    esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_EXT0);return false;
+  }
+  if(esp_lcd_panel_disp_on_off(panel,false)!=ESP_OK){
+    esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);return false;
+  }
+  // DISPOFF alone leaves the panel running; SLPIN stops its internal supplies.
+  if(esp_lcd_panel_io_tx_param(panelIo,0x02001000,nullptr,0)!=ESP_OK){
+    esp_lcd_panel_disp_on_off(panel,true);
+    esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);return false;
+  }
+  detachInterrupt(TP_INT);if(touchReady)touch.sleep();
+  digitalWrite(AUDIO_MUTE_PIN,LOW);
+  esp_wifi_stop();NimBLEDevice::deinit(false);
+  Serial.printf("AMOLED_SLEEP epoch=%lu timer=%u\n",wallTime(),seconds);
   Serial.flush();
-  power.shutdown();
-  delay(500);
-  // Successful PMU shutdown cuts CPU power; reaching here means it did not.
-  Serial.println("POWER_OFF_FAILED");
-  return false;
+  delay(120);
+  esp_deep_sleep_start();return true;
 }
 #endif
 void boardLoop(){
@@ -129,7 +153,7 @@ void boardLoop(){
   static dragon::Amoled175cButton boot;
   switch(boot.update(down,now)){
     case dragon::Amoled175cButtonEvent::Tap:uiAmoled175cKey(false);break;
-    case dragon::Amoled175cButtonEvent::PowerOff:uiAmoled175cPowerOff();break;
+    case dragon::Amoled175cButtonEvent::Sleep:uiAmoled175cSleep();break;
     default:break;
   }
 #else

@@ -38,7 +38,7 @@ No firmware can know how long an unpowered clock was off without an independent 
 | Waveshare AMOLED **1.75 non-C / -G** · beta | PCF85063 hardware RTC | Requires a powered RTC supply; battery-backed retention awaits hardware testing |
 | M5Stack StopWatch C152 | RX8130CE hardware RTC | 0.13.25 enables L1 power hold to keep the RTC supplied during normal button shutdown while the main battery is charged |
 | Seeed XIAO + Round Display | BM8563/PCF8563-compatible hardware RTC | Install a healthy CR927 backup coin cell for timekeeping when the display supply is off |
-| Waveshare AMOLED **1.75C** | ESP32 system clock on tested hardware | USB sync or configured saved-Wi-Fi recovery required after full power-off |
+| Waveshare AMOLED **1.75C** | ESP32 system clock on tested hardware | 0.14.6+ retains time during smaller-button sleep while battery/USB power remains; full power-off needs USB or configured saved-Wi-Fi recovery |
 | Spotpear | ESP32 system clock | USB sync or configured saved-Wi-Fi recovery required |
 | Elecrow CrowPanel 2.1 Rotary | ESP32 system clock | USB sync or configured saved-Wi-Fi recovery required |
 | Waveshare Lite | ESP32 system clock | USB sync required after full power-off |
@@ -48,6 +48,30 @@ The 1.75C schematic does not show the PCF85063 present on the **non-C** 1.75. Th
 In 0.13.10+, the flasher reads the hardware clock directly after setting it and checks again after 1.2 seconds to confirm that it advances. A missing RTC on StopWatch/XIAO/non-C AMOLED 1.75, invalid/stale readback, or stopped oscillator fails setup. A correctly set software clock is reported separately with its power-off limitation. The firmware never restores an old saved timestamp and presents it as current time.
 
 Powered software resets retain system time in 0.13.9+. Hardware reset/power cycling are different: without an independent powered RTC, elapsed off-time cannot be reconstructed offline. Keeping a software-clock board powered preserves time; complete battery discharge also loses it.
+
+## Waveshare 1.75C sleep and wake · 0.14.6
+
+After updating and completing USB clock setup, hold the smaller **BOOT** button
+for at least two seconds and release it. The display, touch controller and radios
+turn off, while the ESP32's internal clock remains powered. Short-press the larger
+**PWR** button to wake. Time advances during sleep without a computer or Wi-Fi,
+provided a charged battery or continuous USB power remains connected.
+
+The smaller-button action in 0.14.5 cut power completely and lost the system
+clock. Version 0.14.6 replaces that action with deep sleep. The larger PWR
+button's hardware long-hold shutdown still cuts power and loses time on this
+model. An exhausted or disconnected battery, or removing USB with no battery,
+also requires synchronization afterward. Finish clock setup after reflashing.
+
+Sleep is blocked while a timer, recording or radio session is running, while
+saving, or while a dialog is open. Pause timing and finish those operations
+first. Wake restarts the firmware; paused timer results and laps are RAM-only
+and do not survive deep sleep.
+
+The ESP32's internal sleep oscillator can drift with temperature. USB
+synchronization corrects drift and updates the local timezone offset. This
+retention change does not provide an independent calendar RTC or recover time
+after complete power loss. See [release validation](RELEASE-0.14.6.md).
 
 ## RTC retention fixes in 0.13.25
 

@@ -64,21 +64,40 @@ unsigned resets=0,updates=0;
 bool locksport(){return locksportTheme;}
 void resetStopwatch(){++resets;resetBox=&marker;}
 void updateTimer(){++updates;}bool uiStopwatchKey(bool start,uint64_t at=0);
+void uiAmoled175cSleep(unsigned seconds=0);
 '''
 for signature in ['static void go(', 'bool uiStopwatchKey(',
                   'static bool uiSideKeyHasMessageBox(', 'static bool uiSideKeyModalOpen(',
-                  'void uiAmoled175cPowerOff(', 'void uiAmoled175cKey(']:
+                  'void uiAmoled175cSleep(', 'void uiAmoled175cKey(']:
     source += '\n' + function(ui, signature)
 source += r'''
-constexpr int BTN_PIN=0,LOW=0;
-bool bootDown=false,powerReady=true;
-int digitalRead(int pin){assert(pin==BTN_PIN);return bootDown?LOW:1;}
-struct Power {bool press=false;unsigned shutdowns=0;void getIrqStatus(){}bool isPekeyShortPressIrq(){return press;}void clearIrqStatus(){press=false;}void shutdown(){++shutdowns;}} power;
-struct SerialMock {void println(const char*){}void flush(){}} Serial;
+constexpr int BTN_PIN=0,LOW=0,HIGH=1,GPIO_NUM_3=3,ESP_OK=0,TP_INT=42,AUDIO_MUTE_PIN=46;
+constexpr int ESP_SLEEP_WAKEUP_EXT0=0,ESP_SLEEP_WAKEUP_ALL=1;
+bool bootDown=false,powerReady=true,wakeDown=false,touchReady=true;
+int digitalRead(int pin){assert(pin==BTN_PIN||pin==3);return pin==3?wakeDown:(bootDown?LOW:HIGH);}
+struct Power {bool press=false;void getIrqStatus(){}bool isPekeyShortPressIrq(){return press;}void clearIrqStatus(){press=false;}} power;
+struct SerialMock {void println(const char*){}void flush(){}template<class... T>void printf(const char*,T...){}} Serial;
+void* panel=reinterpret_cast<void*>(1);void* panelIo=reinterpret_cast<void*>(2);
+bool wakeError=false,timerError=false,displayError=false,commandError=false;
+unsigned sleepCalls=0;uint64_t timerUs=0;
+enum Call {Wake,Timer,DisplayOff,DisplayOn,SleepIn,TouchDetach,TouchSleep,Mute,WifiStop,BleStop,EnterSleep,DisableExt0,DisableAll};
+std::vector<Call> calls;
+int esp_sleep_enable_ext0_wakeup(int pin,int level){assert(pin==3&&level==HIGH);calls.push_back(Wake);return wakeError?-1:ESP_OK;}
+int esp_sleep_enable_timer_wakeup(uint64_t us){calls.push_back(Timer);timerUs=us;return timerError?-1:ESP_OK;}
+int esp_sleep_disable_wakeup_source(int source){assert(source==ESP_SLEEP_WAKEUP_EXT0||source==ESP_SLEEP_WAKEUP_ALL);calls.push_back(source==ESP_SLEEP_WAKEUP_EXT0?DisableExt0:DisableAll);return ESP_OK;}
+int esp_lcd_panel_disp_on_off(void* handle,bool on){assert(handle==panel);calls.push_back(on?DisplayOn:DisplayOff);return displayError?-1:ESP_OK;}
+int esp_lcd_panel_io_tx_param(void* handle,int command,const void* data,size_t len){assert(handle==panelIo&&command==0x02001000&&!data&&!len);calls.push_back(SleepIn);return commandError?-1:ESP_OK;}
+struct Touch {void sleep(){calls.push_back(TouchSleep);}} touch;
+void detachInterrupt(int pin){assert(pin==TP_INT);calls.push_back(TouchDetach);}
+void digitalWrite(int pin,int level){assert(pin==AUDIO_MUTE_PIN&&level==LOW);calls.push_back(Mute);}
+unsigned long wallTime(){return 1794171896UL;}
+int esp_wifi_stop(){calls.push_back(WifiStop);return ESP_OK;}
+struct NimBLEDevice {static void deinit(bool clear){assert(!clear);calls.push_back(BleStop);}};
+void esp_deep_sleep_start(){calls.push_back(EnterSleep);++sleepCalls;}
 void delay(unsigned ms){now+=ms;}
 void uiShow(const char* name){assert(!strcmp(name,"menu"));go(Menu);}
 void uiKey(bool home){assert(home);go(Radar);}
-''' + function(board, 'bool amoled175cPowerOff(') + function(board, 'void boardLoop(') + r'''
+''' + function(board, 'bool amoled175cSleep(') + function(board, 'void boardLoop(') + r'''
 void visible(Page next,int tab=0){page=pending=next;menuTab=tab;}
 void render(){page=pending;}
 void poll(unsigned advance=50){now+=advance;boardLoop();}
@@ -101,16 +120,20 @@ int main(){
  visible(Clock);boot();assert(pending==Menu);render();
  // Ignore a second input while the first screen transition is still pending.
  visible(Radar);pwr();pwr();assert(page==Radar&&pending==Menu);render();
- // PWR is Start/Pause; a BOOT tap is Lap. A long hold only powers off on release.
+ // PWR is Start/Pause; a BOOT tap is Lap. Holding cannot discard a running timer.
  visible(Stopwatch);pwr();assert(stopwatch.running);poll(1000);
  boot();assert(stopwatch.running&&stopwatch.lapCount==1);
  bootDown=true;poll();poll();unsigned laps=stopwatch.lapCount;
- for(int i=0;i<50;++i)poll();assert(stopwatch.lapCount==laps&&laps==1&&power.shutdowns==0);
- bootDown=false;poll();poll();assert(power.shutdowns==1&&stopwatch.lapCount==1);
- assert(!strcmp(dialogTitle,"POWER STILL ON")&&radioEnabled); // Fake PMU never cuts CPU power.
- poll(3000);assert(power.shutdowns==1);
+ for(int i=0;i<50;++i)poll();assert(stopwatch.lapCount==laps&&laps==1&&sleepCalls==0);
+ bootDown=false;poll();poll();assert(sleepCalls==0&&stopwatch.lapCount==1);
+ assert(!strcmp(dialogTitle,"STILL ACTIVE")&&radioEnabled&&stopwatch.running);
+ poll(3000);assert(sleepCalls==0);
  pwr();assert(!stopwatch.running&&pending==Stopwatch);
  auto elapsed=stopwatch.elapsed(stopwatchNow());poll(1000);assert(stopwatch.elapsed(stopwatchNow())==elapsed);
+ // After pausing, one hold requests sleep on release, without a lap/reset action.
+ bootDown=true;poll();poll();poll(2000);assert(sleepCalls==0);
+ bootDown=false;poll();poll();assert(sleepCalls==1&&stopwatch.lapCount==1&&resets==0);
+ poll(3000);assert(sleepCalls==1);radioEnabled=true; // Fake deep sleep returns; hardware reboots on wake.
  pwr();assert(stopwatch.running); // Resume preserves earlier laps.
  // BOOT bounce shorter than debounce never records another lap.
  bootDown=true;poll(5);bootDown=false;poll(5);poll(50);assert(stopwatch.lapCount==1);
@@ -127,30 +150,48 @@ int main(){
  dialog.hidden=true;screen.children.push_back(&dialog);pwr();assert(pending==Menu);screen.children.clear();
  // Navigation retains the existing cleanup and storage-operation guards.
  visible(Recon);pwr();assert(reconLeaves==1&&pending==Menu);
- visible(BleLab);pwr();assert(bleStops==4&&pending==Menu);
+ visible(BleLab);unsigned stopped=bleStops;pwr();assert(bleStops==stopped+1&&pending==Menu);
  visible(Recon);driveBusy=true;pwr();assert(pending==Recon&&driveEnds==1);driveBusy=false;
  uploadBusy=true;pwr();assert(pending==Recon&&uploadCancels==1);uploadBusy=false;
- // Shutdown never interrupts an active writer or an asynchronous radio session.
- visible(Radar);unsigned cuts=power.shutdowns;
+ // Sleep never interrupts an active writer, radio session, or off-screen timer.
+ visible(Radar);unsigned sleeps=sleepCalls;
  for(bool* busy:{&recording,&saving,&reconOwned,&bleOwned,&mission,&driveBusy,&uploadBusy}){
-   *busy=true;uiAmoled175cPowerOff();assert(power.shutdowns==cuts&&!strcmp(dialogTitle,"STILL ACTIVE"));*busy=false;
+   *busy=true;uiAmoled175cSleep();assert(sleepCalls==sleeps&&!strcmp(dialogTitle,"STILL ACTIVE"));*busy=false;
  }
- audio.mode=AudioMode::Recording;uiAmoled175cPowerOff();assert(power.shutdowns==cuts);audio.mode=AudioMode::Idle;
- clockPrompt=&marker;uiAmoled175cPowerOff();assert(power.shutdowns==cuts);clockPrompt=nullptr;
- pending=Clock;uiAmoled175cPowerOff();assert(power.shutdowns==cuts);pending=Radar;
- powerReady=false;uiAmoled175cPowerOff();assert(power.shutdowns==cuts&&radioEnabled);powerReady=true;
- // Debounce must not turn a 1999 ms hold into a shutdown; subtraction survives rollover.
+ audio.mode=AudioMode::Recording;uiAmoled175cSleep();assert(sleepCalls==sleeps);audio.mode=AudioMode::Idle;
+ stopwatch.running=true;uiAmoled175cSleep();assert(sleepCalls==sleeps&&!strcmp(dialogTitle,"STILL ACTIVE"));stopwatch.running=false;
+ clockPrompt=&marker;uiAmoled175cSleep();assert(sleepCalls==sleeps);clockPrompt=nullptr;
+ pending=Clock;uiAmoled175cSleep();assert(sleepCalls==sleeps);pending=Radar;
+ powerReady=false;uiAmoled175cSleep();assert(sleepCalls==sleeps&&radioEnabled&&!strcmp(dialogTitle,"SLEEP UNAVAILABLE"));powerReady=true;
+ // Debounce must not turn a 1999 ms hold into sleep; subtraction survives rollover.
  using Event=dragon::Amoled175cButtonEvent;
  for(uint32_t start:{100u,UINT32_MAX-1500u}){
    for(uint32_t held:{1999u,2000u}){
      dragon::Amoled175cButton b;b.update(false,start-80);b.update(false,start-40);
      assert(b.update(true,start)==Event::None&&b.update(true,start+35)==Event::None);
      assert(b.update(false,start+held)==Event::None);
-     assert(b.update(false,start+held+35)==(held==2000?Event::PowerOff:Event::Tap));
+     assert(b.update(false,start+held+35)==(held==2000?Event::Sleep:Event::Tap));
      assert(b.update(false,start+held+100)==Event::None);
    }
  }
  assert(lastInteraction==now);
+ // Fail before screen/radio teardown if a wake source cannot be established.
+ calls.clear();wakeDown=true;assert(!amoled175cSleep(0)&&calls.empty());wakeDown=false;
+ panel=nullptr;assert(!amoled175cSleep(0)&&calls.empty());panel=reinterpret_cast<void*>(1);
+ panelIo=nullptr;assert(!amoled175cSleep(0)&&calls.empty());panelIo=reinterpret_cast<void*>(2);
+ wakeError=true;assert(!amoled175cSleep(0)&&(calls==std::vector<Call>{Wake}));wakeError=false;
+ calls.clear();timerError=true;assert(!amoled175cSleep(10)&&(calls==std::vector<Call>{Wake,Timer,DisableExt0}));timerError=false;
+ calls.clear();displayError=true;assert(!amoled175cSleep(0)&&(calls==std::vector<Call>{Wake,DisplayOff,DisableAll}));displayError=false;
+ calls.clear();commandError=true;assert(!amoled175cSleep(0)&&(calls==std::vector<Call>{Wake,DisplayOff,SleepIn,DisplayOn,DisableAll}));commandError=false;
+ // Failed UI sleep restores the previous radio setting, including Clock's standby.
+ visible(Clock);radioEnabled=false;wakeError=true;uiAmoled175cSleep();assert(!radioEnabled&&sleepCalls==sleeps&&!strcmp(dialogTitle,"SLEEP UNAVAILABLE"));wakeError=false;
+ // Production shutdown sequence keeps the CPU supply on and tears down peripherals.
+ calls.clear();assert(amoled175cSleep(0));
+ assert((calls==std::vector<Call>{Wake,DisplayOff,SleepIn,TouchDetach,TouchSleep,Mute,WifiStop,BleStop,EnterSleep}));
+ calls.clear();assert(amoled175cSleep(1234)&&timerUs==1234000000ULL);
+ assert((calls==std::vector<Call>{Wake,Timer,DisplayOff,SleepIn,TouchDetach,TouchSleep,Mute,WifiStop,BleStop,EnterSleep}));
+ calls.clear();touchReady=false;assert(amoled175cSleep(0));
+ assert((calls==std::vector<Call>{Wake,DisplayOff,SleepIn,TouchDetach,Mute,WifiStop,BleStop,EnterSleep}));
 #else
  // The 16 MB non-C profile keeps its original controls.
  poll();visible(Stopwatch);boot();assert(stopwatch.running);poll(1000);pwr();assert(stopwatch.running&&stopwatch.lapCount==1);
@@ -165,4 +206,4 @@ for variant in ['BOARD_AMOLED_175C', 'BOARD_AMOLED_175']:
     subprocess.run(compiler + ['-std=c++17', '-O1', '-UNDEBUG', '-D' + variant,
                               '-I' + str(root / 'firmware/include'), str(path), '-o', str(exe)], check=True)
     subprocess.run([str(exe)], check=True)
-print('PASS 1.75C navigation, timing, tap/hold shutdown, debounce/rollover, storage and modal guards; non-C unchanged')
+print('PASS 1.75C navigation, timing, sleep routing, wake/display failures, debounce/rollover, timer/storage/modal guards; non-C unchanged')
