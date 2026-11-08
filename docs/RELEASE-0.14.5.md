@@ -31,7 +31,14 @@ Host tests cover short presses, holds, release before shutdown, startup-held
 BOOT, debounce, the two-second boundary, timer rollover, busy storage, active
 recording, confirmation dialogs and a failed PMU shutdown. The existing 1.75C
 navigation/stopwatch tests, non-C hardware-profile tests and 1.85B controls
-regression tests also pass. Physical shutdown and restart testing is pending.
+regression tests also pass.
+
+On November 8, 2026, the 0.14.5 application was installed on a 1.75C with write-hash
+verification and all 23 startup self-tests passing. The owner confirmed that
+holding and releasing the smaller button turns the display off, and the larger
+PWR button powers it back on. USB diagnostics after restart confirmed 0.14.5,
+working display/touch and PMU initialization. The software clock was unset after
+full power loss and was synchronized again over USB, as documented above.
 
 [Clock and timer controls](STOPWATCH-CLOCK-ORIENTATION.md) ·
 [0.14.4 navigation update](RELEASE-0.14.4.md)
