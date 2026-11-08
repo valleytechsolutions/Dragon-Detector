@@ -45,8 +45,13 @@ recovery, debounce and counter rollover, including unchanged non-C controls.
 RTC-driver and 1.85B controls regressions pass, along with 19 web clock-setup
 and verification tests.
 
-The battery-powered smaller-button sleep and larger-button wake check is
-pending. Multi-hour sleep drift and battery consumption have not been measured.
+The owner then confirmed correct date/time after unplugging USB, sleeping with
+the smaller button and waking with the larger PWR button. After USB reconnection,
+read-only diagnostics confirmed a deep-sleep reset, a valid clock advancing
+normally, the retained local offset, and all 23 self-tests passing. No time-sync
+command was sent during this verification.
+
+Multi-hour sleep drift and battery consumption have not been measured.
 
 [Clock setup](CLOCK-SETUP.md) ·
 [Clock and timer controls](STOPWATCH-CLOCK-ORIENTATION.md) ·
