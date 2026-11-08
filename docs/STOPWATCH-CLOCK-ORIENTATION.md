@@ -74,7 +74,7 @@ The Church of Malware watch keeps the complete emblem clear. Add the white bits 
 
 On classic dials, a dot strip indicates the current face. The gear opens time settings; the list icon or a downward swipe opens Tools. HaleHound flames and Biscuit mechanisms refresh at up to five frames per second, with only the changing region redrawn between clock ticks. Gearwork, moon phases, map outlines, radio halos and celestial details are decorative; they are not mechanical or astronomical measurements.
 
-Clock and stopwatch suppress detection popups without stopping background listening. An unset clock displays a setup prompt rather than invented time. These features apply to all four full boards; Lite has compact themed clocks and USB time sync, without touch settings tabs.
+Clock and stopwatch pause ordinary scanning and suppress detection popups. An unset clock displays a setup prompt rather than invented time. Full-size touch profiles include separate time and date settings; Lite has compact themed clocks and USB time sync, without touch settings tabs.
 
 M5Stack and XIAO read their hardware RTC at boot; time settings write and read back that RTC. An RTC requires its backup supply to keep time when the main device is off. The tested Waveshare **1.75C**, Spotpear and Lite use the ESP32 system clock; 0.13.9+ retains time through powered software resets, but full shutdown needs USB or configured Wi-Fi synchronization (full boards only). Dates are limited to 2000–2099. See [clock setup](CLOCK-SETUP.md) for the verified hardware distinction and diagnostics.
 
