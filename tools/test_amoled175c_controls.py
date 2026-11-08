@@ -27,7 +27,7 @@ def function(text, signature):
 
 enum_start = ui.index('enum Page {')
 source = r'''
-#include "theme_button.h"
+#include "amoled175c_button.h"
 #include "wearable.h"
 #include <cassert>
 #include <cstdint>
@@ -46,6 +46,14 @@ unsigned lv_obj_get_child_cnt(lv_obj_t* object){return object->children.size();}
 lv_obj_t* lv_obj_get_child(lv_obj_t* object,unsigned i){return object->children.at(i);}
 lv_obj_t* lv_layer_top(){return &top;}
 bool uploadBusy=false,driveBusy=false,locksportTheme=false;
+bool recording=false,saving=false,reconOwned=false,bleOwned=false,mission=false,radioEnabled=true;
+bool reconRecording(){return recording;}bool reconStorageBusy(){return saving;}
+bool reconOwnsRadio(){return reconOwned;}bool bleLabOwnsRadio(){return bleOwned;}bool missionActive(){return mission;}
+enum class AudioMode {Idle,Recording};struct AppAudioStatus {AudioMode mode=AudioMode::Idle;} audio;
+AppAudioStatus audioStatus(){return audio;}void audioStop(){}void setRadio(bool on){radioEnabled=on;}
+const char* dialogTitle=nullptr;
+lv_obj_t* uiMessageBox(lv_obj_t*,const char* title,const char*,const char**,bool){dialogTitle=title;return &marker;}
+void lv_obj_set_width(lv_obj_t*,int){}void lv_obj_center(lv_obj_t*){}int S(int value){return value;}
 unsigned uploadCancels=0,driveEnds=0,recipeStops=0,reconStops=0,bleStops=0,reconLeaves=0;
 bool wardriveUploadBusy(){return uploadBusy;}bool wardriveBusy(){return driveBusy;}
 void wardriveUploadCancel(){++uploadCancels;}void reconEndWardrive(){++driveEnds;}
@@ -59,16 +67,18 @@ void updateTimer(){++updates;}bool uiStopwatchKey(bool start,uint64_t at=0);
 '''
 for signature in ['static void go(', 'bool uiStopwatchKey(',
                   'static bool uiSideKeyHasMessageBox(', 'static bool uiSideKeyModalOpen(',
-                  'void uiAmoled175cKey(']:
+                  'void uiAmoled175cPowerOff(', 'void uiAmoled175cKey(']:
     source += '\n' + function(ui, signature)
 source += r'''
 constexpr int BTN_PIN=0,LOW=0;
 bool bootDown=false,powerReady=true;
 int digitalRead(int pin){assert(pin==BTN_PIN);return bootDown?LOW:1;}
-struct Power {bool press=false;void getIrqStatus(){}bool isPekeyShortPressIrq(){return press;}void clearIrqStatus(){press=false;}} power;
+struct Power {bool press=false;unsigned shutdowns=0;void getIrqStatus(){}bool isPekeyShortPressIrq(){return press;}void clearIrqStatus(){press=false;}void shutdown(){++shutdowns;}} power;
+struct SerialMock {void println(const char*){}void flush(){}} Serial;
+void delay(unsigned ms){now+=ms;}
 void uiShow(const char* name){assert(!strcmp(name,"menu"));go(Menu);}
 void uiKey(bool home){assert(home);go(Radar);}
-''' + function(board, 'void boardLoop(') + r'''
+''' + function(board, 'bool amoled175cPowerOff(') + function(board, 'void boardLoop(') + r'''
 void visible(Page next,int tab=0){page=pending=next;menuTab=tab;}
 void render(){page=pending;}
 void poll(unsigned advance=50){now+=advance;boardLoop();}
@@ -91,18 +101,21 @@ int main(){
  visible(Clock);boot();assert(pending==Menu);render();
  // Ignore a second input while the first screen transition is still pending.
  visible(Radar);pwr();pwr();assert(page==Radar&&pending==Menu);render();
- // PWR is Start/Pause; BOOT is Lap, including exactly one event for a long hold.
+ // PWR is Start/Pause; a BOOT tap is Lap. A long hold only powers off on release.
  visible(Stopwatch);pwr();assert(stopwatch.running);poll(1000);
  boot();assert(stopwatch.running&&stopwatch.lapCount==1);
  bootDown=true;poll();poll();unsigned laps=stopwatch.lapCount;
- for(int i=0;i<50;++i)poll();assert(stopwatch.lapCount==laps&&laps==2);
- bootDown=false;poll();poll();pwr();assert(!stopwatch.running&&pending==Stopwatch);
+ for(int i=0;i<50;++i)poll();assert(stopwatch.lapCount==laps&&laps==1&&power.shutdowns==0);
+ bootDown=false;poll();poll();assert(power.shutdowns==1&&stopwatch.lapCount==1);
+ assert(!strcmp(dialogTitle,"POWER STILL ON")&&radioEnabled); // Fake PMU never cuts CPU power.
+ poll(3000);assert(power.shutdowns==1);
+ pwr();assert(!stopwatch.running&&pending==Stopwatch);
  auto elapsed=stopwatch.elapsed(stopwatchNow());poll(1000);assert(stopwatch.elapsed(stopwatchNow())==elapsed);
  pwr();assert(stopwatch.running); // Resume preserves earlier laps.
  // BOOT bounce shorter than debounce never records another lap.
- bootDown=true;poll(5);bootDown=false;poll(5);poll(50);assert(stopwatch.lapCount==2);
+ bootDown=true;poll(5);bootDown=false;poll(5);poll(50);assert(stopwatch.lapCount==1);
  // Locksport's secondary action finishes the attempt; paused BOOT requests reset.
- locksportTheme=true;poll(1000);boot();assert(!stopwatch.running&&stopwatch.lapCount==3);
+ locksportTheme=true;poll(1000);boot();assert(!stopwatch.running&&stopwatch.lapCount==2);
  boot();assert(resets==1&&resetBox);pwr();assert(!stopwatch.running&&resets==1);resetBox=nullptr;
  // Other dialogs must not trigger a timer action or hide a confirmation.
  for(lv_obj_t** modal:{&clockPrompt,&notice}){
@@ -114,9 +127,29 @@ int main(){
  dialog.hidden=true;screen.children.push_back(&dialog);pwr();assert(pending==Menu);screen.children.clear();
  // Navigation retains the existing cleanup and storage-operation guards.
  visible(Recon);pwr();assert(reconLeaves==1&&pending==Menu);
- visible(BleLab);pwr();assert(bleStops==3&&pending==Menu);
+ visible(BleLab);pwr();assert(bleStops==4&&pending==Menu);
  visible(Recon);driveBusy=true;pwr();assert(pending==Recon&&driveEnds==1);driveBusy=false;
  uploadBusy=true;pwr();assert(pending==Recon&&uploadCancels==1);uploadBusy=false;
+ // Shutdown never interrupts an active writer or an asynchronous radio session.
+ visible(Radar);unsigned cuts=power.shutdowns;
+ for(bool* busy:{&recording,&saving,&reconOwned,&bleOwned,&mission,&driveBusy,&uploadBusy}){
+   *busy=true;uiAmoled175cPowerOff();assert(power.shutdowns==cuts&&!strcmp(dialogTitle,"STILL ACTIVE"));*busy=false;
+ }
+ audio.mode=AudioMode::Recording;uiAmoled175cPowerOff();assert(power.shutdowns==cuts);audio.mode=AudioMode::Idle;
+ clockPrompt=&marker;uiAmoled175cPowerOff();assert(power.shutdowns==cuts);clockPrompt=nullptr;
+ pending=Clock;uiAmoled175cPowerOff();assert(power.shutdowns==cuts);pending=Radar;
+ powerReady=false;uiAmoled175cPowerOff();assert(power.shutdowns==cuts&&radioEnabled);powerReady=true;
+ // Debounce must not turn a 1999 ms hold into a shutdown; subtraction survives rollover.
+ using Event=dragon::Amoled175cButtonEvent;
+ for(uint32_t start:{100u,UINT32_MAX-1500u}){
+   for(uint32_t held:{1999u,2000u}){
+     dragon::Amoled175cButton b;b.update(false,start-80);b.update(false,start-40);
+     assert(b.update(true,start)==Event::None&&b.update(true,start+35)==Event::None);
+     assert(b.update(false,start+held)==Event::None);
+     assert(b.update(false,start+held+35)==(held==2000?Event::PowerOff:Event::Tap));
+     assert(b.update(false,start+held+100)==Event::None);
+   }
+ }
  assert(lastInteraction==now);
 #else
  // The 16 MB non-C profile keeps its original controls.
@@ -132,4 +165,4 @@ for variant in ['BOARD_AMOLED_175C', 'BOARD_AMOLED_175']:
     subprocess.run(compiler + ['-std=c++17', '-O1', '-UNDEBUG', '-D' + variant,
                               '-I' + str(root / 'firmware/include'), str(path), '-o', str(exe)], check=True)
     subprocess.run([str(exe)], check=True)
-print('PASS 1.75C physical button mapping, four-screen cycle, timer/locksport, debounce, modal guards; non-C controls unchanged')
+print('PASS 1.75C navigation, timing, tap/hold shutdown, debounce/rollover, storage and modal guards; non-C unchanged')

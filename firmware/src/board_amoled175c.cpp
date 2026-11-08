@@ -2,7 +2,7 @@
 #include "app.h"
 #include "board_pins.h"
 #ifdef BOARD_AMOLED_175C
-#include "theme_button.h"
+#include "amoled175c_button.h"
 #endif
 #include <lvgl.h>
 #include <Wire.h>
@@ -110,12 +110,28 @@ void scr_lvgl_init(){
 }
 
 void boardBegin(){pinMode(BTN_PIN,INPUT_PULLUP);}
+#ifdef BOARD_AMOLED_175C
+bool amoled175cPowerOff(){
+  if(!powerReady)return false;
+  Serial.println("POWER_OFF_REQUEST");
+  Serial.flush();
+  power.shutdown();
+  delay(500);
+  // Successful PMU shutdown cuts CPU power; reaching here means it did not.
+  Serial.println("POWER_OFF_FAILED");
+  return false;
+}
+#endif
 void boardLoop(){
   static uint32_t polled=0;
   uint32_t now=millis();bool down=digitalRead(BTN_PIN)==LOW;
 #ifdef BOARD_AMOLED_175C
-  static dragon::ThemeButton boot;
-  if(boot.update(down,now))uiAmoled175cKey(false);
+  static dragon::Amoled175cButton boot;
+  switch(boot.update(down,now)){
+    case dragon::Amoled175cButtonEvent::Tap:uiAmoled175cKey(false);break;
+    case dragon::Amoled175cButtonEvent::PowerOff:uiAmoled175cPowerOff();break;
+    default:break;
+  }
 #else
   static bool raw=false,stable=false;static uint32_t changed=0;
   if(down!=raw){raw=down;changed=now;}

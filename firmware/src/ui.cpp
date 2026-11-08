@@ -11,6 +11,9 @@
 #include "waveshare_185b_performance.h"
 #endif
 #include "recipes.h"
+#ifdef BOARD_AMOLED_175C
+#include "missions.h"
+#endif
 #include "radar_colors.h"
 #include "board_pins.h"
 #include "board_waveshare_185b.h"
@@ -1018,6 +1021,23 @@ static bool uiSideKeyHasMessageBox(lv_obj_t* object){
 static bool uiSideKeyModalOpen(){return resetBox||clockPrompt||notice||uiSideKeyHasMessageBox(root)||uiSideKeyHasMessageBox(lv_layer_top());}
 #endif
 #ifdef BOARD_AMOLED_175C
+void uiAmoled175cPowerOff(){
+  lastInteraction=millis();
+  if(uiSideKeyModalOpen()||page!=pending)return;
+  const char* title="POWER STILL ON";
+  const char* message="Power off did not complete. Release the button and try again.";
+  if(reconRecording()||reconStorageBusy()||reconOwnsRadio()||bleLabOwnsRadio()||missionActive()||wardriveBusy()||wardriveUploadBusy()||audioStatus().mode==AudioMode::Recording){
+    title="STILL ACTIVE";message="Stop recording and radio sessions, and wait for saving before powering off.";
+  }else{
+    bool wasRadio=radioEnabled;
+    recipeStop();reconStop();bleLabStop();audioStop();setRadio(false);
+    extern bool amoled175cPowerOff();
+    if(amoled175cPowerOff())return;
+    setRadio(wasRadio);
+  }
+  auto* box=uiMessageBox(root,title,message,nullptr,true);
+  lv_obj_set_width(box,S(280));lv_obj_center(box);
+}
 void uiAmoled175cKey(bool primary){
   lastInteraction=millis();
   if(uiSideKeyModalOpen()||page!=pending)return;

@@ -18,6 +18,14 @@ On the **32 MB Waveshare 1.75C from 0.14.4**, each short press of the larger **P
 
 The **16 MB non-C 1.75 / 1.75-G** keeps its existing mapping: BOOT opens Tools outside Stopwatch; short PWR returns to radar.
 
+On the **32 MB 1.75C from 0.14.5**, hold the smaller BOOT button for at least two
+seconds, then release it to power off. This long hold does not also record a lap
+or open Tools. Stop recordings and radio sessions first; shutdown waits for
+saving and confirmation dialogs. Use the larger PWR button to turn the board
+back on after full power off. The smaller GPIO0 button needs the ESP32 to be
+running. Full shutdown clears RAM-only timer results; USB or configured Wi-Fi
+restores the 1.75C's clock afterward.
+
 ## TOOOL Locksport Timer
 
 Select **Settings → Theme & radar labels → TOOOL, TOOOL Dark or Covert Instruments / McNally** (or save the theme in Studio). Utilities now shows **Locksport timer**, and the matching watch is selected. TOOOL Dark uses near-black, red and soft white throughout radar, watch, timer and split log. Covert Instruments × McNally uses black, white and silver with both supplied logos and distinct pick hands. Changing to a non-locksport theme restores the ordinary stopwatch; it does not reset elapsed time or splits. The watch remains independently swipeable.
