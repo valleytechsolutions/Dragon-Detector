@@ -77,7 +77,8 @@ bool locksport(){return locksportTheme;}void resetStopwatch(){++resetRequests;}
 void updateTimer(){++updates;}bool uiStopwatchKey(bool start,uint64_t at=0);
 '''
 for signature in ['static void go(', 'bool uiStopwatchKey(', 'static const char* ui185bResourceState(',
-                  'static void build185bSystem(', 'static void show185bResources(', 'static bool ui185bHasMessageBox(',
+                  'static void build185bSystem(', 'static void show185bResources(', 'static bool uiSideKeyHasMessageBox(',
+                  'static bool uiSideKeyModalOpen(',
                   'static bool ui185bModalOpen(', 'bool ui185bTimerVisible(',
                   'void ui185bHome(', 'void ui185bCycle(']:
     source += '\n' + function(signature)

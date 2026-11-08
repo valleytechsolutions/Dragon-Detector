@@ -8,7 +8,7 @@ Current firmware: **0.13.27 for Dial v1.1; other board versions are listed in th
 |---|---|---|---|---|---|
 | Display | 466×466 AMOLED / touch | 466×466 AMOLED / touch | 360×360 LCD / touch | 240×240 LCD / touch | 240×240 LCD / no touch |
 | Flash / PSRAM | 32 / 8 MB | 16 / 8 MB | 16 / 8 MB | 8 / 8 MB | 16 / 2 MB |
-| Physical timing controls | BOOT + short PWR | Yellow Start/Pause + blue Lap | On-screen | BOOT Start/Pause + on-screen Lap | BOOT tap / double-tap / hold |
+| Physical timing controls | Larger PWR Start/Pause + smaller BOOT Lap (0.14.4+) | Yellow Start/Pause + blue Lap | On-screen | BOOT Start/Pause + on-screen Lap | BOOT tap / double-tap / hold |
 | Radar / same detection families | Yes | Yes | Yes | Yes | Yes |
 | 37 themes / badge / touch menus | Yes | Yes | Yes | Yes | 37 themes; no badge/touch |
 | RSSI Hunt / watch lists / history | Yes | Yes | Yes | Yes | Radar + signal details; no saved history |

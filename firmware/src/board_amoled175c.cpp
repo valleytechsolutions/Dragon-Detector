@@ -1,6 +1,9 @@
 // Shared CO5300/CST9217/AXP2101 adapter; variant wiring comes from board_pins.h.
 #include "app.h"
 #include "board_pins.h"
+#ifdef BOARD_AMOLED_175C
+#include "theme_button.h"
+#endif
 #include <lvgl.h>
 #include <Wire.h>
 #include <esp_heap_caps.h>
@@ -88,7 +91,7 @@ void scr_lvgl_init(){
   touch.setPins(TP_RESET,TP_INT);
   touchReady=touch.begin(Wire,TP_I2C_ADDR,IIC_SDA,IIC_SCL);
   if(touchReady){touch.setMaxCoordinates(SCREEN_RES,SCREEN_RES);touch.setMirrorXY(true,true);pinMode(TP_INT,INPUT_PULLUP);attachInterrupt(digitalPinToInterrupt(TP_INT),onTouch,FALLING);Serial.printf("TOUCH: %s ready\n",touch.getModelName());}
-  else Serial.println("TOUCH: CST9217 not found; BOOT button still switches radar / tools");
+  else Serial.println("TOUCH: CST9217 not found; side buttons remain available");
 
   size_t rows=40;
   auto* buffer=(lv_color_t*)heap_caps_malloc(rows*SCREEN_RES*sizeof(lv_color_t),MALLOC_CAP_INTERNAL|MALLOC_CAP_DMA);
@@ -108,12 +111,24 @@ void scr_lvgl_init(){
 
 void boardBegin(){pinMode(BTN_PIN,INPUT_PULLUP);}
 void boardLoop(){
-  // Debounce BOOT independently of the display refresh cadence.
-  static bool raw=false,stable=false;static uint32_t changed=0,polled=0;
+  static uint32_t polled=0;
   uint32_t now=millis();bool down=digitalRead(BTN_PIN)==LOW;
+#ifdef BOARD_AMOLED_175C
+  static dragon::ThemeButton boot;
+  if(boot.update(down,now))uiAmoled175cKey(false);
+#else
+  static bool raw=false,stable=false;static uint32_t changed=0;
   if(down!=raw){raw=down;changed=now;}
   if(raw!=stable&&now-changed>=25){stable=raw;if(stable&&!uiStopwatchKey(true))uiShow("menu");}
-  if(powerReady&&now-polled>=50){polled=now;power.getIrqStatus();bool lap=power.isPekeyShortPressIrq();power.clearIrqStatus();if(lap&&!uiStopwatchKey(false))uiKey(true);}
+#endif
+  if(powerReady&&now-polled>=50){
+    polled=now;power.getIrqStatus();bool pressed=power.isPekeyShortPressIrq();power.clearIrqStatus();
+#ifdef BOARD_AMOLED_175C
+    if(pressed)uiAmoled175cKey(true);
+#else
+    if(pressed&&!uiStopwatchKey(false))uiKey(true);
+#endif
+  }
 }
 // Small checked I2C reads avoid accepting an uninitialized RTC date after a
 // failed bus transaction. The 1.75C schematic does not populate the PCF85063

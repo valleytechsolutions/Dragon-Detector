@@ -1,17 +1,22 @@
-# Stopwatch, clock and orientation · 0.13.11
+# Stopwatch, clock and orientation
 
-Open **Tools → Utilities → Stopwatch**. Start begins or resumes elapsed time; Pause stops it; Lap records a split while running. Reset is available only while paused and asks before clearing the timer and laps. Home, Tools and the lap list leave a running timer running. Detection continues in the background; detection popups do not cover the timing controls. Audio alerts retain their existing settings.
+Open **Tools → Utilities → Stopwatch**. Start begins or resumes elapsed time; Pause stops it; Lap records a split while running. Reset is available only while paused and asks before clearing the timer and laps. Home, Tools and the lap list leave a running timer running. Clock, timer and lap pages pause ordinary scanning to save power; returning to radar resumes it. Detection popups do not cover the timing controls.
 
 The timer uses a 64-bit monotonic microsecond clock and displays hundredths. Clock synchronization, timezone changes and the 49-day `millis()` rollover do not change elapsed time. The display refresh is not a guarantee of reaction-time accuracy. The latest 50 laps are retained, with split and cumulative times; older laps roll out of the list. Elapsed time and laps are RAM-only and reset after reboot/power loss.
 
 | Board | Start / pause while on Stopwatch | Lap while running / reset while paused | Clock hardware |
 |---|---|---|---|
 | M5Stack StopWatch C152 | Yellow button | Blue button | RX8130CE |
-| Waveshare ESP32-S3-Touch-AMOLED-1.75C | BOOT button | Short PWR press | ESP32 system clock; USB / saved Wi-Fi after shutdown |
+| Waveshare ESP32-S3-Touch-AMOLED-1.75C · 0.14.4+ | Larger PWR button, short press | Smaller BOOT button | ESP32 system clock; USB / saved Wi-Fi after shutdown |
+| Waveshare ESP32-S3-Touch-AMOLED-1.75 / 1.75-G | BOOT button | Short PWR press | PCF85063 when fitted and powered |
 | Spotpear / Guition JC3636W518 | Touch Start / Pause | Touch Lap / Reset | Software clock |
 | Seeed XIAO ESP32-S3 + Round Display | BOOT or touch | Touch Lap / Reset | BM8563 / PCF8563-compatible |
 
-The four full boards have the same touch controls. [Lite uses BOOT tap/double/hold](WAVESHARE-LITE.md). Hardware stopwatch shortcuts apply only on the Stopwatch page. M5Stack navigation elsewhere retains yellow = radar and blue = Tools/Badge. Waveshare BOOT opens Tools outside Stopwatch; short PWR returns to radar. Long PWR retains the board's power-off behavior; it is not a lap shortcut.
+Full-size touch profiles share the on-screen timing controls. [Lite uses BOOT tap/double/hold](WAVESHARE-LITE.md). Hardware stopwatch shortcuts apply only on the Stopwatch page. M5Stack StopWatch navigation elsewhere retains yellow = radar and blue = Tools/Badge.
+
+On the **32 MB Waveshare 1.75C from 0.14.4**, each short press of the larger **PWR** button cycles **Radar → Tools → Badge → Clock → Radar**. Tools is one step regardless of its selected tab. Touch navigation determines the next step; other pages return to Tools. The smaller **BOOT** button opens Tools outside the timer. Side buttons wait while a confirmation dialog or screen transition is open. Holding BOOT does not repeat laps. Long PWR retains the board's hardware power-off behavior.
+
+The **16 MB non-C 1.75 / 1.75-G** keeps its existing mapping: BOOT opens Tools outside Stopwatch; short PWR returns to radar.
 
 ## TOOOL Locksport Timer
 
@@ -19,7 +24,7 @@ Select **Settings → Theme & radar labels → TOOOL, TOOOL Dark or Covert Instr
 
 **START** begins an attempt; **PAUSE / RESUME** excludes pauses. **SPLIT** records a milestone without stopping. **OPEN** records the final split and stops at the same timestamp; the screen shows **OPENED** and the total elapsed time. **LOG** shows the latest 50 split and cumulative times for the current attempt. **RESET** asks before clearing this attempt for the next lock. Results are RAM-only, cleared by reset or reboot; this is not a persistent results archive. Home/Tools leaves a running attempt running.
 
-On M5Stack, the blue secondary button performs OPEN while picking; on Waveshare, short PWR performs OPEN. Their primary Start/Pause buttons are unchanged. XIAO uses BOOT for Start/Pause and touch for OPEN/SPLIT. Other themes retain the ordinary hardware Lap/Reset action. USB `stopwatch finish` records and stops; it rejects an idle timer or a zero-length split.
+On M5Stack, the blue secondary button performs OPEN while picking. On the 32 MB Waveshare 1.75C from 0.14.4, smaller BOOT performs OPEN and larger PWR starts/pauses. The 16 MB non-C 1.75 / 1.75-G retains short PWR for OPEN and BOOT for Start/Pause. XIAO uses BOOT for Start/Pause and touch for OPEN/SPLIT. Other themes retain the ordinary hardware Lap/Reset action. USB `stopwatch finish` records and stops; it rejects an idle timer or a zero-length split.
 
 DMAC uses the same controls under **Locksport counter**. Its original teal/pink logo, silver details and acrylic pick hands carry through the full GUI. Select **DMAC** to choose watch 24 automatically.
 

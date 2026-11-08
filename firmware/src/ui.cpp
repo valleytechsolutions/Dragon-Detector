@@ -1008,14 +1008,37 @@ bool uiStopwatchKey(bool start,uint64_t at){
   if(!at)at=stopwatchNow();if(start)stopwatch.toggle(at);else if(stopwatch.running){if(locksport())stopwatch.finish(at);else stopwatch.lap(at);}else resetStopwatch();
   updateTimer();return true;
 }
-#ifdef BOARD_WAVESHARE_185B
-static bool ui185bHasMessageBox(lv_obj_t* object){
+#if defined(BOARD_WAVESHARE_185B) || defined(BOARD_AMOLED_175C)
+static bool uiSideKeyHasMessageBox(lv_obj_t* object){
   if(!object||lv_obj_has_flag(object,LV_OBJ_FLAG_HIDDEN))return false;
   if(lv_obj_check_type(object,&lv_msgbox_class))return true;
-  for(unsigned i=0;i<lv_obj_get_child_cnt(object);++i)if(ui185bHasMessageBox(lv_obj_get_child(object,i)))return true;
+  for(unsigned i=0;i<lv_obj_get_child_cnt(object);++i)if(uiSideKeyHasMessageBox(lv_obj_get_child(object,i)))return true;
   return false;
 }
-static bool ui185bModalOpen(){return resetBox||clockPrompt||notice||ui185bHasMessageBox(root)||ui185bHasMessageBox(lv_layer_top());}
+static bool uiSideKeyModalOpen(){return resetBox||clockPrompt||notice||uiSideKeyHasMessageBox(root)||uiSideKeyHasMessageBox(lv_layer_top());}
+#endif
+#ifdef BOARD_AMOLED_175C
+void uiAmoled175cKey(bool primary){
+  lastInteraction=millis();
+  if(uiSideKeyModalOpen()||page!=pending)return;
+  if(uiStopwatchKey(primary))return;
+  // PWR follows the visible screen; BOOT opens Tools from other pages.
+  Page next=Menu;
+  if(primary){
+    switch(page){
+      case Menu:next=Badge;break;
+      case Badge:next=Clock;break;
+      case Clock:next=Radar;break;
+      default:break;
+    }
+  }
+  if(next==Menu)menuTab=0;
+  go(next);
+  if(next==Menu&&page==Menu&&pending==Menu)page=Boot;
+}
+#endif
+#ifdef BOARD_WAVESHARE_185B
+static bool ui185bModalOpen(){return uiSideKeyModalOpen();}
 bool ui185bTimerVisible(){return page==Stopwatch&&pending==Stopwatch&&!ui185bModalOpen();}
 void ui185bHome(){
   lastInteraction=millis();if(ui185bModalOpen())return;
