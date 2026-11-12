@@ -4,7 +4,7 @@ Choose **Waveshare AMOLED 1.43C** in the [web flasher](https://valleytech-dragon
 
 [Buy the exact 1.43C model](https://www.waveshare.com/esp32-s3-touch-amoled-1.43c.htm?&aff_id=122099) · [Waveshare hardware documentation](https://docs.waveshare.com/ESP32-S3-Touch-AMOLED-1.43C) · [Release notes and validation](RELEASE-0.14.7.md)
 
-**Physical validation is in progress.** The firmware has been installed and started on one board, and its automatic checks passed. That does not establish that the picture, touch, buttons or speaker work; [the release notes](RELEASE-0.14.7.md#validation) list what was checked and what was not.
+**Physical validation is in progress.** Pre-release builds of this firmware have been installed and started on one board, and their automatic checks passed. That does not establish that the picture, touch, buttons or speaker work; [the release notes](RELEASE-0.14.7.md#validation) list what was checked and what was not.
 
 ## Hardware and installation
 

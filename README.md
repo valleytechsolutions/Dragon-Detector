@@ -17,7 +17,7 @@ forwards there. [Hosting status](docs/HOSTING-STATUS.md).
 
 [**Install firmware**](https://valleytech-dragon-detector.pages.dev/#install) · [Latest release](docs/RELEASE-0.14.7.md) · [User guides](docs/GUI.md) · [Clock setup](docs/CLOCK-SETUP.md)
 
-**Waveshare AMOLED 1.43C · 0.14.7:** New profile for the 8 MB **ESP32-S3-Touch-AMOLED-1.43C**: the full 466 px touch interface, BOOT-button navigation, a speaker connector and a battery estimate from cell voltage. It has no SD slot, RTC or GPS, and it does not fit the plain 1.43 or 1.43-B. It has been installed and started on one board; the picture, touch, buttons and sound await confirmation. Other board downloads remain on their existing versions. [Setup and buttons](docs/WAVESHARE-AMOLED-143C.md) · [Release notes](docs/RELEASE-0.14.7.md).
+**Waveshare AMOLED 1.43C · 0.14.7:** New profile for the 8 MB **ESP32-S3-Touch-AMOLED-1.43C**: the full 466 px touch interface, BOOT-button navigation, a speaker connector and a battery estimate from cell voltage. It has no SD slot, RTC or GPS, and it does not fit the plain 1.43 or 1.43-B. Pre-release builds have been installed and started on one board; the picture, touch, buttons and sound await confirmation. Other board downloads remain on their existing versions. [Setup and buttons](docs/WAVESHARE-AMOLED-143C.md) · [Release notes](docs/RELEASE-0.14.7.md).
 
 **Waveshare AMOLED 1.75C · 0.14.6:** Hold the smaller BOOT button for two seconds and release to sleep while the clock keeps ticking; short-press the larger PWR button to wake. The display and radios turn off during sleep. The four-screen cycle and stopwatch buttons are unchanged. Other board downloads remain on their existing versions. [Controls and release notes](docs/RELEASE-0.14.6.md).
 

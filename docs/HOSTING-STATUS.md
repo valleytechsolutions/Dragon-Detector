@@ -1,14 +1,14 @@
 # Installation and hosting status
 
-Updated November 3, 2026.
+Updated November 12, 2026.
 
 ## Working web flasher
 
 **[Open Dragon Detector](https://valleytech-dragon-detector.pages.dev/)**
 
-This independently hosted copy includes the 0.14.2 firmware for all twelve board profiles, including the Waveshare ESP32-S3-Touch-LCD-1.85B, USB date/time setup, device tools and the optional personal-theme creator. Guides, SD resource packs and screenshots are served here too. The firmware on an already-installed device is unaffected by a website outage.
+This independently hosted copy includes firmware for all thirteen board profiles: 0.14.7 for the new Waveshare ESP32-S3-Touch-AMOLED-1.43C (physical validation in progress), 0.14.6 for the Waveshare ESP32-S3-Touch-AMOLED-1.75C and 0.14.2 for the other eleven, including the Waveshare ESP32-S3-Touch-LCD-1.85B. It also offers USB date/time setup, device tools and the optional personal-theme creator. Guides, SD resource packs and screenshots are served here too. The firmware on an already-installed device is unaffected by a website outage.
 
-A separate [Guition / Surenoo JC3636W518 Beta 1](GUITION-SURENOO-BETA.md) installer uses a newer manufacturer panel sequence. It is physically unverified and does not replace or modify the twelve released firmware packages, including the original Spotpear profile.
+A separate [Guition / Surenoo JC3636W518 Beta 1](GUITION-SURENOO-BETA.md) installer uses a newer manufacturer panel sequence. It is physically unverified and does not replace or modify the thirteen released firmware packages, including the original Spotpear profile.
 
 Public GitHub repository access is restored. The [repository](https://github.com/valleytechsolutions/Dragon-Detector)
 links directly to this working flasher. The original
@@ -24,7 +24,7 @@ Cloudflare remains the primary installer, so there is one public firmware source
 
 The Custom theme tab is optional. Its personal-theme slot stays hidden on the device unless a design is explicitly installed.
 
-[Full installation guide](FLASHING.md) · [Clock setup](CLOCK-SETUP.md) · [Custom theme guide](CUSTOM-THEME.md) · [Release notes](RELEASE-0.14.2.md)
+[Full installation guide](FLASHING.md) · [Clock setup](CLOCK-SETUP.md) · [Custom theme guide](CUSTOM-THEME.md) · [Release notes](RELEASE-0.14.7.md)
 
 ## GitHub and Gitea
 
@@ -34,7 +34,7 @@ The GitHub Pages workflow publishes only the forwarding page. Firmware CI builds
 remain validation artifacts until explicitly released to the primary flasher.
 The 0.14.2 release adds the three sound levels, the physically checked 1.85B
 speaker adjustment and stable-ID theme retirement. Publication requires all
-twelve profile builds and checked packages; other boards retain their documented
+thirteen profile builds and checked packages; other boards retain their documented
 physical-validation limits. A Git push alone does not deploy
 firmware to the web flasher.
 
