@@ -1,0 +1,7 @@
+# ESP32-S3-Touch-AMOLED-1.43C, 8 MB flash. One 4 MB application slot (the size the
+# 16 MB profiles use) and 3.94 MiB of user files: two slots that still fit the
+# 466 px application would leave under 1 MiB of storage on a board with no SD.
+nvs,data,nvs,0x9000,0x5000
+otadata,data,ota,0xe000,0x2000
+app0,app,ota_0,0x10000,0x400000
+spiffs,data,spiffs,0x410000,0x3f0000

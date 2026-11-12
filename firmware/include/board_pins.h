@@ -33,6 +33,41 @@
 #define AUDIO_I2S_WS_IO 38
 #define AUDIO_I2S_DO_IO 47
 #define AUDIO_MUTE_PIN 9
+#elif defined(BOARD_WAVESHARE_143C)
+// ESP32-S3-Touch-AMOLED-1.43C / 1.43C-EN (ESP32-S3-PICO-1-N8R8). Wiring follows
+// Waveshare's 1.43C schematic and BSP; see docs/WAVESHARE-AMOLED-143C.md. The
+// 16 MB ESP32-S3-Touch-AMOLED-1.43 / 1.43-B is a different board and pin map.
+#define BOARD_NAME "Waveshare ESP32-S3-Touch-AMOLED-1.43C"
+#define SCREEN_RES 466
+#define BOARD_HAS_AUDIO 1
+#define BOARD_HAS_SD 0
+#define LCD_SDIO0 9
+#define LCD_SDIO1 10
+#define LCD_SDIO2 11
+#define LCD_SDIO3 12
+#define LCD_SCLK 14
+#define LCD_CS 15
+#define LCD_RESET 13
+#define LCD_TE 8
+// The panel is mounted rotated 180 degrees: MADCTL 0xC0 moves the 466 visible
+// columns of the 480-column source driver from offset 6 to offset 8.
+#define LCD_COL_OFFSET 8
+// CST820 touch, ES8311 speaker codec and ES7210 microphone ADC share this bus.
+#define IIC_SDA 47
+#define IIC_SCL 48
+#define TP_RESET 16
+#define TP_INT 17
+#define TP_I2C_ADDR 0x15
+#define AUDIO_I2S_MCK_IO 38
+#define AUDIO_I2S_BCK_IO 39
+#define AUDIO_I2S_WS_IO 40
+#define AUDIO_I2S_DO_IO 41
+#define AUDIO_I2S_DI_IO 42  // ES7210 microphones; not used by this firmware
+#define AUDIO_MUTE_PIN 46   // NS4150B speaker amplifier enable, active high
+#define AUDIO_LDO_EN 18     // codec supply enable, active high
+#define BATTERY_ADC_PIN 4   // ADC1_CH3 through a 1:2 divider
+#define CHARGE_STATUS_PIN 7 // ETA6098 STAT, low while charging
+#define BOARD_LED_PIN 5     // CHG LED, low = lit; driven by firmware
 #elif defined(BOARD_WATCHER)
 #define BOARD_NAME "Seeed SenseCAP Watcher"
 #define SCREEN_RES 412

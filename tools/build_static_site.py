@@ -149,6 +149,10 @@ def build(output):
             downloads.append('<p><strong>Dial v1.1 — display, controls, radar actions and RTC restart verified. Original K130 not physically tested.</strong> <a href="M5STACK-DIAL.html">Dial installation, controls and RTC</a>.</p>')
         elif metadata.get('board') == 'waveshare_185b':
             downloads.append('<p><strong>Waveshare LCD 1.85B — dedicated 360 px profile with SD and opt-in external UART GPS.</strong> <a href="WAVESHARE-LCD-185B.html">Installation, wiring and validation</a>.</p>')
+        elif metadata.get('board') == 'waveshare_143c':
+            status = 'physical validation pending' if metadata.get('hardware_validation') == 'physically-unverified' else 'checked on one board; see the release notes for what was and was not tested'
+            downloads.append(f'<p><strong>Waveshare AMOLED 1.43C — 8 MB profile for the 1.43C only, not the plain 1.43 or 1.43-B; {status}.</strong> '
+                             '<a href="WAVESHARE-AMOLED-143C.html">Installation, buttons and limits</a>.</p>')
         elif metadata.get('board') == 'lilygo_175':
             downloads.append('<p><strong>Beta — working display/touch baseline reported; new RTC/SD checks await hardware testing.</strong> <a href="LILYGO-AMOLED-175.html">Installation, RTC and SD</a>.</p>')
         elif metadata.get('board') == 'elecrow_21':

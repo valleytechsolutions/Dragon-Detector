@@ -12,6 +12,6 @@ Measured from the clean v0.13.17 release builds:
 | Seeed XIAO Round | 8 MiB | 2,490,688 | 3,145,728 | 20.82% | 497,753 |
 | Waveshare Lite | 16 MiB | 1,844,000 | 6,291,456 | 70.69% | 4,132,883 |
 
-The separate OTA slot supports update recovery. Filesystem allocations hold user files; their usage depends on the device. More flash does not increase internal RAM, radio capacity or processor throughput. Each package includes its exact `memory-budget.json`.
+The separate OTA slot supports update recovery. The 8 MB Waveshare AMOLED 1.43C is the exception: it has one application slot and no OTA slot, so its `memory-budget.json` reports `ota_slot_bytes` 0. Filesystem allocations hold user files; their usage depends on the device. More flash does not increase internal RAM, radio capacity or processor throughput. Each package includes its exact `memory-budget.json`.
 
 The four full boards share the application workflows with hardware-specific capture and storage limits. Lite uses five compact pages, 2 MiB PSRAM and one button. [Feature matrix](FEATURE-MATRIX.md) · [Validation](VALIDATION.md).

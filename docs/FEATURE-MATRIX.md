@@ -17,6 +17,7 @@ The v0.13.17 source audit confirms that Waveshare AMOLED, M5Stack StopWatch, Spo
 | Profile | Capture buffer | Recon session limit |
 |---|---:|---:|
 | Waveshare 1.75C | 2 MiB | 2 MiB |
+| Waveshare 1.43C | 1 MiB | 256 KiB |
 | Waveshare 1.75 / 1.75-G beta with SD | 64 KiB queue / 32 MiB segments | 64 MiB / 8 hours |
 | Waveshare 1.75 / 1.75-G without SD | 2 MiB RAM | 2 MiB |
 | Seeed Watcher beta with SD | 64 KiB queue / 32 MiB segments | 64 MiB / 8 hours |
@@ -97,3 +98,7 @@ The `watcher` environment targets 412×412, 32 MB flash and 8 MB PSRAM with full
 ## Waveshare LCD 1.85B · 0.14.1
 
 This full profile shares the detector, radio tools, BLE Lab, themes, badge and timing workflows. It has a 360 px touch LCD, 8 MB PSRAM, RTC, speaker and four-bit SDMMC. Supported recon files prefer SD. GPS is an optional external UART receiver, off by default, and its Wardrive entry requires recent valid NMEA. PWR is a hardware power button, not a second programmable input. [Setup and physical validation](WAVESHARE-LCD-185B.md).
+
+## Waveshare AMOLED 1.43C · 0.14.7
+
+This full profile shares the detector, radio tools, BLE Lab, themes, badge and timing workflows on a 466 px touch AMOLED with 8 MB PSRAM. Its 8 MB flash gives 3.94 MiB of internal storage, so captures are limited to 1 MiB and recon sessions to 256 KiB. There is no SD slot, RTC or GPS: saved files download over USB, and the clock needs USB or saved-Wi-Fi recovery after power loss. Sound needs a speaker on the board's connector. BOOT navigates and runs the timer; PWR is a hardware power button. [Setup and physical validation](WAVESHARE-AMOLED-143C.md).

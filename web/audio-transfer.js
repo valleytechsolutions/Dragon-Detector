@@ -1,9 +1,9 @@
-import {deviceQuery} from './device-query.js?v=0.14.2-guition-beta1';
-import {firmwareAtLeast} from './firmware-version.js?v=0.14.2-guition-beta1';
+import {deviceQuery} from './device-query.js?v=0.14.7-143c';
+import {firmwareAtLeast} from './firmware-version.js?v=0.14.7-143c';
 
 const levels=Object.freeze({silent:0,medium:50,high:100});
-const audioBoards=new Set(['guition_185_beta','waveshare_185b','watcher','waveshare','waveshare_175','waveshare_175_gps','stopwatch','spotpear']);
-export function hasWebAudio(board,version){return audioBoards.has(board)&&firmwareAtLeast(version,board==='guition_185_beta'?'0.14.2':board==='waveshare_185b'?'0.14.1':'0.4.0');}
+const audioBoards=new Set(['waveshare_143c','guition_185_beta','waveshare_185b','watcher','waveshare','waveshare_175','waveshare_175_gps','stopwatch','spotpear']);
+export function hasWebAudio(board,version){return audioBoards.has(board)&&firmwareAtLeast(version,board==='waveshare_143c'?'0.14.7':board==='guition_185_beta'?'0.14.2':board==='waveshare_185b'?'0.14.1':'0.4.0');}
 function levelFor(enabled,volume){return !enabled||volume===0?'silent':volume<=50?'medium':'high';}
 function validLevel(level){return typeof level==='string'&&Object.hasOwn(levels,level);}
 

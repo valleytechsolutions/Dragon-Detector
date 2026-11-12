@@ -149,6 +149,7 @@ int main(){
 
 profiles = [
     ('waveshare185b', ['BOARD_WAVESHARE_185B'], 'audio.cpp'),
+    ('waveshare143c', ['BOARD_WAVESHARE_143C'], 'audio.cpp'),
     ('watcher', ['BOARD_WATCHER'], 'audio.cpp'),
     ('amoled175', ['BOARD_AMOLED_175'], 'audio.cpp'),
     ('stopwatch', ['BOARD_STOPWATCH'], 'audio.cpp'),
@@ -191,11 +192,11 @@ codec = (root/'lib/es8311/src/es8311.c').read_text()
 function_start = codec.index('esp_err_t es8311_voice_volume_set(')
 function_end = codec.index('\nesp_err_t ',function_start+1)
 set_volume = codec[function_start:function_end]
-for board, value, register in [('BOARD_WAVESHARE_185B',75,0xbf),('BOARD_WATCHER',65,0xa5),('BOARD_AMOLED_175',65,0xa5),('BOARD_AMOLED_175C',100,0xff)]:
+for board, value, register in [('BOARD_WAVESHARE_185B',75,0xbf),('BOARD_WATCHER',65,0xa5),('BOARD_AMOLED_175',65,0xa5),('BOARD_WAVESHARE_143C',65,0xa5),('BOARD_AMOLED_175C',100,0xff)]:
     cpp = work/'codec.cpp'
     cpp.write_text('#include <cassert>\n#include <cstddef>\nusing esp_err_t=int;using es8311_handle_t=void*;constexpr int ES8311_DAC_REG32=0x32;int written=0;int es8311_write_reg(void*,int address,int value){assert(address==ES8311_DAC_REG32);written=value;return 0;}\n'+
                    set_volume+output[start:end]+f'\nstatic_assert(codecVolume=={value});int main(){{int saved=0;assert(es8311_voice_volume_set(nullptr,codecVolume,&saved)==0);assert(written=={register}&&saved=={value});}}\n')
     exe = work/'codec.exe'
     subprocess.run(compiler+['-std=c++17','-O1','-UNDEBUG','-D'+board,str(cpp),'-o',str(exe)],check=True)
     subprocess.run([str(exe)],check=True)
-print('PASS codec branch isolation: 1.85B 75/0xBF, Watcher + AMOLED-1.75 65/0xA5, AMOLED-1.75C unchanged')
+print('PASS codec branch isolation: 1.85B 75/0xBF, Watcher + AMOLED-1.75 + AMOLED-1.43C 65/0xA5, AMOLED-1.75C unchanged')

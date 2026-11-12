@@ -86,6 +86,9 @@ static void clockSetupPrompt(){
   if(clockPromptShown||wallTime()||millis()<10000||page!=Radar)return;
   clockPromptShown=true;dismissNotice();static const char* choices[]={"Later","Set now",""};
   clockPrompt=uiMessageBox(root,"SET YOUR CLOCK","Time needs setup after power loss. Set time and date here, or sync with the web flasher by USB.",choices,true);
+#ifdef BOARD_WAVESHARE_143C
+  clockPromptOpenedAt=millis();
+#endif
   lv_obj_set_width(clockPrompt,S(260));lv_obj_center(clockPrompt);
   lv_obj_add_event_cb(clockPrompt,[](lv_event_t* e){auto* box=lv_event_get_current_target(e);bool setup=lv_msgbox_get_active_btn(box)==1;lv_msgbox_close(box);clockPrompt=nullptr;if(setup)clockTab(0,true);},LV_EVENT_VALUE_CHANGED,nullptr);
   lv_obj_add_event_cb(clockPrompt,[](lv_event_t*){clockPrompt=nullptr;},LV_EVENT_DELETE,nullptr);

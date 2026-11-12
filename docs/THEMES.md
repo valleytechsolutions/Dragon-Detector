@@ -1,11 +1,11 @@
 # Radar themes
 
 The theme library offers 44 built-in themes plus an optional personal design
-across all twelve hardware profiles. [44Delta](44DELTA.md) uses cyan on black, a centered padlock radar and an analog-only
+across all thirteen hardware profiles. [44Delta](44DELTA.md) uses cyan on black, a centered padlock radar and an analog-only
 clock with silver lockpick hands. The earlier VectorPotential, Argyle, Law Lock
 Tools and Moki themes remain available.
 
-The saved theme also controls menus, settings, dialogs, utility screens, BLE Lab and radio tools on full profiles. Watch designs remain independently swipeable. All twelve profiles show the Dragon Ball/BWM mark on black at power-on, then open the saved radar theme. Custom badge artwork and detection-family colors retain their meaning.
+The saved theme also controls menus, settings, dialogs, utility screens, BLE Lab and radio tools on full profiles. Watch designs remain independently swipeable. All thirteen profiles show the Dragon Ball/BWM mark on black at power-on, then open the saved radar theme. Custom badge artwork and detection-family colors retain their meaning.
 
 Open **Tools → System → Settings → Theme & radar labels** and scroll to the theme. It saves immediately; tap Home to return to radar. Or connect through the [web tools](https://valleytech-dragon-detector.pages.dev/#detector), choose Radar appearance → Theme, and save. Older firmware keeps its original three choices until updated. Waveshare Lite cycles all 44 built-in themes with BOOT and saves the selection. Hold BOOT to cycle radar, compact clock, timer, signals and diagnostics; see [Lite controls](WAVESHARE-LITE.md). Its LPL radar includes the central emblem and rotating scales.
 

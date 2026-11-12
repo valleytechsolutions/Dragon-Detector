@@ -2,7 +2,7 @@
 
 Current firmware: **0.13.27 for Dial v1.1; other board versions are listed in their download packages**. Another display on the same ESP32-S3 needs different firmware.
 
-[Device purchase links and exact model choices](../README.md#supported-hardware) · [Shop from the web flasher](https://valleytech-dragon-detector.pages.dev/#buy-hardware). The XIAO setup needs both the ESP32-S3 board and Round Display. Waveshare 1.75C, 1.75 and 1.75-G use separate installer profiles.
+[Device purchase links and exact model choices](../README.md#supported-hardware) · [Shop from the web flasher](https://valleytech-dragon-detector.pages.dev/#buy-hardware). The XIAO setup needs both the ESP32-S3 board and Round Display. Waveshare 1.43C, 1.75C, 1.75 and 1.75-G use separate installer profiles.
 
 | Feature | Waveshare AMOLED 1.75C | M5Stack StopWatch C152 | Spotpear JC3636W518 | XIAO ESP32-S3 + Round Display | Waveshare LCD 1.28 Lite |
 |---|---|---|---|---|---|
@@ -43,7 +43,7 @@ The `elecrow_21` profile targets the 480 × 480 ST7701 IPS rotary board, with 16
 
 ## Storage follows the hardware
 
-**Waveshare AMOLED 1.75C and M5Stack:** Utilities → Saved files opens the internal capture library. Settings provides Capture studio and Saved captures; SD controls and SD command handlers are excluded from the build. Capture Studio saves Wi-Fi PCAP and BLE CSV in flash. GATT profiles and event logs are in BLE Lab, detection history is separate, and downloads are in the browser's Radio tools / BLE Lab / Detector tools. No card is required.
+**Waveshare AMOLED 1.43C and 1.75C, and M5Stack:** Utilities → Saved files opens the internal capture library. Settings provides Capture studio and Saved captures; SD controls and SD command handlers are excluded from the build. Capture Studio saves Wi-Fi PCAP and BLE CSV in flash. GATT profiles and event logs are in BLE Lab, detection history is separate, and downloads are in the browser's Radio tools / BLE Lab / Detector tools. No card is required.
 
 **Spotpear and XIAO:** Utilities → SD files browses an inserted FAT32 card. Settings retains opt-in SD event logging and SD PCAP. These are separate from internal Capture Studio, badge/history and BLE Lab storage; an absent card does not disable those internal features. Inserted-card behavior is not newly validated by this release.
 
@@ -51,7 +51,7 @@ The `elecrow_21` profile targets the 480 × 480 ST7701 IPS rotary board, with 16
 
 Shared storage sizes are partition allocations, not free-space promises. They include badge/history and lab data; new writes stop before storage is full. Updates never reformat these volumes automatically.
 
-[Pin definitions](../firmware/include/board_pins.h) are authoritative for these builds. Waveshare C uses display reset GPIO 1 and touch reset GPIO 2; these are not the non-C board's wiring. It has no SD slot in this profile. M5Unified identifies the StopWatch and rejects an unexpected display.
+[Pin definitions](../firmware/include/board_pins.h) are authoritative for these builds. Waveshare 1.75C uses display reset GPIO 1 and touch reset GPIO 2; these are not the non-C board's wiring. It has no SD slot in this profile. M5Unified identifies the StopWatch and rejects an unexpected display.
 
 Manufacturer references:
 
@@ -60,7 +60,7 @@ Manufacturer references:
 - [Waveshare C-variant hardware/demo source](https://github.com/waveshareteam/ESP32-S3-Touch-AMOLED-1.75C) and [schematic](https://files.waveshare.com/wiki/ESP32-S3-Touch-AMOLED-1.75C/ESP32-S3-Touch-AMOLED-1.75C-schematic.pdf).
 - [M5Stack StopWatch documentation](https://docs.m5stack.com/en/core/StopWatch), [product photographs](https://shop.m5stack.com/products/m5stack-stopwatch-dev-kit-esp32-s3), and [manufacturer demo](https://github.com/m5stack/M5StopWatch-UserDemo).
 
-Battery percentage is available through Waveshare AXP2101 and M5Stack power APIs. Spotpear has no configured fuel gauge; no battery estimate is invented. Hardware-in-the-loop testing is distinct from a successful compile; see [validation](VALIDATION.md).
+Battery percentage is available through Waveshare AXP2101 and M5Stack power APIs. Spotpear has no configured fuel gauge; no battery estimate is invented. The Waveshare 1.43C has no fuel gauge either; its percentage is an estimate from the cell voltage, as its guide explains. Hardware-in-the-loop testing is distinct from a successful compile; see [validation](VALIDATION.md).
 
 ## Speaker output
 
@@ -70,8 +70,9 @@ Battery percentage is available through Waveshare AXP2101 and M5Stack power APIs
 | Waveshare 1.75C | ES8311 codec, original 16 kHz I2S PCM synthesis | MCLK 16, BCLK 9, WS 45, DOUT 8, amplifier enable 46; codec I2C address 0x18 on the display/touch bus |
 | StopWatch | M5Unified speaker | Board-specific wiring managed by the pinned library; vibration is independent |
 | Waveshare LCD 1.85B | ES8311 codec, original 16 kHz I2S PCM synthesis | MCLK2, BCLK48, LRCK38, DOUT47, amplifier enable9; codec I²C address0x18 |
+| Waveshare AMOLED 1.43C | ES8311 codec, original 16 kHz I2S PCM synthesis | MCLK38, BCLK39, LRCK40, DOUT41, amplifier enable46, codec supply enable18; codec I²C address0x18 on the touch bus; speaker connector |
 
-Use the board's suitable speaker connection; a bare board with no speaker connected cannot produce sound. The Waveshare owner confirmed audible output. StopWatch speaker initialization and a 100% preview were exercised during the 0.8 hardware checks. Spotpear audio remains build-verified only. RTTTL melodies are synthesized locally, and no microphone input is enabled. From 0.14.2, supported audio profiles offer High, Medium and Silent. Medium selects application gain 50, High selects 100, and Silent sets zero gain and disables alerts, hunt sounds and previews. Updates retain prior saved gains until a level is selected. The 1.85B's board-specific codec unity-gain setting and Medium/High test beeps were approved by its owner; other boards were not physically retested for this change. Display brightness remains configurable with no default dim/off timers.
+Use the board's suitable speaker connection; a bare board with no speaker connected cannot produce sound. The Waveshare 1.75C owner confirmed audible output. The Waveshare 1.43C has not been listened to yet. StopWatch speaker initialization and a 100% preview were exercised during the 0.8 hardware checks. Spotpear audio remains build-verified only. RTTTL melodies are synthesized locally, and no microphone input is enabled. From 0.14.2, supported audio profiles offer High, Medium and Silent. Medium selects application gain 50, High selects 100, and Silent sets zero gain and disables alerts, hunt sounds and previews. Updates retain prior saved gains until a level is selected. The 1.85B's board-specific codec unity-gain setting and Medium/High test beeps were approved by its owner; other boards were not physically retested for this change. Display brightness remains configurable with no default dim/off timers.
 
 ## StopWatch input diagnostics
 
@@ -99,3 +100,7 @@ The `watcher` environment targets 412×412, 32 MB flash and 8 MB PSRAM with full
 ## Waveshare LCD 1.85B
 
 The `waveshare_185b` profile adds the full 360 px touch UI, 16 MB flash, 8 MB PSRAM, four-bit SDMMC storage, PCF85063 RTC and ES8311 speaker. SD is preferred for supported logs, captures and recon files. External UART GPS is off by default; Wardrive remains hidden until enabled with recent valid receiver data. The SH1.0 UART connector supplies 3.3 V and requires the correct adapter for Grove modules. BOOT is programmable and PWR is hardware-controlled. [Exact model, wiring and validation](WAVESHARE-LCD-185B.md).
+
+## Waveshare AMOLED 1.43C
+
+The `waveshare_143c` profile adds the full 466 px touch UI on the 8 MB **ESP32-S3-Touch-AMOLED-1.43C**: CO5300 AMOLED, CST820 touch, 8 MB PSRAM, an ES8311 codec on a speaker connector and a battery connector with a voltage-based estimate. One 4 MiB application slot leaves 3.94 MiB shared internal storage, with a 1 MiB capture buffer and 256 KiB recon sessions. No SD, RTC, GPS or motion sensor is fitted; time comes from USB or saved Wi-Fi. BOOT is programmable and navigates the main screens; PWR is hardware-controlled. The plain 1.43 and 1.43-B are different boards. [Exact model, buttons and validation](WAVESHARE-AMOLED-143C.md).

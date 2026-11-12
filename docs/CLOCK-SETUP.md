@@ -39,6 +39,7 @@ No firmware can know how long an unpowered clock was off without an independent 
 | M5Stack StopWatch C152 | RX8130CE hardware RTC | 0.13.25 enables L1 power hold to keep the RTC supplied during normal button shutdown while the main battery is charged |
 | Seeed XIAO + Round Display | BM8563/PCF8563-compatible hardware RTC | Install a healthy CR927 backup coin cell for timekeeping when the display supply is off |
 | Waveshare AMOLED **1.75C** | ESP32 system clock on tested hardware | 0.14.6+ retains time during smaller-button sleep while battery/USB power remains; full power-off needs USB or configured saved-Wi-Fi recovery |
+| Waveshare AMOLED **1.43C** | ESP32 system clock; no clock chip | USB sync or configured saved-Wi-Fi recovery required after power-off |
 | Spotpear | ESP32 system clock | USB sync or configured saved-Wi-Fi recovery required |
 | Elecrow CrowPanel 2.1 Rotary | ESP32 system clock | USB sync or configured saved-Wi-Fi recovery required |
 | Waveshare Lite | ESP32 system clock | USB sync required after full power-off |

@@ -27,6 +27,7 @@ On the 1.85B, **SYSTEM → SD resources** also shows ready, missing, invalid or 
 | Waveshare ESP32-S3-Touch-AMOLED-1.75 | Optional | 0.13.40 development: [optional external UART GPS](EXTERNAL-GPS-AMOLED175.md), off by default; explicit SD-configured uploads |
 | Waveshare ESP32-S3-Touch-AMOLED-1.75-G | Optional | LC76G; 0.13.39 development adds explicit [SD-configured uploads](WARDRIVE-UPLOADS.md), pending live service validation |
 | Waveshare ESP32-S3-Touch-AMOLED-1.75C | None | No |
+| Waveshare ESP32-S3-Touch-AMOLED-1.43C | None | No |
 | LILYGO T-Display-S3-AMOLED-1.75, H0175Y003AM | Optional | No |
 | Seeed XIAO ESP32-S3 + Round Display | Optional | No |
 | M5Stack StopWatch C152 | None | No |

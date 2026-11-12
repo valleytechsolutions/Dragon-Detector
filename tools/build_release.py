@@ -3,7 +3,7 @@ from pathlib import Path
 import argparse, csv, hashlib, json, os, re, shutil, subprocess, sys, zipfile
 from flash_budget import report as flash_report
 ROOT=Path(__file__).resolve().parents[1]
-BOARDS={'guition_185_beta':('Guition / Surenoo JC3636W518 Beta 1','spotpear'),'waveshare_185b':('Waveshare ESP32-S3-Touch-LCD-1.85B','waveshare-lcd-185b'),'watcher':('Seeed SenseCAP Watcher','seeed-watcher'),'m5dial':('M5Stack Dial','m5stack-dial'),'lilygo_175':('LilyGo T-Display-S3-AMOLED-1.75','lilygo-amoled-175'),'elecrow_21':('Elecrow CrowPanel 2.1 Rotary','elecrow-rotary-21'),'waveshare_175_gps':('Waveshare ESP32-S3-Touch-AMOLED-1.75-G','waveshare-amoled-175'),'waveshare_175':('Waveshare ESP32-S3-Touch-AMOLED-1.75','waveshare-amoled-175'),'spotpear':('Spotpear JC3636W518','spotpear'),'waveshare':('Waveshare ESP32-S3-Touch-AMOLED-1.75C','waveshare-amoled'),'stopwatch':('M5Stack StopWatch C152','m5stack-stopwatch'),'xiao_round':('Seeed XIAO ESP32-S3 + Round Display','xiao-round'),'waveshare_lite':('Waveshare ESP32-S3-LCD-1.28 Lite','waveshare-lite')}
+BOARDS={'waveshare_143c':('Waveshare ESP32-S3-Touch-AMOLED-1.43C','waveshare-amoled-143c'),'guition_185_beta':('Guition / Surenoo JC3636W518 Beta 1','spotpear'),'waveshare_185b':('Waveshare ESP32-S3-Touch-LCD-1.85B','waveshare-lcd-185b'),'watcher':('Seeed SenseCAP Watcher','seeed-watcher'),'m5dial':('M5Stack Dial','m5stack-dial'),'lilygo_175':('LilyGo T-Display-S3-AMOLED-1.75','lilygo-amoled-175'),'elecrow_21':('Elecrow CrowPanel 2.1 Rotary','elecrow-rotary-21'),'waveshare_175_gps':('Waveshare ESP32-S3-Touch-AMOLED-1.75-G','waveshare-amoled-175'),'waveshare_175':('Waveshare ESP32-S3-Touch-AMOLED-1.75','waveshare-amoled-175'),'spotpear':('Spotpear JC3636W518','spotpear'),'waveshare':('Waveshare ESP32-S3-Touch-AMOLED-1.75C','waveshare-amoled'),'stopwatch':('M5Stack StopWatch C152','m5stack-stopwatch'),'xiao_round':('Seeed XIAO ESP32-S3 + Round Display','xiao-round'),'waveshare_lite':('Waveshare ESP32-S3-LCD-1.28 Lite','waveshare-lite')}
 VERSION=re.search(r'#define DRAGON_VERSION "([0-9.]+)"',(ROOT/'firmware/include/dragon_version.h').read_text()).group(1)
 
 def run(*args):subprocess.run([sys.executable,*args],cwd=ROOT,check=True)
@@ -30,6 +30,19 @@ def build(board,skip):
     # Each standalone board ZIP also carries the embedded fonts' license.
     shutil.copyfile(ROOT/'docs/licenses/Montserrat-OFL.txt',out/'FONT-LICENSE.txt')
     shutil.copyfile(ROOT/'docs/licenses/Unscii-NOTICE.txt',out/'ASCII-FONT-NOTICE.txt')
+    if board=='waveshare_143c':
+        (out/'BOARD-STATUS.txt').write_text(
+            'Waveshare ESP32-S3-Touch-AMOLED-1.43C / 1.43C-EN, 466 x 466, 8 MB flash, 8 MB PSRAM.\n'
+            'CO5300 display, CST820 touch and ES8311 speaker. Physical validation pending.\n'
+            'Not compatible with the original 16 MB 1.43 / 1.43-B or any 1.75 profile.\n'
+            '3.94 MiB shared internal storage. No SD slot, hardware RTC or GPS.\n'
+            'Use Fresh installation for factory firmware or another profile. Update requires this exact 0.14.7+ layout.\n'
+            'Clock setup uses USB or saved Wi-Fi after full power loss.\n'
+            'https://valleytech-dragon-detector.pages.dev/guides/WAVESHARE-AMOLED-143C.html\n',encoding='utf-8')
+        for name in ('NOTICE.md','LICENSE'):
+            shutil.copyfile(ROOT/'third_party/waveshare-143c'/name,out/('DISPLAY-'+name))
+        for name in ('UPSTREAM.md','LICENSE'):
+            shutil.copyfile(ROOT/'lib/es8311'/name,out/('ES8311-'+name))
     if board=='guition_185_beta':
         (out/'BOARD-STATUS.txt').write_text(
             'BETA 1: Guition / Surenoo JC3636W518, 360 x 360, 16 MB flash, PSRAM.\n'
@@ -118,7 +131,7 @@ def build(board,skip):
     checks=[]
     for file in sorted(out.glob('*.bin')):
         data=file.read_bytes();assert b'C:/Users/' not in data and b'C:\\Users\\' not in data, 'Private workstation path in image'
-        if file.name=='firmware.bin' and board in ('waveshare','stopwatch','waveshare_lite','elecrow_21'):
+        if file.name=='firmware.bin' and board in ('waveshare_143c','waveshare','stopwatch','waveshare_lite','elecrow_21'):
             for prompt in (b'SD CARD',b'SD files',b'SD event logging:',b'Requires a mounted SD card',b'Insert FAT32 card',b'SD: this board has no card slot'):
                 assert prompt not in data,(board,'Unsupported card UI in firmware',prompt)
         checks.append(f'{hashlib.sha256(data).hexdigest()}  {file.name}\n')
@@ -132,7 +145,8 @@ def build(board,skip):
     if board=='watcher':metadata['hardware_validation']='display-rtc-sd-controls-verified'
     if board=='waveshare_185b':metadata['hardware_validation']='185b-display-touch-sd-rtc-restart-verified'
     if board=='guition_185_beta':metadata.update(release_channel='beta',beta_iteration=1,hardware_validation='physically-unverified',display_source='Guition-JC/Guition@dbadb44943658338602c5f5a584b2af026fb32da',display_commands=184,display_qspi_hz=20000000,display_id_probe_hz=3000000,display_id_autodetection=False)
-    metadata['flash_size']=0x2000000 if board in ('watcher','waveshare') else 0x800000 if board in ('m5dial','xiao_round') else 0x1000000
+    if board=='waveshare_143c':metadata['hardware_validation']='physically-unverified'
+    metadata['flash_size']=0x2000000 if board in ('watcher','waveshare') else 0x800000 if board in ('waveshare_143c','m5dial','xiao_round') else 0x1000000
     metadata['memory']=flash_report(entries,(build/'firmware.bin').stat().st_size,metadata['flash_size'])
     (out/'memory-budget.json').write_text(json.dumps(metadata['memory'],indent=2)+'\n',encoding='utf-8')
     if board=='waveshare':metadata.update(recon_offset=recon_offset,recon_size=recon_size,update_preserves_recon=True)
@@ -148,6 +162,9 @@ def build(board,skip):
                 assert archive.read(name)==(out/name).read_bytes(),f'Missing or altered beta notice: {name}'
         if board=='waveshare_185b':
             for name in ('DISPLAY-NOTICE.md','DISPLAY-LICENSE','ES8311-UPSTREAM.md','ES8311-LICENSE'):
+                assert archive.read(name)==(out/name).read_bytes(),f'Missing or altered package notice: {name}'
+        if board=='waveshare_143c':
+            for name in ('DISPLAY-NOTICE.md','DISPLAY-LICENSE','ES8311-UPSTREAM.md','ES8311-LICENSE','BOARD-STATUS.txt'):
                 assert archive.read(name)==(out/name).read_bytes(),f'Missing or altered package notice: {name}'
     with (out/'SHA256SUMS.txt').open('a',encoding='ascii') as checksums:
         checksums.write(f'{hashlib.sha256(bundle.read_bytes()).hexdigest()}  {bundle.name}\n')
