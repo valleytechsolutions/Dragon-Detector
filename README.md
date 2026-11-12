@@ -15,7 +15,9 @@ GitHub source access is restored. The Cloudflare address above remains the prima
 installer; the [original GitHub Pages link](https://valleytechsolutions.github.io/Dragon-Detector/)
 forwards there. [Hosting status](docs/HOSTING-STATUS.md).
 
-[**Install firmware**](https://valleytech-dragon-detector.pages.dev/#install) · [Latest release](docs/RELEASE-0.14.6.md) · [User guides](docs/GUI.md) · [Clock setup](docs/CLOCK-SETUP.md)
+[**Install firmware**](https://valleytech-dragon-detector.pages.dev/#install) · [Latest release](docs/RELEASE-0.14.7.md) · [User guides](docs/GUI.md) · [Clock setup](docs/CLOCK-SETUP.md)
+
+**Waveshare AMOLED 1.43C · 0.14.7:** New profile for the 8 MB **ESP32-S3-Touch-AMOLED-1.43C**: the full 466 px touch interface, BOOT-button navigation, a speaker connector and a battery estimate from cell voltage. It has no SD slot, RTC or GPS, and it does not fit the plain 1.43 or 1.43-B. Pre-release builds have been installed and started on one board; the picture, touch, buttons and sound await confirmation. Other board downloads remain on their existing versions. [Setup and buttons](docs/WAVESHARE-AMOLED-143C.md) · [Release notes](docs/RELEASE-0.14.7.md).
 
 **Waveshare AMOLED 1.75C · 0.14.6:** Hold the smaller BOOT button for two seconds and release to sleep while the clock keeps ticking; short-press the larger PWR button to wake. The display and radios turn off during sleep. The four-screen cycle and stopwatch buttons are unchanged. Other board downloads remain on their existing versions. [Controls and release notes](docs/RELEASE-0.14.6.md).
 
@@ -79,6 +81,7 @@ Some store links are affiliate links. Purchases through them may earn Valleytech
 |---|---|---|---|
 | **Waveshare ESP32-S3-Touch-LCD-1.85B** | 360 × 360 LCD | Touch, BOOT/PWR, RTC, speaker, microSD; optional external UART GPS, off by default · [setup](docs/WAVESHARE-LCD-185B.md) | [Waveshare](https://www.waveshare.com/esp32-s3-touch-lcd-1.85b.htm?&aff_id=122099) |
 | **Waveshare ESP32-S3-Touch-AMOLED-1.75C** | 466 × 466 AMOLED | Touch, BOOT/PWR, 32 MB flash; choose the **C** model | [Waveshare](https://www.waveshare.com/esp32-s3-touch-amoled-1.75c.htm?&aff_id=122099) |
+| **Waveshare ESP32-S3-Touch-AMOLED-1.43C** | 466 × 466 AMOLED | Touch, BOOT navigation, speaker connector, battery estimate, 8 MB flash; choose the **C** model · [setup](docs/WAVESHARE-AMOLED-143C.md) | [Waveshare](https://www.waveshare.com/esp32-s3-touch-amoled-1.43c.htm?&aff_id=122099) |
 | **Waveshare ESP32-S3-Touch-AMOLED-1.75 · SD beta** | 466 × 466 AMOLED | Touch, BOOT/PWR, RTC, microSD, 16 MB flash; select **Standard version** | [Waveshare](https://www.waveshare.com/esp32-s3-touch-amoled-1.75.htm?&aff_id=122099) |
 | **Waveshare ESP32-S3-Touch-AMOLED-1.75-G · GPS beta** | 466 × 466 AMOLED | RTC, microSD, onboard LC76G GPS; select **GPS version** | [Waveshare · choose GPS](https://www.waveshare.com/esp32-s3-touch-amoled-1.75.htm?&aff_id=122099) |
 | **M5Stack StopWatch C152** | 466 × 466 AMOLED | Touch, yellow/blue buttons, RTC, speaker, haptics, 16 MB flash | [M5Stack](https://shop.m5stack.com/products/m5stack-stopwatch-dev-kit-esp32-s3?ref=marvvxzb&variant=48862593515777) |
@@ -89,11 +92,11 @@ Some store links are affiliate links. Purchases through them may earn Valleytech
 | **Seeed XIAO ESP32-S3 + Round Display** | 240 × 240 LCD | Touch, RTC, microSD, 8 MB flash; **both parts required** | [ESP32-S3 board](https://www.seeedstudio.com/XIAO-ESP32S3-p-5627.html?c_event_medium=search%3A%3Aresults&c_event_id=2529207033%3A%3Axiao+round+display&sensecap_affiliate=qV5RXdv&referring_service=link) + [Round Display](https://www.seeedstudio.com/1-28-Round-Touch-Display-for-Seeed-Studio-XIAO-ESP32.html?c_event_medium=search%3A%3Aresults_recommend&c_event_id=2529207033%3A%3Axiao+round+display&sensecap_affiliate=qV5RXdv&referring_service=link) |
 | **Waveshare ESP32-S3-LCD-1.28 Lite** | 240 × 240 LCD | BOOT button, 16 MB flash; **non-touch** model | [Waveshare](https://www.waveshare.com/esp32-s3-lcd-1.28.htm) |
 
-The nine full profiles share the radar, 45 built-in themes, logo watch faces, timers, notebook, badge editor, radio tools, and BLE Lab. StopWatch and Waveshare AMOLED support 2 MiB captures and 2 MiB recon sessions. Their total file storage differs.
+The eleven full profiles share the radar, 45 built-in themes, logo watch faces, timers, notebook, badge editor, radio tools, and BLE Lab. StopWatch and the Waveshare AMOLED 1.75 models support 2 MiB captures and 2 MiB recon sessions; the 8 MB AMOLED 1.43C has 1 MiB captures and 256 KiB sessions. Their total file storage differs.
 
 Lite provides five button-operated pages: radar, clock, timer, signals, and diagnostics. It shares detection and all 45 built-in themes, with compact clocks. It does not include Badge Studio, audio, or active labs.
 
-Firmware is board-specific. The Waveshare **1.75C**, **1.75** and **1.75-G** each have a separate installer profile. Non-C SD captures and GPS transport have passed bench checks; GPS routes still await field testing. Elecrow has passed initial checks on one unit. [Hardware guide](docs/HARDWARE.md) · [Feature comparison](docs/FEATURE-MATRIX.md) · [Tested hardware and limitations](docs/VALIDATION.md)
+Firmware is board-specific. The Waveshare **1.43C**, **1.75C**, **1.75** and **1.75-G** each have a separate installer profile, and the 1.43C profile does not fit the plain 1.43 or 1.43-B. Non-C SD captures and GPS transport have passed bench checks; GPS routes still await field testing. Elecrow has passed initial checks on one unit. [Hardware guide](docs/HARDWARE.md) · [Feature comparison](docs/FEATURE-MATRIX.md) · [Tested hardware and limitations](docs/VALIDATION.md)
 
 ## Watcher beta
 
@@ -143,7 +146,7 @@ Detection matches observable radio signatures; it does not establish intent, own
 | `hardware/` | Board partitions and archived projects |
 | `docs/` | Setup guides, architecture, and validation |
 
-CI tests the firmware core and browser modules, builds all twelve ESP32 profiles, and publishes matching firmware, manifests, and SHA-256 checksums. Historical projects under `hardware/` retain their original licenses and are not current update targets.
+CI tests the firmware core and browser modules, builds all thirteen ESP32 profiles, and publishes matching firmware, manifests, and SHA-256 checksums. Historical projects under `hardware/` retain their original licenses and are not current update targets.
 
 ## Credits and license
 

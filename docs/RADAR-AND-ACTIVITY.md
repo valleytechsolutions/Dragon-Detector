@@ -1,6 +1,6 @@
 # Radar, hunt and traffic evidence · 0.14
 
-The shared detection and radar code runs across all twelve supported ESP32-S3 profiles. Each board retains its own display, input, storage and audio capabilities. Choose the exact hardware profile; similarly shaped boards are not interchangeable.
+The shared detection and radar code runs across all thirteen supported ESP32-S3 profiles. Each board retains its own display, input, storage and audio capabilities. Choose the exact hardware profile; similarly shaped boards are not interchangeable.
 
 ## Reading the radar
 

@@ -4,7 +4,7 @@
 
 **[Open the web flasher](https://valleytech-dragon-detector.pages.dev/)** in desktop Chrome or Edge. HTTPS or localhost is required for Web Serial. Use a USB data cable and close serial monitors first.
 
-1. Check the exact printed model against the table below. Waveshare **1.75C**, **1.75**, **1.75-G** and non-touch **LCD-1.28** have separate profiles. The touch LCD-1.28 is not supported by the non-touch Lite build.
+1. Check the exact printed model against the table below. Waveshare **1.43C**, **1.75C**, **1.75**, **1.75-G** and non-touch **LCD-1.28** have separate profiles. The touch LCD-1.28 is not supported by the non-touch Lite build.
 2. Select that board. The ESP32-S3 chip check does not distinguish these boards.
 3. Choose **Update matching Dragon Detector** if the exact board already has a compatible Dragon Detector layout (table below). The page applies the selected erase policy. Choose **Fresh install** for a new board or migration from unrelated firmware; this replaces saved files. Back up existing firmware, files and settings first.
 4. Confirm the board/type checkbox, Connect & install, choose its serial port, and wait for verification. Reset if it stays in the bootloader.
@@ -15,6 +15,7 @@
 | Spotpear JC3636W518 | This profile's 0.3.x–0.13.x layout |
 | M5Stack StopWatch C152 | This profile's 0.3.x–0.13.x layout |
 | Waveshare LCD **1.85B** | Exact `waveshare_185b` profile, **0.14.1 or newer**; Fresh installation for the factory demo |
+| Waveshare AMOLED **1.43C** | Exact `waveshare_143c` profile, **0.14.7 or newer**; Fresh installation for the factory demo |
 | Waveshare AMOLED **1.75C** | This profile's 0.3.x–0.13.x layout; older 16 MB builds need the one-time recon initialization below |
 | XIAO ESP32-S3 + Round Display | This profile's **0.9.2 or newer**, 8 MB layout |
 | Waveshare non-touch LCD 1.28 Lite | This profile's **0.9.4 or newer** layout; unrelated/older ports are not assumed compatible |
@@ -31,7 +32,7 @@ After installation, open Tools → Utilities on a full board. **Waveshare AMOLED
 
 **XIAO Round starts at 0.9.2:** use Fresh install when migrating from any other firmware, and Update only for this exact XIAO profile’s 0.9.2-or-newer layout. Its 8 MB flash cannot hold the other board images. [XIAO setup](XIAO-ROUND.md).
 
-The factory filesystem is at `0xC10000` on Spotpear/Waveshare, `0x810000` on StopWatch, and `0x610000` on Seeed XIAO Round. A merged `factory-0x0.bin` writes intervening blank regions too, so it resets NVS and files. **Never use a merged factory BIN as a preservation update.** Earlier 0.1/0.2 binaries are retained under `hardware/` and use their older instructions.
+The factory filesystem is at `0xC10000` on Spotpear and the Waveshare 1.75C, `0x810000` on StopWatch, `0x610000` on Seeed XIAO Round and `0x410000` on the Waveshare 1.43C. A merged `factory-0x0.bin` writes intervening blank regions too, so it resets NVS and files. **Never use a merged factory BIN as a preservation update.** Earlier 0.1/0.2 binaries are retained under `hardware/` and use their older instructions.
 
 ## Manual installation
 
@@ -69,11 +70,13 @@ If a firmware file cannot be reached, the board chooser keeps installation disab
 
 **M5Stack StopWatch:** connect USB, hold the power button for about two seconds until its green LED lights, then release to enter download mode. Leave all buttons alone during flashing and verification. After flashing, a short power-button press restarts it. If the screen stays blank, close the serial connection, unplug USB, double-press power to turn it off, wait five seconds, then press power once. Reconnect USB after the logo appears and choose **Finish clock setup** or **Connect & sync local time**. This full power cycle recovered a C152 that remained in download mode after a verified 0.13.20 factory installation. [Official power-button controls](https://docs.m5stack.com/en/core/StopWatch).
 
+**Waveshare AMOLED 1.43C:** this board has no RESET button. With it switched off, hold BOOT and press PWR, or hold BOOT while plugging in USB, then release BOOT and select the bootloader port. The screen stays dark in download mode.
+
 **Spotpear/Waveshare/XIAO:** Hold BOOT, tap RESET, release BOOT, then select the bootloader port. Try a known data cable and another direct USB port. Stop any other program holding the serial port. If the display is blank but USB responds, confirm the board variant before trying another build. For badge storage errors, back up existing flash before reinstalling the correct factory image. The firmware never auto-formats a failed mount.
 
 ## Hosting
 
-The current public flasher is hosted on Cloudflare Pages. The repository also includes GitHub Actions packaging; if using GitHub Pages, set its source to **GitHub Actions** and publish source and all nine build artifacts from the same successful run. Failed builds must not be substituted with older binaries. The public website contains release binaries; device dumps and local scan data are excluded.
+The current public flasher is hosted on Cloudflare Pages. The repository also includes GitHub Actions packaging; if using GitHub Pages, set its source to **GitHub Actions** and publish source and all thirteen build artifacts from the same successful run. Failed builds must not be substituted with older binaries. The public website contains release binaries; device dumps and local scan data are excluded.
 
 The web page validates the exact board name, ESP32-S3 family, image filenames, partition offsets and factory/update erase policy, then checks file availability and declared sizes before enabling installation. Some hosts omit sizes on HEAD responses; release packaging still verifies every full binary and its offsets. The availability check is not a checksum verification; published SHA-256 files are available for manual verification. This does not automatically identify connected display wiring; select the printed model carefully.
 

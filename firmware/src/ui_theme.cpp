@@ -26,6 +26,9 @@ void apply(lv_theme_t*,lv_obj_t* obj){
 const dragon::UiPalette& uiColors(){return themeUiColors(selected);}
 lv_obj_t* uiMessageBox(lv_obj_t* parent,const char* title,const char* text,const char* buttons[],bool close){
   const auto& p=uiColors();auto* box=lv_msgbox_create(parent,title,text,buttons,close);
+#ifdef BOARD_WAVESHARE_143C
+  waveshare143cPictureChanged(false);lv_obj_add_event_cb(box,[](lv_event_t*){waveshare143cPictureChanged(true);},LV_EVENT_DELETE,nullptr);
+#endif
   lv_obj_set_style_bg_color(box,lv_color_hex(p.surface),0);
   lv_obj_set_style_bg_opa(box,LV_OPA_COVER,0);
   lv_obj_set_style_border_color(box,lv_color_hex(p.accent),0);
@@ -51,7 +54,7 @@ const lv_font_t* uiFont(const lv_font_t* standard){
   if(!uiAscii())return standard;
   // Montserrat includes ascender/descender padding in line_height. Use the
   // board's actual regular-font metrics rather than rounding pixel sizes up.
-#if defined(BOARD_WATCHER) || defined(BOARD_LILYGO_175) || defined(BOARD_AMOLED_175C) || defined(BOARD_AMOLED_175) || defined(BOARD_STOPWATCH) || defined(BOARD_CROWPANEL_21)
+#if defined(BOARD_WATCHER) || defined(BOARD_LILYGO_175) || defined(BOARD_WAVESHARE_143C) || defined(BOARD_AMOLED_175C) || defined(BOARD_AMOLED_175) || defined(BOARD_STOPWATCH) || defined(BOARD_CROWPANEL_21)
   const int small=21,body=22;
 #elif defined(BOARD_XIAO_ROUND)
   const int small=11,body=15;

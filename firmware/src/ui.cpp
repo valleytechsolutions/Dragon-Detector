@@ -17,6 +17,9 @@
 #include "radar_colors.h"
 #include "board_pins.h"
 #include "board_waveshare_185b.h"
+#ifdef BOARD_WAVESHARE_143C
+#include "waveshare_143c_input.h"
+#endif
 #include "sd_resources.h"
 #include "radar_layout.h"
 #include "radar_interaction.h"
@@ -131,6 +134,9 @@ static Preferences settings;
 static lv_obj_t *timerValue=nullptr,*timerState=nullptr,*timerLap=nullptr,*timerStartButton=nullptr,*timerSecondary=nullptr,*timerSplit=nullptr,*clockValue=nullptr,*clockDate=nullptr,*editValue=nullptr;
 static int editOffset=0;
 static lv_obj_t* clockPrompt=nullptr;
+#ifdef BOARD_WAVESHARE_143C
+static uint32_t clockPromptOpenedAt=0;
+#endif
 static lv_obj_t* resetBox=nullptr;
 #if BOARD_HAS_SD
 static String directory="/";
@@ -186,6 +192,9 @@ void uiNotify(const char* text,const char* detail,const dragon::DeviceKey* key,b
   auto* message=label(notice,safe.c_str(),12,31,236,F12);lv_obj_set_height(message,S(30));lv_label_set_long_mode(message,LV_LABEL_LONG_DOT);
   if(key)button(notice,"HUNT",14,69,100,30,90);
   button(notice,"DISMISS",key?124:64,69,122,30,89);
+#ifdef BOARD_WAVESHARE_143C
+  waveshare143cPictureChanged(false);lv_obj_add_event_cb(notice,[](lv_event_t*){waveshare143cPictureChanged(true);},LV_EVENT_DELETE,nullptr);
+#endif
 }
 static void title(const char* text,const char* subtitle=nullptr){
   auto* t=label(root,text,55,39,250,F20);lv_obj_set_style_text_align(t,LV_TEXT_ALIGN_CENTER,0);
@@ -345,6 +354,9 @@ static void show185bResources(){
 static void build(){
 #ifdef BOARD_WATCHER
   rotaryUiReset();
+#endif
+#ifdef BOARD_WAVESHARE_143C
+  waveshare143cPictureChanged(true);
 #endif
   if(pending!=Radar){if(noticeHasKey)dismissNotice();noticeQueue.count=0;}
   // BLE Lab owns its complete screen and returns before the shared mic label
@@ -1011,7 +1023,7 @@ bool uiStopwatchKey(bool start,uint64_t at){
   if(!at)at=stopwatchNow();if(start)stopwatch.toggle(at);else if(stopwatch.running){if(locksport())stopwatch.finish(at);else stopwatch.lap(at);}else resetStopwatch();
   updateTimer();return true;
 }
-#if defined(BOARD_WAVESHARE_185B) || defined(BOARD_AMOLED_175C)
+#if defined(BOARD_WAVESHARE_185B) || defined(BOARD_WAVESHARE_143C) || defined(BOARD_AMOLED_175C)
 static bool uiSideKeyHasMessageBox(lv_obj_t* object){
   if(!object||lv_obj_has_flag(object,LV_OBJ_FLAG_HIDDEN))return false;
   if(lv_obj_check_type(object,&lv_msgbox_class))return true;
@@ -1057,16 +1069,35 @@ void uiAmoled175cKey(bool primary){
   if(next==Menu&&page==Menu&&pending==Menu)page=Boot;
 }
 #endif
-#ifdef BOARD_WAVESHARE_185B
+// One programmable BOOT key beside a hardware-only PWR key: 1.85B and 1.43C.
+#if defined(BOARD_WAVESHARE_185B) || defined(BOARD_WAVESHARE_143C)
 static bool ui185bModalOpen(){return uiSideKeyModalOpen();}
 bool ui185bTimerVisible(){return page==Stopwatch&&pending==Stopwatch&&!ui185bModalOpen();}
+#ifdef BOARD_WAVESHARE_143C
+// The 1.43C has no clock chip, so SET YOUR CLOCK opens after every power-on
+// that has no time source. BOOT answers "Later" there instead of being ignored,
+// once the prompt has been up long enough to have been seen. A press before
+// that was meant for the screen under it and is spent like one on any dialog.
+static bool ui143cClockPromptLater(){
+  if(!clockPrompt)return false;
+  lastInteraction=millis();
+  if(waveshare143c::clockPromptAnswers(clockPromptOpenedAt,millis())){lv_msgbox_close(clockPrompt);clockPrompt=nullptr;}
+  return true;
+}
+#endif
 void ui185bHome(){
+#ifdef BOARD_WAVESHARE_143C
+  if(ui143cClockPromptLater())return;
+#endif
   lastInteraction=millis();if(ui185bModalOpen())return;
   menuTab=0;go(Menu);
   // Changing a tab stays on Menu, so explicitly rebuild its visible controls.
   if(page==Menu&&pending==Menu)page=Boot;
 }
 void ui185bCycle(){
+#ifdef BOARD_WAVESHARE_143C
+  if(ui143cClockPromptLater())return;
+#endif
   lastInteraction=millis();if(ui185bModalOpen()||page!=pending)return;
   if(uiStopwatchKey(true))return;
   // Use the visible page and tab so touchscreen navigation resets the cycle.

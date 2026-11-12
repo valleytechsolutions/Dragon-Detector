@@ -43,9 +43,9 @@ test('post-install clock verifies each full board, current offset and RTC state'
   for(const board of Object.keys(boardProfiles).filter(k=>!boardProfiles[k].lite)){
     for(const offset of [-720,-240,0,330,345,840]){
       const rtc=['waveshare_185b','watcher','lilygo_175','stopwatch','xiao_round','waveshare_175','waveshare_175_gps'].includes(board)?1:0;
-      const r=rig(board,{offset,rtc,version:board==='guition_185_beta'?'0.14.2':board==='waveshare_185b'?'0.14.1':board==='watcher'?'0.13.29':board==='elecrow_21'?'0.13.20':'0.13.7'});const result=await syncInstalledClock({},board,r.options);
+      const r=rig(board,{offset,rtc,version:board==='waveshare_143c'?'0.14.7':board==='guition_185_beta'?'0.14.2':board==='waveshare_185b'?'0.14.1':board==='watcher'?'0.13.29':board==='elecrow_21'?'0.13.20':'0.13.7'});const result=await syncInstalledClock({},board,r.options);
       assert.equal(result.board,board);assert.equal(result.rtc,!!rtc);assert.equal(result.offset,offset);
-      assert.deepEqual(r.writes,['badge info',`time ${r.epoch}`,`clock offset ${offset}`,'clock status','orientation status',...(['waveshare_185b','watcher'].includes(board)?['clock hardware','clock hardware']:['guition_185_beta','elecrow_21'].includes(board)?['clock hardware']:[])]);
+      assert.deepEqual(r.writes,['badge info',`time ${r.epoch}`,`clock offset ${offset}`,'clock status','orientation status',...(['waveshare_185b','watcher'].includes(board)?['clock hardware','clock hardware']:['waveshare_143c','guition_185_beta','elecrow_21'].includes(board)?['clock hardware']:[])]);
       assert.deepEqual(r.events,['open','close']);
     }
   }

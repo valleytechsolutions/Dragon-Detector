@@ -9,7 +9,7 @@ for md in [ROOT/'README.md',ROOT/'CREDITS.md',*ROOT.glob('docs/*.md')]:
     for target in re.findall(r'!?\[[^\]]*\]\(([^\s)]+)',md.read_text(encoding='utf-8')):
         if '://' in target or target.startswith('#'):continue
         file=unquote(target.split('#')[0]);assert (md.parent/file).exists(),f'{md.name}: missing {file}'
-boards=['waveshare_185b','watcher','m5dial','spotpear','waveshare','stopwatch','xiao_round','waveshare_lite','waveshare_175','waveshare_175_gps','elecrow_21','lilygo_175']
+boards=['waveshare_143c','waveshare_185b','watcher','m5dial','spotpear','waveshare','stopwatch','xiao_round','waveshare_lite','waveshare_175','waveshare_175_gps','elecrow_21','lilygo_175']
 # The separately requested beta is not part of the default stable build set.
 if (ROOT/'web/firmware/guition_185_beta').exists():boards.append('guition_185_beta')
 for board in boards:
@@ -43,6 +43,18 @@ for board in boards:
                     expected=(source/name).read_bytes();packaged=prefix+name
                     assert (folder/packaged).read_bytes()==expected,f'Altered or missing notice: {packaged}'
                     assert archive.read(packaged)==expected,f'Notice missing from board ZIP: {packaged}'
+    if board=='waveshare_143c':
+        # 8 MB, one application slot: the filesystem starts exactly where app0 ends.
+        assert info['flash_size']==0x800000
+        assert (info['filesystem_offset'],info['filesystem_size'])==(0x410000,0x3f0000)
+        assert (budget['app_slot_bytes'],budget['ota_slot_bytes'])==(0x400000,0)
+        with zipfile.ZipFile(folder/f'dragon-detector-{board}.zip') as archive:
+            for source,prefix,names in ((ROOT/'third_party/waveshare-143c','DISPLAY-',('NOTICE.md','LICENSE')),(ROOT/'lib/es8311','ES8311-',('UPSTREAM.md','LICENSE'))):
+                for name in names:
+                    expected=(source/name).read_bytes();packaged=prefix+name
+                    assert (folder/packaged).read_bytes()==expected,f'Altered or missing notice: {packaged}'
+                    assert archive.read(packaged)==expected,f'Notice missing from board ZIP: {packaged}'
+            assert archive.read('BOARD-STATUS.txt')==(folder/'BOARD-STATUS.txt').read_bytes(),'Board status missing from ZIP'
     for mode in ('factory','update'):
         manifest=json.loads((folder/f'{mode}.json').read_text(encoding='utf-8'))
         assert manifest['version']==info['version']
@@ -55,11 +67,12 @@ for board in boards:
             assert part['offset']>=end,'Overlapping segments'
             payload=file.read_bytes();assert hashlib.sha256(payload).hexdigest()==records[file.name]
             end=part['offset']+len(payload)
-            assert end<=(0x2000000 if board in ('watcher','waveshare') else 0x800000 if board in ('m5dial','xiao_round') else 0x1000000),'Image exceeds physical flash'
+            assert end<=(0x2000000 if board in ('watcher','waveshare') else 0x800000 if board in ('waveshare_143c','m5dial','xiao_round') else 0x1000000),'Image exceeds physical flash'
         offsets=[p['offset'] for p in parts]
         assert 0x9000 not in offsets,'NVS must not be explicitly written'
         assert len(parts)==((6 if board=='waveshare' else 5) if mode=='factory' else 4)
         if mode=='update':assert all(p['offset']<0xc10000 for p in parts),'Update must preserve both filesystems'
+        if mode=='update':assert end<=0x10000+budget['app_slot_bytes']<=info['filesystem_offset'],'Update must stay inside app0'
         if board=='waveshare' and mode=='factory':assert parts[-1]=={'path':'reconfs.bin','offset':0x1000000}
     print(f'PASS {board}: both manifests, checksums, image paths and nonoverlapping offsets')
 print('PASS current documentation links')

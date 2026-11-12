@@ -167,6 +167,9 @@ static void command(const String& c){
 #ifdef BOARD_WAVESHARE_185B
   else if(c=="touch status"||c=="185b status"){extern void waveshare185bDiagnostics();waveshare185bDiagnostics();}
 #endif
+#ifdef BOARD_WAVESHARE_143C
+  else if(c=="display hardware"||c=="touch status"||c=="143c status"){extern void waveshare143cHardwareStatus();waveshare143cHardwareStatus();}
+#endif
 #ifdef BOARD_STOPWATCH
   else if(c=="touch status"){extern void stopwatchTouchStatus();stopwatchTouchStatus();}
   else if(c.startsWith("touch inject ")){int x,y,pressed;char extra;if(sscanf(c.c_str(),"touch inject %d %d %d %c",&x,&y,&pressed,&extra)==3&&x>=0&&x<466&&y>=0&&y<466&&(pressed==0||pressed==1)){extern void testTouch(int,int,bool);testTouch(x,y,pressed);Serial.println("TOUCH_INJECT_OK");}else Serial.println("TOUCH_INJECT_ERROR");}

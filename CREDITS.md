@@ -353,3 +353,16 @@ Their [source and modification notice](third_party/waveshare-185b/NOTICE.md) and
 [Apache-2.0 license](third_party/waveshare-185b/LICENSE) are retained and included
 in the board package. The board's ES8311 codec driver retains its existing
 [upstream notice](lib/es8311/UPSTREAM.md) and [license](lib/es8311/LICENSE).
+
+## Waveshare AMOLED 1.43C hardware reference
+
+Pin assignments, the CO5300 start-up values, QSPI settings and touch orientation
+of the `waveshare_143c` profile follow the official Waveshare
+[ESP32-S3-Touch-AMOLED-1.43C examples](https://github.com/waveshareteam/ESP32-S3-Touch-AMOLED-1.43C)
+at revision `8cea11ddae6167dd591d1f5465fd7b615080360f` and the board schematic. The
+[source and modification notice](third_party/waveshare-143c/NOTICE.md) and
+[Apache-2.0 license](third_party/waveshare-143c/LICENSE) are retained and included
+in the board package. The display uses the already-credited CO5300 driver, and
+the ES8311 codec driver retains its [upstream notice](lib/es8311/UPSTREAM.md)
+and [license](lib/es8311/LICENSE). The board integration, touch handling,
+button navigation and battery estimate are original MIT code.

@@ -15,7 +15,7 @@ void toneOutput(uint16_t hz,uint16_t ms,uint8_t volume){M5.Speaker.setVolume(uns
 #else
 #include <driver/i2s_std.h>
 #include <math.h>
-#if defined(BOARD_WATCHER) || defined(BOARD_AMOLED_175C) || defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
+#if defined(BOARD_WATCHER) || defined(BOARD_AMOLED_175C) || defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B) || defined(BOARD_WAVESHARE_143C)
 #include <es8311.h>
 #endif
 static i2s_chan_handle_t tx=nullptr;
@@ -51,7 +51,7 @@ bool toneOutputBegin(){
  i2s_std_config_t cfgStd{};cfgStd.clk_cfg=I2S_STD_CLK_DEFAULT_CONFIG(16000);cfgStd.slot_cfg=I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT,I2S_SLOT_MODE_STEREO);
  cfgStd.gpio_cfg.mclk=gpio_num_t(AUDIO_I2S_MCK_IO);cfgStd.gpio_cfg.bclk=gpio_num_t(AUDIO_I2S_BCK_IO);cfgStd.gpio_cfg.ws=gpio_num_t(AUDIO_I2S_WS_IO);cfgStd.gpio_cfg.dout=gpio_num_t(AUDIO_I2S_DO_IO);cfgStd.gpio_cfg.din=GPIO_NUM_NC;
  if(i2s_channel_init_std_mode(tx,&cfgStd)!=ESP_OK||i2s_channel_enable(tx)!=ESP_OK)return false;
-#if defined(BOARD_WATCHER) || defined(BOARD_AMOLED_175C) || defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
+#if defined(BOARD_WATCHER) || defined(BOARD_AMOLED_175C) || defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B) || defined(BOARD_WAVESHARE_143C)
 #ifdef BOARD_WAVESHARE_185B
  // Touch polling shares I2C0. Serialize codec setup with its bounded reads.
  if(!waveshare185bI2cLock(100))return false;
@@ -63,7 +63,7 @@ bool toneOutputBegin(){
  // This board needs the codec's unity-gain DAC setting. 75 maps to 0xBF
  // (0 dB); app volume still controls PCM amplitude below full scale.
  constexpr int codecVolume=75;
-#elif defined(BOARD_WATCHER) || defined(BOARD_AMOLED_175)
+#elif defined(BOARD_WATCHER) || defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_143C)
  // Driver percent maps directly to DAC register: 100 -> 0xFF (+32 dB).
  // 65 -> 0xA5 (-13 dB), keeping headroom even at full application volume.
  constexpr int codecVolume=65;
@@ -73,7 +73,7 @@ bool toneOutputBegin(){
  bool ok=es8311_init(codec,&clock,ES8311_RESOLUTION_16,ES8311_RESOLUTION_16)==ESP_OK&&es8311_voice_volume_set(codec,codecVolume,nullptr)==ESP_OK&&es8311_voice_mute(codec,false)==ESP_OK;es8311_delete(codec);if(!ok)return false;
 #endif
  // Queue silence before enabling the amplifier, avoiding stale DMA startup.
-#ifdef BOARD_WAVESHARE_185B
+#if defined(BOARD_WAVESHARE_185B) || defined(BOARD_WAVESHARE_143C)
  int16_t silence[128]{};size_t silentBytes=0;
  if(i2s_channel_write(tx,silence,sizeof(silence),&silentBytes,100)!=ESP_OK||silentBytes!=sizeof(silence))return false;
 #endif

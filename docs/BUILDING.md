@@ -8,7 +8,7 @@ python -m platformio run -e spotpear -e waveshare -e stopwatch -e xiao_round -e 
 python tools/build_release.py --skip-build
 ```
 
-The pinned pioarduino platform provides Arduino ESP32 and ESP-IDF. Full profiles use octal PSRAM; Waveshare Lite has 2 MB QSPI PSRAM. The M5Stack Dial beta has no PSRAM and uses a separate compact memory configuration. Waveshare AMOLED 1.75C uses 32 MB flash, XIAO uses 8 MB, and the other profiles use 16 MB. Firmware uses one shared application in `firmware/`; display/power and speaker-output adapters vary.
+The pinned pioarduino platform provides Arduino ESP32 and ESP-IDF. Full profiles use octal PSRAM; Waveshare Lite has 2 MB QSPI PSRAM. The M5Stack Dial beta has no PSRAM and uses a separate compact memory configuration. Waveshare AMOLED 1.75C and the Seeed Watcher use 32 MB flash; XIAO, the M5Stack Dial and the Waveshare AMOLED 1.43C use 8 MB; the other profiles use 16 MB. Firmware uses one shared application in `firmware/`; display/power and speaker-output adapters vary.
 
 `tools/build_release.py` builds a blank badge filesystem, checks image/partition sizes, generates split factory/update manifests, merges a factory image, verifies every merged segment, rejects embedded workstation paths, and writes SHA-256 checksums plus source-commit metadata. Do not publish manually renamed binaries from a different board.
 
@@ -47,3 +47,7 @@ Build and package only this board with `python tools/build_release.py --board m5
 ## Waveshare LCD 1.85B
 
 Build with `python -m platformio run -e waveshare_185b` and package with `python tools/build_release.py --board waveshare_185b`. This dedicated profile uses `hardware/waveshare-lcd-185b/partitions.csv`: 16 MB flash, two 4 MiB application slots and 7.94 MiB internal storage. It does not inherit the AMOLED driver or require M5Unified. [Hardware and wiring](WAVESHARE-LCD-185B.md).
+
+## Waveshare AMOLED 1.43C
+
+Build with `python -m platformio run -e waveshare_143c` and package with `python tools/build_release.py --board waveshare_143c`. This profile uses `hardware/waveshare-amoled-143c/partitions.csv`: 8 MB flash, one 4 MiB application slot and 3.94 MiB internal storage. `python tools/test_waveshare143c.py` runs the native checks for its pin map, shared-code gates and input logic. It is not a build for the 16 MB 1.43 or 1.43-B. [Hardware and wiring](WAVESHARE-AMOLED-143C.md).

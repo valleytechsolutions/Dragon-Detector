@@ -66,3 +66,7 @@ The `watcher` environment targets 412×412, 32 MB flash and 8 MB PSRAM with full
 ## Waveshare LCD 1.85B · 0.14.1
 
 The new dedicated port has a separate [release validation record](RELEASE-0.14.1.md) and [hardware guide](WAVESHARE-LCD-185B.md). Do not infer 1.85B physical results from the similarly sized Spotpear or AMOLED models.
+
+## Waveshare AMOLED 1.43C · 0.14.7
+
+The new port has a separate [release validation record](RELEASE-0.14.7.md) and [hardware guide](WAVESHARE-AMOLED-143C.md). Do not infer 1.43C physical results from the 1.75C, which shares only the panel family.
