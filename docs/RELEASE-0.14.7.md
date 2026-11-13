@@ -56,25 +56,26 @@ this profile with about 0.9 MiB of its application slot free.
 On November 11, 2026, a release candidate was installed on one 1.43C, with
 write-hash verification, and run through an automated check over USB. Its
 firmware matches this release byte for byte except for build dates and times,
-file timestamps in the storage image, and the checksums that follow from them.
-The board reported:
+file-system timestamps in the storage image, and the checksums computed from
+the build. The board reported:
 
-- **Start-up.** 8 MB flash and 8 MB PSRAM, one start with no crash or
-  unexpected reset, the CO5300 display, CST820 touch controller and ES8311
+- **Start-up.** 8 MB flash and 8 MB PSRAM. The board started once after
+  installation and once after a restart requested over USB, with no crash or
+  unexpected reset. The CO5300 display, CST820 touch controller and ES8311
   codec initialized, 3.94 MiB of storage mounted, and all 23 detection
   self-tests passed. The USB connection never dropped.
-- **Clock.** Set over USB and read back ten times. No clock chip was detected,
-  as expected.
+- **Clock.** Set over USB and read back ten times. The firmware reports no
+  clock chip, as expected for this board.
 - **Touch reading.** The touch controller was read 70.5 times a second while
   the radar redrew and 58.9 times a second on the stopwatch, with no read
   errors.
 - **Memory.** 52 KB of internal memory free at the start and 46 KB after two
-  Wi-Fi join attempts to a saved network that does not exist. Neither attempt
-  was refused for memory, and the lab portal then started, kept at least 35 KB
-  free and stopped.
-- **Capture.** A Wi-Fi capture recorded 216 records in about nine seconds,
-  saved a 72,976-byte file with a matching checksum, downloaded over USB
-  complete and was then deleted.
+  Wi-Fi join attempts to a saved network name that does not exist. Neither
+  attempt was refused for memory, and the lab portal then started, kept at
+  least 35 KB free and stopped.
+- **Capture.** A Wi-Fi capture recorded 216 records in about nine seconds and
+  was saved as a 72,976-byte file. The file downloaded in full over USB with a
+  matching checksum and was then deleted.
 - **Display.** About 13,000 display transfers completed with no errors. Four
   screens (radar, main menu, clock and stopwatch) were captured from the
   firmware's drawing path with matching checksums and compared with the
@@ -98,9 +99,10 @@ the clock prompt after a power-off, and download mode by hand. Also not yet
 run on this board: quick taps replayed while the display updates, taps
 dropped while the picture changes or the screen is dark, one BOOT step per
 pass, the BOOT answer on the clock prompt (these have passed host tests only),
-and installation and Update through the web flasher with the clock set that
-follows it. The test images were written with esptool as one 8 MB file. A
-completed installation and start-up are not a claim that these work.
+keeping a saved capture across a restart, and installation and Update through
+the web flasher with the clock set that follows it. The test images were
+written with esptool as one 8 MB file. A completed installation and start-up
+are not a claim that these work.
 
 Other boards were not reflashed or physically retested for this release. The
 thirteen-board CI and package checks passed before the web flasher was updated
