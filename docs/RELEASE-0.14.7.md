@@ -53,46 +53,58 @@ cover board identification, the 8 MB size limits and the installer manifests.
 The build matrix covers thirteen ESP32 profiles. The full firmware builds for
 this profile with about 0.9 MiB of its application slot free.
 
-On November 9 and 10, 2026, four pre-release images were installed on one
-1.43C, each with write-hash verification, after a full backup of the factory
-firmware. The last of them is older than this release's source: it read touch
-once per screen update, took every queued BOOT step in one pass and did not
-answer the clock prompt with BOOT. On it the board reported over USB:
+On November 11, 2026, a release candidate was installed on one 1.43C, with
+write-hash verification, and run through an automated check over USB. Its
+firmware matches this release byte for byte except for build dates and times,
+file timestamps in the storage image, and the checksums that follow from them.
+The board reported:
 
 - **Start-up.** 8 MB flash and 8 MB PSRAM, one start with no crash or
   unexpected reset, the CO5300 display, CST820 touch controller and ES8311
   codec initialized, 3.94 MiB of storage mounted, and all 23 detection
-  self-tests passed.
+  self-tests passed. The USB connection never dropped.
 - **Clock.** Set over USB and read back ten times. No clock chip was detected,
   as expected.
-- **Memory.** 52 KB of internal memory free at idle and 46 KB after two Wi-Fi
-  join attempts to a network name that does not exist. Neither attempt was
-  refused for memory, and the lab portal started and stopped afterwards.
-- **Display.** About ten thousand display transfers completed. Four screens
-  were captured from the firmware's drawing path with matching checksums and
-  compared with the intended layout. That checks what the firmware drew, not
-  what the panel showed.
-- **Battery line.** 4.20 V with the charger active.
-- **USB commands.** Six replies in that run arrived only when the next
-  command was sent, more than four seconds later. The firmware kept running
-  throughout.
+- **Touch reading.** The touch controller was read 70.5 times a second while
+  the radar redrew and 58.9 times a second on the stopwatch, with no read
+  errors.
+- **Memory.** 52 KB of internal memory free at the start and 46 KB after two
+  Wi-Fi join attempts to a saved network that does not exist. Neither attempt
+  was refused for memory, and the lab portal then started, kept at least 35 KB
+  free and stopped.
+- **Capture.** A Wi-Fi capture recorded 216 records in about nine seconds,
+  saved a 72,976-byte file with a matching checksum, downloaded over USB
+  complete and was then deleted.
+- **Display.** About 13,000 display transfers completed with no errors. Four
+  screens (radar, main menu, clock and stopwatch) were captured from the
+  firmware's drawing path with matching checksums and compared with the
+  intended layout. That checks what the firmware drew, not what the panel
+  showed.
+- **USB commands.** Three replies arrived after the checker's four-second
+  wait, two of them only when the next command was sent. The firmware kept
+  running throughout.
 
-Two earlier images each ran for about half an hour without a crash or reset.
+The board registered no BOOT presses during the check's ten-second button
+window, so button navigation was not tested. Earlier, on November 9 and 10,
+four pre-release images were installed on the same board after a full backup
+of the factory firmware, and two of them each ran for about half an hour
+without a crash or reset.
 
 Not yet confirmed by a person on the board: the picture as seen on the panel
 (position, orientation and colours), touch input, BOOT presses, sound through a
 connected speaker, the battery estimate with a cell connected, the charge
 symbol and LED, PWR behaviour, a join to a real network with clock recovery,
 the clock prompt after a power-off, and download mode by hand. Also not yet
-run on this board: touch read between display transfers with quick taps
-replayed, taps dropped while the picture changes or the screen is dark, one
-BOOT step per pass, the BOOT answer on the clock prompt (these have passed
-host tests only), recording, saving and downloading a
-capture, and installation and Update through the web flasher with the clock
-set that follows it. The test images were written with esptool as one 8 MB
-file. A completed installation and start-up are not a claim that these work.
+run on this board: quick taps replayed while the display updates, taps
+dropped while the picture changes or the screen is dark, one BOOT step per
+pass, the BOOT answer on the clock prompt (these have passed host tests only),
+and installation and Update through the web flasher with the clock set that
+follows it. The test images were written with esptool as one 8 MB file. A
+completed installation and start-up are not a claim that these work.
 
 Other boards were not reflashed or physically retested for this release. The
-thirteen-board CI and package checks must pass before rollout.
+thirteen-board CI and package checks passed before the web flasher was updated
+on November 13, 2026. Afterwards every file the flasher serves was compared
+with the release build, and the other boards' firmware images were unchanged.
 
 [Clock setup](CLOCK-SETUP.md) · [Installation and recovery](FLASHING.md)
