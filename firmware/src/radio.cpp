@@ -146,8 +146,8 @@ static void wifiRx(void* buffer,wifi_promiscuous_pkt_type_t type){
   auto* p=static_cast<wifi_promiscuous_pkt_t*>(buffer);
   if(p->rx_ctrl.rx_state || p->rx_ctrl.sig_len<28)return;
 #ifndef BOARD_RADAR_LITE
-  // Room motion owns the radio: only count the selected AP's PHY classes.
-  if(csiActive()){csiFrame(p);return;}
+  // Room motion counts the selected AP's PHY classes; detections still queue.
+  if(csiActive())csiFrame(p);
 #endif
   if(wardriveScanning&&(type!=WIFI_PKT_MGMT||(p->payload[0]!=0x80&&p->payload[0]!=0x50)))return;
   bool priority=!wardriveScanning&&dragon::inspectAxonWifi(p->payload,p->rx_ctrl.sig_len-4).detected();

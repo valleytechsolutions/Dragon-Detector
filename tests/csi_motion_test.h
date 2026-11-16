@@ -77,6 +77,24 @@ static void ownTests(){
  {MotionModel m;Channel c;uint32_t a=0;m.reset(0);run(m,c,0,40000,a);uint32_t t=40000;
   for(int i=0;i<14;++i){c.mover=9;run(m,c,t,t+5000,a);c.mover=0;run(m,c,t+5000,t+25000,a);t+=25000;}
   assert(m.intervalCount()==12&&m.interval(11).start>m.interval(0).start&&!m.interval(11).open);m.reset(t);assert(m.intervalCount()==12&&!m.calibrated());m.clearLog();assert(!m.intervalCount());}
+ // A sample stamped after the caller's tick time neither wraps window time nor
+ // runs empty windows that would end an open interval.
+ {MotionModel m;Channel c;uint32_t a=0;m.reset(0);run(m,c,0,60000,a);c.mover=9;run(m,c,60000,66000,a);assert(m.state()==State::Motion&&m.interval(0).open);
+  int8_t s[128];c.make(s,67000);m.addSample(s,128,-55,67000,true,Encoding::Signed8ImagReal);++a;m.tick(66999,a,0);assert(m.interval(0).open&&m.intervalCount()==1);}
+ // Sparse traffic (180 ms spacing): one continuous movement stays one interval.
+ for(uint32_t seed=7919;seed<=23757;seed+=7919){MotionModel m;Channel c;c.rng=seed;uint32_t a=0;m.reset(0);run(m,c,0,60000,a,180);c.mover=6;run(m,c,60000,180000,a,180);assert(m.intervalCount()<=3);}
+ // Still room, AP 6 dB weaker with more noise: MOTION ends within ~30 windows
+ // as a changed signal path and recalibrates instead of holding for good.
+ {MotionModel m;Channel c;uint32_t a=0;m.reset(0);run(m,c,0,60000,a);c.noise=2.4f;unsigned motion=0;
+  for(uint32_t t=60000;t<300000;t+=1000){run(m,c,t,t+1000,a,50,-61);motion+=m.state()==State::Motion;}
+  assert(m.movedCount()==1&&motion<=35&&m.calibrated()&&m.state()!=State::Motion&&!m.interval(m.intervalCount()-1).open);}
+ // Recalibrating during MOTION ends the open interval; samples/s is not the session total.
+ {MotionModel m;Channel c;uint32_t a=0;m.reset(0);run(m,c,0,60000,a);c.mover=9;run(m,c,60000,70000,a);assert(m.interval(0).open);
+  m.reset(70000);c.mover=0;run(m,c,70000,71000,a);assert(!m.interval(0).open&&m.samplesPerSecond()<=21);}
+ // One window 11 dB low every 20 s neither restarts calibration nor reports a move.
+ {MotionModel m;Channel c;uint32_t a=0;m.reset(0);int8_t s[128];
+  for(uint32_t t=0;t<300000;t+=50){c.make(s,t);m.addSample(s,128,(t/1000)%20==10?-66:-55,t,true,Encoding::Signed8ImagReal);++a;m.tick(t,a,0);}
+  assert(m.movedCount()==0&&m.calibrated());}
  // PHY classes and traffic diagnosis.
  assert(MotionModel::phyClass(0,0)==0&&MotionModel::phyClass(0,7)==0&&MotionModel::phyClass(0,0x0b)==1&&MotionModel::phyClass(1,0)==2);
  using namespace dragon::csi;
@@ -85,4 +103,4 @@ static void ownTests(){
  for(int v=0;v<16;++v)assert(MotionModel::validTone(v)==(v>=2));for(int v=27;v<38;++v)assert(!MotionModel::validTone(v));assert(MotionModel::validTone(38)&&MotionModel::validTone(63));
 }
 }
-static void csiMotionTests(){csimotiontest::marauderTests();csimotiontest::ownTests();puts("PASS CSI room motion: Marauder model port, subcarrier mask, Hampel spikes, hysteresis/hold, calibration floor, moved gate, traffic diagnosis");}
+static void csiMotionTests(){csimotiontest::marauderTests();csimotiontest::ownTests();puts("PASS CSI room motion: Marauder model port, subcarrier mask, Hampel spikes, hysteresis/hold, sparse re-entry, clock skew, level shift, calibration floor, moved gate, traffic diagnosis");}

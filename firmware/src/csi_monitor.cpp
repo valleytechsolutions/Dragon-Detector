@@ -41,8 +41,8 @@ void recalibrate(){model->reset(millis());seenMoved=model->movedCount();window=m
 void note(char* out,size_t capacity){
  if(!active||!model){strlcpy(out,message,capacity);return;}
  const uint32_t now=millis();const State s=model->state();
- if(!model->calibrated()&&model->movedCount()>seenMoved)strlcpy(out,"Detector moved, recalibrating. Keep it still.",capacity);
- else if((s==State::LowData||s==State::Calibrating)&&supply!=Supply::Ok)strlcpy(out,dragon::csi::supplyMessage(supply),capacity);
+ if((s==State::LowData||s==State::Calibrating)&&supply!=Supply::Ok)strlcpy(out,dragon::csi::supplyMessage(supply),capacity);
+ else if(!model->calibrated()&&model->movedCount()>seenMoved)strlcpy(out,"Signal changed (detector moved or something close); recalibrating",capacity);
  else if(s==State::LowData)strlcpy(out,model->calibrated()?"Too little CSI from this network":"Calibration needs 15 windows of 5+ samples/s",capacity);
  else if(s==State::Calibrating)snprintf(out,capacity,"Calibrating %u/30 s. Keep detector and AP still.",model->calibrationPercent(now)*30/100);
  else if(s==State::Hold)snprintf(out,capacity,"Motion %lus ago / hold %lus",(unsigned long)((now-model->lastMotion())/1000),(unsigned long)(MotionModel::HoldMs/1000));
@@ -74,7 +74,7 @@ bool csiStart(){using namespace dragon::toolkit;
 }
 void csiLoop(){if(!active)return;uint32_t now=millis();if(now-started>=900000){csiStop();return;}
  Sample s;for(unsigned i=0;i<32&&xQueueReceive(queue,&s,0)==pdTRUE;++i){model->addSample(s.iq,sizeof(s.iq),s.rssi,s.at,true,dragon::csi::Encoding::Signed8ImagReal);++total;}
- model->tick(now,total,dropped.load());state=dragon::csi::stateName(model->state());
+ model->tick(now=millis(),total,dropped.load());state=dragon::csi::stateName(model->state());
  if(now-window<1000)return;
  // Five-second view of what the selected AP sends, for the LOW DATA reason.
  Snap& c=snaps[snapHead];for(unsigned k=0;k<3;++k)c.frames[k]=std::max(heard[k].load(),csiClass[k].load());c.usable=total;c.at=now;
