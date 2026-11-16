@@ -62,6 +62,7 @@ inline unsigned heap_caps_get_largest_free_block(int){return 120000;}
 #include "board_pins.h"
 #include "contacts.h"
 #include "traffic.h"
+#include "nearby.h"
 #include "wearable.h"
 #include "personal_theme.h"
 #include <cassert>
@@ -72,6 +73,7 @@ static ContactStore contacts{entries};
 static dragon::DetectorSettings detector;
 static void setAdultMode(bool enabled){detector.families=dragon::adultOptInMask(detector.families,enabled);}
 static dragon::TrafficStatus trafficStatus;
+static dragon::NearbyRadios nearby;
 static dragon::Stopwatch stopwatch;
 static bool radioEnabled=true,blePhase=true,candidatesOnly=false,radarRecent=false,alertSound=true,rtcAvailable=true,standby=false;
 static uint32_t wifiFrames=12830,bleFrames=9540,queueDrops=0;

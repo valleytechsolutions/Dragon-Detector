@@ -69,11 +69,11 @@ The near count is covered by native tests and a host simulation of the radio sch
 
 1. Put one known phone with Bluetooth on beside the board and keep other radios away or note them. Leave the board on Radar.
 2. Send USB `radar near` once a minute for 30 minutes and keep the lines. They contain counts only, no addresses.
-3. Expected: `state=ready` after the first seconds; `near` settles and `steady` follows after about five minutes; `new_addresses` stays flat while `handovers` rises about twice, once per address change; `gone` and `dropped` stay flat.
+3. Expected: `state=ready` after the first seconds; `near` settles and `steady` follows after about five minutes; `new_addresses` stays flat while `handovers` rises about twice, once per address change and about 40 seconds after it; `gone` and `dropped` stay flat. This holds only with at most five radios near; with more, address changes are deliberately not joined.
 4. Move the phone away: `near` should fall within about 40 seconds. Bring it back within five minutes: `returns` rises and `new_addresses` does not.
 5. Record where `near` starts and stops counting the phone as it is carried away. That is the only evidence for or against the -70 dBm default on that board.
 
-A rising `new_addresses` with a flat `handovers` means address changes are not being paired on that phone and the count briefly overstates.
+A rising `new_addresses` and `gone` with a flat `handovers` means address changes are not being joined on that phone: the count overstates by one for about 40 seconds and `steady` drops for about five minutes at each change. Repeat with the phone resting where it reads between the level and 12 dB below it, and after a 20 to 50 second pause (open Clock, then return): `state` should read `warming` for about 20 seconds and `near` should return without `new_addresses` rising.
 
 ## Waveshare LCD 1.85B · 0.14.1
 

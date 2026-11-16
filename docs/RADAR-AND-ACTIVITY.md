@@ -37,27 +37,30 @@ What it does and does not say:
 - It counts **BLE radio addresses, not people**. One person may carry several radios or none.
 - A hidden line or a low number **does not mean nobody is near**: Bluetooth may be off, a body or bag can hide a radio, and Wi-Fi devices are not counted. The count is a floor.
 - "Near" is a **signal level**, -70 dBm by default and not calibrated per board. It is not a distance.
-- A radio must be heard in two scan windows, about 5 to 15 seconds, before it counts, so people walking past are usually missed. It stays counted for about 40 seconds after it goes, and while it is heard up to 12 dB below the level.
-- Phones change their BLE address about every 15 minutes. A change is usually recognised and the count stays the same; when it is not, the count is one too high for up to about 40 seconds.
-- **Steady** means the radio has counted for about five minutes of radio time, which is usually your own devices. BLE listening is half of that, hence the 150 s figure below.
+- A radio must be heard in two scan windows, about 5 to 15 seconds, before it counts, so people walking past are usually missed. The three hits must come in a row: one advert below the level starts the confirmation over, so a radio that hovers below the level with occasional peaks is not counted. It stays counted for about 40 seconds after it goes, and while it is heard up to 12 dB below the level.
+- Phones change their BLE address about every 15 minutes. The old and new address are joined only on strong evidence, in a quiet place: at most six radios near or being confirmed (the new address included), nothing refused, the old address already steady, exactly one old address that fell silent and exactly one new one that fits it. The new address then waits uncounted while the old one is still counted, and takes its place and its time near only when the old one has stayed silent for the full leave time. If the old address is heard again, nothing is joined and both count. The number does not move for a joined change.
+- Everywhere else — a busy room, a street, an old address not yet steady, two candidates — **nothing is joined**: the count is one too high for about 40 seconds and the radio's time near starts again, so it loses **STEADY** for about five minutes. In a busy place the steady number therefore runs low, also for your own phone, and the count runs slightly high. That is chosen over guessing: an earlier version joined on timing and level alone and in a crowd mostly joined two different radios.
+- A join can still be wrong when a steady radio really leaves and an unrelated one arrives within 6.6 s of listening at a similar level with no other candidate in view. The newcomer then shows as steady early. A changed address missed for longer than 6.6 s of listening is not joined.
+- A rotating radio that entered the count and now rests between the level and the level minus 12 dB (a phone left on a desk) keeps its place across an address change by the same rule; without it the new address would never be strong enough to enter. Up to two such weaker candidates wait at once, each address is considered once, and none is ever counted on its own.
+- **Steady** means the radio has counted for 150 s of BLE listening. That is about five minutes in normal scanning and during a Wi-Fi Hunt up to seven and a half, but about 3.75 minutes during a BLE Hunt and 2.5 minutes in a BLE-only mode, where BLE is listened to more of the time. The leave time scales the same way (40 s normally, 20 s in a BLE-only mode). It is usually your own devices.
 - `24+` means at least 24: the table was full or new addresses arrived faster than they could be confirmed.
 - Addresses with an **Ignore** rule (full boards) are not counted.
-- The line is hidden at zero, when the count is switched off, for the first seconds after the radio starts or resumes, and when BLE has not been listened to for 15 seconds (Clock, Timer, standby, wardriving, a BLE Lab session). A deauth or BLE-spam warning takes the same line and wins; on the Dial the notice box can cover it.
+- The line is hidden at zero, when the count is switched off, for the first seconds after the radio starts or resumes, and when BLE has not been listened to for 15 seconds (Clock, Timer, standby, wardriving, a BLE Lab session). After such a pause the number stays hidden for 10 s of listening (about 20 s) and then counts only radios heard again since the pause, so a radio that went during the pause is not shown; time near is kept for those still there. A deauth or BLE-spam warning takes the same line and wins; on the Dial the notice box can cover it.
 
 All times are **BLE listening time**, so a Wi-Fi slice, a Hunt or a paused radio cannot make a present radio leave. In the balanced schedule BLE is listened to for 2.2 s of every 4.4 s, so wall time is about twice these figures; during a Wi-Fi Hunt it is three times.
 
 | Step | Rule |
 |---|---|
 | First heard | One advert at or above the level (-70 dBm) starts a candidate; at most 8 candidates at once |
-| Counted | 3 hits at or above the level, at least 2.5 s of listening after the first |
-| Candidate dropped | 6.6 s of listening without being heard |
+| Counted | 3 hits in a row at or above the level, at least 2.5 s of listening after the first |
+| Candidate dropped | 6.6 s of listening without being heard, or one advert below the level |
 | Kept alive | Any advert at or above the level minus 12 dB (-82 dBm) |
 | Gone | 20 s of listening with nothing that strong |
 | Return | Back within a further 150 s of listening: the same radio, its time near is kept |
-| Address change | A new rotating address first heard within 2.2 s of listening after another rotating address fell silent, within 10 dB of it: one radio, count unchanged |
+| Address change | At most 6 radios near or candidate and none refused; one steady rotating address silent, one new rotating address first heard within 6.6 s of listening after it and within 10 dB, no other match either way. The new one waits uncounted; joined when the old one reaches the 20 s leave time, cancelled if it is heard again |
 | Steady | Counted for 150 s of listening |
-| Start or resume | No number for the first 10 s of listening; after a 60 s pause the table restarts |
-| Capacity | 24 radios, about 620 bytes of static memory on every board |
+| Start or resume | No number for the first 10 s of listening. After a 15 to 60 s pause only radios heard again count; after 60 s the table restarts |
+| Capacity | 24 radios, about 660 bytes of static memory on every board |
 
 The level uses the same filtered RSSI as the radar dots. On the M5Dial the 32-entry contact table turns over quickly and each new entry restarts that filter, so entry into the count is noisier there.
 
