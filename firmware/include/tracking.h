@@ -58,7 +58,16 @@ struct SignalTrack {
 };
 // Display units only: this is a dBm scale, never an estimated range or bearing.
 inline float radarRadius(float dbm){return 18.f+std::clamp((-35.f-dbm)/65.f,0.f,1.f)*140.f;}
-inline uint8_t radarOpacity(uint32_t age){return age>=30000?0:uint8_t(255-std::min<uint32_t>(age,30000)*200/30000);}
+// Freshness is drawn as three explicit states, not a fade nobody can read.
+// Live allows two radio cycles (about 10 s) without a frame, because a present
+// emitter is routinely unheard for one. Fading is clearly dimmer and has no
+// highlight or halo. Recent is the segmented marker. The halo follows
+// reception: it flashes on a new sample and is gone RadarHaloMs later.
+enum class RadarFreshness:uint8_t {Live,Fading,Recent};
+constexpr uint32_t RadarLiveMs=10000,RadarFadingMs=30000,RadarHaloMs=600;
+inline RadarFreshness radarFreshness(uint32_t age){return age<RadarLiveMs?RadarFreshness::Live:age<RadarFadingMs?RadarFreshness::Fading:RadarFreshness::Recent;}
+inline uint8_t radarOpacity(uint32_t age){return age<RadarLiveMs?255:age<RadarFadingMs?130:205;}
+inline uint8_t radarHalo(uint32_t sinceSample){return sinceSample>=RadarHaloMs?0:uint8_t(110-sinceSample*110/RadarHaloMs);}
 inline uint32_t crc32(const uint8_t* data,size_t n,uint32_t crc=0xffffffffu){
   for(size_t i=0;i<n;++i){crc^=data[i];for(int b=0;b<8;++b)crc=(crc>>1)^(0xedb88320u&uint32_t(-int32_t(crc&1)));}
   return crc;

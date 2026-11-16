@@ -984,8 +984,10 @@ void uiLoop(){
       if(trackedContact>=0 && trackingLabel){auto& t=contacts[trackedContact];uint32_t age=millis()-t.seen;String line=age>10000?"SIGNAL LOST / HUNT":String("HUNT / ")+t.signal.direction();lv_label_set_text(trackingLabel,line.c_str());}
       else if(trackingLabel){char primary[64];if(radarPrimary>=0){auto& c=contacts[radarPrimary];snprintf(primary,sizeof(primary),"%s / %d dBm",radarFamilyName(c.match.family),c.rssi);lv_obj_set_style_text_color(trackingLabel,color(familyColor(c.match.family)),0);}else{strlcpy(primary,reconMode()==dragon::ReconMode::Radar?"":dragon::reconModes[unsigned(reconMode())].name,sizeof(primary));lv_obj_set_style_text_color(trackingLabel,color(radarPalette(radarTheme).text),0);}lv_label_set_text(trackingLabel,primary);}
       if(locksport()&&trackingLabel){if(trackedContact>=0)lv_obj_set_style_text_color(trackingLabel,color(familyColor(contacts[trackedContact].match.family)),0);lv_obj_set_style_bg_color(trackingLabel,color((radarPrimary>=0||trackedContact>=0)?dragon::RadarLabelBackground:locksportBg()),0);lv_obj_set_style_bg_opa(trackingLabel,LV_OPA_COVER,0);lv_obj_set_style_radius(trackingLabel,S(5),0);}
-      lv_obj_invalidate(radar);int count=0;for(auto& c:contacts)if(radarVisible(c,millis()))++count;char s[96];int n=snprintf(s,sizeof(s),"%s %s / %d %s",radioEnabled?(blePhase?"BLE":"WI-FI"):"PAUSED",captureEnabled?"PCAP":"RX",count,count==1?"target":"targets");
-      int battery=batteryPercent();if(battery>=0)snprintf(s+n,sizeof(s)-n,"  /  %s%d%%",batteryCharging()?LV_SYMBOL_CHARGE " ":"",battery);
+      lv_obj_invalidate(radar);// Live: heard within RadarLiveMs. Recent: every other plotted contact.
+      int live=0,recent=0;for(auto& c:contacts)if(radarVisible(c,radarFrameAt))++(uint32_t(radarFrameAt-c.seen)<dragon::RadarLiveMs?live:recent);char s[96];int n=snprintf(s,sizeof(s),"%s %s / %d live",radioEnabled?(blePhase?"BLE":"WI-FI"):"PAUSED",captureEnabled?"PCAP":"RX",live);
+      if(recent)n+=snprintf(s+n,sizeof(s)-n," %d recent",recent);
+      int battery=batteryPercent();if(battery>=0)snprintf(s+n,sizeof(s)-n,"%s%s%d%%",recent?" / ":"  /  ",batteryCharging()?LV_SYMBOL_CHARGE " ":"",battery);
 #ifdef BOARD_XIAO_ROUND
       else snprintf(s+n,sizeof(s)-n," / %d%%",brightness);
 #endif
@@ -1013,7 +1015,7 @@ void uiLoop(){
 #if defined(BOARD_CROWPANEL_21) || defined(BOARD_WATCHER)
   rotaryUiLoop();
 #endif
-  lv_timer_handler();
+  ++radarPass;lv_timer_handler();
 }
 
 void uiKey(bool home){lastInteraction=millis();go(home?Radar:page==Menu?Badge:Menu);}

@@ -419,13 +419,13 @@ void radioLoop(){
     esp_wifi_set_promiscuous(false);blePhase=true;schedule.begin(now,true,schedule.firstChannel);
     if(!scanCommand(ScanAction::Start,configuredActive?1000:dragon::RadioSchedule::BleMs)){blePhase=false;schedule.begin(now,false,wifiChannel);esp_wifi_set_promiscuous(true);addAlert("BLE scan failed","Wi-Fi listening resumed");}
   }else if(blePhase && schedule.due(now)){
-    scanCommand(ScanAction::Stop);blePhase=false;schedule.begin(now,false,(schedule.firstChannel%11)+1);
+    scanCommand(ScanAction::Stop);blePhase=false;schedule.begin(now,false,schedule.nextFirst());
     wifiChannel=schedule.firstChannel;
     wifiSweep.begin(now,wifiChannel);
     esp_wifi_set_channel(wifiChannel,WIFI_SECOND_CHAN_NONE);esp_wifi_set_promiscuous(true);lastHop=now;
   }
   bool relocating=trackedContact>=0 && huntSweep(contacts[trackedContact],now);
-  if(!blePhase && wifiSweep.hop(now,relocating?0:channelLock)){
+  if(!blePhase && wifiSweep.hop(now,relocating?0:channelLock,schedule.focus==dragon::RadioSchedule::Wifi?schedule.left(now):0)){
     if(esp_wifi_set_channel(wifiSweep.current,WIFI_SECOND_CHAN_NONE)==ESP_OK)wifiChannel=wifiSweep.current;
   }
 }

@@ -125,7 +125,7 @@ void uiLoop(){
   }
   // Leave time between full radar draws to drain reception queues.
 #ifdef BOARD_M5DIAL
-  if(dialMenuVisible()){lv_timer_handler();return;}
+  if(dialMenuVisible()){++radarPass;lv_timer_handler();return;}
 #endif
   if(uint32_t(now-lastFrame)>=liteFrameInterval){lastFrame=radarFrameAt=now;++frames;
     if(litePage==LitePage::Radar){lv_obj_invalidate(radar);
@@ -142,7 +142,7 @@ void uiLoop(){
 #endif
     if(!noticeAt||uint32_t(now-noticeAt)>5000)lv_obj_add_flag(notice,LV_OBJ_FLAG_HIDDEN);
   }
-  lv_timer_handler();
+  ++radarPass;lv_timer_handler();
 }
 void uiNotify(const char* title,const char*,const dragon::DeviceKey*,bool){
 #ifdef BOARD_M5DIAL

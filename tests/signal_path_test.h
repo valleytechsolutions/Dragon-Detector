@@ -105,5 +105,43 @@ static void signalPathTests(){
   assert(score(flock,false,true,Family::Tracker)==0&&score(flock,false,true,Family::Ble)==0&&score(flock,false,true,Family::Flock)>0);
   assert(score(stale,false,false,Family::Tracker)>0&&score(tracker,false,true,Family::Tracker)>0&&score(anonymous,false,false,Family::Tracker)==0);
   Contact wrapped=contact(Family::Ble,Confidence::None,0xfffffff0);assert(evictionScore(wrapped,10,false,false,Family::Ble)==1+26+100000000u+50000000u+8000000u);
-  puts("PASS: gap-aware signal filter and step budget; drain budget; advertised channel; eviction order");
+  // Wi-Fi Hunt dwell. The driver repeats radioLoop()'s slice and hop rules.
+  struct HuntRun {unsigned lockMs,lockGap,channelGap,cycleMs;};
+  auto hunt=[](uint8_t first,uint8_t lock,bool interleave,unsigned poll,unsigned jitter){
+    RadioSchedule s;s.focus=RadioSchedule::Wifi;WifiSweep w;uint32_t now=0xfffff000u,next=now,cycleAt=now;s.begin(now,true,first);
+    bool ble=true;uint8_t channel=first;unsigned cycles=0,rng=7,gap=0,gaps[12]={};HuntRun r{};
+    for(;cycles<24;++now){
+      if(int32_t(now-next)>=0){rng=rng*1103515245u+12345u;next=now+poll+(jitter?(rng>>16)%jitter:0);
+        if(!ble&&s.due(now)&&w.full()){ble=true;s.begin(now,true,s.firstChannel);if(++cycles>2)r.cycleMs=std::max<unsigned>(r.cycleMs,now-cycleAt);cycleAt=now;}
+        else if(ble&&s.due(now)){ble=false;s.begin(now,false,interleave?s.nextFirst():s.firstChannel%11+1);channel=s.firstChannel;w.begin(now,channel);}
+        if(!ble&&w.hop(now,lock,interleave?s.left(now):0))channel=w.current;
+      }
+      if(cycles<2)continue;
+      if(!ble&&channel==lock){++r.lockMs;gap=0;}else r.lockGap=std::max(r.lockGap,++gap);
+      for(unsigned c=1;c<=11;++c)if(!ble&&channel==c)gaps[c]=0;else r.channelGap=std::max(r.channelGap,++gaps[c]);
+    }
+    r.lockMs/=22;return r;
+  };
+  // Exact timing: the lock channel keeps 2400 of 6600 ms (36%), but the longest
+  // wait for it falls from 4200 to 2400 ms and no channel waits longer than
+  // 6400 ms (8400 ms before, when the rotating sweep order wrapped).
+  unsigned worstLock=0,worstChannel=0,oldLock=0,oldChannel=0;
+  for(uint8_t first=1;first<=11;++first)for(uint8_t lock=1;lock<=11;++lock){
+    auto after=hunt(first,lock,true,1,0),before=hunt(first,lock,false,1,0);
+    assert(after.lockMs==2400&&before.lockMs==2400&&after.cycleMs==6600&&before.cycleMs==6600);
+    assert(after.lockGap==(first==lock?2200u:2400u));
+    worstLock=std::max(worstLock,after.lockGap);worstChannel=std::max(worstChannel,after.channelGap);oldLock=std::max(oldLock,before.lockGap);oldChannel=std::max(oldChannel,before.channelGap);
+  }
+  assert(worstLock==2400&&worstChannel==6400&&oldLock==4200&&oldChannel==8400);
+  // A main loop that only reaches the radio every 170-254 ms (a radar frame)
+  // drops visits before it delays the sweep: all eleven channels stay inside
+  // the continuity check's eight seconds and the cycle is no longer than before.
+  for(uint8_t first:{1,6,11})for(uint8_t lock:{1,6,11}){auto after=hunt(first,lock,true,170,85),before=hunt(first,lock,false,170,85);
+    assert(after.channelGap<8000&&after.lockGap<3000&&after.lockGap<before.lockGap&&after.cycleMs<8000&&after.cycleMs<=before.cycleMs+WifiSweep::VisitMs);
+  }
+  // Without time left, or without a lock, the sweep is the plain one.
+  {WifiSweep w;w.begin(0,3);uint32_t now=0;for(unsigned i=0;i<11;++i){now+=200;assert(w.hop(now,0,4400)&&w.resume==0);}assert(w.full()&&w.current==3);}
+  {WifiSweep w;w.begin(0,3);assert(w.hop(200,9,4200)&&w.current==9&&w.resume==4&&!w.hop(399,9,4000)&&w.hop(400,9,4000)&&w.current==4&&w.completed==1);
+    assert(w.hop(600,9,10*WifiSweep::VisitMs-1)&&w.current==5&&w.completed==2);} // too little time: no visit
+  puts("PASS: gap-aware signal filter and step budget; drain budget; advertised channel; eviction order; Wi-Fi Hunt lock visits");
 }
