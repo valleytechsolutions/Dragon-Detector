@@ -111,6 +111,7 @@ static int devicePage=0,deviceRows=0,deviceTotal=0,devicePages=1;
 static dragon::DeviceKey deviceKeys[10];
 static lv_obj_t* diagnosticsLabel=nullptr;
 static lv_obj_t *activityLabel=nullptr,*radarActivity=nullptr;
+static bool radarActivityCue=false; // the label shows the near count, in the theme text colour
 static uint32_t radarPrepared=0;
 static uint32_t radarFrameAt=0;
 static int radarOrder[MAX_CONTACTS],radarCount=0;
@@ -382,7 +383,7 @@ static void build(){
     else if(!lawLockTools()&&!moki()&&!delta44()&&!argyle()&&!vectorPotential()&&radarTheme!=13&&radarTheme!=24&&radarTheme!=32&&radarTheme!=CanCommanderTheme&&radarTheme!=MuldersRevengeTheme&&!greenArtTheme(radarTheme)){auto* logo=lv_img_create(root);lv_img_set_src(logo,radarLogo(radarTheme));lv_obj_align(logo,LV_ALIGN_TOP_MID,0,S(17));lv_obj_clear_flag(logo,LV_OBJ_FLAG_CLICKABLE);if(radarTheme==10||radarTheme==3){lv_obj_set_style_img_recolor(logo,color(radarTheme==3?0xd6b46e:0xffffff),0);lv_obj_set_style_img_recolor_opa(logo,LV_OPA_COVER,0);}}
     const auto& theme=radarPalette(radarTheme);
     statusLabel=label(root,"LISTENING",56,66,248,F12,theme.text);lv_obj_set_style_text_align(statusLabel,LV_TEXT_ALIGN_CENTER,0);legible(statusLabel);lv_obj_set_style_bg_color(statusLabel,color(theme.panel),0);lv_obj_set_style_bg_opa(statusLabel,LV_OPA_60,0);
-    radarActivity=label(root,"",75,84,210,F12,0xffbc76);lv_obj_set_style_text_align(radarActivity,LV_TEXT_ALIGN_CENTER,0);legible(radarActivity);lv_obj_add_flag(radarActivity,LV_OBJ_FLAG_CLICKABLE);lv_obj_add_event_cb(radarActivity,action,LV_EVENT_CLICKED,(void*)116);
+    radarActivity=label(root,"",75,84,210,F12,0xffbc76);lv_obj_set_style_text_align(radarActivity,LV_TEXT_ALIGN_CENTER,0);legible(radarActivity);lv_obj_add_flag(radarActivity,LV_OBJ_FLAG_CLICKABLE);lv_obj_add_event_cb(radarActivity,action,LV_EVENT_CLICKED,(void*)116);radarActivityCue=false;
     radarSummary=label(root,"",65,244,194,F12,theme.text);
     lv_obj_set_height(radarSummary,S(34));lv_obj_set_style_text_align(radarSummary,LV_TEXT_ALIGN_CENTER,0);
     lv_obj_set_style_bg_color(radarSummary,color(dragon::RadarLabelBackground),0);lv_obj_set_style_bg_opa(radarSummary,LV_OPA_COVER,0);
@@ -678,6 +679,8 @@ static void build(){
     row(body,"Device color legend","Unique family colors in every theme",n++,150);
     row(body,radarLabels?"Device labels: ON":"Device labels: OFF",radarLabels?"Priority tags + tapped dot / all dots visible":"All dots together / tap for evidence",n++,121);
     row(body,radarRecent?"Recent signals: 2 minutes":"Recent signals: OFF","Stale dots show last-seen age, not live RSSI",n++,124);
+    row(body,nearby.on?"BLE radios near: ON":"BLE radios near: OFF","Counts radio addresses, not people",n++,125);
+    {char level[24];snprintf(level,sizeof(level),"Near level: %d dBm",int(nearby.enter));row(body,level,"-60 closer / -80 wider; not a distance",n++,126);}
   }else if(page==Display){
     title("DISPLAY");body=scrollBody();String b=String("Brightness: ")+brightness+"%";row(body,b.c_str(),"25 / 50 / 75 / 100%",0,44);
     String dim=detector.dimSeconds?String("Dim after ")+detector.dimSeconds+" seconds":"Auto dim: NEVER";row(body,dim.c_str(),"Never / 15 / 30 / 60 / 120 / 300 s",1,80);
@@ -838,6 +841,8 @@ static void action(lv_event_t* e){
     case 152:if(radarPrimary>=0&&contacts[radarPrimary].used){selectContact(radarPrimary);go(Details);}else if(trackedContact>=0)go(Hunt);break;
     case 121:radarLabels=!radarLabels;settings.putBool("radar-labels",radarLabels);go(RadarStyle);page=Boot;break;
     case 124:radarRecent=!radarRecent;settings.putBool("radar-recent",radarRecent);go(RadarStyle);page=Boot;break;
+    case 125:nearbySet(!nearby.on,nearby.enter);go(RadarStyle);page=Boot;break;
+    case 126:nearbySet(nearby.on,nearby.enter>-65?-70:nearby.enter>-75?-80:-60);go(RadarStyle);page=Boot;break; // -60, -70, -80
     case 110:if(historyPage>0)--historyPage;go(History);page=Boot;break;
     case 111:if(size_t((historyPage+1)*10)<historyCount)++historyPage;go(History);page=Boot;break;
 #ifdef BOARD_WATCHER
@@ -979,8 +984,15 @@ void uiLoop(){
       radarFrameAt=millis();
       updateRadarSummary();
       bool deauth=detector.enabled(Family::Deauth)&&trafficStatus.disconnectActive(millis()),spam=detector.enabled(Family::BleSpam)&&trafficStatus.bleActive(millis());
-      lv_label_set_text(radarActivity,deauth&&spam?"DEAUTH + BLE BURST  >":deauth?"DEAUTH ACTIVITY  >":spam?"BLE SPAM CANDIDATE  >":"");
-      if(deauth||spam)lv_obj_clear_flag(radarActivity,LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(radarActivity,LV_OBJ_FLAG_HIDDEN);
+      // Warnings own the line. Otherwise it is the quiet near count: long form,
+      // compact when that is too wide, and nothing at all at zero.
+      char near[48]="";
+      if(!deauth&&!spam){auto fits=[&]{return lv_txt_get_width(near,strlen(near),lv_obj_get_style_text_font(radarActivity,0),lv_obj_get_style_text_letter_space(radarActivity,0),LV_TEXT_FLAG_NONE)<=lv_obj_get_content_width(radarActivity);};
+        if(dragon::nearbyText(near,sizeof(near),nearby,radarFrameAt)&&!fits())dragon::nearbyText(near,sizeof(near),nearby,radarFrameAt,true);
+        size_t n=strlen(near);if(n&&n+4<=sizeof(near)){strcpy(near+n,"  >");if(!fits())near[n]=0;}}
+      const bool cue=*near;if(cue!=radarActivityCue){radarActivityCue=cue;lv_obj_set_style_text_color(radarActivity,color(cue?radarPalette(radarTheme).text:0xffbc76),0);lv_obj_set_style_bg_color(radarActivity,color(cue?radarPalette(radarTheme).panel:uiColors().surface),0);} // the status row's colours
+      lv_label_set_text(radarActivity,deauth&&spam?"DEAUTH + BLE BURST  >":deauth?"DEAUTH ACTIVITY  >":spam?"BLE SPAM CANDIDATE  >":near);
+      if(deauth||spam||cue)lv_obj_clear_flag(radarActivity,LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(radarActivity,LV_OBJ_FLAG_HIDDEN);
       if(trackedContact>=0 && trackingLabel){auto& t=contacts[trackedContact];uint32_t age=millis()-t.seen;String line=age>10000?"SIGNAL LOST / HUNT":String("HUNT / ")+t.signal.direction();lv_label_set_text(trackingLabel,line.c_str());}
       else if(trackingLabel){char primary[64];if(radarPrimary>=0){auto& c=contacts[radarPrimary];snprintf(primary,sizeof(primary),"%s / %d dBm",radarFamilyName(c.match.family),c.rssi);lv_obj_set_style_text_color(trackingLabel,color(familyColor(c.match.family)),0);}else{strlcpy(primary,reconMode()==dragon::ReconMode::Radar?"":dragon::reconModes[unsigned(reconMode())].name,sizeof(primary));lv_obj_set_style_text_color(trackingLabel,color(radarPalette(radarTheme).text),0);}lv_label_set_text(trackingLabel,primary);}
       if(locksport()&&trackingLabel){if(trackedContact>=0)lv_obj_set_style_text_color(trackingLabel,color(familyColor(contacts[trackedContact].match.family)),0);lv_obj_set_style_bg_color(trackingLabel,color((radarPrimary>=0||trackedContact>=0)?dragon::RadarLabelBackground:locksportBg()),0);lv_obj_set_style_bg_opa(trackingLabel,LV_OPA_COVER,0);lv_obj_set_style_radius(trackingLabel,S(5),0);}
@@ -999,10 +1011,11 @@ void uiLoop(){
       char text[360];snprintf(text,sizeof(text),"Wi-Fi frames: %lu\nBLE adverts: %lu\nQueue drops: %lu / peak %u\nMax processing: %lu us\nMax queue age: %lu ms\nContact slots: %u\nEvictions: %lu\nCache hits/misses: %lu/%lu\nFree heap: %u KB\nFree PSRAM: %u KB\nBLE: %s\n\nCounters restart at boot.\nHigher queue age means delayed\nRSSI and scan results.",wifiFrames,bleFrames,queueDrops,radioQueueHigh,radioMaxBatchUs,radioMaxLagMs,unsigned(MAX_CONTACTS),contactEvictions,contactCacheHits,contactCacheMisses,ESP.getFreeHeap()/1024,ESP.getFreePsram()/1024,activeBle?"Active / requests names":"Passive / listen only");lv_label_set_text(diagnosticsLabel,text);
     }
     if(page==Activity&&activityLabel){
-      char text[600],wifiMeta[100],bleMeta[120];auto& t=trafficStatus;unsigned recent=recentDisconnects();
+      char text[900],wifiMeta[100],bleMeta[120];auto& t=trafficStatus;unsigned recent=recentDisconnects();
       if(t.disconnectAlerts){snprintf(wifiMeta,sizeof(wifiMeta),"Last: CH %u / %s\nReason: %s",t.channel,t.disconnectActive(millis())?"RECENT":"older burst",t.protectedFrame?"protected / unavailable":"");if(!t.protectedFrame)snprintf(wifiMeta+strlen(wifiMeta),sizeof(wifiMeta)-strlen(wifiMeta),"%u",t.reason);}else strcpy(wifiMeta,"No bursts observed.");
       if(t.bleAlerts)snprintf(bleMeta,sizeof(bleMeta),"%s / %s\n%u addresses / %u variants",dragon::bleBurstName(t.bleGroup),t.bleActive(millis())?"RECENT":"older burst",t.bleAddresses,t.bleVariants);else strcpy(bleMeta,"No bursts observed.");
-      snprintf(text,sizeof(text),"WI-FI DEAUTH / DISASSOC\n%lu frames / %lu burst alerts\n%u%s frames in last 3s\n%s\n\nBLE SPAM CANDIDATES\n%lu burst alerts\n%s\n\nThresholds: 6 disconnects / 3s;\n12 BLE addresses / 5s, or\n24 pairing variants / 5s.\nRetries/identical adverts filtered.\nScan gaps can hide activity.\nCrowding or normal disconnects\ncan resemble attacks.\nEvents retain the evidence.",t.disconnectFrames,t.disconnectAlerts,recent,recent==64?"+":"",wifiMeta,t.bleAlerts,bleMeta);
+      int used=snprintf(text,sizeof(text),"WI-FI DEAUTH / DISASSOC\n%lu frames / %lu burst alerts\n%u%s frames in last 3s\n%s\n\nBLE SPAM CANDIDATES\n%lu burst alerts\n%s\n\nThresholds: 6 disconnects / 3s;\n12 BLE addresses / 5s, or\n24 pairing variants / 5s.\nRetries/identical adverts filtered.\nScan gaps can hide activity.\nCrowding or normal disconnects\ncan resemble attacks.\nEvents retain the evidence.",t.disconnectFrames,t.disconnectAlerts,recent,recent==64?"+":"",wifiMeta,t.bleAlerts,bleMeta);
+      if(used>0&&size_t(used)<sizeof(text))snprintf(text+used,sizeof(text)-used,"\n\nBLE RADIOS NEAR\n%u near / %u steady%s  (%s)\nLevel %d dBm or stronger\n\nCounts radio addresses, not\npeople. One person may carry\nseveral radios or none. Phones\nchange address about every\n15 minutes. Wi-Fi is not counted.\nSteady: near 5+ minutes, usually\nyour own devices. A hidden line\ndoes not mean nobody is near.\nNot a distance. No alert or log.",unsigned(nearby.near),unsigned(nearby.steady),nearby.capped()?"+":"",nearby.state(millis()),int(nearby.enter));
       lv_label_set_text(activityLabel,text);
     }
     if(page==Hunt&&trackedContact>=0&&huntValue){auto& c=contacts[trackedContact];uint32_t age=millis()-(c.signal.count?c.signal.last:c.seen);bool stale=age>=10000||!c.signal.count;

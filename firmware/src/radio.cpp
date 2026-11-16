@@ -119,6 +119,7 @@ static dragon::RadioSchedule schedule;
 static dragon::BleBurstMonitor bleBursts;
 static dragon::WifiRetryFilter retries;
 dragon::TrafficStatus trafficStatus;
+dragon::NearbyRadios nearby;
 static dragon::SsidMonitor ssids;
 static dragon::DisconnectMonitor disconnects;
 unsigned recentDisconnects(){return disconnects.recent(millis());}
@@ -291,7 +292,9 @@ static void process(const Observation& o){
     if(!payloadValid)++malformedFrames;if(!f.valid)return;
     countAxon(dragon::inspectAxonBle(o.data,o.len,o.advLength,o.mac,o.addressType),true,payloadValid,o.at);
     auto* contact=getContact(o.mac,true,o.addressType,o.at,f.match);if(!contact)return;Contact& c=*contact;if(c.packets&&int32_t(o.at-c.seen)<0)return;
-    update(c,o,f.name,f.match);dragon::mergeDrone(c.drone,f.drone,o.at);
+    update(c,o,f.name,f.match);
+    if(c.rssi>=nearby.exitDbm()&&!(deviceRules(contactKey(c))&RuleIgnore))nearby.observe(contactHash(keyOf(c)),c.rssi,dragon::rotatingAddress(o.mac,o.addressType));
+    dragon::mergeDrone(c.drone,f.drone,o.at);
     if(f.match.family==Family::Tracker||f.match.family==Family::SmartTag||f.match.family==Family::GoogleTag||f.match.family==Family::Tile||f.match.family==Family::IBeacon)checkBleBurst(c,o,3);
     if(f.applePopup)checkBleBurst(c,o,0);if(f.fastPair)checkBleBurst(c,o,1);if(f.swiftPair)checkBleBurst(c,o,2);
   }
@@ -402,19 +405,20 @@ void radioLoop(){
   if(!queue)return;
   drain(false);
   uint32_t now=millis(),elapsed=now-lastAccounting;lastAccounting=now;
+  static uint32_t nearTick=0;if(uint32_t(now-nearTick)>=1000){nearTick=now;nearby.tick();}
 #if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
   if(wardriveBusy()){driveRadioLoop(now,elapsed);return;}
 #endif
   if(!radioEnabled || !scanner)return;
   schedule.focus=trackedContact>=0&&contacts[trackedContact].ble?dragon::RadioSchedule::Bluetooth:channelLock?dragon::RadioSchedule::Wifi:dragon::RadioSchedule::Balanced;
   if(!wardriveBusy()&&reconRadio()){
-    if(reconRadio()==2){if(!scanner->isScanning())scanCommand(ScanAction::Start,10000);bleListenMs+=elapsed;return;}
+    if(reconRadio()==2){if(!scanner->isScanning())scanCommand(ScanAction::Start,10000);bleListenMs+=elapsed;nearby.listen(elapsed,now);return;}
     wifiListenMs+=elapsed;channelDwellMs[wifiChannel]+=elapsed;
     if(now-lastHop>=reconHopDwell()){lastHop=now;uint8_t c=channelLock?channelLock:reconNextChannel(wifiChannel);if(esp_wifi_set_channel(c,WIFI_SECOND_CHAN_NONE)==ESP_OK)wifiChannel=c;}
     return;
   }
   if(blePhase && !schedule.due(now) && !scanner->isScanning())scanCommand(ScanAction::Start,configuredActive?1000:dragon::RadioSchedule::BleMs);
-  if(blePhase)bleListenMs+=elapsed;else{wifiListenMs+=elapsed;channelDwellMs[wifiChannel]+=elapsed;}
+  if(blePhase){bleListenMs+=elapsed;nearby.listen(elapsed,now);}else{wifiListenMs+=elapsed;channelDwellMs[wifiChannel]+=elapsed;}
   if(!blePhase && schedule.due(now) && wifiSweep.full()){
     esp_wifi_set_promiscuous(false);blePhase=true;schedule.begin(now,true,schedule.firstChannel);
     if(!scanCommand(ScanAction::Start,configuredActive?1000:dragon::RadioSchedule::BleMs)){blePhase=false;schedule.begin(now,false,wifiChannel);esp_wifi_set_promiscuous(true);addAlert("BLE scan failed","Wi-Fi listening resumed");}

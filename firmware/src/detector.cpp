@@ -71,6 +71,7 @@ static int historySlot(const dragon::DeviceKey& key,uint8_t family){
 }
 void detectorBegin(){
   prefs.begin("dd-detect",false);
+  nearby.on=prefs.getBool("near",true);{int v=prefs.getChar("near-dbm",-70);nearby.enter=v<-85||v>-55?-70:v;}
 #ifdef BOARD_RADAR_LITE
   // Fixed passive radar. Never import old full-UI filters, ignore rules or
   // display timers. No persistent history allocation on Lite; only explicit settings are saved.
@@ -191,6 +192,22 @@ bool emitDetection(Contact& c,Family family,Confidence confidence,const char* ev
   // the event log and contact details.
   snprintf(detail,sizeof(detail),"%s%s%d dBm / %s",c.name,*c.name?" / ":"",c.rssi,c.ble?"Bluetooth":"Wi-Fi");
   if(!detector.quiet||watch)uiNotify(watch?"LOCKED ON":dragon::familyName(family),detail,&key,watch);
+  return true;
+}
+// The near count has its own keys: DetectorSettings is a size-checked blob.
+void nearbySet(bool on,int level){
+  level=std::max(-85,std::min(-55,level));nearby.on=on;nearby.enter=level;
+  prefs.putBool("near",on);prefs.putChar("near-dbm",level);nearby.reset(millis());
+}
+// Aggregate only: no address is printed.
+bool nearbyCommand(const String& c){
+  int level;char tail;
+  if(c=="radar near"){const uint32_t now=millis();
+    Serial.printf("NEAR on=%u state=%s level_dbm=%d exit_dbm=%d near=%u steady=%u pending=%u capped=%u new_addresses=%lu gone=%lu handovers=%lu returns=%lu dropped=%lu listen_ms=%lu slots=24 radio=BLE unit=addresses\n",nearby.on,nearby.state(now),nearby.enter,nearby.exitDbm(),nearby.near,nearby.steady,nearby.pending,nearby.capped(),(unsigned long)nearby.fresh,(unsigned long)nearby.gone,(unsigned long)nearby.handovers,(unsigned long)nearby.returns,(unsigned long)nearby.dropped,(unsigned long)nearby.clock);
+  }else if(c=="radar near on"||c=="radar near off"){nearbySet(c.endsWith("on"),nearby.enter);Serial.printf("NEAR_OK on=%u\n",nearby.on);}
+  else if(sscanf(c.c_str(),"radar near level %d %c",&level,&tail)==1&&level>=-85&&level<=-55){nearbySet(nearby.on,level);Serial.printf("NEAR_OK level_dbm=%d\n",nearby.enter);}
+  else if(c.startsWith("radar near level"))Serial.println("NEAR_ERROR level -85..-55");
+  else return false;
   return true;
 }
 bool detectorCommand(const String& cmd){

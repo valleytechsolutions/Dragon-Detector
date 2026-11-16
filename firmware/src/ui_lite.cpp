@@ -59,6 +59,7 @@ static void prepareLiteBackdrop(lv_obj_t* root){
 }
 #include "radar_renderer.inc"
 static lv_obj_t *root,*radar,*status,*activity,*pageLabel,*notice,*logo;
+static uint8_t activityKind=1; // activity colour: 1 warning accent, 2 near count in the theme text colour
 static lv_obj_t* liteStartup=nullptr;
 static uint32_t liteStartupAt=0;
 #include "startup_logo.inc"
@@ -131,8 +132,12 @@ void uiLoop(){
     if(litePage==LitePage::Radar){lv_obj_invalidate(radar);
     char value[80];snprintf(value,sizeof(value),"%s RX   %02d SIGNALS   100%%",blePhase?"BLE":"WI-FI",radarCount);lv_label_set_text(status,value);
     const bool deauth=trafficStatus.disconnectActive(now),spam=trafficStatus.bleActive(now);
-    lv_label_set_text(activity,deauth&&spam?"DEAUTH + BLE BURST":deauth?"DEAUTH ACTIVITY":spam?"BLE SPAM CANDIDATE":"");
-    if(deauth||spam)lv_obj_clear_flag(activity,LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(activity,LV_OBJ_FLAG_HIDDEN);
+    // Warnings own the line; otherwise the quiet near count, compact when the long form is too wide.
+    char near[48]="";
+    if(!deauth&&!spam&&dragon::nearbyText(near,sizeof(near),nearby,now)&&lv_txt_get_width(near,strlen(near),lv_obj_get_style_text_font(activity,0),lv_obj_get_style_text_letter_space(activity,0),LV_TEXT_FLAG_NONE)>lv_obj_get_content_width(activity))dragon::nearbyText(near,sizeof(near),nearby,now,true);
+    const uint8_t kind=*near?2:1;if(kind!=activityKind){activityKind=kind;lv_obj_set_style_text_color(activity,color(*near?radarPalette(radarTheme).text:themeUiColors(radarTheme).accent),0);}
+    lv_label_set_text(activity,deauth&&spam?"DEAUTH + BLE BURST":deauth?"DEAUTH ACTIVITY":spam?"BLE SPAM CANDIDATE":near);
+    if(deauth||spam||*near)lv_obj_clear_flag(activity,LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(activity,LV_OBJ_FLAG_HIDDEN);
     snprintf(value,sizeof(value),"%s",themeChangedAt&&uint32_t(now-themeChangedAt)<4000?radarThemeNames[radarTheme]:radarCount?"RSSI  /  STRONGER INWARD":"SCANNING  /  BLE + WI-FI");
     lv_label_set_text(pageLabel,value);
     }
@@ -162,7 +167,7 @@ static void refreshLiteTheme(){
   prepareLiteBackdrop(root);lv_obj_set_style_bg_color(root,color(radarPalette(radarTheme).bottom),0);
   lv_obj_set_style_text_color(status,color(radarPalette(radarTheme).text),0);
   lv_obj_set_style_text_color(pageLabel,color(radarPalette(radarTheme).text),0);
-  lv_obj_set_style_text_color(activity,color(themeUiColors(radarTheme).accent),0);
+  lv_obj_set_style_text_color(activity,color(themeUiColors(radarTheme).accent),0);activityKind=1;
   lv_obj_set_style_text_color(notice,color(themeUiColors(radarTheme).ink),0);
   if(radarLogo(radarTheme)){lv_img_set_src(logo,radarLogo(radarTheme));lv_obj_clear_flag(logo,LV_OBJ_FLAG_HIDDEN);}
   else lv_obj_add_flag(logo,LV_OBJ_FLAG_HIDDEN);

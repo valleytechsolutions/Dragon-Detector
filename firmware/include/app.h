@@ -24,6 +24,7 @@
 #include "traffic.h"
 #include "wearable.h"
 #include "audio_levels.h"
+#include "nearby.h"
 extern dragon::TrafficStatus trafficStatus;
 unsigned recentDisconnects();
 
@@ -48,6 +49,9 @@ extern uint32_t radioHandled,radioLateHandled,radioLongBatches,advertisedFrames,
 unsigned radioPoolSize();
 void radioDrain(); // queued observations only; no scheduling
 void radarSignalStatus();
+extern dragon::NearbyRadios nearby; // BLE addresses heard close; a count, never an alert
+void nearbySet(bool on,int level);
+bool nearbyCommand(const String& command);
 void setActiveBle(bool enabled);
 extern SemaphoreHandle_t sdMutex;
 extern String sessionPath;
