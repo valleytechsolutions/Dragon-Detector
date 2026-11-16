@@ -37,7 +37,9 @@ static Match ble(const std::vector<uint8_t>& p){auto f=parseBle(p.data(),p.size(
 #include "personal_theme_test.h"
 #include "rotary_input_test.h"
 #include "detection_refresh_test.h"
+#include "signal_path_test.h"
 int main(){
+  signalPathTests();
   detectionRefreshTests();
   rotaryInputTests();
   beeperSessionTests();

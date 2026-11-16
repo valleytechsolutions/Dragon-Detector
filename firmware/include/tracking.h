@@ -6,12 +6,23 @@
 
 namespace dragon {
 // Median suppresses isolated spikes; elapsed-time EWMA avoids packet-rate bias.
+// Reception is time-shared (BLE 2.2 s / Wi-Fi 2.2 s, 200 ms per channel), so
+// most emitters arrive as short runs separated by silence. After a gap longer
+// than GapMs the median spans only the samples heard since: otherwise the
+// elapsed-time weight is spent on pre-gap values and the dot stays put. One
+// post-gap sample takes at most FirstWeight, so a single fade cannot teleport
+// the dot; the rest of the elapsed-time weight waits for a second fresh sample.
 struct SignalTrack {
+  static constexpr uint32_t GapMs=1000;
+  static constexpr float FirstWeight=.55f;
   int8_t samples[5]{};
-  uint8_t count=0, cursor=0;
+  uint8_t count=0, cursor=0, fresh=0; // fresh: window samples since the last gap
   float smooth=-100, baseline=-100, spread=0;
   uint32_t last=0, trendAt=0, filterAt=0;
+  uint32_t gapSum=0; // diagnostics: ms between filter samples, their count
+  uint16_t accepted=0, gapMax=0; // and the longest wait; the mean stops at 65535
   int8_t trend=0,raw=-100;
+  uint8_t credit=0; // deferred post-gap weight, 0..255
   void add(int rssi,uint32_t now,uint16_t smoothingMs=1800) {
     if(rssi>=0 || rssi<-127)return;
     if(!count || uint32_t(now-last)>15000){
@@ -21,18 +32,26 @@ struct SignalTrack {
     // One median sample per 100 ms: packet floods must not dominate the
     // filter, and expensive math need not run for every repeated advert.
     if(count && uint32_t(now-filterAt)<100)return;
-    samples[cursor]=rssi;cursor=(cursor+1)%5;if(count<5)++count;
-    int8_t sorted[5];for(unsigned i=0;i<count;++i)sorted[i]=samples[i];
-    std::sort(sorted,sorted+count);
-    float median=sorted[count/2];
     uint32_t dt=now-filterAt;
+    if(accepted){gapMax=std::max<uint32_t>(gapMax,std::min<uint32_t>(dt,65535));if(accepted<65535)gapSum+=dt;}
+    if(accepted<65535)++accepted;
+    if(dt>GapMs){fresh=0;credit=0;}
+    samples[cursor]=rssi;cursor=(cursor+1)%5;if(count<5)++count;if(fresh<5)++fresh;
+    int8_t sorted[5];for(unsigned i=0;i<count;++i)sorted[i]=samples[i];
+    std::sort(sorted,sorted+count);spread=sorted[count-1]-sorted[0];
+    for(unsigned i=0;i<fresh;++i)sorted[i]=samples[(cursor+4-i)%5];
+    std::sort(sorted,sorted+fresh);
+    float median=fresh&1?sorted[fresh/2]:(sorted[fresh/2-1]+sorted[fresh/2])*.5f;
     float alpha=1.0f-expf(-float(dt)/std::max<uint16_t>(smoothingMs,100));
-    smooth+=alpha*(median-smooth);spread=sorted[count-1]-sorted[0];filterAt=now;
+    if(fresh==1&&alpha>FirstWeight){credit=uint8_t((alpha-FirstWeight)/(1-FirstWeight)*255);alpha=FirstWeight;}
+    else if(credit){if(fresh==2)alpha=std::max(alpha,credit/255.f);credit=0;}
+    smooth+=alpha*(median-smooth);filterAt=now;
     if(uint32_t(now-trendAt)>=4000){
       float delta=smooth-baseline;trend=delta>=3?1:delta<=-3?-1:0;
       baseline=smooth;trendAt=now;
     }
   }
+  uint32_t gapMean() const {return accepted>1?gapSum/(accepted-1):0;}
   int value() const {return int(lroundf(smooth));}
   const char* quality() const {return count<5?"Warming up":spread>12?"Unstable signal":"Stable signal";}
   const char* direction() const {return trend>0?"Signal rising":trend<0?"Signal falling":"Signal steady";}

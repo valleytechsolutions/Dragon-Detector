@@ -11,6 +11,17 @@ struct WifiSweep {
     current=full()&&priority>=1&&priority<=11?priority:current%11+1;return true;
   }
 };
+// Main-loop time for queued observations. One radar frame can hold the loop
+// for 100-170 ms; a fixed 4 ms pass then handles less than arrives and the
+// pool overflows although the average rate is modest (measured on a 1.75C:
+// about 62 observations/s arriving, about 30% dropped). A backlog above a
+// quarter of the pool earns a longer pass; every pass handles a few items.
+struct DrainBudget {
+  static constexpr uint32_t ShortUs=4000,LongUs=20000;
+  static constexpr unsigned MinItems=4;
+  static uint32_t limit(unsigned waiting,unsigned capacity){return waiting>capacity/4?LongUs:ShortUs;}
+  static bool more(unsigned handled,uint32_t elapsedUs,uint32_t limitUs){return handled<MinItems||elapsedUs<limitUs;}
+};
 // One complete 1..11 Wi-Fi sweep per slice; begin each cycle listening to BLE.
 // Hunt adds a target-focused slice without starving the other radio/channels.
 // WifiSweep completes every channel even when rendering delays a hop.

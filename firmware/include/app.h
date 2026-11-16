@@ -44,6 +44,10 @@ extern uint32_t axonAlertCount;
 void axonStatus();
 extern uint32_t radioMaxBatchUs,radioMaxLagMs,contactEvictions,contactCacheHits,contactCacheMisses;
 extern uint16_t radioQueueHigh;
+extern uint32_t radioHandled,radioLateHandled,radioLongBatches,advertisedFrames,advertisedMismatch;
+unsigned radioPoolSize();
+void radioDrain(); // queued observations only; no scheduling
+void radarSignalStatus();
 void setActiveBle(bool enabled);
 extern SemaphoreHandle_t sdMutex;
 extern String sessionPath;

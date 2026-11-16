@@ -33,12 +33,13 @@ void setRadioStandby(bool enabled){
 }
 bool radarRecent=true;
 int trackedContact=-1;
-bool radarVisible(const Contact& c,uint32_t now){
+static bool radarVisibleWith(const Contact& c,uint32_t now,uint8_t flags){
  if(!reconAccepts(c.match.family,c.ble))return false;
- uint8_t flags=deviceRules(contactKey(c));
  return candidateVisible(c,now,detector,!candidatesOnly||reconAll(),flags&RuleIgnore,flags&RuleWatch) || (radarRecent&&recentCandidateVisible(c,now,detector,flags&RuleIgnore,flags&RuleWatch));
 }
+bool radarVisible(const Contact& c,uint32_t now){return radarVisibleWith(c,now,deviceRules(contactKey(c)));}
 bool activeBle=false;
+uint32_t radioHandled=0,radioLateHandled=0,radioLongBatches=0,advertisedFrames=0,advertisedMismatch=0;
 uint32_t radioMaxBatchUs=0,radioMaxLagMs=0,contactEvictions=0,contactCacheHits=0,contactCacheMisses=0;
 uint16_t radioQueueHigh=0;
 static ContactCache contactCache;
@@ -50,9 +51,13 @@ static std::atomic<uint32_t> drops{0},axonDrops{0},axonQueued{0};
 static constexpr unsigned QUEUE_SIZE=16;
 static constexpr unsigned AXON_RESERVE=4;
 #else
-static constexpr unsigned QUEUE_SIZE=96;
-static constexpr unsigned AXON_RESERVE=24;
+// 240 slots (about 250 KB of PSRAM) ride out a slow radar frame; indexes stay
+// one byte. The Axon reserve keeps its quarter share.
+static constexpr unsigned QUEUE_SIZE=240;
+static constexpr unsigned AXON_RESERVE=60;
 #endif
+static_assert(QUEUE_SIZE<=255,"pool indexes are uint8_t");
+unsigned radioPoolSize(){return QUEUE_SIZE;}
 static QueueHandle_t queue,priorityQueue,freeSlots;
 static Observation* observations;
 // Free/ready queues carry one-byte pool indexes. Only received bytes are copied
@@ -185,11 +190,8 @@ static Contact* getContact(const uint8_t* mac,bool ble,uint8_t addressType,uint3
     for(auto& c:contacts){
       if(&c-contacts.data==trackedContact)continue;
       uint8_t flags=deviceRules(keyOf(c));
-      uint32_t age=std::min<uint32_t>(uint32_t(now-c.seen),3600000);
-      // New tracker addresses cannot evict a live higher-priority detection.
-      if(age<30000&&dragon::familyPriority(c.match.family)>dragon::familyPriority(incoming.family))continue;
-      uint32_t score=age + (age>=30000?200000000u:0) + (!(flags&RuleWatch)?100000000u:0) + (100-dragon::familyPriority(c.match.family))*100000u;
-      if(!slot||score>best){slot=&c;best=score;}
+      uint32_t score=evictionScore(c,now,flags&RuleWatch,radarVisibleWith(c,now,flags),incoming.family);
+      if(score>best){slot=&c;best=score;}
     }
     if(!slot)return nullptr;
     ++contactEvictions;
@@ -199,9 +201,9 @@ static Contact* getContact(const uint8_t* mac,bool ble,uint8_t addressType,uint3
   slot->match={ble?Family::Ble:Family::Wifi,Confidence::None,"no specific signature"};
   contactCache.remember(key,slot-contacts.data);return slot;
 }
-static void update(Contact& c,const Observation& o,const char* name,dragon::Match m){
-  if(c.packets && uint32_t(o.at-c.seen)>30000){c.signal={};c.matchHits=0;c.match={c.ble?Family::Ble:Family::Wifi,Confidence::None,"expired evidence"};c.signatureAlerted=false;c.wifiAlerts=0;}
-  if(o.rssi<0 && o.rssi>=-127){c.signal.add(o.rssi,o.at,detector.smoothingMs);c.rssi=c.signal.value();c.trace.add(c.rssi,o.at);}c.seen=o.at;c.channel=o.channel;++c.packets;
+static void update(Contact& c,const Observation& o,const char* name,dragon::Match m,uint8_t advertised=0,bool beacon=false){
+  if(c.packets && uint32_t(o.at-c.seen)>30000){c.signal={};c.advChannel=0;c.matchHits=0;c.match={c.ble?Family::Ble:Family::Wifi,Confidence::None,"expired evidence"};c.signatureAlerted=false;c.wifiAlerts=0;}
+  if(o.rssi<0 && o.rssi>=-127){c.signal.add(o.rssi,o.at,detector.smoothingMs);c.rssi=c.signal.value();c.trace.add(c.rssi,o.at);}c.seen=o.at;noteChannel(c,o.channel,advertised,beacon);++c.packets;
   if(*name)strlcpy(c.name,name,sizeof(c.name));
   if(c.matchHits && uint32_t(o.at-c.matchedAt)>30000){c.matchHits=0;c.signatureAlerted=false;c.match={c.ble?Family::Ble:Family::Wifi,Confidence::None,"expired evidence"};}
   bool changed=dragon::strongerMatch(m,c.match);
@@ -262,8 +264,9 @@ static void process(const Observation& o){
     auto* contact=getContact(f.source,false,0,o.at,f.match);if(!contact)return;Contact& c=*contact;
     // Priority observations may overtake older general traffic for this key.
     if(c.packets&&int32_t(o.at-c.seen)<0)return;
-    update(c,o,f.name,f.match);
-    if(&c-contacts.data==trackedContact && o.channel>=1 && o.channel<=11)channelLock=o.channel;
+    if(radarChannel(f.channel)){++advertisedFrames;if(f.channel!=o.channel)++advertisedMismatch;}
+    update(c,o,f.name,f.match,f.channel,f.beacon);
+    if(&c-contacts.data==trackedContact && radarChannel(c.channel))channelLock=c.channel;
     dragon::mergeDrone(c.drone,f.drone,o.at);
     uint8_t peer[6];
     if(ssids.observe(f,o.at,peer)){
@@ -377,18 +380,27 @@ void radioWardriveStatus(){
 #endif
 }
 #endif
-void radioLoop(){
-  if(!queue)return;
-  radioQueueHigh=std::max<uint16_t>(radioQueueHigh,uxQueueMessagesWaiting(queue)+uxQueueMessagesWaiting(priorityQueue));
+// Runs on the application task only: from radioLoop() and once more after the
+// UI pass, never from a radio or LVGL callback. process() applies the
+// wardrive/recon ownership rules either way.
+static void drain(bool afterUi){
+  unsigned waiting=uxQueueMessagesWaiting(queue)+uxQueueMessagesWaiting(priorityQueue);
+  radioQueueHigh=std::max<uint16_t>(radioQueueHigh,waiting);
+  const uint32_t limit=dragon::DrainBudget::limit(waiting,QUEUE_SIZE);if(limit>dragon::DrainBudget::ShortUs)++radioLongBatches;
   uint64_t batchAt=esp_timer_get_time();uint8_t index;
-  for(int i=0;i<64;++i){
+  for(unsigned i=0;i<QUEUE_SIZE;++i){
     if(xQueueReceive(priorityQueue,&index,0)!=pdTRUE&&xQueueReceive(queue,&index,0)!=pdTRUE)break;
     radioMaxLagMs=std::max(radioMaxLagMs,uint32_t(millis()-observations[index].at));
-    process(observations[index]);xQueueSend(freeSlots,&index,0);
-    if(esp_timer_get_time()-batchAt>=4000)break; // give touch/audio/render a turn
+    process(observations[index]);xQueueSend(freeSlots,&index,0);++radioHandled;if(afterUi)++radioLateHandled;
+    if(!dragon::DrainBudget::more(i+1,esp_timer_get_time()-batchAt,limit))break; // give touch/audio/render a turn
   }
   radioMaxBatchUs=std::max<uint32_t>(radioMaxBatchUs,esp_timer_get_time()-batchAt);
   queueDrops=drops.load();
+}
+void radioDrain(){if(queue)drain(true);}
+void radioLoop(){
+  if(!queue)return;
+  drain(false);
   uint32_t now=millis(),elapsed=now-lastAccounting;lastAccounting=now;
 #if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
   if(wardriveBusy()){driveRadioLoop(now,elapsed);return;}
@@ -423,6 +435,23 @@ void trackContact(int index){
  if(index<0 || index>=int(MAX_CONTACTS) || !contacts[index].used){trackedContact=-1;channelLock=0;setRadio(true);return;}
  trackedContact=index;channelLock=contacts[index].ble?0:contacts[index].channel;setRadio(true);
  if(channelLock && esp_wifi_set_channel(channelLock,WIFI_SECOND_CHAN_NONE)==ESP_OK)wifiChannel=channelLock;
+}
+// Read-only filter diagnostics for `radar signal`. Addresses are shortened to
+// their last two bytes: enough to follow a contact between calls.
+void radarSignalStatus(){
+ uint32_t now=millis();int rows[8];unsigned count=0;
+ if(trackedContact>=0&&contacts[trackedContact].used)rows[count++]=trackedContact;
+ else for(size_t i=0;i<MAX_CONTACTS;++i){
+  auto& c=contacts[i];if(!c.used||!radarVisible(c,now))continue;
+  unsigned at=count;while(at&&contacts[rows[at-1]].rssi<c.rssi)--at;
+  if(at>=8)continue;if(count<8)++count;
+  for(unsigned j=count-1;j>at;--j)rows[j]=rows[j-1];rows[at]=i;
+ }
+ Serial.printf("RADAR_SIGNAL_BEGIN count=%u tracked=%d smoothing_ms=%u uptime=%lu\n",count,trackedContact,unsigned(detector.smoothingMs),now);
+ for(unsigned k=0;k<count;++k){auto& c=contacts[rows[k]];
+  Serial.printf("RADAR_SIGNAL index=%d id=%02x%02x radio=%s family=%u raw=%d filtered=%d spread=%d samples=%u gap_mean_ms=%lu gap_max_ms=%u age_ms=%lu rx_channel=%u adv_channel=%u label=%s\n",rows[k],c.mac[4],c.mac[5],c.ble?"BLE":"WIFI",unsigned(c.match.family),c.signal.raw,c.signal.value(),int(c.signal.spread),unsigned(c.signal.accepted),c.signal.gapMean(),unsigned(c.signal.gapMax),uint32_t(now-c.seen),c.rxChannel,c.advChannel,dragon::familyName(c.match.family));
+ }
+ Serial.println("RADAR_SIGNAL_END");
 }
 int findContact(const dragon::DeviceKey& key){for(size_t i=0;i<MAX_CONTACTS;++i)if(contacts[i].used&&contactKey(contacts[i])==key)return i;return -1;}
 bool huntDevice(const dragon::DeviceKey& key,uint8_t channel){
