@@ -1,5 +1,14 @@
 # Changes
 
+## Unreleased
+
+- Fewer lost frames: the observation pool grows from 96 to 240 entries on PSRAM boards (M5Dial keeps 16), a backlog above a quarter of the pool earns a 20 ms processing pass instead of 4 ms, and queued observations are also handled right after each UI pass. A 1.75C had dropped about 30% of roughly 62 observations per second because a 168 ms radar frame outlasted the queue. The effect on hardware has not been measured yet.
+- The RSSI filter is gap-aware. After more than one second without a sample the median uses only new samples; the first takes at most 55% of the weight. Simulated 63% response to a 20 dB change at the default setting: access point 6.6 s to 2.3 s, 100 ms BLE advertiser 3.1 s to 2.1 s, 2 s advertiser 9.9 s to 5.9 s. Sparse dots react to a single faded reading, which the old filter ignored. Even sample counts use a true median.
+- Wi-Fi contacts and the Hunt channel lock use the channel an access point advertises (DS Parameter Set, 1–11) instead of the channel the frame happened to be received on. Off-channel readings are counted, not rejected: `scan status` appends `adv_frames` and `adv_mismatch`.
+- A full contact table now evicts unclassified addresses the radar is not showing before classified contacts. Long-silent contacts still go first, watched contacts last, and a live higher-priority detection stays protected.
+- Adds read-only USB `radar signal` on every profile: per-contact raw/filtered RSSI, spread, accepted samples, mean and longest wait between samples, age and receive/advertised channel, with addresses shortened to two bytes. `RADIO_STATS` appends `pool`, `handled`, `late` and `long_batches`.
+- Hunt documentation no longer says reception is dedicated: a BLE target gets about two thirds of the cycle and a Wi-Fi target's channel about one third.
+
 ## 0.13.20
 
 - Adds Find My Beeper under Attacks → BLE attacks, with a dedicated selection/result screen and confirmation before each request.

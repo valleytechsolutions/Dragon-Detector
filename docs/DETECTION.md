@@ -42,7 +42,7 @@ Balanced scanning starts with BLE and alternates 2.2 seconds BLE and 2.2 seconds
 
 ## Signal estimation
 
-A five-sample median, accepting at most one sample per 100 ms, precedes elapsed-time exponential smoothing (0.6/1.8/4-second constant). Trend compares filtered values over four seconds using a ±3 dB threshold. A 15-second gap resets the estimate; ten-second absence marks a hunt stale. A stale Wi-Fi hunt begins sweeping channels 1–11 after twelve seconds and locks again when its address is heard. The 48-point trace covers 24 seconds with 500 ms buckets and explicit missing-signal gaps. Hunt also shows the most recent raw RSSI alongside the filtered gauge. Peak and saved mark are relative signal references, not range calibration.
+A median of up to five samples, accepting at most one sample per 100 ms, precedes elapsed-time exponential smoothing (0.6/1.8/4-second constant). After more than one second without a sample the median restarts from the new samples, and the first of them takes at most 55% of the weight ([details](RADAR-AND-ACTIVITY.md)). Trend compares filtered values over four seconds using a ±3 dB threshold. A 15-second gap resets the estimate; ten-second absence marks a hunt stale. A stale Wi-Fi hunt begins sweeping channels 1–11 after twelve seconds and locks again when its address is heard. The 48-point trace covers 24 seconds with 500 ms buckets and explicit missing-signal gaps. Hunt also shows the most recent raw RSSI alongside the filtered gauge. Peak and saved mark are relative signal references, not range calibration.
 
 ## Sources
 
