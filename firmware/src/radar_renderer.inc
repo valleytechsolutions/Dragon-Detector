@@ -238,13 +238,15 @@ static void radarDraw(lv_event_t* e){
   if(radarHasSelection&&dragon::radarSelectionExpired(now,radarSelectedAt))radarHasSelection=false;
 #endif
   // Plot points are built once per rendered frame; later tiles reuse them.
+  // A redraw outside uiLoop (screenshot) may follow an eviction: drop points
+  // whose slot now holds another contact.
   static uint32_t plotPass=UINT32_MAX;
   if(advancePlot||plotPass!=radarPass){plotPass=radarPass;dotCount=0;
   for(unsigned k=0;k<unsigned(radarCount);++k){int i=radarOrder[k];auto& c=contacts[i];if(!radarVisible(c,now))continue;
     float target=c.signal.count?dragon::radarRadius(c.signal.smooth):158.f;if(!c.plotRadius)c.plotRadius=target;else if(advancePlot&&!(radarHasSelection&&contactKey(c)==radarSelectedKey))c.plotRadius+=(target-c.plotRadius)*.35f;
     auto plot=dragon::radarPlotPoint(c.plotRadius,c.radarX,c.radarY);dots[dotCount++]={S(plot.x),S(plot.y),i,contactKey(c)};
   }
-  }
+  }else{int kept=0;for(int i=0;i<dotCount;++i){auto& c=contacts[dots[i].index];if(c.used&&contactKey(c)==dots[i].key)dots[kept++]=dots[i];}dotCount=kept;}
   // Paint low-priority dots first so a coincident tracker cannot cover Axon.
   for(int i=dotCount-1;i>=0;--i){auto& dot=dots[i];auto& c=contacts[dot.index];int x=dot.x,y=dot.y;uint32_t age=now-c.seen;const auto fresh=dragon::radarFreshness(age);uint8_t opacity=dragon::radarOpacity(age);Family family=visibleFamily(c,now,detector.families);uint32_t deviceColor=contactColor(c);
     #ifndef BOARD_RADAR_LITE
@@ -282,7 +284,7 @@ static void radarDraw(lv_event_t* e){
     #ifndef BOARD_RADAR_LITE
     if(radarTheme==24)asciiMark(ctx,"*",dot.x*360/SCREEN_RES,dot.y*360/SCREEN_RES,contactColor(c));else
 #endif
-    disc(ctx,dot.x,dot.y,S(5),contactColor(c),age>=30000?255:dragon::radarOpacity(age));
+    {disc(ctx,dot.x,dot.y,S(5),dragon::RadarLabelBackground);disc(ctx,dot.x,dot.y,S(5),contactColor(c),age>=30000?255:dragon::radarOpacity(age));} // backing first: one layer, not two
   }
   // Decorative center cursor, not a compass. Keep it above the sweep/labels.
   if(radarTheme==CanCommanderTheme||radarTheme==ArgyleTheme||radarTheme==LawLockToolsTheme||radarTheme==MokiTheme||radarTheme==Delta44Theme)return;

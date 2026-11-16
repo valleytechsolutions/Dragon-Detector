@@ -64,10 +64,13 @@ inline dragon::Family visibleFamily(const Contact& c,uint32_t now,uint32_t famil
 // sent, so the receive channel is a poor Hunt lock. Prefer the channel the
 // frame itself states (DS Parameter Set). Only an AP's beacon/probe response
 // is remembered: a probing station names each channel it visits. The receive
-// channel is kept for diagnostics and RSSI samples are not rejected.
+// channel is kept for diagnostics and RSSI samples are not rejected. An AP
+// that moves to channel 12-14 is forgotten, so the lock follows where its
+// frames are still received instead of the channel it left.
 inline bool radarChannel(uint8_t channel){return channel>=1&&channel<=11;}
 inline void noteChannel(Contact& c,uint8_t received,uint8_t advertised,bool remember){
-  c.rxChannel=received;if(!radarChannel(advertised))advertised=0;
+  c.rxChannel=received;if(remember&&advertised>=12&&advertised<=14)c.advChannel=0;
+  if(!radarChannel(advertised))advertised=0;
   if(advertised&&remember)c.advChannel=advertised;
   c.channel=advertised?advertised:c.advChannel?c.advChannel:received;
 }

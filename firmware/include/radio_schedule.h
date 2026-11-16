@@ -1,23 +1,25 @@
 #pragma once
 #include <stdint.h>
+#include <algorithm>
 namespace dragon {
 // leftMs is the time left in a Hunt slice (0: plain sweep). While it lasts, a
 // 200 ms visit to the priority channel follows each sweep hop, so a Wi-Fi Hunt
 // target is revisited every 400 ms instead of once at the end of the slice.
-// A visit is skipped when the channels still to sweep, budgeted at VisitMs
-// each for loop delay, would no longer fit: the sweep always wins.
+// A visit is skipped when the channels still to sweep would no longer fit at
+// VisitMs each, or at the pace recent hops kept when the loop is slower than
+// that, so visits do not lengthen the slice of a steadily slow loop.
 struct WifiSweep {
   static constexpr uint32_t VisitMs=300;
-  uint8_t current=1,completed=0,resume=0;uint32_t last=0; // resume: sweep channel after a visit
+  uint8_t current=1,completed=0,resume=0;uint32_t last=0,pace=200; // resume: sweep channel after a visit; pace: smoothed ms per hop
   void begin(uint32_t now,uint8_t first){current=first;completed=0;resume=0;last=now;}
   bool full()const{return completed>=11;}
   bool hop(uint32_t now,uint8_t priority=0,uint32_t leftMs=0){
     if(uint32_t(now-last)<200)return false;
-    last=now;if(resume){current=resume;resume=0;return true;}
+    pace=(pace*3+std::min<uint32_t>(now-last,2000)+3)/4;last=now;if(resume){current=resume;resume=0;return true;}
     if(completed<11)++completed;
     const bool lock=priority>=1&&priority<=11;const uint8_t next=current%11+1;
     if(full()){current=lock?priority:next;return true;}
-    if(lock&&current!=priority&&next!=priority&&leftMs>=(12u-completed)*VisitMs){resume=next;current=priority;}
+    if(lock&&current!=priority&&next!=priority&&leftMs>=(12u-completed)*std::max(VisitMs,pace)){resume=next;current=priority;}
     else current=next;
     return true;
   }

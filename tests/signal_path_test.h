@@ -2,13 +2,14 @@
 #include "radio_schedule.h"
 // The 0.14.7 filter, kept only as the "before" reference for the step budget.
 struct LegacySignalTrack {
-  int8_t samples[5]{};uint8_t count=0,cursor=0;float smooth=-100;uint32_t last=0,filterAt=0;
+  int8_t samples[5]{};uint8_t count=0,cursor=0;int8_t trend=0;float smooth=-100,baseline=-100;uint32_t last=0,filterAt=0,trendAt=0;
   void add(int rssi,uint32_t now,uint16_t smoothingMs=1800){
-    if(!count||uint32_t(now-last)>15000){*this={};smooth=rssi;last=filterAt=now;}
+    if(!count||uint32_t(now-last)>15000){*this={};smooth=baseline=rssi;last=filterAt=trendAt=now;}
     last=now;if(count&&uint32_t(now-filterAt)<100)return;
     samples[cursor]=rssi;cursor=(cursor+1)%5;if(count<5)++count;
     int8_t sorted[5];for(unsigned i=0;i<count;++i)sorted[i]=samples[i];std::sort(sorted,sorted+count);
     smooth+=(1.0f-expf(-float(now-filterAt)/std::max<uint16_t>(smoothingMs,100)))*(sorted[count/2]-smooth);filterAt=now;
+    if(uint32_t(now-trendAt)>=4000){float delta=smooth-baseline;trend=delta>=3?1:delta<=-3?-1:0;baseline=smooth;trendAt=now;}
   }
 };
 struct StepTimes { uint32_t mean63=0,worst63=0,mean90=0,worst90=0; };
@@ -33,44 +34,79 @@ template<class Track> static StepTimes stepResponse(unsigned interval,bool acces
 static void signalPathTests(){
   using namespace dragon;
   // After a gap the median restarts: the first fresh sample moves the value by
-  // FirstWeight at most, the second spends the rest of the elapsed-time weight.
+  // FirstWeight and FirstStepDb at most, the second spends the rest of the
+  // elapsed-time weight, so two agreeing samples land where they did unclamped.
   SignalTrack g;for(int n=0;n<10;++n)g.add(-80,n*100);assert(g.fresh==5&&g.value()==-80);
-  g.add(-60,3100);assert(g.fresh==1&&g.count==5&&fabsf(g.smooth-(-80+20*SignalTrack::FirstWeight))<.01f);
+  g.add(-60,3100);assert(g.fresh==1&&g.count==5&&fabsf(g.smooth-(-80+SignalTrack::FirstStepDb))<.01f);
   g.add(-60,3150);assert(g.fresh==1&&g.raw==-60); // 100 ms gate still applies
   g.add(-60,3200);assert(g.fresh==2&&fabsf(g.smooth-(-80+20*(1-expf(-2200.f/1800))))<.15f);
   g.add(-60,3300);assert(g.fresh==3&&g.credit==0&&g.smooth<-64.5f); // no further credit
   assert(g.accepted==13&&g.gapMax==2200&&g.gapMean()==3300/12);
-  // One faded sample after a gap: bounded, where the old filter ignored it and
-  // equally ignored a real change. This is the cost of the faster response.
-  SignalTrack fade;for(int n=0;n<10;++n)fade.add(-60,n*100);fade.add(-85,5000);assert(fade.smooth>=-60-25*SignalTrack::FirstWeight-.01f);
-  fade.add(-60,5100);assert(fade.smooth>-73.f&&fade.smooth<-71.f);fade.add(-60,5200);fade.add(-60,5300);assert(fade.smooth>-73.f);
+  // A small change is not clamped: FirstWeight of 10 dB, then the rest.
+  SignalTrack small;for(int n=0;n<10;++n)small.add(-80,n*100);small.add(-70,3100);assert(fabsf(small.smooth-(-80+10*SignalTrack::FirstWeight))<.01f);
+  small.add(-70,3200);assert(fabsf(small.smooth-(-80+10*(1-expf(-2200.f/1800))))<.1f);
+  // One outlier after a gap moves the value by FirstStepDb at most, whether it
+  // is the first or the second fresh sample, and the next good sample undoes
+  // it. Before this rule a -40 dBm spike on a -75 dBm emitter moved it 19 dB.
+  SignalTrack fade;for(int n=0;n<10;++n)fade.add(-60,n*100);fade.add(-85,5000);assert(fabsf(fade.smooth-(-60-SignalTrack::FirstStepDb))<.01f);
+  fade.add(-60,5100);assert(fade.fresh==2&&fade.smooth>-61.5f);fade.add(-60,5200);fade.add(-60,5300);assert(fade.smooth>-61.5f);
+  SignalTrack spike;for(int n=0;n<10;++n)spike.add(-75,n*100);spike.add(-75,5300);spike.add(-40,5402);assert(spike.value()==-75);
+  SignalTrack first;for(int n=0;n<10;++n)first.add(-75,n*100);first.add(-40,5300);assert(fabsf(first.smooth-(-75+SignalTrack::FirstStepDb))<.01f);first.add(-75,5402);assert(first.smooth<-73.5f);
+  // A post-gap sample that agrees with the last one before the gap is not alone.
+  SignalTrack pair;pair.add(-70,0);pair.add(-66,4000);assert(pair.fresh==2&&fabsf(pair.smooth-(-70+2*(1-expf(-4000.f/1800))))<.01f);
+  // Every seventh sample a 35 dB spike, on the four reception patterns.
+  for(unsigned interval:{100u,102u,1000u,2000u}){SignalTrack t;float worst=0;unsigned n=0;
+    for(uint32_t at=13;at<600000;at+=interval){const uint32_t slot=at%4400;if(interval==102?slot<3200||slot>=3400:slot>=RadioSchedule::BleMs)continue;
+      float was=t.smooth;t.add(++n%7?-75:-40,at);if(n>1)worst=std::max(worst,fabsf(t.smooth-was));}
+    assert(n>100&&worst<=SignalTrack::FirstStepDb+.01f);
+  }
+  // A continuously heard 1 s advertiser (0-10 ms advDelay) is not a gap.
+  {SignalTrack t;unsigned rng=3,gaps=0;for(uint32_t at=0;at<200000;at+=1000+(rng>>16)%11){rng=rng*1103515245u+12345u;t.add(-70,at);gaps+=t.fresh==1;}assert(gaps==1);}
   // A short gap (under GapMs) keeps the full five-sample spike rejection.
   SignalTrack dense;for(int n=0;n<10;++n)dense.add(-70,n*100);dense.add(-30,1800);assert(dense.fresh==5&&dense.value()==-70);
   // True median for even counts: the old code took the upper of two samples.
-  SignalTrack even;even.add(-70,0);even.add(-60,1000);assert(fabsf(even.smooth-(-70+5*(1-expf(-1000.f/1800))))<.01f);
-  // A lone sample after silence under the 15 s restart cannot spend more than FirstWeight.
-  SignalTrack lone;lone.add(-90,0);lone.add(-50,14000);assert(lone.count==2&&fabsf(lone.smooth-(-90+40*SignalTrack::FirstWeight))<.01f);
+  SignalTrack even;even.add(-70,0);even.add(-64,1000);assert(fabsf(even.smooth-(-70+3*(1-expf(-1000.f/1800))))<.01f);
+  // Two samples more than AgreeDb apart: wait for a third before moving.
+  SignalTrack split;split.add(-70,0);split.add(-60,1000);assert(split.value()==-70);split.add(-60,1200);assert(split.smooth>-70&&split.smooth<-68);
+  // A lone sample after silence under the 15 s restart cannot move more than FirstStepDb.
+  SignalTrack lone;lone.add(-90,0);lone.add(-50,14000);assert(lone.count==2&&fabsf(lone.smooth-(-90+SignalTrack::FirstStepDb))<.01f);
   assert(sizeof(SignalTrack)<=44); // 384 PSRAM contacts, 32 internal on Dial
   // Step-response budget, default 1.8 s smoothing, mean / worst over phase.
   //                        63% before      63% after      90% before      90% after
-  // Access point beacons   6.6 / 8.7 s     2.3 / 4.3 s    6.6 / 8.7 s     2.3 / 4.4 s
-  // BLE every 100 ms       3.1 / 4.1 s     2.1 / 4.1 s    5.0 / 6.7 s     3.7 / 4.4 s
-  // BLE every 1 s          5.9 / 7.9 s     3.5 / 4.9 s    9.6 / 11.9 s    6.1 / 7.9 s
-  // BLE every 2 s          9.9 / 11.9 s    5.9 / 7.9 s    13.9 / 15.9 s   9.9 / 11.9 s
+  // Access point beacons   6.6 / 8.7 s     2.3 / 4.3 s    6.6 / 8.7 s     2.3 / 4.3 s
+  // BLE every 100 ms       3.1 / 4.1 s     2.1 / 4.1 s    5.0 / 6.7 s     3.7 / 4.3 s
+  // BLE every 1 s          5.9 / 7.9 s     3.3 / 4.9 s    9.6 / 11.9 s    6.1 / 7.9 s
+  // BLE every 2 s          9.9 / 11.9 s    5.9 / 7.9 s    13.9 / 15.9 s   5.9 / 7.9 s
   auto apOld=stepResponse<LegacySignalTrack>(102,true),ap=stepResponse<SignalTrack>(102,true);
   assert(apOld.mean63>=6000&&apOld.worst90>=8500); // the defect: two cycles before the dot moves
   assert(ap.mean63<=2500&&ap.worst63<=4500&&ap.mean90<=2500&&ap.worst90<=4500); // within one 4.4 s cycle
   auto fastOld=stepResponse<LegacySignalTrack>(100,false),fast=stepResponse<SignalTrack>(100,false);
   assert(fastOld.mean63>=3000&&fast.mean63<=2300&&fast.worst63<=fastOld.worst63&&fast.mean90<=4000&&fast.worst90<=4500);
   auto secondOld=stepResponse<LegacySignalTrack>(1000,false),second=stepResponse<SignalTrack>(1000,false);
-  assert(secondOld.mean63>=5500&&second.mean63<=3700&&second.worst63<=5000&&second.worst90<=8000);
+  assert(secondOld.mean63>=5500&&second.mean63<=3500&&second.worst63<=5000&&second.mean90<=6300&&second.worst90<=8000);
   auto slowOld=stepResponse<LegacySignalTrack>(2000,false),slow=stepResponse<SignalTrack>(2000,false);
-  assert(slowOld.mean63>=9500&&slow.mean63<=6000&&slow.worst63<=8000&&slow.worst90<=12000);
+  assert(slowOld.mean63>=9500&&slow.mean63<=6000&&slow.worst63<=8000&&slow.mean90<=6200&&slow.worst90<=8000);
   // Fast and Steady presets now differ for a sparse emitter (both were 6.6 s to 63%).
   assert(stepResponse<SignalTrack>(102,true,600).mean90<stepResponse<SignalTrack>(102,true,4000).mean90);
   for(uint16_t preset:{600,4000})for(unsigned interval:{100u,1000u,2000u}){
     auto before=stepResponse<LegacySignalTrack>(interval,false,preset),after=stepResponse<SignalTrack>(interval,false,preset);
     assert(after.mean63<=before.mean63&&after.worst63<=before.worst63&&after.mean90<=before.mean90&&after.worst90<=before.worst90);
+  }
+  // Trend is the 0.14.7 one, check for check: a stationary emitter with 3 dB
+  // of RSSI noise is told its signal changes exactly as often as before.
+  for(unsigned interval:{100u,102u,1000u,2000u})for(unsigned hunt:{0u,1u}){SignalTrack t;LegacySignalTrack old;unsigned rng=interval+hunt,checks=0;
+    for(uint32_t at=13;at<600000;at+=interval){rng=rng*1103515245u+12345u;const uint32_t slot=at%(hunt?6600:4400);
+      if(interval==102?slot<3200||slot>=3400:slot>=(hunt?2:1)*RadioSchedule::BleMs)continue;
+      int noise=0;for(unsigned k=0;k<4;++k)noise+=int((rng>>(8+k*5))%7)-3; // sum of four uniforms, sd 4
+      const uint32_t was=t.trendAt;t.add(-75+noise*3/4,at);old.add(-75+noise*3/4,at);assert(t.trend==old.trend&&t.trendAt==old.trendAt&&fabsf(t.steady-old.smooth)<.001f);
+      checks+=t.trendAt!=was;
+    }
+    assert(checks>80);
+  }
+  // A real 15 dB rise still reads as rising within two checks.
+  for(unsigned interval:{100u,102u,2000u}){SignalTrack t;bool rose=false;
+    for(uint32_t at=13;at<60000;at+=interval){const uint32_t slot=at%4400;if(interval==102?slot<3200||slot>=3400:slot>=RadioSchedule::BleMs)continue;t.add(at<30000?-80:-65,at);if(at>=30000&&at<46000&&t.trend>0)rose=true;assert(at>=30000||!t.trend);}
+    assert(rose);
   }
   // Main-loop drain: short pass for a small backlog, longer above a quarter of
   // the pool, and always a few items even when one of them was slow.
@@ -87,6 +123,11 @@ static void signalPathTests(){
   Contact station;noteChannel(station,1,1,false);assert(station.channel==1&&!station.advChannel);noteChannel(station,6,0,false);assert(station.channel==6);
   noteChannel(station,6,7,false);assert(station.channel==7&&!station.advChannel);noteChannel(station,6,0,false);assert(station.channel==6);
   for(uint8_t bad:{0,12,13,14,36,255}){Contact c;noteChannel(c,3,bad,true);assert(c.channel==3&&!c.advChannel&&!radarChannel(bad));}
+  // An AP that moves from 6 to 13 is still heard on 11: the stale 6 is dropped.
+  Contact moved;noteChannel(moved,6,6,true);noteChannel(moved,11,13,true);assert(moved.channel==11&&!moved.advChannel&&moved.rxChannel==11);
+  noteChannel(moved,11,0,false);assert(moved.channel==11);
+  // A station naming 13, or a corrupt value, does not clear what the AP said.
+  Contact kept;noteChannel(kept,6,6,true);noteChannel(kept,11,13,false);noteChannel(kept,11,36,true);noteChannel(kept,11,255,true);assert(kept.channel==6&&kept.advChannel==6);
   Contact bluetooth;bluetooth.ble=true;noteChannel(bluetooth,0,0,false);assert(!bluetooth.channel);
   // Eviction order for a full table.
   auto contact=[](Family family,Confidence confidence,uint32_t seen){Contact c;c.used=true;c.packets=1;c.seen=seen;c.match={family,confidence,"fixture"};c.matchHits=confidence!=Confidence::None;c.matchedAt=seen;return c;};
@@ -139,6 +180,14 @@ static void signalPathTests(){
   for(uint8_t first:{1,6,11})for(uint8_t lock:{1,6,11}){auto after=hunt(first,lock,true,170,85),before=hunt(first,lock,false,170,85);
     assert(after.channelGap<8000&&after.lockGap<3000&&after.lockGap<before.lockGap&&after.cycleMs<8000&&after.cycleMs<=before.cycleMs+WifiSweep::VisitMs);
   }
+  // A steadily slow loop (hops 340-500 ms apart) is budgeted at the pace it
+  // keeps, so visits never lengthen the cycle; before this they added up to
+  // 800 ms (7140 against 6630 ms at 170 ms). From 400 ms the sweep runs alone.
+  for(unsigned poll:{170u,250u,300u,400u,500u})for(uint8_t first=1;first<=11;++first)for(uint8_t lock=1;lock<=11;++lock){
+    auto after=hunt(first,lock,true,poll,0),before=hunt(first,lock,false,poll,0);
+    assert(after.cycleMs<=before.cycleMs&&after.lockGap<=before.lockGap&&after.channelGap<=before.channelGap+poll);
+  }
+  {WifiSweep w;w.begin(0,3);uint32_t now=0;for(unsigned i=0;i<11;++i){now+=450;assert(w.hop(now,9,now<4400?4400-now:0));if(i>=3)assert(!w.resume);}assert(w.pace>=440&&w.pace<=452);} // eleven channels at 450 ms leave no room
   // Without time left, or without a lock, the sweep is the plain one.
   {WifiSweep w;w.begin(0,3);uint32_t now=0;for(unsigned i=0;i<11;++i){now+=200;assert(w.hop(now,0,4400)&&w.resume==0);}assert(w.full()&&w.current==3);}
   {WifiSweep w;w.begin(0,3);assert(w.hop(200,9,4200)&&w.current==9&&w.resume==4&&!w.hop(399,9,4000)&&w.hop(400,9,4000)&&w.current==4&&w.completed==1);
