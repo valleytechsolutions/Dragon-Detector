@@ -91,13 +91,35 @@ Upload an optional UTF-8 HTML template (1–16,384 bytes, no NUL) via CRC-checke
 
 USB: `portal name NAME`, `portal probes`, `portal probe MAC SSID_HEX`, `portal start`, `portal status`, `portal stop`, `portal log`, `portal save`, `portal clear`, `portal html reset`; browser handles binary template import. Stop/Home/timeout closes the AP/server and restores prior reception. There is no automatic deauthentication step.
 
-## Experimental CSI signal monitor
+## Room motion (experimental CSI monitor)
 
-Select a fresh AP, place both endpoints still, and Start from Radio tools. CSI accepts only that source's compatible LLTF 128-byte IQ layout, fixing the PHY mode/bandwidth from the first eligible packet, discarding the first two complex pairs consistently. It normalizes amplitude to remove uniform gain changes and compares successive subcarrier shapes. Only a fixed callback queue is filled in the Wi-Fi task; analysis runs in the application loop.
+Senses movement near this detector while it sits still. Not people, position or count.
 
-Calibration lasts 30 seconds and requires at least 20 usable one-second windows. Windows need at least five samples/second, recent data, low queue loss and stable RSSI. Insufficient data reports LOW DATA, never STABLE. The displayed change score is relative to that local baseline; it is not calibrated probability, an occupancy guarantee, a person detector or a location estimate. Recalibrate after moving the detector/AP. Walking/still ground-truth validation remains installation dependent.
+Open **Radio tools → Room motion**. Select a fresh AP, set the detector down where it will stay, keep it still and start. The monitor listens passively to that one AP on its channel and pauses the radar until Stop, Home or the 15-minute ceiling. It sends nothing and does not join the network.
 
-The monitor retains the last 120 one-second summary points for CSV download. No raw CSI or nearby credentials are stored. Stop/Home and the 15-minute ceiling release the radio. USB: `csi start`, `csi status`, `csi calibrate`, `csi history`, `csi stop`.
+**What it reads.** Only the selected AP's legacy-OFDM or HT frames that give a 128-byte LLTF block, with the PHY mode and bandwidth fixed by the first eligible frame. DC, guard tones and tone 1 (it shares the driver's possibly invalid first word) are dropped, leaving 51 of the 64 tones (LLTF 2..26 and -26..-1). Each one-second window needs at least five usable frames. A single packet that differs sharply from the recent ones (Hampel test on shape decorrelation, nine-packet window) is skipped once; a second in a row is accepted as a real change.
+
+**Model.** The window features, calibration and fusion are ported from ESP32 Marauder's `CsiMotionModel` (develop 79cc6bc, MIT; see [credits](../CREDITS.md)): amplitude spread per tone, spread of shape decorrelation, of linear-detrended phase change and of tone-to-tone amplitude change. Calibration takes 30 seconds and at least 15 usable windows; each feature is scaled by its calibration median and MAD and the four are fused by their middle two. Marauder takes the 85th percentile of calibration windows as the limit; here the limit is 2.5 times that (at least z 2), because the original crosses about one still window in seven; on synthetic still CSI it entered MOTION about 10 to 30 times an hour. With the change, host simulation gave 0 and 1 MOTION entries in 1000 still minutes at two noise levels and 4 in 500 minutes at a higher one. The score shown is smoothed as in Marauder; MOTION decisions use the unsmoothed window score. These numbers come from synthetic data, not from rooms.
+
+**States.**
+
+| State | Meaning |
+| --- | --- |
+| CALIBRATING | First 30 seconds after Start, Recalibrate or a detector-moved event. Keep still. |
+| LOW DATA | Fewer than five usable frames per second, poor reliability, or calibration still short of 15 windows. Never reported as STILL. |
+| STILL | Calibrated, data flowing, no motion in the last 15 seconds. |
+| MOTION | Two windows in a row over the limit; leaves after two windows under it. |
+| HOLD | Up to 15 seconds after the last motion window. |
+
+**Margin.** `limit − highest score of the last 30 non-motion windows` (a lone crossing counts as noise). A large positive margin means the placement is quiet; near zero or negative means false alarms are likely: move the detector or choose another AP and recalibrate. Walk past once to see the motion peak in the history.
+
+**Why LOW DATA.** The monitor counts the selected AP's frames by PHY class, both from the normal capture path and the CSI callback. Beacons are usually sent at 1 Mb/s DSSS, which carries no LLTF, so an idle AP may give nothing usable. The screen then says *This network's beacons carry no motion data; choose another network*, *Selected network not heard here; choose another network*, or *Too little OFDM traffic from this network*. The next step if passive sourcing starves is an active link (joining the AP or sending paced frames to it to make it answer with OFDM); that is not implemented.
+
+**Detector moved.** There is no motion sensor in the firmware, so the radio's own evidence is used: a window whose mean RSSI is 10 dB or more from the calibrated RSSI, or a spread jump on 90% of tones (four times their calibration spread) with a 5 dB RSSI shift, or an RSSI range of 10 dB within the calibration windows. Any of these shows *Detector moved, recalibrating* and starts a new calibration instead of reporting motion. It is a heuristic: a person very close to the detector or the AP can trigger it, and a gentle move may not, in which case motion is reported until you recalibrate.
+
+**Limits.** It needs a still detector and a still AP, and an AP that sends OFDM traffic. It senses changes in the radio path between them, which includes movement in adjacent rooms, fans, curtains, pets, doors and other radios; it can stay STILL while someone sits motionless. It makes no through-wall, occupancy, breathing, identity, position or count claims. No popup, sound, vibration or alert is raised; MOTION shows only on this screen and over USB. Ground-truth walking/still validation on hardware has not been done.
+
+**USB.** `csi start`, `csi stop`, `csi calibrate`, `csi status`, `csi history`. `csi status` keeps its `RECON_CSI` line (state values are now STILL / MOTION / HOLD / LOW DATA / CALIBRATING; `score` is the smoothed motion score, `quality` the reliability, `baseline` the calibration windows, `variation` the fused z and `threshold` the limit z) and adds a `RECON_CSI_ROOM` line with the window score, limit, margin, motion intervals, moved count, skipped packets, tone count, feature scores, supply diagnosis and per-class frame counts. `csi history` keeps the 120 one-second points, appends `state` and `margin` columns, then lists the last 12 motion intervals as `RECON_CSI_INTERVAL start_ms,end_ms,peak_score,status` (`open`, `ended` or `detector_moved`). No raw CSI or nearby credentials are stored.
 
 ## Connected network · 0.11.1
 

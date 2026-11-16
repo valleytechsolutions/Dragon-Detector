@@ -5,6 +5,7 @@
 #include "recipes.h"
 #include "missions.h"
 #include "wardrive.h"
+#include "csi_monitor.h"
 #include <WiFi.h>
 #include <NimBLEDevice.h>
 #include <esp_wifi.h>
@@ -144,6 +145,10 @@ static void wifiRx(void* buffer,wifi_promiscuous_pkt_type_t type){
   if(type!=WIFI_PKT_MGMT && type!=WIFI_PKT_DATA)return;
   auto* p=static_cast<wifi_promiscuous_pkt_t*>(buffer);
   if(p->rx_ctrl.rx_state || p->rx_ctrl.sig_len<28)return;
+#ifndef BOARD_RADAR_LITE
+  // Room motion owns the radio: only count the selected AP's PHY classes.
+  if(csiActive()){csiFrame(p);return;}
+#endif
   if(wardriveScanning&&(type!=WIFI_PKT_MGMT||(p->payload[0]!=0x80&&p->payload[0]!=0x50)))return;
   bool priority=!wardriveScanning&&dragon::inspectAxonWifi(p->payload,p->rx_ctrl.sig_len-4).detected();
   uint8_t index;if(!reserveObservation(index,priority))return;auto& o=observations[index];o.at=millis();o.us=esp_timer_get_time();o.kind=0;o.addressType=0;

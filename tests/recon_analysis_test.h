@@ -2,9 +2,7 @@
 #include "recon_analysis.h"
 #include "ble_insights.h"
 #include "dns_reply.h"
-#include "csi_analysis.h"
 static void reconAnalysisTests(){using namespace dragon::analysis;using namespace dragon::lab;
- dragon::csi::Shape shape;int8_t iq[128]{};for(unsigned i=4;i<128;++i)iq[i]=10;assert(shape.observe(iq,127)<0);assert(shape.observe(iq,128)<0);assert(shape.observe(iq,128)<.00001f);for(unsigned i=4;i<128;++i)iq[i]=20;assert(shape.observe(iq,128)<.00001f);for(unsigned i=4;i<64;++i)iq[i]=0;assert(shape.observe(iq,128)>.1f);dragon::csi::Baseline base;for(unsigned i=0;i<30;++i)base.add(.001f);assert(base.score(.001f)==0&&base.score(.5f)==100&&base.threshold()>=.005f);base.add(NAN);assert(base.count==30);int8_t zeros[128]{};assert(shape.observe(zeros,128)<0);
  const uint8_t camera[6]={0,0x1d,0x96,1,2,3};assert(inspectAxonBle(nullptr,0,0,camera,0).signals&BodyCameraVendor);assert(!inspectAxonBle(nullptr,0,0,camera,1).detected());
  uint8_t dns[512]={0x12,0x34,1,0,0,1,0,0,0,0,0,0,3,'l','a','b',0,0,1,0,1};assert(captiveDns(dns,21,sizeof(dns))==37&&dns[7]==1&&dns[33]==192);dns[2]=1;dns[7]=0;dns[12]=0xc0;assert(!captiveDns(dns,21,sizeof(dns)));
  auto b=beacon(1,false);auto f=parseWifi(b.data(),b.size());assert(accepts(Filter::All,f)&&accepts(Filter::Beacons,f)&&!accepts(Filter::Probes,f));
