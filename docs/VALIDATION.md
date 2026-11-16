@@ -63,6 +63,18 @@ The `waveshare_175` port is prepared from the official schematic and maintained 
 
 The `watcher` environment targets 412×412, 32 MB flash and 8 MB PSRAM with full-board software, touch/rotary controls, RTC, speaker and FAT32 SD. Optional UART AT6668 GPS support uses expansion GPIO19/20, not the shared I²C Grove socket. Camera, microphone recording and Himax AI are not enabled. [Setup, wiring and current physical validation](SEEED-WATCHER.md).
 
+## BLE radios near · unreleased, not yet measured
+
+The near count is covered by native tests and a host simulation of the radio schedule only. No board has been checked. Bench check to run on each profile before relying on it:
+
+1. Put one known phone with Bluetooth on beside the board and keep other radios away or note them. Leave the board on Radar.
+2. Send USB `radar near` once a minute for 30 minutes and keep the lines. They contain counts only, no addresses.
+3. Expected: `state=ready` after the first seconds; `near` settles and `steady` follows after about five minutes; `new_addresses` stays flat while `handovers` rises about twice, once per address change; `gone` and `dropped` stay flat.
+4. Move the phone away: `near` should fall within about 40 seconds. Bring it back within five minutes: `returns` rises and `new_addresses` does not.
+5. Record where `near` starts and stops counting the phone as it is carried away. That is the only evidence for or against the -70 dBm default on that board.
+
+A rising `new_addresses` with a flat `handovers` means address changes are not being paired on that phone and the count briefly overstates.
+
 ## Waveshare LCD 1.85B · 0.14.1
 
 The new dedicated port has a separate [release validation record](RELEASE-0.14.1.md) and [hardware guide](WAVESHARE-LCD-185B.md). Do not infer 1.85B physical results from the similarly sized Spotpear or AMOLED models.

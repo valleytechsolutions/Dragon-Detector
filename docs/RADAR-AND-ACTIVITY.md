@@ -28,6 +28,43 @@ USB `radar signal` is read-only. For the Hunt target, or otherwise the eight str
 
 Hunt gives the chosen radio a larger share of reception; it does not dedicate it. A BLE target is listened for during about two thirds of each 6.6 s cycle (4.4 s BLE, 2.2 s Wi-Fi). A Wi-Fi target's channel gets about a third (2.4 s of 6.6 s, 36%), because each cycle still completes one 1–11 sweep and a BLE slice. That share cannot grow without shortening the BLE slice or the 200 ms sweep dwell. What changed is how it is spent: during the 4.4 s Wi-Fi slice a 200 ms visit to the target channel follows each sweep hop, so the target is revisited every 400 ms instead of in one block at the end. With exact timing the longest wait for the target channel falls from 4.2 s to 2.4 s (the BLE slice plus one hop). The sweep order stays fixed while a Wi-Fi Hunt is active, so every channel returns within 6.4 s; with the rotating order one channel waited 8.4 s. A slow main loop drops visits before it delays the sweep: visits are budgeted at the pace recent hops kept. With hops a steady 340–500 ms apart the cycle is as long as without visits; with uneven loop times it can still run up to about one hop longer. These are schedule figures from a host simulation, not hardware measurements. The Wi-Fi Hunt channel is the one the access point states in its beacon or probe response (DS Parameter Set, channels 1–11) when it has stated one; otherwise it is the channel the frame was received on. A beacon decoded on a neighbouring channel therefore no longer moves the lock. An access point that states channel 12–14 is treated as having no stated channel and its earlier one is forgotten. Such readings still feed RSSI; `scan status` counts them as `adv_mismatch` out of `adv_frames`. Raw RSSI helps expose filter lag; Mark, peak and trend compare changes. The trace uses 48 half-second buckets; missing reception creates gaps instead of a continuous line. A lost Wi-Fi address triggers a channel sweep after twelve seconds. Address rotation can lose a target; unrelated devices are not merged.
 
+## BLE radios near
+
+A quiet line under the status row, on every board: `5 BLE RADIOS NEAR / 2 STEADY`, `1 BLE RADIO NEAR`, or `24+ BLE RADIOS NEAR`. Where the long form does not fit it reads `5 BLE RADIOS / 2 STEADY`. It is a count of what is being heard strongly now. Nothing is alerted, sounded, vibrated, logged or stored for it, no arrival or departure is announced, and no address is kept beyond the table in memory.
+
+What it does and does not say:
+
+- It counts **BLE radio addresses, not people**. One person may carry several radios or none.
+- A hidden line or a low number **does not mean nobody is near**: Bluetooth may be off, a body or bag can hide a radio, and Wi-Fi devices are not counted. The count is a floor.
+- "Near" is a **signal level**, -70 dBm by default and not calibrated per board. It is not a distance.
+- A radio must be heard in two scan windows, about 5 to 15 seconds, before it counts, so people walking past are usually missed. It stays counted for about 40 seconds after it goes, and while it is heard up to 12 dB below the level.
+- Phones change their BLE address about every 15 minutes. A change is usually recognised and the count stays the same; when it is not, the count is one too high for up to about 40 seconds.
+- **Steady** means the radio has counted for about five minutes of radio time, which is usually your own devices. BLE listening is half of that, hence the 150 s figure below.
+- `24+` means at least 24: the table was full or new addresses arrived faster than they could be confirmed.
+- Addresses with an **Ignore** rule (full boards) are not counted.
+- The line is hidden at zero, when the count is switched off, for the first seconds after the radio starts or resumes, and when BLE has not been listened to for 15 seconds (Clock, Timer, standby, wardriving, a BLE Lab session). A deauth or BLE-spam warning takes the same line and wins; on the Dial the notice box can cover it.
+
+All times are **BLE listening time**, so a Wi-Fi slice, a Hunt or a paused radio cannot make a present radio leave. In the balanced schedule BLE is listened to for 2.2 s of every 4.4 s, so wall time is about twice these figures; during a Wi-Fi Hunt it is three times.
+
+| Step | Rule |
+|---|---|
+| First heard | One advert at or above the level (-70 dBm) starts a candidate; at most 8 candidates at once |
+| Counted | 3 hits at or above the level, at least 2.5 s of listening after the first |
+| Candidate dropped | 6.6 s of listening without being heard |
+| Kept alive | Any advert at or above the level minus 12 dB (-82 dBm) |
+| Gone | 20 s of listening with nothing that strong |
+| Return | Back within a further 150 s of listening: the same radio, its time near is kept |
+| Address change | A new rotating address first heard within 2.2 s of listening after another rotating address fell silent, within 10 dB of it: one radio, count unchanged |
+| Steady | Counted for 150 s of listening |
+| Start or resume | No number for the first 10 s of listening; after a 60 s pause the table restarts |
+| Capacity | 24 radios, about 620 bytes of static memory on every board |
+
+The level uses the same filtered RSSI as the radar dots. On the M5Dial the 32-entry contact table turns over quickly and each new entry restarts that filter, so entry into the count is noisier there.
+
+Full boards: **Settings → Theme & radar** has **BLE radios near: ON/OFF** and **Near level** (-60 closer, -70, -80 wider). The line opens **Radio activity**, which repeats the numbers and these limits. Lite and Dial have no on-device control for it. USB on every board: `radar near` prints one aggregate line without addresses (`NEAR on= state= level_dbm= exit_dbm= near= steady= pending= capped= new_addresses= gone= handovers= returns= dropped= listen_ms=`); `radar near on|off` and `radar near level <-85..-55>` change and save the setting and restart the count. It is on by default.
+
+The timings, the -70 dBm level, the 12 dB margin and the address-change pairing come from reasoning and a host simulation of the radio schedule. None has been measured on hardware.
+
 ## Wi-Fi deauthentication and disassociation
 
 Six received disconnect frames within a rolling three seconds trigger a medium-confidence traffic candidate, with a fifteen-second burst cooldown. A dedicated 32-entry cache suppresses interleaved retry frames using source, destination, subtype and sequence/fragment for one second. Ordinary data traffic does not evict that cache. It is bounded, so very large bursts can exceed its history.

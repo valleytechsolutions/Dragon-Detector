@@ -82,6 +82,10 @@ SquachWatch pets/games/chat and social systems remain outside the user's detecto
 
 Waveshare AMOLED, M5Stack StopWatch, Spotpear and XIAO Round share the passive Recon Notebook: full bounded advertisements, common protocol metadata, probe-request inventory, protocol counters and CSV. Hunt now preserves both radios and a complete Wi-Fi sweep, including under delayed rendering. Normal USB badge/history/SD transfers cooperate with detection. All four full boards expose the 29-format toolkit in 0.13. [Details](RECON-NOTEBOOK.md).
 
+| Shared radar feature | Full boards | Waveshare Lite | M5Stack Dial |
+|---|---|---|---|
+| [BLE radios near](RADAR-AND-ACTIVITY.md#ble-radios-near): count of BLE addresses heard at a strong level; not people, not a distance, no alert or log | Radar line, Radio activity text, Settings on/off and level, USB `radar near` | Radar line, USB `radar near` only | Radar line, USB `radar near` only |
+
 The [budget report](FLASH-BUDGET.md) separates app slots, OTA allocation and user storage. The unsupported/unimplemented rows above remain explicit work or hardware limits.
 
 The [0.13 guide](RECON-013.md) documents session, recipe, archive, HID and bridge limits. USB BadUSB/DuckyScript and Chimera JSON protocol compatibility remain unimplemented; unsupported radio bands and external GPS require different hardware.
