@@ -7,6 +7,10 @@
 - Wi-Fi contacts and the Hunt channel lock use the channel an access point advertises (DS Parameter Set, 1–11) instead of the channel the frame happened to be received on. Off-channel readings are counted, not rejected: `scan status` appends `adv_frames` and `adv_mismatch`.
 - A full contact table now evicts unclassified addresses the radar is not showing before classified contacts. Long-silent contacts still go first, watched contacts last, and a live higher-priority detection stays protected.
 - Adds read-only USB `radar signal` on every profile: per-contact raw/filtered RSSI, spread, accepted samples, mean and longest wait between samples, age and receive/advertised channel, with addresses shortened to two bytes. `RADIO_STATS` appends `pool`, `handled`, `late` and `long_batches`.
+- Weak radar dots no longer stack on two rows. Outside radius 62 the address angle is spread evenly over the arc that clears the logo and controls; the RSSI radius is unchanged. At the outer ring 0.14.7 put 256 of 360 angles on two rows. Plot points are built once per frame instead of once per display tile.
+- Radar freshness is explicit: live (heard within 10 s, full brightness), fading (10–30 s, about half brightness, no highlight or halo) and the unchanged segmented recent marker. The 205/255 brightness floor that made a 29-second-old dot look current is gone. The halo flashes on reception for 0.6 s instead of pulsing on a timer.
+- The full-board radar status row shows `live` and `recent` counts instead of one target total. Recent includes fading dots. Lite and Dial are unchanged.
+- Wi-Fi Hunt revisits the target channel between sweep hops. Its share of the 6.6 s cycle is unchanged at 2.4 s (36%); the longest wait for it falls from 4.2 s to 2.4 s with exact timing, and the sweep order stays fixed during a Wi-Fi Hunt so no channel waits more than 6.4 s (8.4 s before). Simulated on the host, not measured on hardware.
 - Hunt documentation no longer says reception is dedicated: a BLE target gets about two thirds of the cycle and a Wi-Fi target's channel about one third.
 
 ## 0.13.20

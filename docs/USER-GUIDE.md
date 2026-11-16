@@ -24,7 +24,7 @@ Use **TARGETS** for a ten-row paged list ordered by family priority, freshness a
 
 **Settings → Radar** switches between candidates and all contacts. Disabled families and ignored addresses remain suppressed; explicitly watched addresses stay visible unless ignored. Angle is a stable visual arrangement, not a bearing; radius represents signal strength, not distance.
 
-The BWM1 emblem replaces the radar heading. RX mode, total radar contacts and battery percentage (where a fuel gauge exists) remain below it. **Settings → Theme & radar labels** offers Green radar (default), Dragon Ball, Black / gold / red, Valleytech, Biscuit Shop and Marauder. The three branded themes replace the BWM1 emblem with their own logo. The sweep animates and live dots pulse; rings have no numbered distance scale.
+The BWM1 emblem replaces the radar heading. RX mode, live and recent contact counts (one total on Lite and Dial) and battery percentage (where a fuel gauge exists) remain below it. **Settings → Theme & radar labels** offers Green radar (default), Dragon Ball, Black / gold / red, Valleytech, Biscuit Shop and Marauder. The three branded themes replace the BWM1 emblem with their own logo. The sweep animates and a live dot flashes a halo when it is received; a dot unheard for ten seconds dims; rings have no numbered distance scale.
 
 Every visible contact stays on one radar as a family-colored dot; there are no radar pages. Axon receives the primary tag and leader line. Flipper, Flock/ALPR, camera glasses, Ring, other cameras and drones receive automatic tags next. Up to six tags fit on full boards (four on Lite); additional contacts remain visible as dots. AirTag/Find My, SmartTag, Google tags, Tile and iBeacon have smaller dots and no automatic tags or sounds. Tap any dot to reveal its tag and leader for ten seconds; tap the selected dot/tag again for details and Hunt. Tapping a tracker does not displace Axon's primary tag. Details retain the actual received evidence and its specificity; the radar has no CLUE or hint labels.
 
@@ -35,7 +35,7 @@ Inward means stronger filtered RSSI. The triangle and sweep do not indicate head
 ## Hunt a signal
 
 1. Select a radar dot, nearby contact or saved history record, then **Hunt signal**.
-2. Hunts prioritize the selected signal while both BLE and Wi-Fi continue scanning. Wi-Fi channel priority follows a complete channel sweep; stale targets trigger a broader search. Explicit radio modes or active labs can intentionally specialize reception.
+2. Hunts prioritize the selected signal while both BLE and Wi-Fi continue scanning. Wi-Fi channel priority is interleaved with a complete channel sweep; stale targets trigger a broader search. Explicit radio modes or active labs can intentionally specialize reception.
 3. Walk and compare dBm, signal trend and the trace. A less negative value is stronger. **Mark** saves the current filtered value for comparison. The peak and stability label help distinguish a sustained change from a spike.
 4. After ten seconds without reception, the gauge reports signal lost. The filter resets after a long gap; the 24-second trace shows missing reception as gaps, and the selected slot cannot be silently replaced by another device.
 A Wi-Fi target absent for twelve seconds triggers a channel sweep; reception locks to its new channel when it returns. This follows its saved address, not a guessed identity after address rotation.
