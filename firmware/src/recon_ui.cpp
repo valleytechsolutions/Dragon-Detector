@@ -57,23 +57,29 @@ uint32_t csiKey(const CsiNetwork* r,unsigned n){uint32_t sum=n;for(unsigned i=0;
 lv_obj_t* fit(lv_obj_t* l){lv_label_set_long_mode(l,LV_LABEL_LONG_DOT);lv_obj_set_height(l,lv_font_get_line_height(lv_obj_get_style_text_font(l,LV_PART_MAIN)));return l;}
 void csiButton(const String& s,int x,int y,int w,int id){auto* b=btn(body,"",x,y,w,42,id);auto* l=fit(text(b,s,0,0,w-24,uiColors().ink,font18()));lv_obj_set_style_text_align(l,LV_TEXT_ALIGN_CENTER,0);lv_obj_center(l);}
 String csiName(const char* name,uint8_t channel){if(*name)return displayName(name);return String("Hidden CH ")+channel;}
-void drawCsi(){csiShownActive=csiActive();csiShownNoData=csiNoData();
+void drawCsi(){csiShownActive=csiActive();csiShownNoData=csiNoData();csiListedAt=millis();
  if(csiShownActive){csiButton("CHANGE NETWORK",0,0,164,87);csiButton("STOP",174,0,164,54);
   char next[33];if(!csiShownNoData)csiButton("RECALIBRATE",0,50,334,53);else if(csiNextName(next,sizeof(next)))csiButton(String("TRY NEXT: ")+displayName(next),0,50,334,88);else csiButton("CHANGE NETWORK",0,50,334,87);
   info=text(body,"",3,104,327,uiColors().ink,font16());updateStatus();return;}
- csiSurvey(true);csiCount=csiNetworks(csiRows,8);csiShownKey=csiKey(csiRows,csiCount);csiListedAt=millis();
+ csiSurvey(true);csiCount=csiNetworks(csiRows,8);csiShownKey=csiKey(csiRows,csiCount);
+ // A running radar locked to one channel (Channel monitor or Hunt) only hears that channel.
+ const bool locked=radioEnabled&&channelLock&&reconRadio()!=2;char lockNote[150]="";
+ if(locked)snprintf(lockNote,sizeof(lockNote),"Only CH %u is listed: the radar is locked to it by Channel monitor or a Hunt. Clear the lock or stop the Hunt to list every channel.",channelLock);
  int last=-1;for(unsigned i=0;i<csiCount;++i)if(csiRows[i].last&&csiRows[i].evidence!=dragon::csi::Evidence::NoData)last=i;
  if(last>=0){csiButton("AUTO",0,0,104,52);csiButton(String("LAST: ")+csiName(csiRows[last].name,csiRows[last].channel),114,0,224,89);}else csiButton("AUTO: BEST NETWORK",0,0,334,52);
  text(body,csiMessage(),3,50,327,uiColors().muted,font14());
  for(unsigned i=0;i<csiCount;++i){auto& r=csiRows[i];char detail[64];snprintf(detail,sizeof(detail),"CH %u / %d dBm%s%s",r.channel,r.rssi,r.evidence==dragon::csi::Evidence::Ofdm?" / motion data seen":r.evidence==dragon::csi::Evidence::NoData?" / no motion data":"",r.last?" / last used":"");
   auto* b=btn(body,"",0,96+i*70,338,64,3000+i);fit(text(b,csiName(r.name,r.channel),0,-1,308,uiColors().ink,font18()));fit(text(b,detail,0,24,308,uiColors().muted,font14()));}
- if(!csiCount)text(body,radioStandby()?"Leave clock or timer to list networks.":reconRadio()==2?"This radio mode hears BLE only. Pick Dragon radar or Wi-Fi survey in Modes to list networks.":"Listening for nearby networks...\nThe list fills in a few seconds.",3,96,327,uiColors().ink,font16());
- else text(body,"Strongest first. Set the detector down, then tap. Nothing is sent and no alert is set.",3,96+csiCount*70,327,uiColors().muted,font14());
+ if(!csiCount)text(body,radioStandby()?"Leave clock or timer to list networks.":radioEnabled&&reconRadio()==2?"This radio mode hears BLE only. Pick Dragon radar or Wi-Fi survey in Modes to list networks.":locked?lockNote:!radioEnabled&&!radioSurveyListening()?"Another radio tool is running. Stop it to list networks.":"Listening for nearby networks...\nThe list fills in a few seconds.",3,96,327,uiColors().ink,font16());
+ else text(body,String("Networks that gave motion data first, then strongest signal. Set the detector down, then tap. Choosing one transmits nothing and sets no Hunt or Watch.")+(radioSurveyListening()?" The radar stays paused while you choose.":"")+(locked?String("\n")+lockNote:String()),3,96+csiCount*70,327,uiColors().muted,font14());
  if(csiScroll){lv_obj_update_layout(body);lv_obj_scroll_to_y(body,csiScroll,LV_ANIM_OFF);csiScroll=0;}
 }
-// Redraw the list only when the set of networks changes, at most every 3 s, never mid-touch.
-void csiRefresh(){if(csiActive()!=csiShownActive||(csiShownActive&&csiNoData()!=csiShownNoData)){redraw=true;return;}
- if(csiShownActive||millis()-csiListedAt<3000||!inputIdle())return;CsiNetwork r[8];unsigned n=csiNetworks(r,8);
+// Rebuild at most every 3 s and never under a finger: a rebuild deletes the
+// pressed button. A run starting or stopping only waits for the touch to end.
+void csiRefresh(){if(!inputIdle())return;
+ if(csiActive()!=csiShownActive){redraw=true;return;}
+ if(csiShownActive){if(csiNoData()!=csiShownNoData&&millis()-csiListedAt>=3000)redraw=true;return;}
+ if(millis()-csiListedAt<3000)return;CsiNetwork r[8];unsigned n=csiNetworks(r,8);
  if(csiKey(r,n)!=csiShownKey){csiScroll=body?lv_obj_get_scroll_y(body):0;redraw=true;}else csiListedAt=millis();}
 #if BOARD_HAS_GPS
 void updateWardrive(){
@@ -340,7 +346,7 @@ void reconViewLoop(){
    redraw=true;
  }
 #endif
- if(pageRequested){view=requested;redraw=true;pageRequested=false;}
+ if(pageRequested){pageRequested=false;change(requested);}
 #ifdef BOARD_WAVESHARE_185B
  if(view==Wardrive&&!wardriveBusy()&&!wardriveSnapshot().failed&&!wardriveAvailable()&&gpsMenuInputReleased())change(GpsSetup);
  if(view==Tools&&toolsWardriveAvailable!=wardriveAvailable()&&gpsMenuInputReleased())redraw=true;

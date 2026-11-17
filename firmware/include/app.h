@@ -72,6 +72,10 @@ bool setCapture(bool enabled);
 void radioBegin();
 void radioLoop();
 void setRadio(bool enabled);
+// Wi-Fi beacons into the AP table only, all channels, while the radar is
+// paused; no detections or alerts. False when the radar is on or owned.
+bool radioSurveyListen(bool on);
+bool radioSurveyListening();
 bool radioStandby();
 void setRadioStandby(bool enabled);
 void uiBegin();

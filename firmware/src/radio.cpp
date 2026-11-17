@@ -116,6 +116,7 @@ static bool scanCommand(ScanAction action,uint32_t duration=0,bool active=false)
   return scanRequest.ok;
 }
 static uint32_t lastHop=0,lastAccounting=0;
+static bool surveyListen=false; // see radioSurveyListen()
 static dragon::RadioSchedule schedule;
 static dragon::BleBurstMonitor bleBursts;
 static dragon::WifiRetryFilter retries;
@@ -259,7 +260,7 @@ static void process(const Observation& o){
   }
   if(o.kind==0){
     reconWifi(o.data,o.len,o.original,o.us,o.rssi,o.channel);
-    if(reconOwnsRadio())return;
+    if(reconOwnsRadio()||surveyListen)return;
     ++wifiFrames;if(o.channel<14)++channelFrames[o.channel];
     writePcap(o.data,o.len,o.original,o.us);
     // Header evidence survives an incomplete body, but partial SSID/security
@@ -297,7 +298,7 @@ static void process(const Observation& o){
     }
   }else{
     reconBle(o.mac,o.addressType,o.rssi,o.data,o.len,o.advLength,o.at);
-    if(reconOwnsRadio())return;
+    if(reconOwnsRadio()||surveyListen)return;
     ++bleFrames;bleLabObserve(o.mac,o.addressType,o.rssi,o.data,o.len,o.advLength,o.at);if(o.len!=o.original){++malformedFrames;return;}
     notebookBle(o.mac,o.addressType,o.rssi,o.data,o.len,o.advLength,o.at);
     bool payloadValid=false;auto f=dragon::parseBleObservation(o.data,o.len,o.advLength,o.mac,o.addressType,payloadValid,detector.enabled(Family::Adult));
@@ -350,15 +351,34 @@ void radioBegin(){
   setRadio(true);
   Serial.println("RADIO ready: BLE-first 2200ms / Wi-Fi 2200ms; channels 1-11; Axon reserved queue");
 }
+static void discardQueued(){
+  uint8_t pendingIndex;while(xQueueReceive(priorityQueue,&pendingIndex,0)==pdTRUE)xQueueSend(freeSlots,&pendingIndex,0);
+  while(xQueueReceive(queue,&pendingIndex,0)==pdTRUE)xQueueSend(freeSlots,&pendingIndex,0);
+}
+// Room motion's network list while the radar is paused: Wi-Fi beacons fill
+// the AP table on every channel, ignoring a channel lock. No BLE, no
+// detections, no alerts, and radioEnabled stays false, so the paused radar is
+// what other tools see and restore. Any setRadio() call ends it.
+bool radioSurveyListen(bool on){
+  if(on==surveyListen)return true;
+  if(on){
+    if(radioEnabled||standby||!queue||!scanner||wardriveBusy()||bleLabOwnsRadio()||reconOwnsRadio())return false;
+    discardQueued();surveyListen=true;lastHop=millis();
+    if(esp_wifi_set_channel(wifiChannel>=1&&wifiChannel<=11?wifiChannel:1,WIFI_SECOND_CHAN_NONE)==ESP_OK&&esp_wifi_set_promiscuous(true)==ESP_OK)return true;
+    surveyListen=false;esp_wifi_set_promiscuous(false);return false;
+  }
+  surveyListen=false;esp_wifi_set_promiscuous(false);discardQueued();return true;
+}
+bool radioSurveyListening(){return surveyListen;}
 void setRadio(bool enabled){
   enabled=enabled&&!standby;
+  if(surveyListen){surveyListen=false;esp_wifi_set_promiscuous(false);discardQueued();}
   if(!wardriveTransition&&(bleLabOwnsRadio()||reconOwnsRadio()))return;
   if(!queue || !scanner)return;
   if(!enabled && fox)setFoxTransmit(false);
   radioEnabled=enabled;scanCommand(ScanAction::Stop);esp_wifi_set_promiscuous(false);
   // A stopped tool must not turn its queued test traffic into radar alerts.
-  uint8_t pendingIndex;while(xQueueReceive(priorityQueue,&pendingIndex,0)==pdTRUE)xQueueSend(freeSlots,&pendingIndex,0);
-  while(xQueueReceive(queue,&pendingIndex,0)==pdTRUE)xQueueSend(freeSlots,&pendingIndex,0);
+  discardQueued();
   uint32_t now=millis();lastHop=lastAccounting=now;
   schedule.focus=trackedContact>=0&&contacts[trackedContact].ble?dragon::RadioSchedule::Bluetooth:channelLock?dragon::RadioSchedule::Wifi:dragon::RadioSchedule::Balanced;
   blePhase=enabled&&(wardriveBusy()||reconRadio()!=1);schedule.begin(now,blePhase,wifiChannel);
@@ -422,6 +442,7 @@ void radioLoop(){
 #if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
   if(wardriveBusy()){driveRadioLoop(now,elapsed);return;}
 #endif
+  if(surveyListen){if(now-lastHop>=250){lastHop=now;uint8_t next=wifiChannel%11+1;if(esp_wifi_set_channel(next,WIFI_SECOND_CHAN_NONE)==ESP_OK)wifiChannel=next;}return;}
   if(!radioEnabled || !scanner)return;
   schedule.focus=trackedContact>=0&&contacts[trackedContact].ble?dragon::RadioSchedule::Bluetooth:channelLock?dragon::RadioSchedule::Wifi:dragon::RadioSchedule::Balanced;
   if(!wardriveBusy()&&reconRadio()){
