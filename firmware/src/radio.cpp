@@ -284,7 +284,7 @@ static void process(const Observation& o){
     if(ssids.observe(f,o.at,peer)){
       char mac[18],msg[128];macText(peer,mac);snprintf(msg,sizeof(msg),"Same SSID, open/protected mismatch with %s; possible evil twin or network configuration",mac);
       if(detector.enabled(Family::EvilTwin)){++c.wifiAlerts;c.lastWifiAlert=o.at;c.trafficFamily=Family::EvilTwin;strlcpy(c.trafficEvidence,msg,sizeof(c.trafficEvidence));
-        const dragon::Incident pair{dragon::IncidentKind::EvilTwin,dragon::ssidPairId(f.bssid,peer,f.ssid,f.ssidLength),dragon::EvilTwinQuietMs};emitDetection(c,Family::EvilTwin,Confidence::Medium,msg,&pair);}
+        const dragon::Incident pair{dragon::IncidentKind::EvilTwin,dragon::ssidConflictId(f.ssid,f.ssidLength,f.security?peer:f.bssid),dragon::EvilTwinQuietMs};emitDetection(c,Family::EvilTwin,Confidence::Medium,msg,&pair);}
     }
     if(f.deauth || f.disassoc){
       ++trafficStatus.disconnectFrames;
@@ -292,7 +292,7 @@ static void process(const Observation& o){
         ++trafficStatus.disconnectAlerts;trafficStatus.lastDisconnect=o.at;trafficStatus.channel=o.channel;trafficStatus.reason=f.reason;trafficStatus.protectedFrame=f.protectedFrame;
         ++c.wifiAlerts;c.lastWifiAlert=o.at;c.trafficFamily=Family::Deauth;
         snprintf(c.trafficEvidence,sizeof(c.trafficEvidence),"%u+ disconnects / 3s; CH %u; %s reason %u; possible attack, source may be spoofed",disconnects.recent(o.at),o.channel,f.protectedFrame?"protected/unknown":"clear",f.reason);
-        const dragon::Incident burst{dragon::IncidentKind::Deauth,o.channel,dragon::DeauthQuietMs};
+        const dragon::Incident burst{dragon::IncidentKind::Deauth,dragon::deauthId(f.bssid,o.channel),dragon::DeauthQuietMs};
         emitDetection(c,Family::Deauth,Confidence::Medium,c.trafficEvidence,&burst);
       }
     }
@@ -437,8 +437,12 @@ void radioLoop(){
   if(!queue)return;
   drain(false);
   uint32_t now=millis(),elapsed=now-lastAccounting;lastAccounting=now;
-  static uint32_t nearTick=0,visitTick=0;if(uint32_t(now-nearTick)>=1000){nearTick=now;nearby.tick();}
+  static uint32_t nearTick=0,visitTick=0,keepTick=0;if(uint32_t(now-nearTick)>=1000){nearTick=now;nearby.tick();}
+  // Only time spent listening on a radio counts as a device being away: the
+  // same gates as process(), per radio for BLE-only and Wi-Fi-only modes.
+  {const bool on=radioEnabled&&!standby&&!surveyListen&&!wardriveBusy()&&!reconOwnsRadio()&&!bleLabOwnsRadio();visitListen(on&&reconRadio()!=2,on&&reconRadio()!=1,now);}
   if(uint32_t(now-visitTick)>=60000){visitTick=now;visitExpire(now);}
+  if(uint32_t(now-keepTick)>=10000){keepTick=now;visitsPersist();}
 #if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
   if(wardriveBusy()){driveRadioLoop(now,elapsed);return;}
 #endif

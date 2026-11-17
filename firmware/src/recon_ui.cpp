@@ -51,8 +51,9 @@ bool inputIdle(){for(auto* input=lv_indev_get_next(nullptr);input;input=lv_indev
 // "Survey / select network" switches to Wi-Fi survey (every Wi-Fi contact on
 // the radar) only while its Networks and Stations views are open; leaving
 // returns the mode that was set before, unless something else changed it.
-bool surveyModeOwned=false,surveyRadio=true;ReconMode surveyPrevious=ReconMode::Radar;
-void surveyRestore(){if(!surveyModeOwned)return;if(reconMode()==ReconMode::Wifi){if(!reconSetMode(surveyPrevious))return;if(!surveyRadio)setRadio(false);}surveyModeOwned=false;}
+// A paused radar stays paused: the lists come from the alert-free survey listen.
+bool surveyModeOwned=false,surveyRadio=true,surveyListenOwned=false;ReconMode surveyPrevious=ReconMode::Radar;
+void surveyRestore(){if(surveyListenOwned){surveyListenOwned=false;radioSurveyListen(false);}if(!surveyModeOwned)return;if(reconMode()==ReconMode::Wifi){if(!reconSetMode(surveyPrevious))return;if(!surveyRadio)setRadio(false);}surveyModeOwned=false;}
 void change(View v){if(view==Csi&&v!=Csi)csiSurvey(false);if(v!=Networks&&v!=Stations)surveyRestore();view=v;redraw=true;}
 // Room motion picks its own network on its own screen: a passive list, Auto,
 // last used, and Next when a network gives no motion data. Nothing here sets
@@ -67,8 +68,9 @@ void drawCsi(){csiShownActive=csiActive();csiShownNoData=csiNoData();csiListedAt
   char next[33];if(!csiShownNoData)csiButton("RECALIBRATE",0,50,334,53);else if(csiNextName(next,sizeof(next)))csiButton(String("TRY NEXT: ")+displayName(next),0,50,334,88);else csiButton("CHANGE NETWORK",0,50,334,87);
   info=text(body,"",3,104,327,uiColors().ink,font16());updateStatus();return;}
  csiSurvey(true);csiCount=csiNetworks(csiRows,8);csiShownKey=csiKey(csiRows,csiCount);
- // A running radar locked to one channel (Channel monitor or Hunt) only hears that channel.
- const bool locked=radioEnabled&&channelLock&&reconRadio()!=2;char lockNote[150]="";
+ // Only Wi-Fi survey hops on the lock alone; Dragon radar keeps sweeping every
+ // channel with extra dwell on the locked one.
+ const bool locked=radioEnabled&&channelLock&&reconRadio()==1;char lockNote[150]="";
  if(locked)snprintf(lockNote,sizeof(lockNote),"Only CH %u is listed: the radar is locked to it by Channel monitor or a Hunt. Clear the lock or stop the Hunt to list every channel.",channelLock);
  int last=-1;for(unsigned i=0;i<csiCount;++i)if(csiRows[i].last&&csiRows[i].evidence!=dragon::csi::Evidence::NoData)last=i;
  if(last>=0){csiButton("AUTO",0,0,104,52);csiButton(String("LAST: ")+csiName(csiRows[last].name,csiRows[last].channel),114,0,224,89);}else csiButton("AUTO: BEST NETWORK",0,0,334,52);
@@ -300,7 +302,7 @@ if(id==1){recipeStop();reconStop();uiShow("radar");return;}
  case 80:{static const char* buttons[]={"WiGLE","WDGoWars","Cancel",""};auto* box=uiMessageBox(root,"Retry uncertain upload?","Check the service first. A previous upload may have arrived even when its reply was lost.",buttons,true);dragon::labui::width(box,330);lv_obj_center(box);lv_obj_add_event_cb(box,[](lv_event_t* ev){auto* box=lv_event_get_current_target(ev);unsigned choice=lv_msgbox_get_active_btn(box);if(choice<2)wardriveUploadStart(choice==1,false,true);lv_msgbox_close(box);redraw=true;},LV_EVENT_VALUE_CHANGED,nullptr);break;}
 #endif
  case 69:reconStop();uiShow("findmy-beeper");break;
- case 20:change(WifiTools);break;case 21:change(BleTools);break;case 22:if(!reconOwnsRadio()&&!bleLabOwnsRadio()){const ReconMode before=reconMode();const bool listening=radioEnabled;if(reconSetMode(ReconMode::Wifi)&&!surveyModeOwned&&before!=ReconMode::Wifi){surveyPrevious=before;surveyRadio=listening;surveyModeOwned=true;}change(Networks);}break;
+ case 20:change(WifiTools);break;case 21:change(BleTools);break;case 22:if(!reconOwnsRadio()&&!bleLabOwnsRadio()){const ReconMode before=reconMode();const bool listening=radioEnabled;if(reconSetMode(ReconMode::Wifi)&&!surveyModeOwned&&before!=ReconMode::Wifi){surveyPrevious=before;surveyRadio=listening;surveyModeOwned=true;}change(Networks);if(!listening&&radioEnabled){setRadio(false);surveyListenOwned=radioSurveyListen(true);}}break;
  case 23:change(Capture);break;case 24:change(Library);break;case 25:uiShow("channels");break;
  case 26:target.hasClient=false;change(Confirm);break;case 27:change(Stations);break;
  case 28:seconds=seconds<5?5:seconds<15?15:seconds<30?30:seconds<60?60:5;redraw=true;break;

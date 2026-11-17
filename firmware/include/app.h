@@ -32,7 +32,7 @@ unsigned recentDisconnects();
 using dragon::Family;
 using dragon::Confidence;
 // count>1: the same title and address again, folded into this row (last = newest).
-struct Alert { uint32_t at=0,last=0; uint16_t count=1; char title[40]{},detail[128]{},mac[18]{}; };
+struct Alert { uint32_t at=0,last=0,tag=0; uint16_t count=1; char title[40]{},detail[128]{},mac[18]{}; }; // tag: incident rows
 constexpr size_t MAX_ALERTS=40;
 extern ContactStore contacts;
 extern Alert alerts[MAX_ALERTS];
@@ -61,10 +61,10 @@ void macText(const uint8_t* mac,char* out);
 void storageBegin();
 void storageLoop();
 void logContact(const Contact& c,const char* event);
-void addAlert(const char* title,const char* detail,const uint8_t* mac=nullptr);
+void addAlert(const char* title,const char* detail,const uint8_t* mac=nullptr,bool coalesce=true,uint32_t tag=0);
 // A silent repeat: counts on the newest matching row (any address when mac is
 // null). No sound, card, USB line or SD line.
-void alertRepeat(const char* title,const uint8_t* mac);
+void alertRepeat(const char* title,const uint8_t* mac,uint32_t tag=0);
 extern uint32_t alertRepeats;
 bool alertCommand(const String& command); // alerts status / visits status
 void writePcap(const uint8_t* data,size_t len,size_t original,uint64_t us);
@@ -132,6 +132,8 @@ bool emitDetection(Contact& c,Family family,Confidence confidence,const char* ev
 void historyRefresh(Contact& c,Family family,Confidence confidence,const char* evidence); // at most once a second
 void visitTouch(const dragon::DeviceKey& key,uint32_t now); // every packet; extends a running visit only
 void visitExpire(uint32_t now);
+void visitListen(bool wifi,bool ble,uint32_t now); // which radios the radar is listening on now
+void visitsPersist(); // RTC copy of running visits for deep sleep / reset
 uint16_t alertRevision(); // changes with settings, rules and radio mode
 void uiNotify(const char* title,const char* detail,const dragon::DeviceKey* key,bool watched);
 void displayMac(const uint8_t* mac,char* out);

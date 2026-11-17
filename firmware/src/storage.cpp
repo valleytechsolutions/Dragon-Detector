@@ -75,20 +75,22 @@ void storageBegin(){}
 void logContact(const Contact&,const char*){}
 #endif
 uint32_t alertRepeats=0;
-// Newest row with this title (and address, when given), or null.
-static Alert* alertRow(const char* title,const char* mac){
+// Newest row with this title and incident tag (when given), else this title
+// and address (when given), or null.
+static Alert* alertRow(const char* title,const char* mac,uint32_t tag){
   for(uint32_t i=0,n=std::min<uint32_t>(alertTotal,MAX_ALERTS);i<n;++i){Alert& a=alerts[(alertTotal-1-i)%MAX_ALERTS];
-    if(!strncmp(a.title,title,sizeof(a.title)-1)&&(!mac||!strcmp(a.mac,mac)))return &a;}
+    if(!strncmp(a.title,title,sizeof(a.title)-1)&&(tag?a.tag==tag:(!mac||!strcmp(a.mac,mac))))return &a;}
   return nullptr;
 }
 static void fold(Alert& a,uint32_t now){if(a.count<65535)++a.count;a.last=now;++alertRepeats;}
-void alertRepeat(const char* title,const uint8_t* mac){char text[18]="";if(mac)macText(mac,text);if(Alert* a=alertRow(title,mac?text:nullptr))fold(*a,millis());}
-void addAlert(const char* title,const char* detail,const uint8_t* mac){
+void alertRepeat(const char* title,const uint8_t* mac,uint32_t tag){char text[18]="";if(mac)macText(mac,text);if(Alert* a=alertRow(title,mac?text:nullptr,tag))fold(*a,millis());}
+void addAlert(const char* title,const char* detail,const uint8_t* mac,bool coalesce,uint32_t tag){
   // The same message for the same address within a minute of its last
   // occurrence folds into one row (for example a BLE scan that keeps failing).
+  // Detections never fold here: the visit ledgers already decided it is new.
   const uint32_t now=millis();char text[18]="";if(mac)macText(mac,text);
-  if(Alert* same=alertRow(title,text);same&&uint32_t(now-(same->last?same->last:same->at))<60000){fold(*same,now);return;}
-  Alert& a=alerts[alertTotal%MAX_ALERTS];a={};a.at=now;strlcpy(a.title,title,sizeof(a.title));strlcpy(a.detail,detail,sizeof(a.detail));strlcpy(a.mac,text,sizeof(a.mac));++alertTotal;
+  if(Alert* same=coalesce?alertRow(title,text,0):nullptr;same&&uint32_t(now-(same->last?same->last:same->at))<60000){fold(*same,now);return;}
+  Alert& a=alerts[alertTotal%MAX_ALERTS];a={};a.at=now;strlcpy(a.title,title,sizeof(a.title));strlcpy(a.detail,detail,sizeof(a.detail));strlcpy(a.mac,text,sizeof(a.mac));a.tag=tag;++alertTotal;
 #if BOARD_HAS_SD
   if(sdReady && loggingEnabled)append(String(a.at)+",alert,,"+a.mac+","+quoted(title)+",,,,,"+quoted(detail));
 #endif

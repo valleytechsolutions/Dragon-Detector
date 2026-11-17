@@ -38,6 +38,26 @@ storage=(src/'storage.cpp').read_text(encoding='utf-8')
 fn=storage[storage.index('void alertRepeat('):storage.index('void addAlert(')]
 assert 'Serial' not in fn and 'append(' not in fn
 assert '<60000' in storage[storage.index('void addAlert('):]
+# Detections always get their own row; incident repeats fold by incident tag.
+assert 'addAlert(title,detail,c.mac,false,tag)' in emit and 'alertRepeat(title,incident?nullptr:c.mac,tag)' in emit
+# An incident never takes the watch presentation (LOCKED ON, sticky, past quiet).
+assert 'bool watch=!incident&&(flags&RuleWatch)' in emit
+# Incident quiet follows the visit setting; a participant visit gets each kind once.
+assert 'dragon::incidentQuietMs(in.quietMs,detector.autoQuiet)' in emit and 'visits.claimIncident(' in emit
+assert 'dragon::deauthId(f.bssid,o.channel)' in radio and 'dragon::ssidConflictId(f.ssid,f.ssidLength,f.security?peer:f.bssid)' in radio
+# Only listening time counts as away, with the same gates as process().
+loop=radio[radio.index('void radioLoop()'):]
+assert 'visitListen(on&&reconRadio()!=2,on&&reconRadio()!=1,now)' in loop and loop.index('visitListen(')<loop.index('visitExpire(')
+assert '!surveyListen&&!wardriveBusy()&&!reconOwnsRadio()&&!bleLabOwnsRadio()' in loop
+# Visits survive deep sleep: saved periodically and right before sleeping.
+assert 'RTC_NOINIT_ATTR static VisitKeep visitKeep;' in detector and 'visitsPersist();' in loop
+for board in ['board_amoled175c.cpp','board_watcher.cpp']:
+    b=(src/board).read_text(encoding='utf-8');assert b.index('visitsPersist();')<b.index('esp_deep_sleep_start();'),board
+# No static fallback table in internal RAM on PSRAM boards.
+assert 'static dragon::Visit fallback' not in detector and 'VISIT_LIMIT=256' in detector
+recon_ui=(src/'recon_ui.cpp').read_text(encoding='utf-8')
+assert 'const bool locked=radioEnabled&&channelLock&&reconRadio()==1;' in recon_ui
+assert 'if(!listening&&radioEnabled){setRadio(false);surveyListenOwned=radioSurveyListen(true);}' in recon_ui
 # Read-only diagnostics, on Lite and Dial too.
 assert 'if(alertCommand(cmd))return true;' in detector
 main=(src/'main.cpp').read_text(encoding='utf-8')
