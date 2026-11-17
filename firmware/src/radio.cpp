@@ -6,11 +6,14 @@
 #include "missions.h"
 #include "wardrive.h"
 #include "csi_monitor.h"
+#include "node_mode.h"
 #include <WiFi.h>
 #include <NimBLEDevice.h>
 #include <esp_wifi.h>
 #include <esp_event.h>
 #include <esp_timer.h>
+#include <esp_now.h>
+#include <esp_mac.h>
 #include <atomic>
 #include <nimble/porting/nimble/include/nimble/nimble_port.h>
 #include "axon.h"
@@ -250,7 +253,10 @@ static void checkBleBurst(Contact& participant,const Observation& o,uint8_t grou
     emitDetection(participant,Family::BleSpam,Confidence::Medium,participant.trafficEvidence,&burst);
   }
 }
+namespace noderadio {void bleSeen(const uint8_t*,int);extern bool owned;}
 static void process(const Observation& o){
+  // A wardriving node only counts Bluetooth addresses; nothing reaches the detector.
+  if(noderadio::owned){if(o.kind==1)noderadio::bleSeen(o.mac,o.rssi);return;}
   if(wardriveBusy()){
     if(wardriveActive()){
       if(o.kind==0)wardriveWifi(o.data,o.len,o.rssi,o.channel,o.at);
@@ -415,6 +421,7 @@ void radioWardriveStatus(){
 #endif
 }
 #endif
+#include "node_radio.inc"
 // Runs on the application task only: from radioLoop() and once more after the
 // UI pass, never from a radio or LVGL callback. process() applies the
 // wardrive/recon ownership rules either way.
@@ -443,6 +450,7 @@ void radioLoop(){
   {const bool on=radioEnabled&&!standby&&!surveyListen&&!wardriveBusy()&&!reconOwnsRadio()&&!bleLabOwnsRadio();visitListen(on&&reconRadio()!=2,on&&reconRadio()!=1,now);}
   if(uint32_t(now-visitTick)>=60000){visitTick=now;visitExpire(now);}
   if(uint32_t(now-keepTick)>=10000){keepTick=now;visitsPersist();}
+  if(noderadio::owned){noderadio::loop(now);return;}
 #if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
   if(wardriveBusy()){driveRadioLoop(now,elapsed);return;}
 #endif

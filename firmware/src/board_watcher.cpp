@@ -5,6 +5,7 @@
 #include "rotary_input.h"
 #include "rotary_ui.h"
 #include "wardrive.h"
+#include "node_mode.h"
 #include <Wire.h>
 #include <SPI.h>
 #include <lvgl.h>
@@ -174,7 +175,7 @@ bool watcherPowerOff(){
  writeWord(2,previous);watcherAudioPower(true);loggingEnabled=wasLogging;return false;
 }
 bool watcherSleep(unsigned seconds){
- if(reconRecording()||reconStorageBusy()||wardriveBusy())return false;
+ if(reconRecording()||reconStorageBusy()||wardriveBusy()||nodeBusy())return false;
  extern bool watcherCloseStorage();
  if(!watcherCloseStorage())return false;
  audioStop();

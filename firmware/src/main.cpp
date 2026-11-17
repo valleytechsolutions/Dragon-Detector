@@ -9,6 +9,7 @@
 #include "background_radio.h"
 #include "ble_lab.h"
 #include "recon.h"
+#include "node_mode.h"
 #include "board_pins.h"
 #include "flash_budget.h"
 #include <lvgl.h>
@@ -111,12 +112,16 @@ static void command(const String& c){
   if(wardriveBusy()&&c!="status"&&c!="scan status"&&c!="memory status"&&c!="loop diagnostics"&&c!="screen wardrive"&&c!="ui status"&&c!="touch status"&&c!="amoled status"){
     Serial.println("WARDRIVE_BUSY stop wardriving and wait for SD save first");return;
   }
+  // A wardriving node owns both radios until it is stopped.
+  if(nodeCommand(c))return;
+  if(nodeBusy()&&!nodeAllowsCommand(c)){Serial.println("NODE_BUSY stop the node first: node stop");return;}
   if(personalThemeCommand(c))return;
 #ifdef BOARD_WAVESHARE_185B
   if(sdMaintenanceCommand(c))return;
 #endif
   if(c=="system restart"){
-    if(stopwatch.running||reconOwnsRadio()||bleLabOwnsRadio()||reconStorageBusy()){Serial.println("SYSTEM_ERROR stop timing and radio sessions first");return;}
+    // A running node resumes after the restart, so it does not block one.
+    if(stopwatch.running||(reconOwnsRadio()&&!nodeBusy())||bleLabOwnsRadio()||reconStorageBusy()){Serial.println("SYSTEM_ERROR stop timing and radio sessions first");return;}
     Serial.println("SYSTEM_RESTARTING");Serial.flush();delay(50);ESP.restart();return;
   }
   if(c=="scan status"){Serial.printf("SCAN_STATUS enabled=%u ble_ms=%lu wifi_ms=%lu mode=%u lab=%u hunt=%d priority_channel=%u",radioEnabled,bleListenMs,wifiListenMs,unsigned(reconMode()),bleLabOwnsRadio()||reconOwnsRadio(),trackedContact,channelLock);for(unsigned i=1;i<=11;++i)Serial.printf(" ch%u=%lu",i,channelDwellMs[i]);Serial.printf(" standby=%u adv_frames=%lu adv_mismatch=%lu\n",radioStandby(),advertisedFrames,advertisedMismatch);return;}
@@ -283,7 +288,7 @@ void setup(){
 #ifdef BOARD_CROWPANEL_21
   extern void crowInputStatus();crowInputStatus();
 #endif
-  radioBegin();bleLabBegin();reconBegin();wardriveBegin();wardriveUploadBegin();Serial.println("DRAGON READY");health();
+  radioBegin();bleLabBegin();reconBegin();wardriveBegin();wardriveUploadBegin();nodeBegin();Serial.println("DRAGON READY");health();
 }
 void loop(){
   uint32_t stamp=micros();auto measured=[&](int i){uint32_t end=micros();loopLastUs[i]=end-stamp;loopMaxUs[i]=std::max(loopMaxUs[i],loopLastUs[i]);stamp=end;};
@@ -293,15 +298,16 @@ void loop(){
   if(!wardriveI2cBusy())boardLoop();wardriveLoop();wardriveUploadLoop();
   // A wardrive owns the radios and SD writer. Suspend unrelated analysis,
   // history writes, alerts and badge traffic until finalization completes.
-  if(!wardriveBusy()&&!wardriveUploadBusy()){bleLabLoop();reconLoop();}measured(0);
+  const bool quiet=!wardriveBusy()&&!wardriveUploadBusy()&&!nodeBusy(); // a node does nothing but act as a node
+  if(quiet){bleLabLoop();reconLoop();}measured(0);
   radioLoop();measured(1);
-  if(!wardriveBusy()&&!wardriveUploadBusy()){storageLoop();detectorLoop();}measured(2);
-  if(!wardriveBusy()&&!wardriveUploadBusy())audioLoop();measured(3);
+  if(quiet){storageLoop();detectorLoop();}measured(2);
+  if(quiet)audioLoop();measured(3);
   if(!wardriveI2cBusy())uiLoop();measured(4);
   // A radar frame is the longest step of the loop. Empty what arrived during
   // it now instead of one whole pass later; the time is booked under "radio".
   radioDrain();{uint32_t end=micros();loopLastUs[1]+=end-stamp;loopMaxUs[1]=std::max(loopMaxUs[1],loopLastUs[1]);stamp=end;}
-  if(!wardriveBusy()&&!wardriveUploadBusy())badgeLoop();measured(5);
+  if(quiet)badgeLoop();measured(5);
   if(!wardriveI2cBusy()){
   while(Serial.available()){char c=Serial.read();if(c=='\n'){serialLine.trim();if(serialOverflow)Serial.println("COMMAND_ERROR too long");else command(serialLine);serialLine="";serialOverflow=false;}else if(serialLine.length()<1200)serialLine+=c;else serialOverflow=true;}
   if(millis()-lastHealth>10000){lastHealth=millis();health();}

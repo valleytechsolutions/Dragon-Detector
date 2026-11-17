@@ -1,0 +1,177 @@
+"""Render the BISCUIT NODE / JCMK Node screen with native LVGL at every panel size.
+
+Builds LVGL 8.3 from hardware/spotpear/lib/lvgl with the host C compiler once,
+then compiles firmware/src/node_ui.cpp and node_logo.cpp per panel class against
+small stubs and writes PNGs to .work/node-render/. Each board is also checked for
+text that would spill outside the round glass.
+
+Run: python tools/render_node_screen.py
+"""
+from pathlib import Path
+import subprocess
+import sys
+from PIL import Image, ImageDraw
+
+root = Path(__file__).resolve().parents[1]
+work = root / ".work/node-render"
+native = work / "native"
+native.mkdir(parents=True, exist_ok=True)
+lv = root / "hardware/spotpear/lib/lvgl"
+
+config = """#ifndef LV_CONF_H
+#define LV_CONF_H
+#include <stdint.h>
+#define LV_COLOR_DEPTH 16
+#define LV_COLOR_16_SWAP 0
+#define LV_MEM_CUSTOM 1
+#define LV_MEM_CUSTOM_INCLUDE <stdlib.h>
+#define LV_MEM_CUSTOM_ALLOC malloc
+#define LV_MEM_CUSTOM_FREE free
+#define LV_MEM_CUSTOM_REALLOC realloc
+#define LV_USE_LOG 0
+#define LV_TICK_CUSTOM 0
+""" + "".join(f"#define LV_FONT_MONTSERRAT_{n} 1\n" for n in [8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 32, 40, 48]) + "#endif\n"
+conf = native / "lv_conf.h"
+if not conf.exists() or conf.read_text() != config:
+    conf.write_text(config)
+    for o in native.glob("*.o"):
+        o.unlink()
+includes = ["-I" + str(native), "-I" + str(lv), "-DLV_CONF_INCLUDE_SIMPLE"]
+library = native / "liblvgl.a"
+if not library.exists():
+    objects = []
+    sources = [p for p in (lv / "src").rglob("*.c")]
+    procs = []
+    for i, source in enumerate(sources):
+        obj = native / f"lv{i}.o"
+        objects.append(str(obj))
+        procs.append(subprocess.Popen(["cc", "-O1", "-w", "-c", str(source), "-o", str(obj), *includes]))
+        if len(procs) >= 8:
+            for p in procs:
+                assert p.wait() == 0
+            procs = []
+    for p in procs:
+        assert p.wait() == 0
+    subprocess.run(["ar", "rcs", str(library), *objects], check=True)
+
+(native / "Arduino.h").write_text(r"""
+#pragma once
+#include <cstdint>
+#include <cstdio>
+#include <cstring>
+#include <string>
+class String: public std::string { public: using std::string::string; String(const std::string& s):std::string(s){} bool startsWith(const char* s)const{return rfind(s,0)==0;} };
+extern uint32_t hostMillis;
+inline uint32_t millis(){return hostMillis;}
+""")
+
+harness = r"""
+#include "node_ui.h"
+#include "node_mode.h"
+#include <cstdio>
+#include <vector>
+uint32_t hostMillis=100000;
+static dragon::node::Status status;
+static NodeKind kind=NodeKind::Biscuit;
+static bool busy=true,ble=true;
+bool nodeBusy(){return busy;}
+NodeKind nodeKind(){return kind;}
+void nodeStop(){busy=false;}
+const dragon::node::Status& nodeStatus(){return status;}
+bool nodeBleReports(){return ble;}
+static std::vector<uint16_t> frame;static int size=0;
+static void flush(lv_disp_drv_t* d,const lv_area_t* a,lv_color_t* p){
+  for(int y=a->y1;y<=a->y2;++y)for(int x=a->x1;x<=a->x2;++x)frame[y*size+x]=(p++)->full;
+  lv_disp_flush_ready(d);
+}
+static void save(const char* path){FILE* f=fopen(path,"wb");fwrite(frame.data(),2,frame.size(),f);fclose(f);}
+int main(int argc,char** argv){
+  size=atoi(argv[1]);const char* out=argv[2];const bool button=atoi(argv[3]);
+  lv_init();frame.assign(size*size,0);
+  static lv_disp_draw_buf_t buf;static std::vector<lv_color_t> pixels(size*size);
+  lv_disp_draw_buf_init(&buf,pixels.data(),nullptr,size*size);
+  static lv_disp_drv_t drv;lv_disp_drv_init(&drv);drv.hor_res=size;drv.ver_res=size;drv.flush_cb=flush;drv.draw_buf=&buf;drv.full_refresh=1;
+  lv_disp_drv_register(&drv);
+  lv_obj_t* screen=lv_scr_act();lv_obj_set_style_bg_color(screen,lv_color_hex(0x203040),0);
+  NodeScreenOptions options;options.exitButton=button;options.exitHint=button?nullptr:"HOLD BUTTON TO EXIT";
+  struct Case{const char* name;NodeKind kind;bool linked;dragon::node::Core other;uint32_t wifi,ble,sent;uint8_t channel;bool arm;};
+  const Case cases[]={
+    {"biscuit-linked",NodeKind::Biscuit,true,dragon::node::Core::None,12384,0,13110,6,false},
+    {"biscuit-search",NodeKind::Biscuit,false,dragon::node::Core::None,0,0,0,6,false},
+    {"biscuit-secure",NodeKind::Biscuit,false,dragon::node::Core::BiscuitSecure,214,0,214,6,false},
+    {"jcmk-linked",NodeKind::Jcmk,true,dragon::node::Core::None,8742,1903,10840,11,false},
+    {"jcmk-wrong",NodeKind::Jcmk,false,dragon::node::Core::Biscuit,0,0,0,6,false},
+    {"jcmk-confirm",NodeKind::Jcmk,true,dragon::node::Core::None,999999,99999,1099998,3,true},
+  };
+  for(const Case& c:cases){
+    kind=c.kind;busy=true;status={};status.linked=c.linked;status.core=c.linked?(c.kind==NodeKind::Biscuit?dragon::node::Core::Biscuit:dragon::node::Core::Jcmk):dragon::node::Core::None;
+    status.other=c.other;status.wifi=c.wifi;status.ble=c.ble;status.sent=c.sent;status.channel=c.channel;
+    status.planCount=11;for(uint8_t i=0;i<11;++i)status.plan[i]=i+1;status.phase=c.linked?dragon::node::Phase::Scan:dragon::node::Phase::Search;
+    lv_obj_clean(screen);nodeScreenOpen(screen,options);
+    if(c.arm)nodeScreenExitPress();
+    hostMillis+=1000;nodeScreenLoop();
+    lv_obj_invalidate(screen);lv_refr_now(nullptr);
+    char path[512];snprintf(path,sizeof(path),"%s-%s.raw",out,c.name);save(path);
+    // Every label must sit inside the round glass with a small margin.
+    std::vector<lv_obj_t*> stack{screen};
+    while(!stack.empty()){
+      lv_obj_t* o=stack.back();stack.pop_back();
+      for(uint32_t i=0;i<lv_obj_get_child_cnt(o);++i)stack.push_back(lv_obj_get_child(o,i));
+      if(!lv_obj_check_type(o,&lv_label_class)&&!lv_obj_check_type(o,&lv_img_class)&&!lv_obj_check_type(o,&lv_btn_class))continue;
+      lv_area_t a;lv_obj_get_coords(o,&a);
+      if(lv_obj_check_type(o,&lv_label_class)){
+        // Shrink to the drawn text, not the label box.
+        lv_point_t sz;const char* t=lv_label_get_text(o);
+        lv_txt_get_size(&sz,t,lv_obj_get_style_text_font(o,0),lv_obj_get_style_text_letter_space(o,0),0,LV_COORD_MAX,LV_TEXT_FLAG_NONE);
+        const int cx=(a.x1+a.x2)/2;a.x1=cx-sz.x/2;a.x2=cx+sz.x/2;a.y2=a.y1+sz.y;
+        if(sz.x>lv_area_get_width(&a)+2||sz.x>lv_obj_get_width(o)){printf("CLIPPED %s %s '%s' %d>%d\n",out,c.name,t,int(sz.x),int(lv_obj_get_width(o)));}
+      }
+      const float r=size/2.f,margin=size*0.02f;
+      for(int corner=0;corner<4;++corner){
+        const float x=(corner&1?a.x2:a.x1)-r+0.5f,y=(corner&2?a.y2:a.y1)-r+0.5f;
+        if(x*x+y*y>(r-margin)*(r-margin)&&lv_obj_get_width(o)<size){printf("OUTSIDE %s %s corner %d (%d,%d)-(%d,%d)\n",out,c.name,corner,a.x1,a.y1,a.x2,a.y2);break;}
+      }
+    }
+  }
+  return 0;
+}
+"""
+(work / "harness.cpp").write_text(harness)
+
+boards = [
+    ("466", 466, "-DBOARD_AMOLED_175C", True),
+    ("480", 480, "-DBOARD_CROWPANEL_21", True),
+    ("412", 412, "-DBOARD_WATCHER", True),
+    ("360", 360, "-DBOARD_WAVESHARE_185B", True),
+    ("240", 240, "-DBOARD_XIAO_ROUND", True),
+    ("240-dial", 240, "-DBOARD_M5DIAL -DBOARD_RADAR_LITE", True),
+    ("240-lite", 240, "-DBOARD_RADAR_LITE", False),
+]
+problems = 0
+for name, size, define, button in boards:
+    exe = work / f"node-{name}"
+    res = {466: 466, 480: 466, 412: 412, 360: 360, 240: 240}[size]
+    cmd = ["c++", "-std=c++17", "-O1", "-w", *define.split(), f"-DSCREEN_RES={res}", *includes,
+           "-I" + str(root / "firmware/include"), str(work / "harness.cpp"), str(root / "firmware/src/node_ui.cpp"),
+           "-x", "c++", str(root / "firmware/src/node_logo.cpp"), str(library), "-o", str(exe)]
+    (native / "board_pins.h").write_text("#pragma once\n")
+    subprocess.run(cmd, check=True)
+    result = subprocess.run([str(exe), str(size), str(work / name), "1" if button else "0"], check=True, capture_output=True, text=True)
+    if result.stdout:
+        print(result.stdout, end="")
+        problems += result.stdout.count("\n")
+    for raw in sorted(work.glob(f"{name}-*.raw")):
+        data = raw.read_bytes()
+        img = Image.new("RGB", (size, size))
+        px = img.load()
+        for i in range(size * size):
+            v = data[2 * i] | data[2 * i + 1] << 8
+            px[i % size, i // size] = ((v >> 11 & 31) * 255 // 31, (v >> 5 & 63) * 255 // 63, (v & 31) * 255 // 31)
+        mask = Image.new("L", (size, size), 0)
+        ImageDraw.Draw(mask).ellipse((0, 0, size - 1, size - 1), fill=255)
+        out = Image.new("RGB", (size, size), (40, 40, 40))
+        out.paste(img, (0, 0), mask)
+        out.save(raw.with_suffix(".png"))
+        raw.unlink()
+print(f"Rendered node screens to {work}; {problems} layout problem(s)")
+sys.exit(1 if problems else 0)

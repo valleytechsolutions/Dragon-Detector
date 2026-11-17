@@ -2,6 +2,7 @@
 #include <Arduino.h>
 #include "recon_modes.h"
 #include "ibeacon.h"
+#include "node_mode.h"
 #ifndef BOARD_RADAR_LITE
 #include <FS.h>
 size_t reconCaptureCapacity();
@@ -41,7 +42,7 @@ inline dragon::ReconMode reconMode(){return dragon::ReconMode::Radar;}
 inline uint8_t reconRadio(){return 0;}
 inline bool reconAll(){return false;}
 inline bool reconAccepts(dragon::Family,bool){return true;}
-inline bool reconOwnsRadio(){return false;}
+inline bool reconOwnsRadio(){return nodeBusy();} // Lite: a wardriving node is the only radio owner
 inline bool reconStorageBusy(){return false;}
 inline bool reconRecording(){return false;}
 inline void reconStop(){}
