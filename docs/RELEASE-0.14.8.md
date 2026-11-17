@@ -1,9 +1,8 @@
-# Dragon Detector 0.14.8 · Wardriving node modes and a sleeker radar
+# Dragon Detector 0.14.8 · Wardriving node modes and radar updates
 
-Version 0.14.8 turns any Dragon Detector into a scan-only wardriving node for a
-Biscuit or a JustCallMeKoko core, gives the full-board radar a new look with
-less drawing per frame, and makes alerts and radar dots calmer and more honest.
-Every board profile gets the update.
+Version 0.14.8 adds scan-only wardriving node modes for Biscuit and JustCallMeKoko
+cores, reduces full-board radar redraws, and updates contact freshness and alert
+handling. The node modes are included in every board profile.
 
 Use **Update** in the [web flasher](https://valleytech-dragon-detector.pages.dev/#install)
 to keep your settings. **Fresh installation** is only needed for a board that
@@ -44,18 +43,16 @@ M5Stack Dial and on the **MODES** page of Waveshare Lite. USB `node biscuit` and
 
 ## Radar
 
-- **A sleeker radar on the full boards.** Valleytech gets a gold bezel and
+- **Updated radar on the full boards.** Valleytech gets a gold bezel and
   labels with an electric-cyan phosphor sweep, a ring that lights where the
   sweep passes and a breathing centre. The palette themes get the same
   phosphor sweep in their own sweep colour. A live dot sends out one ring when
   it is heard. Lite and Dial keep their simpler radar.
 - **Less drawing per frame.** The radar face is drawn once per theme and
-  reused, and each frame repaints only what changed. On a desktop build of the
-  firmware's own renderer at 466 px a frame repaints 36 to 38% of the panel at
-  about half the cost of the old full redraw.
-- **Fewer lost observations** on boards with PSRAM: a larger queue that is
+  reused, and each frame repaints only what changed.
+- **Larger observation queues** on boards with PSRAM: a queue that is
   emptied more often while the radar draws.
-- **More honest dots.** Dots are live (heard in the last 10 seconds), fading
+- **Contact age and signal filtering.** Dots are live (heard in the last 10 seconds), fading
   (10 to 30 seconds) or recent, and the status row counts live and recent
   separately. The signal filter reacts faster after a gap, Wi-Fi contacts use
   the channel the access point advertises, and weak dots no longer stack in
@@ -76,15 +73,51 @@ M5Stack Dial and on the **MODES** page of Waveshare Lite. USB `node biscuit` and
 
 ## Validation
 
-Host tests cover the node link against simulated JCMK, Biscuit and Piglet cores
-(handshakes and retries, the Biscuit's role and channel plan, the wardrive
-start and end, lost confirmations, link loss and random frames), the node
-session and its USB commands, and the exit rules for every kind of input: the
-touch EXIT, the side buttons, the CrowPanel 2.1 and Watcher knob, and the Dial
-and Lite buttons. The node screen is drawn at every panel size and checked for
-text outside the round glass. The radar renderer, the alert rules and the
-signal filter have their own host tests. All browser tests passed, and all 14
-board profiles build and fit their application slots.
+### Current release checks · November 17, 2026
+
+- **180 JavaScript tests and 30 native host suites passed.** The native checks
+  include simulated JCMK, Biscuit and Piglet links, handshakes and retries,
+  roles and channel plans, wardrive start/stop, lost confirmations, link loss,
+  malformed frames, and the production node-session code and USB command gates.
+- **84 node-screen cases across seven panel/input configurations passed with
+  no layout violations.** Production Dial/Lite rendering and menu tests also
+  passed, including node exit confirmation, refusals, resume and radio hand-back.
+  These checks exercise host-rendered UI and input logic, not physical controls
+  on every board.
+- The core and SD-label suites passed with **UndefinedBehaviorSanitizer** using
+  the installed Windows Zig 0.14.1 toolchain. A signed-overflow positive control
+  trapped as expected. **AddressSanitizer was not active on this toolchain:** an
+  intentional heap overflow went undetected, so these runs do not establish
+  ASan coverage.
+- All **14 board profiles compiled and fit their application slots**.
+
+Current hardware results:
+
+- **Waveshare AMOLED 1.75C:** the current release application was flashed and
+  its write hash verified. With a real Biscuit, assigned Wi-Fi scanning and
+  record transmission continued with no observed send failures, drops, scan
+  errors or link losses. The next status read after a real Biscuit stop message
+  (`no_role type=8`) showed the node waiting; scan and sent counters then stayed
+  fixed. Starting another wardrive while
+  it waited assigned channels and resumed scanning and record transmission.
+- **M5Stack StopWatch C152:** the exact packaged factory image was flashed and
+  its write hash verified. All 23 self-tests passed, and the hardware
+  RTC retained the synchronized time across a software restart. The JCMK Node
+  screen runs, but communication with a real JCMK core has not been tested.
+  After enrollment in Biscuit Manager, the C152 linked and received its own
+  Wi-Fi channel list alongside the 1.75C. Its scan and sent counters increased
+  without observed send failures, drops, scan errors or link losses. After the
+  final wardrive stop, both boards returned to waiting with fixed scan and
+  sent counters. The 1.75C took longer on this second stop; its immediate
+  stop-message path had passed in the earlier cycle. Both devices passed all
+  23 startup self-tests and their synchronized clock status was valid.
+
+### Earlier development measurements · supplied handoff evidence
+
+The following results were supplied with the development handoff. They were
+recorded on earlier builds and were not repeated as measurements of this release
+candidate. They provide context, not additional acceptance results for the
+current binaries.
 
 On a Waveshare 1.75C:
 
@@ -97,9 +130,9 @@ On a Waveshare 1.75C:
 - **Waiting and the wardrive stop**, the same day. A node that joined the
   Biscuit with no wardrive running waited without scanning. Stopping a
   wardrive in the app made the Biscuit send its nodes a stop message, and the
-  node went back to waiting and stopped scanning. This version acts on that
-  message at once; the build used in the field noticed the stop 84 seconds
-  later by the two-round rule that is now the fallback.
+  node went back to waiting and stopped scanning. That earlier build noticed
+  the stop 84 seconds later through the two-round fallback. The current-build
+  stop-message result is recorded separately above.
 - **The new radar**, November 17, 2026: over two minutes every frame was a
   partial repaint, taking 73 ms on average and 102 ms at most, at about 10
   frames a second. The UI pass took 71 ms, against 168 ms in 0.14.7, and none
@@ -108,13 +141,16 @@ On a Waveshare 1.75C:
   radar look: no observation was dropped out of 13,638 in 5½ minutes, where
   the previous version dropped about 30%.
 
+The supplied desktop-renderer benchmark at 466 px reported a repaint of 36 to
+38% of the panel per frame, at about half the cost of the old full redraw. That
+performance measurement was not repeated for this candidate.
+
 Not yet confirmed on hardware:
 
-- A wardrive started while the node waits, the immediate stop on the
-  Biscuit's stop message, and the hold-to-leave rules, with a real Biscuit.
+- The physical hold-to-leave rules on each board.
 - **JCMK Node** with a real JustCallMeKoko core or a Piglet.
-- The node modes on any board other than the 1.75C, including the knob on the
-  CrowPanel 2.1 and Watcher and the buttons on the Dial and Lite.
+- The node modes on boards other than the tested 1.75C and C152, including
+  the CrowPanel 2.1 and Watcher knobs and the Dial and Lite buttons.
 - Room motion and the BLE radios near line in real rooms.
 
 [Validation status](VALIDATION.md) · [Installation and recovery](FLASHING.md)

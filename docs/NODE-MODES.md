@@ -4,7 +4,14 @@
 
 Both modes are on every board profile: the full-UI boards, Waveshare Lite and M5Stack Dial.
 
-**Status: field testing.** BISCUIT NODE has run with a real Biscuit on a Waveshare 1.75C (see the [hardware checklist](#hardware-checklist)). JCMK Node and the other boards are not yet verified on hardware. The link has native tests against simulated JCMK, Biscuit and Piglet cores, the session and its USB commands have their own native test, and the screen has a host render check at every panel size.
+**Status: field testing.** BISCUIT NODE has linked, received Wi-Fi assignments
+and sent records with a real Biscuit on Waveshare 1.75C and M5Stack StopWatch
+C152. The current 1.75C build has also completed a stop-to-wait and
+start-from-wait cycle (see the [hardware checklist](#hardware-checklist)). The
+JCMK Node screen has run on the C152, but a real JCMK or Piglet core has not
+been tested. The other boards remain build- and host-tested. Native tests cover
+simulated cores and the production node-session code; host renders cover every
+panel class.
 
 ## Which mode for which core
 
@@ -280,13 +287,44 @@ While a GPS wardrive or a wardrive upload is running, Modes cannot be opened and
 
 ## Hardware checklist
 
-Field results on a Waveshare 1.75C with a real Biscuit, 2026-11-17: in Secure mode the Biscuit answered with `encrypt=1;wdbatch=2;nodecfg=2;ch=6;ap6=1` and was not joined; switched to Extended mode it was joined within half a second, gave role 1 and the channel list `channels=1,...,14,36,...,161;dwell=110` during a wardrive, and Wi-Fi records were sent with no failures and no link losses over 20 minutes. Every unexpected exit in that run was a side-button double press, which this version no longer counts. In two later listens of 10 and 15 minutes during a running wardrive the link never dropped, and the Biscuit answered every one of 15 questions with the role again, about every 99 seconds. Later that day, on a build of this version that did not yet act on the Biscuit's stop message: stopping a wardrive in the app made the Biscuit send message type 8, with no text, which it never sent while the wardrive ran; after it the Biscuit gave no role, and the node went back to waiting 84 seconds later by the two-round rule. A node that then joined the Biscuit with no wardrive running waited for 3 minutes without a single scan. Earlier the same afternoon the Biscuit had given its role at once to a node that joined while the app showed no wardrive; a start and stop in the app ended that. Quick BOOT presses on the 1.75C were logged and ignored. The rest of the list, the immediate stop on message type 8, a wardrive started while the node waits, and the hold-to-leave rules of this version, are not yet checked on hardware. The fuller per-board list is in [validation status](VALIDATION.md#biscuit-node-and-jcmk-node).
+**Current release candidate, November 17, 2026:** the 1.75C application and the
+C152 factory image were flashed and their write hashes verified. Both boards
+linked to a real Biscuit after Manager enrollment, received different Wi-Fi
+channel lists and sent records without observed send failures, drops, scan
+errors or link losses. On the 1.75C, a Biscuit stop message (`no_role type=8`)
+was followed by waiting status and fixed scan/sent counters. Starting another
+wardrive while it waited reassigned channels and resumed scanning and records.
+The final wardrive stop returned both boards to waiting with fixed scan and
+sent counters. The 1.75C took longer on this second stop; the first cycle
+confirmed its immediate stop-message handling. Both devices passed all 23
+self-tests and had valid synchronized clock status. The C152 retained RTC time across a software
+restart; its JCMK Node screen runs, without real JCMK-core validation.
 
-- [x] BISCUIT NODE with a Biscuit in Extended mode (1.75C): linked, role and channel list received, Wi-Fi records sent. Not yet checked: records in the Biscuit's saved log with its location.
-- [x] BISCUIT NODE joining a Biscuit with no wardrive running (1.75C): WAITING FOR WARDRIVE, no role and no scans for 3 minutes.
-- [x] Stopping a wardrive in the app (1.75C): the Biscuit sends message type 8 and gives no role after it; the node goes back to waiting and `scans=` stops rising. Not yet checked: the stop at once on that message (this version), rather than by the two-round rule.
-- [ ] Starting a Wi-Fi wardrive in the app while the node waits starts the scans.
-- [x] BISCUIT NODE with a Biscuit in Secure mode (1.75C): no link, and `other=BISCUIT SECURE`.
+**Earlier development results supplied with the handoff, not repeated on this
+candidate:** on a Waveshare 1.75C with a real Biscuit, November 17, 2026, Secure
+mode answered with `encrypt=1;wdbatch=2;nodecfg=2;ch=6;ap6=1` and was not joined.
+Extended mode joined within half a second, assigned role 1 and
+`channels=1,...,14,36,...,161;dwell=110`, and Wi-Fi records were sent without
+failures or link losses over 20 minutes. Side-button double presses caused the
+unexpected exits reported in that run; the current input rules do not count
+those presses as exits. Two further listens of 10 and 15 minutes had no link
+losses, and the Biscuit repeated the role in all 15 requests, about every
+99 seconds. An earlier build that did not act on stop-message type 8 returned
+to waiting 84 seconds after a stop through the two-round fallback. A node
+joining with no wardrive running then waited three minutes without scanning.
+An earlier app session had assigned a role despite showing no wardrive; a start
+and stop ended that condition. Quick BOOT presses were logged and ignored.
+Current-build start/stop results are recorded separately above.
+
+The checklist below records current-candidate results where checked; remaining
+physical controls and core combinations still need testing. See the fuller
+[per-board validation list](VALIDATION.md#biscuit-node-and-jcmk-node).
+
+- [x] BISCUIT NODE with a Biscuit in Extended mode (1.75C and C152): linked after Manager enrollment, separate Wi-Fi channel lists received, Wi-Fi records sent. Not yet checked: records in the Biscuit's saved log with its location.
+- [x] Stopping a wardrive in the app (1.75C): the current build acts on message type 8, returns to waiting and stops increasing `scans=` and `sent=`.
+- [x] Starting a Wi-Fi wardrive in the app while the 1.75C waits reassigns channels and resumes scans and records.
+- [x] Final stop-and-wait check on both the C152 and 1.75C together: fixed scan/sent counters; the 1.75C took longer on this second stop.
+- [ ] Repeat initial idle enrollment and Secure-mode refusal on the current release binaries; the earlier results above are supplied handoff evidence.
 - [ ] Side buttons on each board: short presses and quick double presses never leave; the documented hold, then CONFIRM, does.
 - [ ] JCMK Node with an ESP32 Dual Band Wardriver core: LINKED TO CORE; the core's Nodes menu lists the node as 6G EXT; `assigned=0` and `plan=1,2,3,4,5,6,7,8,9,10,11`; the core's other nodes keep their full channel shares; Wi-Fi and Bluetooth records reach the core's log.
 - [ ] JCMK Node with a matching key, with a wrong key, and with `node key ""` against a core with Use Encryption ticked and no ENOW Key; `node config` never prints the key.
