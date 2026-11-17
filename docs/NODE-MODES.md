@@ -23,7 +23,7 @@ Set up the core for ESP-NOW nodes as its own documentation describes. The Dragon
 
 ## Start a node
 
-- **Full boards:** Tools → Modes → **BISCUIT NODE** or **JCMK Node**.
+- **Full boards:** Tools → Modes → **BISCUIT NODE** or **JCMK Node**, the first two entries in the list.
 - **M5Stack Dial:** Menu → Tools → Modes, then BISCUIT NODE or JCMK Node.
 - **Waveshare Lite:** Lite has no Tools menu. Its **MODES** page, in the ring of pages that a BOOT hold steps through, is where the two modes live. Hold BOOT through the pages to MODES (six holds from Radar), Tap to pick a node, then Double tap to start it.
 - **USB:** `node biscuit` or `node jcmk`.

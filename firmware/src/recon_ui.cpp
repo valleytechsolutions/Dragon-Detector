@@ -220,7 +220,7 @@ void draw(){
  body=lv_obj_create(root);dragon::labui::pos(body,57,110);dragon::labui::size(body,352,274);lv_obj_set_style_bg_opa(body,LV_OPA_TRANSP,0);lv_obj_set_style_border_width(body,0,0);lv_obj_set_style_pad_all(body,0,0);
  btn(root,"HOME",123,397,102,42,1);btn(root,view==Modes?"TOOLS":"BACK",239,397,102,42,2);
  unsigned n=0;
- if(view==Modes){for(unsigned i=0;i<unsigned(ReconMode::Count);++i)row(reconModes[i].name,reconModes[i].detail,n++,100+i);row("Foxhunt a target","Choose a radar contact / live signal graph",n++,12);row("BLE Lab","GATT discovery / profile emulation",n++,13);row("Radio toolkit","Wi-Fi + BLE tests / capture files",n++,14);row(NodeBiscuitName,"Biscuit wardriving node / Wi-Fi",n++,7120);row(NodeJcmkName,"JCMK wardriving node / Wi-Fi + BLE",n++,7121);}
+ if(view==Modes){row(NodeBiscuitName,"Biscuit wardriving node / Wi-Fi",n++,7120);row(NodeJcmkName,"JCMK wardriving node / Wi-Fi + BLE",n++,7121);for(unsigned i=0;i<unsigned(ReconMode::Count);++i)row(reconModes[i].name,reconModes[i].detail,n++,100+i);row("Foxhunt a target","Choose a radar contact / live signal graph",n++,12);row("BLE Lab","GATT discovery / profile emulation",n++,13);row("Radio toolkit","Wi-Fi + BLE tests / capture files",n++,14);}
  else if(view==Attacks){row("Wi-Fi attacks","Select network / client / timed session",n++,20);row("BLE attacks","Pairing advertisements / timed session",n++,21);row("Radio toolkit","Capture / recon sessions / network tools",n++,14);}
  else if(view==Tools){
 #if BOARD_HAS_GPS
