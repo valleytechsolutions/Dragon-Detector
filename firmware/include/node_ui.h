@@ -7,6 +7,7 @@
 struct NodeScreenOptions {
   bool exitButton=true;          // touch or rotary boards: an on-screen EXIT
   const char* exitHint=nullptr;  // boards without one: how to leave, e.g. "HOLD BUTTON TO EXIT"
+  const char* confirmHint=nullptr; // after the first exit request, e.g. "HOLD AGAIN TO LEAVE"
   void (*exited)()=nullptr;      // called after the node stopped from this screen
 };
 

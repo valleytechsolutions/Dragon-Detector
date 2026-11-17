@@ -153,7 +153,7 @@ for name, size, define, button in boards:
     res = {466: 466, 480: 466, 412: 412, 360: 360, 240: 240}[size]
     cmd = ["c++", "-std=c++17", "-O1", "-w", *define.split(), f"-DSCREEN_RES={res}", *includes,
            "-I" + str(root / "firmware/include"), str(work / "harness.cpp"), str(root / "firmware/src/node_ui.cpp"),
-           "-x", "c++", str(root / "firmware/src/node_logo.cpp"), str(library), "-o", str(exe)]
+           str(root / "firmware/src/node_logo.cpp"), str(library), "-o", str(exe)]
     (native / "board_pins.h").write_text("#pragma once\n")
     subprocess.run(cmd, check=True)
     result = subprocess.run([str(exe), str(size), str(work / name), "1" if button else "0"], check=True, capture_output=True, text=True)
