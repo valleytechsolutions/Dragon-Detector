@@ -82,3 +82,23 @@ The new dedicated port has a separate [release validation record](RELEASE-0.14.1
 ## Waveshare AMOLED 1.43C · 0.14.7
 
 The new port has a separate [release validation record](RELEASE-0.14.7.md) and [hardware guide](WAVESHARE-AMOLED-143C.md). Do not infer 1.43C physical results from the 1.75C, which shares only the panel family.
+
+## BISCUIT NODE and JCMK Node
+
+Unreleased, not yet verified on hardware. The node link runs against simulated JCMK, Biscuit and Piglet cores in the native tests (`tests/node_link_test.h`: wire format, handshakes, channel plans, repeats, keyed links, delivery, link loss, clock rollover and random frames). `tools/render_node_screen.py` draws the node screen at every panel size and reports text that would spill outside the round glass. No real core and no board has been tested. Checks to run before relying on it ([node guide](NODE-MODES.md)):
+
+- [ ] On a touch board, a board with a knob (CrowPanel 2.1 or Watcher), M5Stack Dial and Waveshare Lite: start both modes from Modes. The node screen fills the panel, the logo is centred and no text is cut off.
+- [ ] Biscuit in Extended mode: LINKED TO BISCUIT; the Biscuit Manager lists the node under `DragonDetector:<version>` (or the `node identity` name); `node status` shows its role and channel list; records reach the Biscuit's log with its position.
+- [ ] Biscuit in Secure mode: SET BISCUIT TO EXTENDED MODE and no records. Switched to Extended mode, it is joined without restarting the node.
+- [ ] JustCallMeKoko ESP32 Dual Band Wardriver core without a key: LINKED TO CORE; `assigned=1` and the assigned 2.4 GHz channels in `plan=`; Wi-Fi and Bluetooth records in the core's log; `node ble off` stops the Bluetooth records.
+- [ ] The same core with encryption: a matching `node key` works; a wrong key does not deliver records; `node config` and `node status` show only `keyed=1`.
+- [ ] Piglet acting as a JCMK-style core: LINKED TO PIGLET CORE and records arrive.
+- [ ] Wrong mode: JCMK Node next to a Biscuit shows BISCUIT FOUND: USE BISCUIT NODE; BISCUIT NODE next to a JCMK core shows JCMK CORE FOUND: USE JCMK Node.
+- [ ] Two cores in range: `node bind <address>` joins only the bound core.
+- [ ] Core switched off: SEARCHING within about 30 seconds. Switched on again: linked, and networks are reported again.
+- [ ] Leaving: tap EXIT, then CONFIRM; a single press goes back to EXIT after 3 seconds; Home, Back, BOOT, the knob and a long press never leave on one press; the Dial front button; Lite Hold twice; USB `node stop`. Afterwards Modes is shown, and detection, alerts and audio work again.
+- [ ] While a node runs, alerts, notifications and the clock setup prompt do not cover the node screen.
+- [ ] Refusals: with the stopwatch running, and during a GPS wardrive on a GPS board, the reason is shown and the device stays on Modes.
+- [ ] Power unplugged and USB `system restart` while a node runs: `NODE_RESUMED` and the node screen at boot.
+- [ ] A one-hour drive on each board, including M5Stack Dial: `heap` and `min_heap` in `node status` stay steady, `rx_drops` and `failed` stay low, and the screen count is plausible against the core's log.
+- [ ] AMOLED boards: the screen content shifts a few pixels each minute.

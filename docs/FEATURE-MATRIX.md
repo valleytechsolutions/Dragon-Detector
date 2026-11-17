@@ -106,3 +106,12 @@ This full profile shares the detector, radio tools, BLE Lab, themes, badge and t
 ## Waveshare AMOLED 1.43C · 0.14.7
 
 This full profile shares the detector, radio tools, BLE Lab, themes, badge and timing workflows on a 466 px touch AMOLED with 8 MB PSRAM. Its 8 MB flash gives 3.94 MiB of internal storage, so captures are limited to 1 MiB and recon sessions to 256 KiB. There is no SD slot, RTC or GPS: saved files download over USB, and the clock needs USB or saved-Wi-Fi recovery after power loss. Sound needs a speaker on the board's connector. BOOT navigates and runs the timer; PWR is a hardware power button. [Setup and physical validation](WAVESHARE-AMOLED-143C.md).
+
+## Wardriving node modes · unreleased
+
+| Node mode | Full boards | Waveshare Lite | M5Stack Dial |
+|---|---|---|---|
+| [BISCUIT NODE](NODE-MODES.md): scan-only node for a Biscuit in Extended mode; sends Wi-Fi only, 2.4 GHz channels 1 to 11; the Biscuit adds the position | Tools → Modes; tap EXIT then CONFIRM, or press a key twice; USB `node biscuit` | Modes page: Hold starts the selected node, Hold twice leaves it; USB `node biscuit` | Menu → Tools → Modes; EXIT or the front button, twice; USB `node biscuit` |
+| [JCMK Node](NODE-MODES.md): scan-only node for a JustCallMeKoko ESP32 Dual Band Wardriver core or a Piglet acting as one; sends Wi-Fi and Bluetooth LE, 2.4 GHz channels 1 to 11; the core adds the position; optional ESP-NOW key | Tools → Modes; same exit; USB `node jcmk` | Modes page, same controls; USB `node jcmk` | Menu → Tools → Modes; same exit; USB `node jcmk` |
+
+While a node runs, the board does nothing else: detection, alerts, audio and the other radio tools pause until it stops. The node has no GPS of its own and saves nothing on the board. The protocol is covered by native tests against simulated cores; it is not yet verified with a real core on any board.

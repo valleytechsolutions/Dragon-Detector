@@ -26,6 +26,8 @@
 #include "notifications.h"
 #include "ui_theme.h"
 #include "rotary_ui.h"
+#include "node_mode.h"
+#include "node_ui.h"
 #include <lvgl.h>
 #include <math.h>
 #include <esp_heap_caps.h>
@@ -72,7 +74,7 @@ extern lv_img_dsc_t radar_logo_awok,watch_logo_awok,radar_logo_baph,watch_logo_b
 #endif
 static const int CENTER=SCREEN_RES/2;
 #include "target_pages.h"
-enum Page {Boot,Radar,Menu,Devices,Details,Alerts,Channels,Files,Audio,Settings,About,Badge,Hunt,Detectors,History,HistoryDetail,Rules,Controls,Display,Diagnostics,Activity,RadarStyle,Stopwatch,Laps,Clock,ClockEdit,Orientation,FamilyColors,BleLab,Recon,Notebook,NotebookProbes,NotebookBle,NotebookDetail,ClockSettings,ClockWheels,Startup};
+enum Page {Boot,Radar,Menu,Devices,Details,Alerts,Channels,Files,Audio,Settings,About,Badge,Hunt,Detectors,History,HistoryDetail,Rules,Controls,Display,Diagnostics,Activity,RadarStyle,Stopwatch,Laps,Clock,ClockEdit,Orientation,FamilyColors,BleLab,Recon,Notebook,NotebookProbes,NotebookBle,NotebookDetail,ClockSettings,ClockWheels,Startup,Node};
 static unsigned notebookPage=0,notebookRows=0;
 static dragon::DeviceKey notebookKeys[10];
 static dragon::notebook::Advert notebookSelection;
@@ -149,13 +151,30 @@ static lv_obj_t* label(lv_obj_t* parent,const char* text,int x,int y,int w=0,con
   auto* o=lv_label_create(parent);lv_label_set_text(o,text);lv_obj_set_pos(o,S(x),S(y));if(w)lv_obj_set_width(o,S(w));lv_obj_set_style_text_font(o,uiFont(font),0);lv_obj_set_style_text_color(o,color(c),0);return o;
 }
 static void go(Page p){
+// A wardriving node keeps its screen up; a key asks it to stop instead (nodeKey).
+if(nodeBusy()&&p!=Node)return;
 if(wardriveUploadBusy()&&p!=Recon){wardriveUploadCancel();reconPage("wardrive-upload");pending=Recon;return;}
 if(wardriveBusy()&&p!=Recon){reconEndWardrive();pending=Recon;return;}
 if(p==Radar){recipeStop();reconStop();bleLabStop();}
 #ifndef BOARD_RADAR_LITE
+// Recon was already left in this pass (its view forgot the screen): build it again.
+if(page==Recon&&p==Recon&&pending!=Recon)page=Boot;
 if(page==Recon&&p!=Recon)reconLeave();
 #endif
 if(page==BleLab&&p!=BleLab)bleLabStop();pending=p;}
+// The node screen calls this when the node has stopped (or changed kind) from
+// inside an LVGL event or nodeScreenLoop(); uiLoop() changes the page next pass.
+static bool nodeLeft=false;
+static void nodeExited(){nodeLeft=true;}
+// While a node runs, every key or knob action that would leave a page asks the
+// node screen to stop it instead; a second request within 3 s confirms. A press
+// that only wakes a dark panel does nothing else. True while a node runs.
+static bool nodeKey(){
+  if(!nodeBusy())return false;
+  const bool dark=outputBrightness==0;lastInteraction=millis();
+  if(!dark&&page==Node&&pending==Node&&nodeScreenShown())nodeScreenExitPress();
+  return true;
+}
 static void action(lv_event_t* e);
 static lv_obj_t* button(lv_obj_t* parent,const char* text,int x,int y,int w,int h,int id){
   auto* b=lv_btn_create(parent);lv_obj_set_pos(b,S(x),S(y));lv_obj_set_size(b,S(w),S(h));lv_obj_set_style_pad_all(b,S(8),0);lv_obj_set_style_bg_color(b,color(uiColors().surface),0);lv_obj_set_style_radius(b,uiAscii()?0:S(13),0);lv_obj_set_style_border_width(b,1,0);lv_obj_set_style_border_color(b,color(uiColors().border),0);lv_obj_set_style_shadow_width(b,0,0);
@@ -178,7 +197,7 @@ static void locksportColors(lv_obj_t* object){
   for(unsigned i=0;i<lv_obj_get_child_cnt(object);++i)locksportColors(lv_obj_get_child(object,i));
 }
 void uiNotify(const char* text,const char* detail,const dragon::DeviceKey* key,bool watched){
-  if(wardriveBusy()||wardriveUploadBusy())return;
+  if(wardriveBusy()||wardriveUploadBusy()||nodeBusy())return;
   dragon::DetectionNotice item;strlcpy(item.title,text,sizeof(item.title));strlcpy(item.detail,detail,sizeof(item.detail));item.watched=watched;item.at=millis();item.hasKey=key!=nullptr;if(key){item.key=*key;int i=findContact(*key);if(i>=0)item.family=contacts[i].match.family;}
   for(unsigned f=0;f<unsigned(Family::Count);++f)if(!strcmp(text,dragon::familyName(Family(f)))){item.family=Family(f);break;}
   if(key&&!dragon::detectionPopupAllowed(page==Radar,pending==Radar))return;
@@ -366,8 +385,9 @@ static void build(){
   micBadge=nullptr;radarSummary=nullptr;radarGesture.clear();radarPress.clear();
   timerOrbit=nullptr;timerValue=timerState=timerLap=timerStartButton=timerSecondary=timerSplit=clockValue=clockDate=editValue=nullptr;
   badgeUnload();page=pending;pageAt=millis();statusLabel=audioLabel=audioMeter=radar=trackingLabel=huntValue=huntMeta=huntGauge=huntGraph=diagnosticsLabel=activityLabel=radarActivity=nullptr;radarPrepared=0;
-  setRadioStandby(page==Clock||page==Stopwatch||page==Laps||page==ClockSettings||page==ClockWheels||page==ClockEdit);
-  lv_obj_clean(root);lv_obj_set_style_bg_color(root,color(uiColors().bg),0);
+  // A node owns the radios: standby is left as it was and settles after the node.
+  if(!nodeBusy())setRadioStandby(page==Clock||page==Stopwatch||page==Laps||page==ClockSettings||page==ClockWheels||page==ClockEdit);
+  nodeScreenClose();lv_obj_clean(root);lv_obj_set_style_bg_color(root,color(uiColors().bg),0);
 #if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
   prepareRadarBackdrop(root,page==Radar);
 #endif
@@ -375,6 +395,16 @@ static void build(){
   if(page==BleLab){bleLabView(root);return;}
   if(page==Recon){reconView(root,openRadioTools);return;}
 #endif
+  if(page==Node){
+    // BISCUIT NODE / JCMK Node: the device does nothing but act as a node. The
+    // EXIT button is the only control; the rotary group focuses it by itself.
+    dismissNotice();lv_obj_set_style_bg_color(root,color(0x000000),0);
+    NodeScreenOptions options;options.exitButton=true;options.exited=nodeExited;
+#if defined(BOARD_CROWPANEL_21) || defined(BOARD_WATCHER)
+    options.confirmHint="PRESS CONFIRM TO LEAVE";
+#endif
+    nodeScreenOpen(root,options);return;
+  }
   if(page==Startup){dismissNotice();drawStartup();return;}
   else if(page==Badge){lv_obj_set_style_bg_color(root,color(0x000000),0);badgeView(root);
   }else if(page==Radar){
@@ -891,11 +921,16 @@ bool uiTouch(bool pressed,int,int){
 #if defined(BOARD_CROWPANEL_21) || defined(BOARD_WATCHER)
 lv_obj_t* uiRotaryScope(){return resetBox?resetBox:clockPrompt?clockPrompt:notice?notice:root;}
 #ifdef BOARD_WATCHER
-bool uiRotaryOpenMenu(){if(resetBox||clockPrompt||notice)return false;go(Menu);return true;}
+bool uiRotaryOpenMenu(){if(nodeKey())return true;if(resetBox||clockPrompt||notice)return false;go(Menu);return true;}
 #endif
 bool uiRotaryWake(){bool wasOff=outputBrightness==0;lastInteraction=millis();return wasOff;}
 #endif
-void uiShow(const String& name){if(name=="startup"){go(Startup);page=Boot;return;}if(name=="radar")recipeStop();
+void uiShow(const String& name){
+  if(name=="node"){if(nodeBusy())go(Node);else{openRadioTools=false;go(Recon);}return;}
+  // A running node keeps its screen. The boards whose key opens the menu
+  // (1.75, LILYGO, XIAO) ask it to stop; nothing else may move the page.
+  if(nodeBusy()){if(name=="menu")nodeKey();return;}
+  if(name=="startup"){go(Startup);page=Boot;return;}if(name=="radar")recipeStop();
 #ifndef BOARD_RADAR_LITE
   if(name=="modes"||name=="tools"){openRadioTools=name=="tools";go(Recon);return;}
   if(name=="findmy-beeper"){bleLabBeeperPage();go(BleLab);return;}
@@ -946,6 +981,12 @@ void uiBegin(){
   pageAt=millis();
 }
 void uiLoop(){
+  // The node screen asked to go: rebuild it for a changed kind, else Tools > Modes.
+  if(nodeLeft){nodeLeft=false;if(page==Node){nodeScreenClose();if(nodeBusy())page=Boot;else{openRadioTools=false;go(Recon);}}}
+  // A running node owns the display as well as the radios: nothing opens over
+  // its screen and nothing replaces it (this also wins over the startup splash).
+  if(nodeBusy()){dismissNotice();if(clockPrompt){lv_obj_del(clockPrompt);clockPrompt=nullptr;}pending=Node;}
+  else if(pending==Node){openRadioTools=false;pending=Recon;if(page==Recon)page=Boot;}
   if(wardriveUploadBusy()){
     dismissNotice();if(clockPrompt){lv_obj_del(clockPrompt);clockPrompt=nullptr;}
     if(page!=Recon&&pending!=Recon){reconPage("wardrive-upload");pending=Recon;}
@@ -966,7 +1007,8 @@ void uiLoop(){
   if(page==Menu&&pending==Menu&&!clockPrompt&&!notice&&!resetBox&&menuWardriveAvailable!=wardriveAvailable()&&gpsMenuInputReleased())build();
 #endif
   if(page!=pending)build();
-  if(!wardriveBusy()&&!wardriveUploadBusy())clockSetupPrompt();
+  if(!wardriveBusy()&&!wardriveUploadBusy()&&!nodeBusy())clockSetupPrompt();
+  if(page==Node)nodeScreenLoop();
 #ifndef BOARD_RADAR_LITE
   if(page==BleLab)bleLabViewLoop();
   if(page==Recon)reconViewLoop();
@@ -1035,7 +1077,7 @@ void uiLoop(){
   ++radarPass;lv_timer_handler();
 }
 
-void uiKey(bool home){lastInteraction=millis();go(home?Radar:page==Menu?Badge:Menu);}
+void uiKey(bool home){if(nodeKey())return;lastInteraction=millis();go(home?Radar:page==Menu?Badge:Menu);}
 bool uiStopwatchKey(bool start,uint64_t at){
   if(page!=Stopwatch||pending!=Stopwatch)return false;lastInteraction=millis();
   if(resetBox)return true;
@@ -1053,6 +1095,7 @@ static bool uiSideKeyModalOpen(){return resetBox||clockPrompt||notice||uiSideKey
 #endif
 #ifdef BOARD_AMOLED_175C
 void uiAmoled175cSleep(unsigned seconds){
+  if(nodeKey())return; // the hold is an exit request; sleep would end the node unasked
   lastInteraction=millis();
   if(uiSideKeyModalOpen()||page!=pending)return;
   const char* title="SLEEP UNAVAILABLE";
@@ -1070,6 +1113,7 @@ void uiAmoled175cSleep(unsigned seconds){
   lv_obj_set_width(box,S(280));lv_obj_center(box);
 }
 void uiAmoled175cKey(bool primary){
+  if(nodeKey())return;
   lastInteraction=millis();
   if(uiSideKeyModalOpen()||page!=pending)return;
   if(uiStopwatchKey(primary))return;
@@ -1105,6 +1149,7 @@ static bool ui143cClockPromptLater(){
 }
 #endif
 void ui185bHome(){
+  if(nodeKey())return;
 #ifdef BOARD_WAVESHARE_143C
   if(ui143cClockPromptLater())return;
 #endif
@@ -1114,6 +1159,7 @@ void ui185bHome(){
   if(page==Menu&&pending==Menu)page=Boot;
 }
 void ui185bCycle(){
+  if(nodeKey())return;
 #ifdef BOARD_WAVESHARE_143C
   if(ui143cClockPromptLater())return;
 #endif

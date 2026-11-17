@@ -8,7 +8,7 @@ Actual 240×240 framebuffer capture from the connected board, not a panel photog
 
 ## Five BOOT-operated pages · 0.13.9
 
-Hold BOOT for about 0.8 seconds to cycle **Radar → Clock → Timer → Signals → Diagnostics**. Release between holds. Detection continues on each page. Boot still opens the saved radar theme at full brightness; 100% means backlight, not battery charge.
+Hold BOOT for about 0.8 seconds to cycle **Radar → Clock → Timer → Signals → Diagnostics → Settings → Modes**. Release between holds. Detection continues on each page except while a node runs. Boot still opens the saved radar theme at full brightness; 100% means backlight, not battery charge.
 
 | Page | Tap | Double tap | Hold |
 |---|---|---|---|
@@ -17,7 +17,10 @@ Hold BOOT for about 0.8 seconds to cycle **Radar → Clock → Timer → Signals
 | Locksport timer, running | Pause | OPEN (final split and stop) | Next page |
 | Timer, paused | Start/resume | Reset attempt and laps | Next page |
 | Signals | Next recent visible contact | Next contact | Next page |
-| Diagnostics | No action | No action | Return to radar |
+| Diagnostics | No action | No action | Next page |
+| Settings | Toggle Adult Mode | No action | Next page |
+| Modes | Pick BISCUIT NODE or JCMK Node | Start the selected node | Return to radar |
+| Node running | No action | No action | Leave the node (Hold twice) |
 
 Single taps wait 300 ms to distinguish double taps. BOOT held during startup is ignored until released; BOOT + RESET download/recovery remains available. Themes save one second after the last change.
 
@@ -28,6 +31,10 @@ Timer durations are monotonic and independent of clock corrections. The last 50 
 Radar retains all 26 detector families and displays recent contacts using filtered RSSI. Signal radius and decorative sweep angle are not measured distance or bearing. The signal page shows name/family, protocol, RSSI, MAC and age; diagnostics shows reception/drop counters, memory, uptime and clock state. Passive Wi-Fi/BLE alternate on the shared 2.4 GHz radio; channel hopping creates listening gaps. There is no touch, badge, speaker, SD capture, active lab or persistent history.
 
 The new pages are build/native-test checked. Physical Lite startup and gesture testing remain unverified; troubleshooting was stopped at the owner's request.
+
+## BISCUIT NODE and JCMK Node
+
+Lite has a Modes page with **BISCUIT NODE** and **JCMK Node**. Each turns the board into a scan-only wardriving node for a Biscuit in Extended mode or a JustCallMeKoko ESP32 Dual Band Wardriver core. On the Modes page, Tap picks a node, Double tap starts it, and Hold twice leaves it. While a node runs, the radar, detection and the other pages pause, and the screen shows the core's logo, the number of Wi-Fi networks found and the link state. USB `node biscuit`, `node jcmk`, `node status` and `node stop` also work. Not yet verified on Lite hardware. [Node guide](NODE-MODES.md).
 
 ## Hardware configuration
 

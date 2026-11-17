@@ -80,6 +80,7 @@ static lv_obj_t* text(const char* value,int y,int width,const lv_font_t* font,ui
   lv_obj_set_style_text_font(o,font,0);lv_obj_set_style_text_color(o,color(rgb),0);lv_obj_set_style_text_align(o,LV_TEXT_ALIGN_CENTER,0);
   lv_label_set_long_mode(o,LV_LABEL_LONG_DOT);return o;
 }
+#include "lite_node.inc"
 #ifdef BOARD_M5DIAL
 #include "lite_button.h"
 static void dialButton(dragon::LitePress);
@@ -124,6 +125,8 @@ void uiLoop(){
     if(prefsReady&&litePrefs.putUChar("theme",radarTheme)!=1)Serial.println("LITE_THEME save failed");
     themeDirty=false;
   }
+  // A running node owns the panel: no page, menu or radar frame is drawn under it.
+  if(liteNodeLoop()){++radarPass;lv_timer_handler();return;}
   // Leave time between full radar draws to drain reception queues.
 #ifdef BOARD_M5DIAL
   if(dialMenuVisible()){++radarPass;lv_timer_handler();return;}
@@ -150,17 +153,31 @@ void uiLoop(){
   ++radarPass;lv_timer_handler();
 }
 void uiNotify(const char* title,const char*,const dragon::DeviceKey*,bool){
+  if(nodeBusy()||liteNodeHost)return;
 #ifdef BOARD_M5DIAL
   if(dialMenuVisible())return;
 #endif
   if(!notice||litePage!=LitePage::Radar)return;noticeAt=millis();lv_label_set_text(notice,title);lv_obj_clear_flag(notice,LV_OBJ_FLAG_HIDDEN);lv_obj_add_flag(pageHint,LV_OBJ_FLAG_HIDDEN);
 }
 void uiShow(const String& name){
+  // A running node keeps its screen: no page, menu, prompt or splash replaces it.
+  if(nodeBusy()){liteNodeOpen();return;}
+  liteNodeClose();
+  if(name=="node"||name=="modes"){liteModesShow();return;}
 #ifdef BOARD_M5DIAL
   if(name=="menu"||name=="tools"||name=="settings"){dialMenuOpen(name=="menu"?DialMenu::Main:name=="tools"?DialMenu::Tools:DialMenu::Settings);return;}
   if(dialMenuVisible())dialMenuClose();
 #endif
-  if(name=="startup"){startLiteSplash();return;}for(unsigned i=0;i<6;++i)if(name==litePageNames[i]){setLitePage(LitePage(i));return;}}
+  if(name=="startup"){startLiteSplash();return;}for(unsigned i=0;i<LitePageCount;++i)if(name==litePageNames[i]){setLitePage(LitePage(i));return;}}
+// Tools > Modes: the Dial's Modes menu, or the Lite's MODES page, on the last node used.
+static void liteModesShow(){
+#ifdef BOARD_M5DIAL
+  if(dialMenuVisible())dialMenuClose();     // restores an unsaved brightness preview
+  dialMenuOpen(DialMenu::Modes);if(liteNodeKind==NodeKind::Jcmk){dialChoice=1;dialMenuRefresh();}
+#else
+  liteModeChoice=liteNodeKind==NodeKind::Jcmk;liteModeFailedAt=0;setLitePage(LitePage::Modes);
+#endif
+}
 static void refreshLiteTheme(){
   radarTheme=savedRadarTheme(radarTheme);
   themeDirty=true;themeChangedAt=millis();
@@ -182,7 +199,7 @@ bool uiCommand(const String& c){
 #ifdef BOARD_M5DIAL
   if(dialUiCommand(c))return true;
 #endif
-  if(c=="ui status"){Serial.printf("UI_STATUS page=%s lite=1 frames=%lu backdrop=%u frame_ms=%lu\n",litePageNames[unsigned(litePage)],frames,liteBackdrop.data?1:0,static_cast<unsigned long>(liteFrameInterval));return true;}
+  if(c=="ui status"){Serial.printf("UI_STATUS page=%s lite=1 frames=%lu backdrop=%u frame_ms=%lu\n",liteNodeHost?"node":litePageNames[unsigned(litePage)],frames,liteBackdrop.data?1:0,static_cast<unsigned long>(liteFrameInterval));return true;}
   if(c=="radar status"){Serial.printf("RADAR_SETTINGS theme=%u labels=1 recent=1 pages=1 plotted=%u primary=%d\n",radarTheme,dotCount,radarPrimary);return true;}
   if(c=="display status"){Serial.println("DISPLAY_SETTINGS brightness=100 output=100 dim=0 off=0 dim_level=0 wake=0");return true;}
   return false;

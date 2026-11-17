@@ -152,3 +152,7 @@ The 0.9.2 XIAO profile fits the same tools to 240×240. Use touch Tools/Home; BO
 ## Waveshare selectable modes and timed tools
 
 Open **Tools → Recon → Modes** for Dragon radar, Axon watch, ALPR watch, Sky watch, Wi-Fi survey, BLE survey and capture modes. **Radio tools** opens inventory, timed transmission tests and Capture Studio. Focused audio respects your saved quiet/volume preferences. Home stops active testing. See the [complete radio-toolkit guide](RADIO-TOOLKIT.md) for capture formats, targets, commands and actual limitations.
+
+## BISCUIT NODE and JCMK Node
+
+**Tools → Modes → BISCUIT NODE** or **JCMK Node** turns the board into a scan-only wardriving node for a separate core: a Biscuit in Extended mode, or a JustCallMeKoko ESP32 Dual Band Wardriver core (JCMK Node also joins a Piglet acting as a JCMK-style core). While a node runs the board does nothing else: the radar, detectors, alerts, audio and other radio tools pause. The screen shows the core's logo, the number of Wi-Fi networks found and the link state. To leave, tap **EXIT**, then **CONFIRM** within 3 seconds; on keys, press twice. The node scans 2.4 GHz channels 1 to 11 and has no GPS of its own; the core adds the position. A node that was running resumes after a power loss. Not yet verified with a real core. [Cores, screen, USB commands and troubleshooting](NODE-MODES.md).

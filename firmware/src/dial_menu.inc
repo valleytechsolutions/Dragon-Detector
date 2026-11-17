@@ -1,4 +1,4 @@
-enum class DialMenu {Closed,Main,Tools,Settings,Themes,Time,Date,Brightness};
+enum class DialMenu {Closed,Main,Tools,Settings,Themes,Time,Date,Brightness,Modes};
 extern void set_brightness(uint8_t);
 static DialMenu dialMenu=DialMenu::Closed;
 static int dialChoice=0,dialFirstRow=0,dialBrightness=100,dialOldBrightness=100;
@@ -11,7 +11,7 @@ static bool dialThemeAllowed(unsigned theme){return radarThemeActive(theme)&&the
 static unsigned dialThemeAt(int choice){for(unsigned i=0;i<RadarThemeCount;++i)if(dialThemeAllowed(i)&&choice--==0)return i;return 0;}
 static int dialThemeCount(){int count=0;for(unsigned i=0;i<RadarThemeCount;++i)if(dialThemeAllowed(i))++count;return count;}
 static const char* dialThemeLabel(unsigned theme){if(!dialThemeAllowed(theme))return "";return theme==9?"CI / McNally":theme==26?"CI / LPL":radarThemeNames[theme];}
-static int dialMenuCount(){switch(dialMenu){case DialMenu::Main:return 6;case DialMenu::Tools:return 4;case DialMenu::Settings:return 6;case DialMenu::Themes:return dialThemeCount();case DialMenu::Time:case DialMenu::Date:return 5;default:return 1;}}
+static int dialMenuCount(){switch(dialMenu){case DialMenu::Main:return 6;case DialMenu::Tools:return 5;case DialMenu::Modes:return 3;case DialMenu::Settings:return 6;case DialMenu::Themes:return dialThemeCount();case DialMenu::Time:case DialMenu::Date:return 5;default:return 1;}}
 static bool dialMenuVisible(){return dialMenu!=DialMenu::Closed;}
 static void dialMenuClose(){
   if(dialMenu==DialMenu::Brightness){dialBrightness=dialOldBrightness;set_brightness(dialBrightness);}
@@ -32,6 +32,7 @@ static void dialMenuCreate(){
   dialPanel=lv_obj_create(root);lv_obj_remove_style_all(dialPanel);lv_obj_set_size(dialPanel,240,240);lv_obj_clear_flag(dialPanel,LV_OBJ_FLAG_SCROLLABLE);lv_obj_add_flag(dialPanel,LV_OBJ_FLAG_CLICKABLE);
   auto label=[](lv_obj_t* parent,int y,int width,const lv_font_t* font){auto* o=lv_label_create(parent);lv_obj_set_size(o,width,LV_SIZE_CONTENT);lv_obj_set_pos(o,(240-width)/2,y);lv_obj_set_style_text_align(o,LV_TEXT_ALIGN_CENTER,0);lv_obj_set_style_text_font(o,font,0);lv_label_set_long_mode(o,LV_LABEL_LONG_DOT);return o;};
   dialMenuTitle=label(dialPanel,20,142,&lv_font_montserrat_14);dialMenuNote=label(dialPanel,40,160,&lv_font_montserrat_10);dialMenuHint=label(dialPanel,214,124,&lv_font_montserrat_10);
+  lv_label_set_long_mode(dialMenuNote,LV_LABEL_LONG_SCROLL_CIRCULAR); // a message wider than the glass scrolls instead of being cut
   for(int i=0;i<5;++i){
     auto* row=dialMenuRows[i]=lv_btn_create(dialPanel);lv_obj_remove_style_all(row);lv_obj_set_pos(row,37,56+i*30);lv_obj_set_size(row,166,28);lv_obj_add_flag(row,LV_OBJ_FLAG_CLICKABLE);
     dialMenuLabels[i]=lv_label_create(row);lv_obj_set_size(dialMenuLabels[i],156,LV_SIZE_CONTENT);lv_label_set_long_mode(dialMenuLabels[i],LV_LABEL_LONG_DOT);lv_obj_set_style_text_align(dialMenuLabels[i],LV_TEXT_ALIGN_CENTER,0);lv_obj_set_style_text_font(dialMenuLabels[i],&lv_font_montserrat_14,0);
@@ -42,17 +43,19 @@ static void dialMenuCreate(){
 static void dialMenuRefresh(){
   if(!dialMenuVisible())return;const auto& p=themeUiColors(radarTheme);char value[64];
   lv_obj_set_style_bg_color(dialPanel,color(p.bg),0);lv_obj_set_style_bg_opa(dialPanel,LV_OPA_COVER,0);
-  const char* title=dialMenu==DialMenu::Main?"MENU":dialMenu==DialMenu::Tools?"TOOLS":dialMenu==DialMenu::Settings?"SETTINGS":dialMenu==DialMenu::Themes?"THEMES":dialMenu==DialMenu::Time?"SET TIME":dialMenu==DialMenu::Date?"SET DATE":"BRIGHTNESS";
+  const char* title=dialMenu==DialMenu::Main?"MENU":dialMenu==DialMenu::Tools?"TOOLS":dialMenu==DialMenu::Settings?"SETTINGS":dialMenu==DialMenu::Themes?"THEMES":dialMenu==DialMenu::Time?"SET TIME":dialMenu==DialMenu::Date?"SET DATE":dialMenu==DialMenu::Modes?"MODES":"BRIGHTNESS";
   lv_label_set_text(dialMenuTitle,title);lv_obj_set_style_text_color(dialMenuTitle,color(p.ink),0);
   snprintf(value,sizeof(value),dialEditing?"Turn to adjust / press done":"%d / %d",dialChoice+1,dialMenuCount());lv_label_set_text(dialMenuNote,value);lv_obj_set_style_text_color(dialMenuNote,color(p.muted),0);
   lv_label_set_text(dialMenuHint,"HOLD TO GO BACK");lv_obj_set_style_text_color(dialMenuHint,color(p.muted),0);
   dialFirstRow=std::max(0,std::min(dialChoice-2,dialMenuCount()-5));
   static const char* mainItems[]={"Radar","Clock","Tools","Themes","Settings","Close"};
-  static const char* toolItems[]={"Stopwatch","Signals / Hunt","Device status","Back"};
+  static const char* toolItems[]={"Stopwatch","Signals / Hunt","Device status","Modes","Back"};
+  static const char* modeItems[]={NodeBiscuitName,NodeJcmkName,"Back"};
   static const char* settingItems[]={"Time","Date","Brightness","Sound","Adult Mode (18+)","Back"};
   for(int row=0;row<5;++row){int item=dialFirstRow+row;auto* button=dialMenuRows[row];if(item>=dialMenuCount()){lv_obj_add_flag(button,LV_OBJ_FLAG_HIDDEN);continue;}lv_obj_clear_flag(button,LV_OBJ_FLAG_HIDDEN);
     const char* name="";
     if(dialMenu==DialMenu::Main)name=mainItems[item];else if(dialMenu==DialMenu::Tools)name=item==0&&liteLocksport()?"Locksport timer":toolItems[item];
+    else if(dialMenu==DialMenu::Modes)name=modeItems[item];
     else if(dialMenu==DialMenu::Settings){name=settingItems[item];if(item==3){snprintf(value,sizeof(value),"Sound level: %s",dragon::audioLevelLabel(audioLevel()));name=value;}if(item==4){snprintf(value,sizeof(value),"18+ Mode: %s",detector.enabled(Family::Adult)?"ON":"OFF");name=value;}}
     else if(dialMenu==DialMenu::Themes)name=dialThemeLabel(dialThemeAt(item));
     else if(dialMenu==DialMenu::Brightness){snprintf(value,sizeof(value),"%d%%  /  press to save",dialBrightness);name=value;}
@@ -63,7 +66,7 @@ static void dialMenuRefresh(){
     lv_obj_set_style_bg_color(button,color(p.accent),0);lv_obj_set_style_bg_opa(button,item==dialChoice?LV_OPA_30:LV_OPA_TRANSP,0);lv_obj_set_style_border_color(button,color(p.accent),0);lv_obj_set_style_border_width(button,item==dialChoice?1:0,0);lv_obj_set_style_radius(button,6,0);
   }
 }
-static void dialMenuBack(){if(dialEditing){dialEditing=false;dialMenuRefresh();return;}if(dialMenu==DialMenu::Main){dialMenuClose();return;}if(dialMenu==DialMenu::Brightness){dialBrightness=dialOldBrightness;set_brightness(dialBrightness);}dialMenuOpen(dialMenu==DialMenu::Time||dialMenu==DialMenu::Date||dialMenu==DialMenu::Brightness?DialMenu::Settings:DialMenu::Main);}
+static void dialMenuBack(){if(dialEditing){dialEditing=false;dialMenuRefresh();return;}if(dialMenu==DialMenu::Main){dialMenuClose();return;}if(dialMenu==DialMenu::Brightness){dialBrightness=dialOldBrightness;set_brightness(dialBrightness);}dialMenuOpen(dialMenu==DialMenu::Time||dialMenu==DialMenu::Date||dialMenu==DialMenu::Brightness?DialMenu::Settings:dialMenu==DialMenu::Modes?DialMenu::Tools:DialMenu::Main);}
 static void dialMenuRotate(int step){
   step=step>0?1:-1;
   if(dialMenu==DialMenu::Brightness){dialBrightness=constrain(dialBrightness+step*5,10,100);set_brightness(dialBrightness);}
@@ -76,7 +79,9 @@ static void dialMenuRotate(int step){
 static void dialMenuSelect(){
   int item=dialChoice;
   if(dialMenu==DialMenu::Main){if(item==0||item==1){dialMenuClose();setLitePage(item==0?LitePage::Radar:LitePage::Clock);}else if(item==2)dialMenuOpen(DialMenu::Tools);else if(item==3)dialMenuOpen(DialMenu::Themes);else if(item==4)dialMenuOpen(DialMenu::Settings);else dialMenuClose();}
-  else if(dialMenu==DialMenu::Tools){if(item==3)dialMenuBack();else{dialMenuClose();setLitePage(item==0?LitePage::Timer:item==1?LitePage::Signals:LitePage::Status);}}
+  else if(dialMenu==DialMenu::Tools){if(item==4)dialMenuBack();else if(item==3)dialMenuOpen(DialMenu::Modes);else{dialMenuClose();setLitePage(item==0?LitePage::Timer:item==1?LitePage::Signals:LitePage::Status);}}
+  // BISCUIT NODE / JCMK Node: the node screen replaces the menu; a refusal stays here with the reason.
+  else if(dialMenu==DialMenu::Modes){if(item==2)dialMenuBack();else if(!liteNodeBegin(item?NodeKind::Jcmk:NodeKind::Biscuit))lv_label_set_text(dialMenuNote,liteNodeError());}
   else if(dialMenu==DialMenu::Settings){if(item==0)dialMenuOpen(DialMenu::Time);else if(item==1)dialMenuOpen(DialMenu::Date);else if(item==2)dialMenuOpen(DialMenu::Brightness);else if(item==3){audioSetLevel(dragon::nextAudioLevel(audioLevel()));dialMenuRefresh();}else if(item==4){setAdultMode(!detector.enabled(Family::Adult));dialMenuRefresh();}else dialMenuBack();}
   else if(dialMenu==DialMenu::Themes){unsigned theme=dialThemeAt(item);dialMenuClose();radarTheme=theme;refreshLiteTheme();}
   else if(dialMenu==DialMenu::Brightness){if(prefsReady)litePrefs.putUChar("brightness",dialBrightness);dialOldBrightness=dialBrightness;dialMenuOpen(DialMenu::Settings);}

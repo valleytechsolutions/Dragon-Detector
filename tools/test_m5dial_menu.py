@@ -18,12 +18,15 @@ catalog = (root/'firmware/include/radar_theme_catalog.h').read_text()
 names = '\n'.join(re.search(r'static const char\* '+name+r'\[\]=\{.*?\};', catalog).group() for name in ['radarThemeNames','radarThemeCommands'])
 count = re.search(r'static constexpr unsigned RadarThemeCount=.*?;', catalog).group()
 active = re.search(r'static bool radarThemeActive\(unsigned i\)\{.*?\}', catalog).group()
+node_header = (root/'firmware/include/node_mode.h').read_text()
+nodes = '\n'.join(re.search(pattern, node_header).group() for pattern in [r'enum class NodeKind[^;]*;', r'constexpr const char\* NodeBiscuitName=[^;]*;', r'constexpr const char\* NodeJcmkName=[^;]*;'])
 source = r'''
 #include <lvgl.h>
 #include <algorithm>
 #include <cassert>
 #include <cstdio>
 #include <cstring>
+#include <string>
 #include <vector>
 #include "wearable.h"
 #include "ui_palette.h"
@@ -53,6 +56,13 @@ enum class Family{Adult};struct Detector{bool adult=false;bool enabled(Family){r
 enum class LitePage{Radar,Clock,Timer,Signals,Status};
 static LitePage litePage=LitePage::Radar;
 static void setLitePage(LitePage p){litePage=p;}
+NODES
+// Tools > Modes: the production session and screen are exercised by render_m5dial_ui.py.
+static NodeKind startedNode=NodeKind::None;
+static const char* nodeRefusal=nullptr;
+static void dialMenuClose();
+static bool liteNodeBegin(NodeKind kind){if(nodeRefusal)return false;startedNode=kind;dialMenuClose();return true;}
+static const char* liteNodeError(){return nodeRefusal;}
 struct Prefs {unsigned getUChar(const char*,unsigned n){return savedBrightness;}void putUChar(const char*,unsigned n){savedBrightness=n;}};
 static Prefs litePrefs;
 static lv_obj_t* root;
@@ -67,6 +77,16 @@ int main(int argc,char** argv){
  dialMenuOpen(DialMenu::Main);render(argv[1],"01-menu");unsigned theme=radarTheme;
  dialMenuRotate(1);dialMenuSelect();assert(!dialMenuVisible()&&litePage==LitePage::Clock&&radarTheme==theme);
  dialMenuOpen(DialMenu::Main);dialChoice=2;dialMenuSelect();assert(dialMenu==DialMenu::Tools);render(argv[1],"02-tools");dialChoice=0;dialMenuSelect();assert(litePage==LitePage::Timer&&!dialMenuVisible());
+ auto rowText=[](int row){return std::string(lv_label_get_text(dialMenuLabels[row]));};
+ dialMenuOpen(DialMenu::Tools);assert(dialMenuCount()==5);for(int i=0;i<3;++i)dialMenuRotate(1);assert(dialChoice==3&&rowText(2)=="Device status"&&rowText(3)=="Modes"&&rowText(4)=="Back");render(argv[1],"02a-tools-modes");
+ dialMenuSelect();assert(dialMenu==DialMenu::Modes&&dialMenuCount()==3&&dialChoice==0&&std::string(lv_label_get_text(dialMenuTitle))=="MODES");
+ assert(rowText(0)=="BISCUIT NODE"&&rowText(1)=="JCMK Node"&&rowText(2)=="Back"&&lv_obj_has_flag(dialMenuRows[3],LV_OBJ_FLAG_HIDDEN));render(argv[1],"02b-modes");
+ nodeRefusal="Wi-Fi could not switch to node mode";dialMenuSelect();assert(dialMenu==DialMenu::Modes&&startedNode==NodeKind::None&&!strcmp(lv_label_get_text(dialMenuNote),nodeRefusal));
+ assert(lv_label_get_long_mode(dialMenuNote)==LV_LABEL_LONG_SCROLL_CIRCULAR);render(argv[1],"02c-modes-refused");nodeRefusal=nullptr;
+ dialMenuSelect();assert(startedNode==NodeKind::Biscuit&&!dialMenuVisible());
+ dialMenuOpen(DialMenu::Modes);dialMenuRotate(1);dialMenuSelect();assert(startedNode==NodeKind::Jcmk&&!dialMenuVisible());
+ dialMenuOpen(DialMenu::Modes);dialMenuRotate(-1);assert(dialChoice==2);dialMenuSelect();assert(dialMenu==DialMenu::Tools&&dialChoice==0);dialMenuBack();assert(dialMenu==DialMenu::Main);
+ dialMenuOpen(DialMenu::Modes);dialMenuBack();assert(dialMenu==DialMenu::Tools);dialChoice=4;dialMenuSelect();assert(dialMenu==DialMenu::Main);
  dialMenuOpen(DialMenu::Settings);render(argv[1],"03-settings");dialMenuSelect();assert(dialMenu==DialMenu::Time);render(argv[1],"04-time");dialChoice=1;dialMenuSelect();dialMenuRotate(1);assert(dialEditDate.minute==46);dialMenuSelect();dialChoice=3;dialMenuSelect();assert(savedEpoch==dragon::dateEpoch({2026,10,23,15,46,12})+240*60);
  dialMenuOpen(DialMenu::Date);dialEditDate={2028,1,31,1,1,1};dialChoice=1;dialMenuSelect();dialMenuRotate(1);assert(dialEditDate.month==2&&dialEditDate.day==29);dialMenuSelect();render(argv[1],"05-date");dialChoice=3;dialMenuSelect();assert(savedEpoch==dragon::dateEpoch({2028,2,29,15,45,12})+240*60);
  dialMenuOpen(DialMenu::Date);dialChoice=3;rtcWrite=false;dialMenuSelect();assert(dialMenu==DialMenu::Date&&strstr(lv_label_get_text(dialMenuNote),"failed"));rtcWrite=true;
@@ -75,9 +95,9 @@ int main(int argc,char** argv){
  radarTheme=23;dialMenuOpen(DialMenu::Settings);render(argv[1],"07-light-settings");dialChoice=3;dialMenuSelect();assert(audioLevel()==dragon::AudioLevel::Silent);dialMenuSelect();assert(audioLevel()==dragon::AudioLevel::Medium);dialMenuSelect();assert(audioLevel()==dragon::AudioLevel::High);
  lv_obj_update_layout(root);for(auto* row:dialMenuRows){lv_area_t a;lv_obj_get_coords(row,&a);for(int x:{a.x1,a.x2})for(int y:{a.y1,a.y2})assert((x-120)*(x-120)+(y-120)*(y-120)<=120*120);}
  dialMenuBack();assert(dialMenu==DialMenu::Main);dialMenuBack();assert(!dialMenuVisible());
- puts("PASS Dial menu routes, explicit theme selection, time/date saves, RTC failures, leap dates, brightness save/cancel and round-screen bounds");
+ puts("PASS Dial menu routes, Tools > Modes node starts and refusals, explicit theme selection, time/date saves, RTC failures, leap dates, brightness save/cancel and round-screen bounds");
 }
-'''.replace('NAMES', names).replace('COUNT', count).replace('ACTIVE', active).replace('MENU_SOURCE', (root/'firmware/src/dial_menu.inc').as_posix())
+'''.replace('NAMES', names).replace('COUNT', count).replace('ACTIVE', active).replace('NODES', nodes).replace('MENU_SOURCE', (root/'firmware/src/dial_menu.inc').as_posix())
 cpp = work/'menus.cpp'
 cpp.write_text(source)
 exe = work/'menus.exe'
@@ -86,7 +106,7 @@ subprocess.run([sys.executable,'-m','ziglang','c++','-std=c++17','-O2','-UNDEBUG
                '-I'+str(root/'firmware/include'),'-DLV_CONF_INCLUDE_SIMPLE',str(cpp),str(library),'-o',str(exe)],check=True)
 subprocess.run([str(exe),str(work)],check=True)
 paths=sorted(work.glob('*.ppm'))
-montage=Image.new('RGB',(240*4,264*2),(15,19,22))
+montage=Image.new('RGB',(240*4,264*((len(paths)+3)//4)),(15,19,22))
 for i,path in enumerate(paths):
     frame=Image.open(path).convert('RGB')
     mask=Image.new('L',(240,240));ImageDraw.Draw(mask).ellipse((0,0,239,239),fill=255)

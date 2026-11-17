@@ -10,6 +10,7 @@
 #include "recipes.h"
 #include "wardrive.h"
 #include "wardrive_upload.h"
+#include "node_mode.h"
 #include <lvgl.h>
 #include "lab_ui_scale.h"
 using namespace dragon;
@@ -219,7 +220,7 @@ void draw(){
  body=lv_obj_create(root);dragon::labui::pos(body,57,110);dragon::labui::size(body,352,274);lv_obj_set_style_bg_opa(body,LV_OPA_TRANSP,0);lv_obj_set_style_border_width(body,0,0);lv_obj_set_style_pad_all(body,0,0);
  btn(root,"HOME",123,397,102,42,1);btn(root,view==Modes?"TOOLS":"BACK",239,397,102,42,2);
  unsigned n=0;
- if(view==Modes){for(unsigned i=0;i<unsigned(ReconMode::Count);++i)row(reconModes[i].name,reconModes[i].detail,n++,100+i);row("Foxhunt a target","Choose a radar contact / live signal graph",n++,12);row("BLE Lab","GATT discovery / profile emulation",n++,13);row("Radio toolkit","Wi-Fi + BLE tests / capture files",n++,14);}
+ if(view==Modes){for(unsigned i=0;i<unsigned(ReconMode::Count);++i)row(reconModes[i].name,reconModes[i].detail,n++,100+i);row("Foxhunt a target","Choose a radar contact / live signal graph",n++,12);row("BLE Lab","GATT discovery / profile emulation",n++,13);row("Radio toolkit","Wi-Fi + BLE tests / capture files",n++,14);row(NodeBiscuitName,"Biscuit wardriving node / Wi-Fi",n++,7120);row(NodeJcmkName,"JCMK wardriving node / Wi-Fi + BLE",n++,7121);}
  else if(view==Attacks){row("Wi-Fi attacks","Select network / client / timed session",n++,20);row("BLE attacks","Pairing advertisements / timed session",n++,21);row("Radio toolkit","Capture / recon sessions / network tools",n++,14);}
  else if(view==Tools){
 #if BOARD_HAS_GPS
@@ -271,6 +272,9 @@ if(id==1){recipeStop();reconStop();uiShow("radar");return;}
  if(id>=600&&id<600+int(fileCount)){fileIndex=id-600;change(FileDetail);return;}
  switch(id){
  case 12:uiShow("targets");break;case 13:reconStop();uiShow("lab");break;case 14:change(Tools);break;
+ // BISCUIT NODE / JCMK Node: the node screen takes over; a refusal stays on Modes.
+ case 7120:case 7121:{const NodeKind kind=id==7120?NodeKind::Biscuit:NodeKind::Jcmk;if(nodeStart(kind)){uiShow("node");break;}
+   auto* box=uiMessageBox(root,nodeName(kind),*nodeError()?nodeError():"Could not start the node",nullptr,true);dragon::labui::width(box,330);lv_obj_center(box);break;}
  case 73:{char name[24];snprintf(name,sizeof(name),"survey-%08lx",esp_random());say(surveySave(name)?"Survey saved in /surveys":"Survey save failed");uiNotify("Wi-Fi survey",status.message,nullptr,false);break;}
 #if BOARD_HAS_GPS
  case 70:
@@ -325,7 +329,8 @@ if(id==1){recipeStop();reconStop();uiShow("radar");return;}
  }
 }
 }
-void reconView(void* p,bool tools){root=(lv_obj_t*)p;view=pageRequested?requested:tools?Tools:Modes;pageRequested=false;redraw=true;draw();}
+// A survey mode left behind while a node ran is restored on the way back in.
+void reconView(void* p,bool tools){root=(lv_obj_t*)p;surveyRestore();view=pageRequested?requested:tools?Tools:Modes;pageRequested=false;redraw=true;draw();}
 void reconPage(const String& name){
 #if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
  if(name=="wardrive-upload"){requested=Uploads;pageRequested=true;return;}
@@ -368,7 +373,8 @@ void reconViewLoop(){
 #endif
  if(view==Running||view==Capture||view==Statistics||view==Portal||view==Csi||view==Network||view==Missions||view==Recipes)updateStatus();}
 }
-void reconLeave(){reconStop();csiSurvey(false);surveyRestore();root=body=info=nullptr;
+// A node that just started owns the radios and already ended every recon session.
+void reconLeave(){if(!nodeBusy()){reconStop();csiSurvey(false);surveyRestore();}root=body=info=nullptr;
 #if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
  gpsSetupStatus=nullptr;gpsClockPending=false;
 #endif

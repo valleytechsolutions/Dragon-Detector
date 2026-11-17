@@ -101,6 +101,8 @@ Recon-session records use factual RCN1/PRB1/REL1 layouts from the already credit
 
 The project owner supplied the unchanged source PNGs for [Valleytech Custom Solutions](media/theme-logos/valleytech.png), [Biscuit Shop](media/theme-logos/biscuit-shop.png), and [JustCallMeKoko / Marauder](media/theme-logos/jcmk.png). Artwork and brand rights remain with their respective owners; the software MIT license does not grant rights to these marks or imply endorsement. These are optional Dragon Detector appearance themes, not official firmware ports or affiliations.
 
+The same supplied Biscuit Shop and JCMK files also appear in the middle of the BISCUIT NODE and JCMK Node screens. `tools/encode_node_logo.py` resizes each to the native panel sizes and stores it as white artwork on black; the JCMK mark is cropped to its drawn area. Nothing is redrawn, and the generated file records each source hash. Their appearance on the node screens does not imply affiliation with or endorsement by either brand.
+
 `tools/encode_radar_logo.py` encodes native 240/360/466-pixel panel assets from the supplied originals, preserving aspect ratio and alpha. The transparent Valleytech mark uses silver radar ink and gold watch ink, with no background plate; Biscuit's white artwork retains its transparency; JCMK retains its supplied black background. The original three themes retain the BWM1 logo. Palettes, layout and drawing code are original Dragon Detector work. Lite keeps its existing fixed green radar and does not include the new logo arrays.
 
 The enlarged digital clock numerals are generated from the bundled Montserrat Medium font by The Montserrat Project Authors (copyright 2011), under [SIL OFL 1.1](docs/licenses/Montserrat-OFL.txt). `tools/encode_watch_digits.py` creates a compact 4-bit digit subset at each native display size. Font data retain OFL licensing; the encoder and watch layout are original project code.
@@ -336,6 +338,29 @@ WiGLE/WDGoWars uploads. Dragon Detector's wardrive dashboard, LC76G transport,
 recording and upload implementation are original
 code; no Piglet code or assets are included. Piglet's LICENSE at that revision is
 CC BY-NC-SA 4.0. Its ESP32-C5 radio capabilities differ from this ESP32-S3 board.
+
+## BISCUIT NODE and JCMK Node
+
+The JCMK Node protocol follows **ESP32DualBandWardriver** by
+**[Just Call Me Koko](https://github.com/justcallmekoko)**, MIT, Copyright (c)
+2025 Just Call Me Koko: the ENOW message layout and numbering, the channel table,
+the timing and the derivation of both ESP-NOW keys from the text key. [Its MIT
+notice is retained](docs/licenses/ESP32DualBandWardriver-LICENSE.txt). The link
+engine in `firmware/include/node_link.h`, the radio hand-over, the session and
+USB commands, the node screen and the simulated-core tests are original
+Dragon Detector code written from those protocol facts.
+
+The BISCUIT NODE dialect (the Biscuit Manager's unencrypted Extended mode) is
+implemented from its observable behaviour. **Piglet** by Hamspiced (see
+[above](#piglet-wardriving-workflow-reference)) was used as a behaviour reference
+only, for the Biscuit handshake and for recognising a Piglet acting as a
+JCMK-style core. No Piglet code was copied; Piglet is published under
+CC BY-NC-SA. No Biscuit code is included, and Biscuit Secure mode is not
+supported. The node screens show the owner-supplied Biscuit Shop and JCMK logos
+credited above under Radar theme artwork · 0.13.1. These modes are
+independent implementations, not official firmware of the Biscuit,
+JustCallMeKoko or Piglet projects, and imply no endorsement.
+[Node guide](docs/NODE-MODES.md).
 
 ## 44Delta · 0.13.41
 

@@ -65,8 +65,12 @@ bool locksport(){return locksportTheme;}
 void resetStopwatch(){++resets;resetBox=&marker;}
 void updateTimer(){++updates;}bool uiStopwatchKey(bool start,uint64_t at=0);
 void uiAmoled175cSleep(unsigned seconds=0);
+// A running BISCUIT NODE / JCMK Node: its screen counts the exit requests.
+bool nodeRunning=false,nodeShown=true;int outputBrightness=100;unsigned exitPresses=0;
+bool nodeBusy(){return nodeRunning;}bool nodeScreenShown(){return nodeShown;}
+bool nodeScreenExitPress(){++exitPresses;return false;}
 '''
-for signature in ['static void go(', 'bool uiStopwatchKey(',
+for signature in ['static void go(', 'static bool nodeKey(', 'void uiKey(', 'bool uiStopwatchKey(',
                   'static bool uiSideKeyHasMessageBox(', 'static bool uiSideKeyModalOpen(',
                   'void uiAmoled175cSleep(', 'void uiAmoled175cKey(']:
     source += '\n' + function(ui, signature)
@@ -96,8 +100,8 @@ struct NimBLEDevice {static void deinit(bool clear){assert(!clear);calls.push_ba
 void esp_deep_sleep_start(){calls.push_back(EnterSleep);++sleepCalls;}
 unsigned visitSaves=0;void visitsPersist(){++visitSaves;}
 void delay(unsigned ms){now+=ms;}
-void uiShow(const char* name){assert(!strcmp(name,"menu"));go(Menu);}
-void uiKey(bool home){assert(home);go(Radar);}
+// The menu route of the production uiShow(), with its node gate.
+void uiShow(const char* name){assert(!strcmp(name,"menu"));if(nodeBusy()){nodeKey();return;}go(Menu);}
 ''' + function(board, 'bool amoled175cSleep(') + function(board, 'void boardLoop(') + r'''
 void visible(Page next,int tab=0){page=pending=next;menuTab=tab;}
 void render(){page=pending;}
@@ -184,6 +188,20 @@ int main(){
  calls.clear();timerError=true;assert(!amoled175cSleep(10)&&(calls==std::vector<Call>{Wake,Timer,DisableExt0}));timerError=false;
  calls.clear();displayError=true;assert(!amoled175cSleep(0)&&(calls==std::vector<Call>{Wake,DisplayOff,DisableAll}));displayError=false;
  calls.clear();commandError=true;assert(!amoled175cSleep(0)&&(calls==std::vector<Call>{Wake,DisplayOff,SleepIn,DisplayOn,DisableAll}));commandError=false;
+ // A running node keeps its screen. PWR, a BOOT tap and the sleep hold each ask
+ // it to stop (the node screen confirms the second); nothing navigates or sleeps.
+ nodeRunning=true;visible(Node);{const unsigned asked=exitPresses,sleeps=sleepCalls,recipes=recipeStops;
+ pwr();assert(exitPresses==asked+1&&page==Node&&pending==Node);
+ boot();assert(exitPresses==asked+2&&pending==Node);
+ bootDown=true;poll();poll();poll(2000);bootDown=false;poll();poll();
+ assert(exitPresses==asked+3&&sleepCalls==sleeps&&pending==Node&&recipeStops==recipes&&lastInteraction==now);
+ // A press on a dark panel only wakes it; before the screen is built a press does nothing.
+ outputBrightness=0;pwr();boot();assert(exitPresses==asked+3&&lastInteraction==now);outputBrightness=100;
+ page=Boot;pwr();assert(exitPresses==asked+3&&pending==Node);page=Node;
+ nodeShown=false;pwr();assert(exitPresses==asked+3);nodeShown=true;
+ // Programmatic navigation cannot leave the node screen.
+ go(Radar);go(Menu);go(Recon);assert(pending==Node&&recipeStops==recipes&&reconLeaves==1);
+ nodeRunning=false;pwr();assert(exitPresses==asked+3&&pending==Menu);}
  // Failed UI sleep restores the previous radio setting, including Clock's standby.
  visible(Clock);radioEnabled=false;wakeError=true;uiAmoled175cSleep();assert(!radioEnabled&&sleepCalls==sleeps&&!strcmp(dialogTitle,"SLEEP UNAVAILABLE"));wakeError=false;
  // Production shutdown sequence keeps the CPU supply on and tears down peripherals.
@@ -197,9 +215,14 @@ int main(){
  // The 16 MB non-C profile keeps its original controls.
  poll();visible(Stopwatch);boot();assert(stopwatch.running);poll(1000);pwr();assert(stopwatch.running&&stopwatch.lapCount==1);
  boot();assert(!stopwatch.running);visible(Radar);boot();assert(pending==Menu);render();pwr();assert(pending==Radar);
+ // A running node keeps its screen: BOOT (menu) and PWR (home) ask it to stop.
+ render();nodeRunning=true;visible(Node);boot();pwr();assert(exitPresses==2&&pending==Node);
+ outputBrightness=0;boot();pwr();assert(exitPresses==2&&pending==Node);outputBrightness=100;
+ nodeRunning=false;pwr();assert(pending==Radar&&exitPresses==2);
 #endif
 }
 '''
+assert 'if(nodeBusy()){if(name=="menu")nodeKey();return;}' in function(ui, 'void uiShow('), 'uiShow node gate changed; update the stub'
 path = work / 'controls.cpp'
 path.write_text(source)
 for variant in ['BOARD_AMOLED_175C', 'BOARD_AMOLED_175']:
@@ -207,4 +230,4 @@ for variant in ['BOARD_AMOLED_175C', 'BOARD_AMOLED_175']:
     subprocess.run(compiler + ['-std=c++17', '-O1', '-UNDEBUG', '-D' + variant,
                               '-I' + str(root / 'firmware/include'), str(path), '-o', str(exe)], check=True)
     subprocess.run([str(exe)], check=True)
-print('PASS 1.75C navigation, timing, sleep routing, wake/display failures, debounce/rollover, timer/storage/modal guards; non-C unchanged')
+print('PASS 1.75C navigation, timing, sleep routing, wake/display failures, debounce/rollover, timer/storage/modal guards, node screen exit keys; non-C unchanged')

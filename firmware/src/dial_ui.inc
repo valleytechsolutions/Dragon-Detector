@@ -73,7 +73,8 @@ static void dialUiBegin(){
   lv_obj_add_flag(pageCanvas,LV_OBJ_FLAG_CLICKABLE);
   lv_obj_add_event_cb(pageCanvas,[](lv_event_t*){if(litePage==LitePage::Signals)dialHunt();},LV_EVENT_SHORT_CLICKED,nullptr);
 }
-void dialRotate(int step){if(!root)return;if(dialMenuVisible()){dialMenuRotate(step);return;}if(litePage==LitePage::Radar&&radarHasSelection){dialTargetChoice=(dialTargetChoice+3+(step>0?1:-1))%3;dialTargetUpdate();return;}dialClearSelection();setLitePage(LitePage((int(litePage)+5+(step>0?1:-1))%5));}
+// The ring does nothing on the node screen.
+void dialRotate(int step){if(!root||liteNodeHost||nodeBusy())return;if(dialMenuVisible()){dialMenuRotate(step);return;}if(litePage==LitePage::Radar&&radarHasSelection){dialTargetChoice=(dialTargetChoice+3+(step>0?1:-1))%3;dialTargetUpdate();return;}dialClearSelection();setLitePage(LitePage((int(litePage)+5+(step>0?1:-1))%5));}
 static void dialButton(dragon::LitePress event){
   if(dialMenuVisible()){if(event==dragon::LitePress::Hold)dialMenuBack();else dialMenuSelect();return;}
   if(event==dragon::LitePress::Hold){dialClearSelection();setLitePage(LitePage::Radar);trackContact(-1);audioStop();return;}
