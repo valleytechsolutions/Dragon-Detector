@@ -227,6 +227,12 @@ static void title(const char* text,const char* subtitle=nullptr){
   button(root,LV_SYMBOL_HOME,149,307,62,lawLockTools()?23:33,1);
 }
 static void legible(lv_obj_t* o){lv_obj_set_style_bg_color(o,color(uiColors().surface),0);lv_obj_set_style_bg_opa(o,LV_OPA_80,0);lv_obj_set_style_radius(o,7,0);}
+// Each LVGL setter invalidates its object even when nothing changes, and on
+// the radar that repaints the field beneath it. Per-frame updates use these.
+static void setText(lv_obj_t* o,const char* text){if(strcmp(lv_label_get_text(o),text))lv_label_set_text(o,text);}
+static void setTextColor(lv_obj_t* o,uint32_t c){const lv_color_t v=color(c);if(lv_obj_get_style_text_color(o,0).full!=v.full)lv_obj_set_style_text_color(o,v,0);}
+static void setBgColor(lv_obj_t* o,uint32_t c){const lv_color_t v=color(c);if(lv_obj_get_style_bg_color(o,0).full!=v.full)lv_obj_set_style_bg_color(o,v,0);}
+static void setHidden(lv_obj_t* o,bool hidden){if(lv_obj_has_flag(o,LV_OBJ_FLAG_HIDDEN)==hidden)return;if(hidden)lv_obj_add_flag(o,LV_OBJ_FLAG_HIDDEN);else lv_obj_clear_flag(o,LV_OBJ_FLAG_HIDDEN);}
 static lv_obj_t* scrollBody(int y=91,int h=211){
   auto* o=lv_obj_create(root);lv_obj_set_pos(o,S(44),S(y));lv_obj_set_size(o,S(272),S(h));lv_obj_set_style_bg_opa(o,LV_OPA_TRANSP,0);lv_obj_set_style_border_width(o,0,0);lv_obj_set_style_pad_all(o,0,0);lv_obj_set_scroll_dir(o,LV_DIR_VER);return o;
 }
@@ -311,13 +317,20 @@ static void huntDraw(lv_event_t* e){
     line(ctx,area.x1+S((i-1)*240/47),area.y1+S(a),area.x1+S(i*240/47),area.y1+S(b),uiColors().accent,2);
   }
 }
+// Themes drawn with the phosphor sweep also get dark glass pills with a
+// hairline in the sweep colour. Locksport themes keep their own styling.
+static bool radarSleek(){return !locksport()&&radarSweepKind(radarTheme)!=RadarSweep::Custom&&radarTheme!=24;}
+static uint32_t radarHairline(){return radarTheme==3?0xb89a5c:radarPalette(radarTheme).sweep;}
+static uint32_t radarPlate(){return fxBlend(radarPalette(radarTheme).panel,0x000000,.5f);}
+static uint32_t radarCueText(){return radarTheme==3?valley::Ice:radarPalette(radarTheme).text;}
+static uint32_t radarCuePlate(){return radarSleek()?radarPlate():radarPalette(radarTheme).panel;}
 static void updateRadarSummary(){
   if(!radarSummary)return;
   int index=radarHasSelection&&uint32_t(millis()-radarSelectedAt)<10000?findContact(radarSelectedKey):-1;
-  if(index<0){lv_obj_add_flag(radarSummary,LV_OBJ_FLAG_HIDDEN);return;}
+  if(index<0){setHidden(radarSummary,true);return;}
   auto& c=contacts[index];char summary[160];
   snprintf(summary,sizeof(summary),"%s / %02X:%02X\n%d dBm / tap here for details",radarFamilyName(c.match.family),c.mac[4],c.mac[5],c.rssi);
-  lv_label_set_text(radarSummary,summary);lv_obj_set_style_text_color(radarSummary,color(contactColor(c)),0);lv_obj_clear_flag(radarSummary,LV_OBJ_FLAG_HIDDEN);
+  setText(radarSummary,summary);setTextColor(radarSummary,contactColor(c));setHidden(radarSummary,false);
 }
 static void radarTap(lv_event_t* event){
   auto code=lv_event_get_code(event);
@@ -340,7 +353,7 @@ static void radarTap(lv_event_t* event){
   if(idx>=0){
     ++radarHits;radarSelectedKey=contactKey(contacts[idx]);radarHasSelection=true;radarSelectedAt=millis();radarPress.begin(radarSelectedKey);
   }else{radarGesture.clear();radarHasSelection=false;}
-  updateRadarSummary();lv_obj_invalidate(radar);
+  updateRadarSummary();radarForgetMarks();lv_obj_invalidate(radar); // the next frame repaints in full too
 }
 #if BOARD_HAS_SD
 static void loadFiles(){
@@ -392,8 +405,9 @@ static void build(){
   // A node owns the radios: standby is left as it was and settles after the node.
   if(!nodeBusy())setRadioStandby(page==Clock||page==Stopwatch||page==Laps||page==ClockSettings||page==ClockWheels||page==ClockEdit);
   nodeScreenClose();lv_obj_clean(root);lv_obj_set_style_bg_color(root,color(uiColors().bg),0);
-#if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
-  prepareRadarBackdrop(root,page==Radar);
+#ifdef RADAR_BACKDROP
+  radarForgetMarks();
+  if(page==Radar)prepareRadarBackdrop();
 #endif
   #ifndef BOARD_RADAR_LITE
   if(page==BleLab){bleLabView(root);return;}
@@ -430,6 +444,11 @@ static void build(){
     auto* tools=button(root,"TOOLS",187,301,78,32,2);
     auto* quiet=button(root,detector.quiet?LV_SYMBOL_MUTE:LV_SYMBOL_VOLUME_MAX,270,257,38,34,97);
     for(auto* b:{targets,tools,quiet}){lv_obj_set_style_bg_color(b,color(theme.panel),0);lv_obj_set_style_bg_opa(b,LV_OPA_80,0);lv_obj_set_style_border_color(b,color(theme.ring),0);lv_obj_set_style_border_opa(b,LV_OPA_60,0);if(locksport()||radarTheme==31)lv_obj_set_style_text_color(lv_obj_get_child(b,0),color(theme.text),0);}
+    if(radarSleek()){
+      const uint32_t hair=radarHairline(),plate=radarPlate();
+      for(auto* o:{statusLabel,radarActivity}){lv_obj_set_style_bg_color(o,color(plate),0);lv_obj_set_style_bg_opa(o,LV_OPA_80,0);lv_obj_set_style_border_color(o,color(hair),0);lv_obj_set_style_border_opa(o,90,0);lv_obj_set_style_border_width(o,1,0);lv_obj_set_style_radius(o,S(10),0);lv_obj_set_style_pad_ver(o,1,0);}
+      for(auto* b:{targets,tools,quiet}){lv_obj_set_style_bg_color(b,color(plate),0);lv_obj_set_style_border_color(b,color(hair),0);lv_obj_set_style_border_opa(b,140,0);}
+    }
   }else if(page==Menu){
 #ifdef BOARD_WAVESHARE_185B
     menuWardriveAvailable=wardriveAvailable();
@@ -1021,7 +1040,10 @@ void uiLoop(){
 #ifdef BOARD_WAVESHARE_185B
     waveshare185b::uiRefreshIntervalMs(page==Stopwatch,page==Radar,dragon::toolkit::status.recording);
 #else
-    page==Stopwatch?50:100;
+    page==Stopwatch?50:page==Radar?radarStats.interval:100;
+#endif
+#ifdef BOARD_WAVESHARE_185B
+  if(page==Radar)radarStats.interval=updateInterval; // what `radar paint` reports
 #endif
   if(millis()-lastUpdate>updateInterval){lastUpdate=millis();if(micBadge){if(audioStatus().mode==AudioMode::Recording)lv_obj_clear_flag(micBadge,LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(micBadge,LV_OBJ_FLAG_HIDDEN);}
     if(page==Stopwatch)updateTimer();
@@ -1037,13 +1059,13 @@ void uiLoop(){
       if(!deauth&&!spam){auto fits=[&]{return lv_txt_get_width(near,strlen(near),lv_obj_get_style_text_font(radarActivity,0),lv_obj_get_style_text_letter_space(radarActivity,0),LV_TEXT_FLAG_NONE)<=lv_obj_get_content_width(radarActivity);};
         if(dragon::nearbyText(near,sizeof(near),nearby,radarFrameAt)&&!fits())dragon::nearbyText(near,sizeof(near),nearby,radarFrameAt,true);
         size_t n=strlen(near);if(n&&n+4<=sizeof(near)){strcpy(near+n,"  >");if(!fits())near[n]=0;}}
-      const bool cue=*near;if(cue!=radarActivityCue){radarActivityCue=cue;lv_obj_set_style_text_color(radarActivity,color(cue?radarPalette(radarTheme).text:0xffbc76),0);lv_obj_set_style_bg_color(radarActivity,color(cue?radarPalette(radarTheme).panel:uiColors().surface),0);} // the status row's colours
-      lv_label_set_text(radarActivity,deauth&&spam?"DEAUTH + BLE BURST  >":deauth?"DEAUTH ACTIVITY  >":spam?"BLE SPAM CANDIDATE  >":near);
-      if(deauth||spam||cue)lv_obj_clear_flag(radarActivity,LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(radarActivity,LV_OBJ_FLAG_HIDDEN);
-      if(trackedContact>=0 && trackingLabel){auto& t=contacts[trackedContact];uint32_t age=millis()-t.seen;String line=age>10000?"SIGNAL LOST / HUNT":String("HUNT / ")+t.signal.direction();lv_label_set_text(trackingLabel,line.c_str());}
-      else if(trackingLabel){char primary[64];if(radarPrimary>=0){auto& c=contacts[radarPrimary];snprintf(primary,sizeof(primary),"%s / %d dBm",radarFamilyName(c.match.family),c.rssi);lv_obj_set_style_text_color(trackingLabel,color(familyColor(c.match.family)),0);}else{strlcpy(primary,reconMode()==dragon::ReconMode::Radar?"":dragon::reconModes[unsigned(reconMode())].name,sizeof(primary));lv_obj_set_style_text_color(trackingLabel,color(radarPalette(radarTheme).text),0);}lv_label_set_text(trackingLabel,primary);}
-      if(locksport()&&trackingLabel){if(trackedContact>=0)lv_obj_set_style_text_color(trackingLabel,color(familyColor(contacts[trackedContact].match.family)),0);lv_obj_set_style_bg_color(trackingLabel,color((radarPrimary>=0||trackedContact>=0)?dragon::RadarLabelBackground:locksportBg()),0);lv_obj_set_style_bg_opa(trackingLabel,LV_OPA_COVER,0);lv_obj_set_style_radius(trackingLabel,S(5),0);}
-      lv_obj_invalidate(radar);// Live: heard within RadarLiveMs. Recent: every other plotted contact.
+      const bool cue=*near;if(cue!=radarActivityCue){radarActivityCue=cue;lv_obj_set_style_text_color(radarActivity,color(cue?radarCueText():0xffbc76),0);lv_obj_set_style_bg_color(radarActivity,color(cue?radarCuePlate():radarSleek()?radarPlate():uiColors().surface),0);} // the status row's colours
+      setText(radarActivity,deauth&&spam?"DEAUTH + BLE BURST  >":deauth?"DEAUTH ACTIVITY  >":spam?"BLE SPAM CANDIDATE  >":near);
+      setHidden(radarActivity,!(deauth||spam||cue));
+      if(trackedContact>=0 && trackingLabel){auto& t=contacts[trackedContact];uint32_t age=millis()-t.seen;String line=age>10000?"SIGNAL LOST / HUNT":String("HUNT / ")+t.signal.direction();setText(trackingLabel,line.c_str());}
+      else if(trackingLabel){char primary[64];if(radarPrimary>=0){auto& c=contacts[radarPrimary];snprintf(primary,sizeof(primary),"%s / %d dBm",radarFamilyName(c.match.family),c.rssi);setTextColor(trackingLabel,familyColor(c.match.family));}else{strlcpy(primary,reconMode()==dragon::ReconMode::Radar?"":dragon::reconModes[unsigned(reconMode())].name,sizeof(primary));setTextColor(trackingLabel,radarPalette(radarTheme).text);}setText(trackingLabel,primary);}
+      if(locksport()&&trackingLabel){if(trackedContact>=0)setTextColor(trackingLabel,familyColor(contacts[trackedContact].match.family));setBgColor(trackingLabel,(radarPrimary>=0||trackedContact>=0)?dragon::RadarLabelBackground:locksportBg());if(lv_obj_get_style_bg_opa(trackingLabel,0)!=LV_OPA_COVER){lv_obj_set_style_bg_opa(trackingLabel,LV_OPA_COVER,0);lv_obj_set_style_radius(trackingLabel,S(5),0);}}
+      // Live: heard within RadarLiveMs. Recent: every other plotted contact.
       int live=0,recent=0;for(auto& c:contacts)if(radarVisible(c,radarFrameAt))++(uint32_t(radarFrameAt-c.seen)<dragon::RadarLiveMs?live:recent);char s[96];
       // The row is one line: when the full text is wider than the label, "+N" stands for "N recent".
       for(bool compact:{false,true}){int n=snprintf(s,sizeof(s),"%s %s / %d live",radioEnabled?(blePhase?"BLE":"WI-FI"):"PAUSED",captureEnabled?"PCAP":"RX",live);
@@ -1053,7 +1075,13 @@ void uiLoop(){
       else snprintf(s+n,sizeof(s)-n," / %d%%",brightness);
 #endif
       if(lv_txt_get_width(s,strlen(s),lv_obj_get_style_text_font(statusLabel,0),lv_obj_get_style_text_letter_space(statusLabel,0),LV_TEXT_FLAG_NONE)<=lv_obj_get_content_width(statusLabel))break;}
-      lv_label_set_text(statusLabel,s);}
+      setText(statusLabel,s);
+      // Repaint only what changed, then draw it now so the frame shown is the
+      // frame just measured.
+      const uint32_t paintStart=micros();
+      const bool full=radarInvalidate(radar,radarFrameAt);
+      radarPaintPixels=0;radarRefreshNow();
+      radarRecordPaint(full,micros()-paintStart,radarPaintPixels);}
     if(page==Diagnostics&&diagnosticsLabel){
       char text[360];snprintf(text,sizeof(text),"Wi-Fi frames: %lu\nBLE adverts: %lu\nQueue drops: %lu / peak %u\nMax processing: %lu us\nMax queue age: %lu ms\nContact slots: %u\nEvictions: %lu\nCache hits/misses: %lu/%lu\nFree heap: %u KB\nFree PSRAM: %u KB\nBLE: %s\n\nCounters restart at boot.\nHigher queue age means delayed\nRSSI and scan results.",wifiFrames,bleFrames,queueDrops,radioQueueHigh,radioMaxBatchUs,radioMaxLagMs,unsigned(MAX_CONTACTS),contactEvictions,contactCacheHits,contactCacheMisses,ESP.getFreeHeap()/1024,ESP.getFreePsram()/1024,activeBle?"Active / requests names":"Passive / listen only");lv_label_set_text(diagnosticsLabel,text);
     }
@@ -1201,6 +1229,8 @@ bool uiCommand(const String& cmd){
   if(cmd=="ui test watch-notification"){dragon::DeviceKey key{};uiNotify("Input test","Test watch-list notification",&key,true);Serial.println("UI_TEST_OK");return true;}
   if(cmd=="ui status"){Serial.printf("UI_STATUS page=%u actions=%lu last_action=%d notice=%u queued=%u\n",unsigned(page),inputActions,lastInputAction,notice!=nullptr,noticeQueue.count);return true;}
   if(cmd=="radar status"){Serial.printf("RADAR_SETTINGS theme=%u labels=%u recent=%u pages=1 plotted=%u primary=%d touches=%lu hits=%lu selected=%u\n",radarTheme,radarLabels,radarRecent,dotCount,radarPrimary,radarTouches,radarHits,radarHasSelection);return true;}
+  if(cmd=="radar paint"){radarPrintStats();return true;}
+  if(cmd=="radar paint reset"){radarStats=RadarPaintStats{};Serial.println("RADAR_PAINT_RESET");return true;}
   if(cmd=="radar dots"){for(int i=0;i<dotCount;++i)Serial.printf("RADAR_DOT %d x=%d y=%d color=%06lx selected=%u\n",i,dots[i].x,dots[i].y,contactColor(contacts[dots[i].index]),radarHasSelection&&dots[i].key==radarSelectedKey);Serial.println("RADAR_DOTS_END");return true;}
   if(cmd=="radar scope all"||cmd=="radar scope candidates"){candidatesOnly=cmd.endsWith("candidates");settings.putBool("candidates",candidatesOnly);radarPrepared=0;Serial.printf("RADAR_SCOPE %s\n",candidatesOnly?"candidates":"all");return true;}
   if(cmd=="radar labels on"||cmd=="radar labels off"){radarLabels=cmd.endsWith("on");settings.putBool("radar-labels",radarLabels);Serial.printf("RADAR_LABELS %u\n",radarLabels);return true;}

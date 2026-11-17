@@ -43,8 +43,10 @@ static Match ble(const std::vector<uint8_t>& p){auto f=parseBle(p.data(),p.size(
 #include "nearby_test.h"
 #include "alert_policy_test.h"
 #include "node_link_test.h"
+#include "radar_fx_test.h"
 int main(){
   nodeLinkTests();
+  radarFxTests();
   alertPolicyTests();
   nearbyTests();
   signalPathTests();

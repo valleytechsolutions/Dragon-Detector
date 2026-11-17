@@ -34,6 +34,7 @@ class String: public std::string {
 template<class T,class A,class B> T constrain(T n,A low,B high){return std::clamp(n,T(low),T(high));}
 inline uint32_t tick=0; // one clock for the UI and the node screen
 inline uint32_t millis(){return tick;}
+inline void* ps_malloc(size_t){return nullptr;} // no PSRAM on the Dial (getFreePsram 0): the radar effects take their no-table path
 struct SerialStub{template<class... T>void printf(T...){} template<class T>void println(T){}};
 static SerialStub Serial;
 struct EspStub{unsigned getFreeHeap(){return 140000;}unsigned getFreePsram(){return 0;}unsigned getMinFreeHeap(){return 130000;}};
