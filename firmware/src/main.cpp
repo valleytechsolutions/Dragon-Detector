@@ -104,6 +104,9 @@ static void command(const String& c){
     if(path.indexOf(".cfg")>=0){Serial.println("FILE_ERROR private configuration; edit on the SD card");return;}
   }
 #endif
+  // A wardriving node owns both radios until it is stopped. Only node commands, the
+  // clock, a restart and read-only queries answer; the wardrive commands do not.
+  if(nodeBusy()&&!nodeAllowsCommand(c)){Serial.println("NODE_BUSY stop the node first: node stop");return;}
   if(wardriveUploadCommand(c))return;
   if(wardriveUploadBusy()&&c!="status"&&c!="memory status"&&c!="ui status"&&c!="screen wardrive-upload"){
     Serial.println("UPLOAD_BUSY cancel or wait for the upload to finish");return;
@@ -112,9 +115,7 @@ static void command(const String& c){
   if(wardriveBusy()&&c!="status"&&c!="scan status"&&c!="memory status"&&c!="loop diagnostics"&&c!="screen wardrive"&&c!="ui status"&&c!="touch status"&&c!="amoled status"){
     Serial.println("WARDRIVE_BUSY stop wardriving and wait for SD save first");return;
   }
-  // A wardriving node owns both radios until it is stopped.
   if(nodeCommand(c))return;
-  if(nodeBusy()&&!nodeAllowsCommand(c)){Serial.println("NODE_BUSY stop the node first: node stop");return;}
   if(personalThemeCommand(c))return;
 #ifdef BOARD_WAVESHARE_185B
   if(sdMaintenanceCommand(c))return;
@@ -295,7 +296,7 @@ void loop(){
   // LC76G command/reply exchanges span short cooperative waits. Other I2C
   // slaves must remain quiet until the reply has been consumed. Radios and SD
   // still run during these waits; touch IRQs stay latched for the next UI pass.
-  if(!wardriveI2cBusy())boardLoop();wardriveLoop();wardriveUploadLoop();
+  if(!wardriveI2cBusy())boardLoop();wardriveLoop();wardriveUploadLoop();nodeLoop();
   // A wardrive owns the radios and SD writer. Suspend unrelated analysis,
   // history writes, alerts and badge traffic until finalization completes.
   const bool quiet=!wardriveBusy()&&!wardriveUploadBusy()&&!nodeBusy(); // a node does nothing but act as a node

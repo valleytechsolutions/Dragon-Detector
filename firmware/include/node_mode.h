@@ -17,7 +17,8 @@ inline const char* nodeName(NodeKind kind){return kind==NodeKind::Biscuit?NodeBi
 bool nodeBusy();
 NodeKind nodeKind();
 // Starts (or switches to) a node. On failure returns false and leaves a short,
-// screen-ready reason in nodeError(). The choice is remembered across restarts.
+// screen-ready reason in nodeError(). The choice is remembered across restarts;
+// a failed switch leaves no node running and none remembered.
 bool nodeStart(NodeKind kind);
 // Ends the node, gives the radios back to the radar and forgets the choice.
 void nodeStop();
@@ -25,14 +26,18 @@ const char* nodeError();
 // Live link state. Valid while nodeBusy(); read on the application task only.
 const dragon::node::Status& nodeStatus();
 uint32_t nodeElapsedMs();
-bool nodeKeyed();        // JCMK Node with an ESP-NOW key set
-bool nodeBleReports();   // JCMK Node also reports Bluetooth devices
+bool nodeKeyed();        // the running JCMK Node uses ESP-NOW encryption
+bool nodeBleReports();   // the running JCMK Node also reports Bluetooth devices
 
-// setup(): resumes a node that was running when the device lost power.
+// setup(): resumes a node that was running when the device lost power or
+// restarted, unless it crashed or restarted twice within a minute of resuming.
 void nodeBegin();
-// USB: node status|biscuit|jcmk|stop|key|bind|identity|ble.
+// loop(): a resumed node that has run a minute stops counting as a quick restart.
+void nodeLoop();
+// USB: node status|config|biscuit|jcmk|stop|key|encrypt|bind|identity|ble.
 bool nodeCommand(const String& command);
-// Commands that still answer while a node runs.
+// Commands that still answer while a node runs: node commands, the clock, a
+// restart and read-only queries (those USB Studio sends when it connects too).
 bool nodeAllowsCommand(const String& command);
 
 // Radio side, in radio.cpp.

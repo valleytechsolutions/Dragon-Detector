@@ -56,7 +56,7 @@ Earlier evidence remains attached to its [release](https://git.churchofmalware.o
 
 ## 0.13.19 non-C AMOLED 1.75
 
-The `waveshare_175` port is prepared from the official schematic and maintained BSP. Automated pin/partition/manifest checks and compilation are separate from physical validation. No physical unit has been tested for this port. Display, touch, RTC retention, buttons, SD, audio and battery operation remain on the [arrival checklist](WAVESHARE-AMOLED-175.md#arrival-checklist).
+The `waveshare_175` port is prepared from the official schematic and maintained BSP. Automated pin/partition/manifest checks and compilation are separate from physical validation. No physical unit has been tested for this port. Display, touch, RTC retention, buttons, SD, audio and battery operation remain on the [field checklist](WAVESHARE-AMOLED-175.md#new-feature-field-checklist).
 
 
 ## Seeed SenseCAP Watcher beta
@@ -85,20 +85,22 @@ The new port has a separate [release validation record](RELEASE-0.14.7.md) and [
 
 ## BISCUIT NODE and JCMK Node
 
-Unreleased, not yet verified on hardware. The node link runs against simulated JCMK, Biscuit and Piglet cores in the native tests (`tests/node_link_test.h`: wire format, handshakes, channel plans, repeats, keyed links, delivery, link loss, clock rollover and random frames). `tools/render_node_screen.py` draws the node screen at every panel size and reports text that would spill outside the round glass. No real core and no board has been tested. Checks to run before relying on it ([node guide](NODE-MODES.md)):
+Unreleased, not yet verified on hardware. The node link runs against simulated JCMK, Biscuit and Piglet cores in the native tests (`tests/node_link_test.h`: wire format, handshakes and their retries, channel plans, the JCMK core's node table, channel split and external-node check, repeats, keyed links, delivery, link loss, clock rollover and random frames). The simulated cores follow the published JCMK and Piglet sources: the Piglet core cannot decrypt and logs every record as Wi-Fi. `tests/node_mode_test.cpp` runs the session code itself: the USB commands and the list of commands allowed while a node runs, encryption and its keys, the remembered node and the restart guard. `tools/render_node_screen.py` draws the node screen at every panel size, checks the wording of each link state, and reports anything that would spill outside the round glass at any drift step. `tools/render_m5dial_ui.py` drives the Dial and Lite buttons, including the Dial's quick double press. No real core and no board has been tested. Checks to run before relying on it ([node guide](NODE-MODES.md)):
 
-- [ ] On a touch board, a board with a knob (CrowPanel 2.1 or Watcher), M5Stack Dial and Waveshare Lite: start both modes from Modes. The node screen fills the panel, the logo is centred and no text is cut off.
-- [ ] Biscuit in Extended mode: LINKED TO BISCUIT; the Biscuit Manager lists the node under `DragonDetector:<version>` (or the `node identity` name); `node status` shows its role and channel list; records reach the Biscuit's log with its position.
+- [ ] On a touch board, a board with a knob (CrowPanel 2.1 or Watcher), M5Stack Dial and Waveshare Lite: start both modes from Modes (on Lite, the MODES page). The node screen fills the panel, the logo is centred and no text is cut off.
+- [ ] Biscuit in Extended mode: JOINING BISCUIT, then LINKED TO BISCUIT; the Biscuit Manager lists the node once, under `DragonDetector:<version>` (or the `node identity` name); `node status` shows `registered=1`, its role and channel list; records reach the Biscuit's log with its position.
+- [ ] Biscuit left alone for several minutes while linked: the node stays LINKED TO BISCUIT throughout (no JOINING BISCUIT flash every 10 seconds), and the Biscuit Manager does not list it twice. Biscuit restarted while linked: the node joins it again without being restarted.
 - [ ] Biscuit in Secure mode: SET BISCUIT TO EXTENDED MODE and no records. Switched to Extended mode, it is joined without restarting the node.
-- [ ] JustCallMeKoko ESP32 Dual Band Wardriver core without a key: LINKED TO CORE; `assigned=1` and the assigned 2.4 GHz channels in `plan=`; Wi-Fi and Bluetooth records in the core's log; `node ble off` stops the Bluetooth records.
-- [ ] The same core with encryption: a matching `node key` works; a wrong key does not deliver records; `node config` and `node status` show only `keyed=1`.
-- [ ] Piglet acting as a JCMK-style core: LINKED TO PIGLET CORE and records arrive.
-- [ ] Wrong mode: JCMK Node next to a Biscuit shows BISCUIT FOUND: USE BISCUIT NODE; BISCUIT NODE next to a JCMK core shows JCMK CORE FOUND: USE JCMK Node.
+- [ ] JustCallMeKoko ESP32 Dual Band Wardriver core without encryption: LINKED TO CORE; the core's Nodes menu lists the node as 6G EXT; `node status` shows `assigned=0`, `node=0/0` and `plan=1,2,3,4,5,6,7,8,9,10,11`; the core's other nodes keep their full channel shares; Wi-Fi and Bluetooth records in the core's log; `node ble off` stops the Bluetooth records.
+- [ ] The same core with encryption: a matching `node key` works; with Use Encryption ticked and no ENOW Key, `node key ""` works, and so does `node encrypt on` after `node key clear`; a wrong key does not deliver records; `node config` shows only `keyed=1`, and `node status` shows `keyed=1` while the keyed JCMK Node runs.
+- [ ] Piglet acting as a JCMK-style core: LINKED TO PIGLET CORE, Wi-Fi records arrive, no BLE count on the screen and no Bluetooth rows in the Piglet's log. With encryption on: PIGLET CORE: CLEAR NODE KEY and no link; `node encrypt off` then joins it.
+- [ ] Wrong mode: JCMK Node next to a Biscuit, in either mode, shows BISCUIT FOUND: USE BISCUIT NODE; BISCUIT NODE next to a JCMK core shows JCMK CORE FOUND: USE JCMK Node.
 - [ ] Two cores in range: `node bind <address>` joins only the bound core.
 - [ ] Core switched off: SEARCHING within about 30 seconds. Switched on again: linked, and networks are reported again.
-- [ ] Leaving: tap EXIT, then CONFIRM; a single press goes back to EXIT after 3 seconds; Home, Back, BOOT, the knob and a long press never leave on one press; the Dial front button; Lite Hold twice; USB `node stop`. Afterwards Modes is shown, and detection, alerts and audio work again.
-- [ ] While a node runs, alerts, notifications and the clock setup prompt do not cover the node screen.
-- [ ] Refusals: with the stopwatch running, and during a GPS wardrive on a GPS board, the reason is shown and the device stays on Modes.
+- [ ] Leaving: tap EXIT, then CONFIRM; a single press goes back to EXIT after 3 seconds; Home, Back, BOOT, the knob and a long press never leave on one press; the Dial front button, twice or as a quick double press; Lite Hold twice; USB `node stop`. The first press shows TAP CONFIRM TO LEAVE on touch boards and the Dial, PRESS CONFIRM TO LEAVE on CrowPanel 2.1 and Watcher, HOLD AGAIN TO LEAVE on Lite. Afterwards Modes is shown, and detection, alerts and audio work again.
+- [ ] While a node runs, alerts, notifications and the clock setup prompt do not cover the node screen. USB Studio connects and reads the settings; changes answer `NODE_BUSY`.
+- [ ] Refusals: with the stopwatch running, Stop the stopwatch first is shown and the device stays on Modes. During a GPS wardrive or a wardrive upload, the device stays on the Wardrive or upload page, Modes cannot be opened, and USB `node biscuit` answers `WARDRIVE_BUSY` or `UPLOAD_BUSY`. A capture recording to SD is finished on the card when a node starts.
 - [ ] Power unplugged and USB `system restart` while a node runs: `NODE_RESUMED` and the node screen at boot.
+- [ ] A supply that browns out within a minute of each resume: the first one or two restarts resume, the next prints `NODE_RESUME_SKIPPED ... check the battery or USB supply` and no node starts.
 - [ ] A one-hour drive on each board, including M5Stack Dial: `heap` and `min_heap` in `node status` stay steady, `rx_drops` and `failed` stay low, and the screen count is plausible against the core's log.
-- [ ] AMOLED boards: the screen content shifts a few pixels each minute.
+- [ ] AMOLED boards: the name, logo, counts and EXIT shift a few pixels each minute, and the rim stays centred.

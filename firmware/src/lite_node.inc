@@ -46,13 +46,14 @@ static bool liteNodeLoop(){
 }
 // Hardware button while a node runs; true when the press belongs to the node.
 // The Dial's front button is its exit press; on the Lite only a BOOT hold is.
+// LiteButton reports two quick Dial presses as one Double: that is both presses.
 static bool liteNodeButton(dragon::LitePress press){
   if(!liteNodeHost&&!nodeBusy())return false;
 #ifdef BOARD_M5DIAL
-  const bool leave=press!=dragon::LitePress::None;
+  const bool leave=press!=dragon::LitePress::None,twice=press==dragon::LitePress::Double;
 #else
-  const bool leave=press==dragon::LitePress::Hold;
+  const bool leave=press==dragon::LitePress::Hold,twice=false;
 #endif
-  if(leave&&liteNodeHost&&!liteNodeLeave)nodeScreenExitPress();
+  if(leave&&liteNodeHost&&!liteNodeLeave&&!nodeScreenExitPress()&&twice&&nodeBusy()&&!liteNodeLeave)nodeScreenExitPress();
   return true;
 }

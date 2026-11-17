@@ -68,87 +68,126 @@ inline uint32_t millis(){return hostMillis;}
 harness = r"""
 #include "node_ui.h"
 #include "node_mode.h"
+#include <cmath>
 #include <cstdio>
+#include <cstring>
 #include <vector>
 uint32_t hostMillis=100000;
 static dragon::node::Status status;
 static NodeKind kind=NodeKind::Biscuit;
-static bool busy=true,ble=true;
+static bool busy=true,ble=true,keyed=false;
 bool nodeBusy(){return busy;}
 NodeKind nodeKind(){return kind;}
 void nodeStop(){busy=false;}
 const dragon::node::Status& nodeStatus(){return status;}
 bool nodeBleReports(){return ble;}
+bool nodeKeyed(){return keyed;}
 static std::vector<uint16_t> frame;static int size=0;
 static void flush(lv_disp_drv_t* d,const lv_area_t* a,lv_color_t* p){
   for(int y=a->y1;y<=a->y2;++y)for(int x=a->x1;x<=a->x2;++x)frame[y*size+x]=(p++)->full;
   lv_disp_flush_ready(d);
 }
 static void save(const char* path){FILE* f=fopen(path,"wb");fwrite(frame.data(),2,frame.size(),f);fclose(f);}
+// Every label, image and button must sit inside the round glass with a small margin.
+static int outside(lv_obj_t* screen,const char* out,const char* name,const char* where){
+  int problems=0;std::vector<lv_obj_t*> stack{screen};
+  while(!stack.empty()){
+    lv_obj_t* o=stack.back();stack.pop_back();
+    for(uint32_t i=0;i<lv_obj_get_child_cnt(o);++i)stack.push_back(lv_obj_get_child(o,i));
+    if(!lv_obj_check_type(o,&lv_label_class)&&!lv_obj_check_type(o,&lv_img_class)&&!lv_obj_check_type(o,&lv_btn_class))continue;
+    lv_area_t a;lv_obj_get_coords(o,&a);
+    if(lv_obj_check_type(o,&lv_label_class)){
+      // Shrink to the drawn text, not the label box.
+      lv_point_t sz;const char* t=lv_label_get_text(o);
+      lv_txt_get_size(&sz,t,lv_obj_get_style_text_font(o,0),lv_obj_get_style_text_letter_space(o,0),0,LV_COORD_MAX,LV_TEXT_FLAG_NONE);
+      const int cx=(a.x1+a.x2)/2;a.x1=cx-sz.x/2;a.x2=cx+sz.x/2;a.y2=a.y1+sz.y;
+      if(sz.x>lv_area_get_width(&a)+2||sz.x>lv_obj_get_width(o)){printf("CLIPPED %s %s%s '%s' %d>%d\n",out,name,where,t,int(sz.x),int(lv_obj_get_width(o)));++problems;}
+    }
+    const float r=size/2.f,margin=size*0.02f;
+    for(int corner=0;corner<4;++corner){
+      const float x=(corner&1?a.x2:a.x1)-r+0.5f,y=(corner&2?a.y2:a.y1)-r+0.5f;
+      if(x*x+y*y>(r-margin)*(r-margin)&&lv_obj_get_width(o)<size){printf("OUTSIDE %s %s%s corner %d (%d,%d)-(%d,%d)\n",out,name,where,corner,a.x1,a.y1,a.x2,a.y2);++problems;break;}
+    }
+  }
+  return problems;
+}
+// The label whose text contains part, if any.
+static lv_obj_t* labelWith(lv_obj_t* o,const char* part){
+  for(uint32_t i=0;i<lv_obj_get_child_cnt(o);++i){
+    lv_obj_t* c=lv_obj_get_child(o,i);
+    if(lv_obj_check_type(c,&lv_label_class)&&strstr(lv_label_get_text(c),part))return c;
+    if(lv_obj_t* found=labelWith(c,part))return found;
+  }
+  return nullptr;
+}
 int main(int argc,char** argv){
-  size=atoi(argv[1]);const char* out=argv[2];const bool button=atoi(argv[3]);
+  size=atoi(argv[1]);const char* out=argv[2];const bool button=atoi(argv[3]);const char* confirm=argc>4&&*argv[4]?argv[4]:nullptr;
   lv_init();frame.assign(size*size,0);
   static lv_disp_draw_buf_t buf;static std::vector<lv_color_t> pixels(size*size);
   lv_disp_draw_buf_init(&buf,pixels.data(),nullptr,size*size);
   static lv_disp_drv_t drv;lv_disp_drv_init(&drv);drv.hor_res=size;drv.ver_res=size;drv.flush_cb=flush;drv.draw_buf=&buf;drv.full_refresh=1;
   lv_disp_drv_register(&drv);
   lv_obj_t* screen=lv_scr_act();lv_obj_set_style_bg_color(screen,lv_color_hex(0x203040),0);
-  NodeScreenOptions options;options.exitButton=button;options.exitHint=button?nullptr:"HOLD BUTTON TO EXIT";
-  struct Case{const char* name;NodeKind kind;bool linked;dragon::node::Core other;uint32_t wifi,ble,sent;uint8_t channel;bool arm;};
+  // The options each board passes (ui.cpp, lite_node.inc).
+  NodeScreenOptions options;options.exitButton=button;options.exitHint=button?nullptr:"HOLD BUTTON TO EXIT";options.confirmHint=confirm;
+  using dragon::node::Core;
+  // scanned: the channel of the last scan before a visit home (Report on channel 6).
+  struct Case{const char* name;NodeKind kind;bool linked,registered;Core core,other;uint32_t wifi,ble,sent;uint8_t channel,scanned;bool arm,keyed;const char* expect;const char* also;const char* forbid;};
   const Case cases[]={
-    {"biscuit-linked",NodeKind::Biscuit,true,dragon::node::Core::None,12384,0,13110,6,false},
-    {"biscuit-search",NodeKind::Biscuit,false,dragon::node::Core::None,0,0,0,6,false},
-    {"biscuit-secure",NodeKind::Biscuit,false,dragon::node::Core::BiscuitSecure,214,0,214,6,false},
-    {"jcmk-linked",NodeKind::Jcmk,true,dragon::node::Core::None,8742,1903,10840,11,false},
-    {"jcmk-wrong",NodeKind::Jcmk,false,dragon::node::Core::Biscuit,0,0,0,6,false},
-    {"jcmk-confirm",NodeKind::Jcmk,true,dragon::node::Core::None,999999,99999,1099998,3,true},
+    {"biscuit-linked",NodeKind::Biscuit,true,true,Core::Biscuit,Core::None,12384,0,13110,6,4,false,false,"LINKED","CH 4",nullptr},
+    {"biscuit-joining",NodeKind::Biscuit,true,false,Core::Biscuit,Core::None,0,0,0,6,0,false,false,"JOINING",nullptr,"LINKED"},
+    {"biscuit-search",NodeKind::Biscuit,false,false,Core::None,Core::None,0,0,0,6,0,false,false,"SEARCHING",nullptr,nullptr},
+    {"biscuit-secure",NodeKind::Biscuit,false,false,Core::None,Core::BiscuitSecure,214,0,214,6,0,false,false,"EXTENDED MODE",nullptr,nullptr},
+    {"jcmk-linked",NodeKind::Jcmk,true,true,Core::Jcmk,Core::None,8742,1903,10840,11,0,false,false,"LINKED","BLE 1,903","PIGLET"},
+    {"jcmk-piglet",NodeKind::Jcmk,true,true,Core::Piglet,Core::None,8742,1903,10840,11,0,false,false,"PIGLET CORE","SENT 10,840","BLE"},
+    {"jcmk-wrong",NodeKind::Jcmk,false,false,Core::None,Core::Biscuit,0,0,0,6,0,false,false,"USE BISCUIT NODE",nullptr,nullptr},
+    {"jcmk-secure-biscuit",NodeKind::Jcmk,false,false,Core::None,Core::BiscuitSecure,0,0,0,6,0,false,false,"USE BISCUIT NODE",nullptr,"EXTENDED"},
+    {"jcmk-keyed-piglet",NodeKind::Jcmk,false,false,Core::None,Core::Piglet,0,0,0,6,0,false,true,"CLEAR NODE KEY",nullptr,"USE JCMK"},
+    {"jcmk-confirm",NodeKind::Jcmk,true,true,Core::Jcmk,Core::None,999999,99999,1099998,3,0,true,false,confirm?confirm:button?"TAP CONFIRM TO LEAVE":"PRESS AGAIN TO LEAVE",nullptr,nullptr},
   };
+  int problems=0;
   for(const Case& c:cases){
-    kind=c.kind;busy=true;status={};status.linked=c.linked;status.core=c.linked?(c.kind==NodeKind::Biscuit?dragon::node::Core::Biscuit:dragon::node::Core::Jcmk):dragon::node::Core::None;
+    kind=c.kind;busy=true;keyed=c.keyed;status={};status.linked=c.linked;status.registered=c.registered;status.core=c.core;
     status.other=c.other;status.wifi=c.wifi;status.ble=c.ble;status.sent=c.sent;status.channel=c.channel;
     status.planCount=11;for(uint8_t i=0;i<11;++i)status.plan[i]=i+1;status.phase=c.linked?dragon::node::Phase::Scan:dragon::node::Phase::Search;
     lv_obj_clean(screen);nodeScreenOpen(screen,options);
+    if(c.scanned){status.channel=c.scanned;hostMillis+=1000;nodeScreenLoop();status.channel=c.channel;status.phase=dragon::node::Phase::Report;}
     if(c.arm)nodeScreenExitPress();
     hostMillis+=1000;nodeScreenLoop();
     lv_obj_invalidate(screen);lv_refr_now(nullptr);
     char path[512];snprintf(path,sizeof(path),"%s-%s.raw",out,c.name);save(path);
-    // Every label must sit inside the round glass with a small margin.
-    std::vector<lv_obj_t*> stack{screen};
-    while(!stack.empty()){
-      lv_obj_t* o=stack.back();stack.pop_back();
-      for(uint32_t i=0;i<lv_obj_get_child_cnt(o);++i)stack.push_back(lv_obj_get_child(o,i));
-      if(!lv_obj_check_type(o,&lv_label_class)&&!lv_obj_check_type(o,&lv_img_class)&&!lv_obj_check_type(o,&lv_btn_class))continue;
-      lv_area_t a;lv_obj_get_coords(o,&a);
-      if(lv_obj_check_type(o,&lv_label_class)){
-        // Shrink to the drawn text, not the label box.
-        lv_point_t sz;const char* t=lv_label_get_text(o);
-        lv_txt_get_size(&sz,t,lv_obj_get_style_text_font(o,0),lv_obj_get_style_text_letter_space(o,0),0,LV_COORD_MAX,LV_TEXT_FLAG_NONE);
-        const int cx=(a.x1+a.x2)/2;a.x1=cx-sz.x/2;a.x2=cx+sz.x/2;a.y2=a.y1+sz.y;
-        if(sz.x>lv_area_get_width(&a)+2||sz.x>lv_obj_get_width(o)){printf("CLIPPED %s %s '%s' %d>%d\n",out,c.name,t,int(sz.x),int(lv_obj_get_width(o)));}
-      }
-      const float r=size/2.f,margin=size*0.02f;
-      for(int corner=0;corner<4;++corner){
-        const float x=(corner&1?a.x2:a.x1)-r+0.5f,y=(corner&2?a.y2:a.y1)-r+0.5f;
-        if(x*x+y*y>(r-margin)*(r-margin)&&lv_obj_get_width(o)<size){printf("OUTSIDE %s %s corner %d (%d,%d)-(%d,%d)\n",out,c.name,corner,a.x1,a.y1,a.x2,a.y2);break;}
-      }
+    // The status says what the case is about, in the wording that fits this panel.
+    if(!labelWith(screen,c.expect)){printf("WRONG %s %s: no '%s'\n",out,c.name,c.expect);++problems;}
+    if(c.also&&!labelWith(screen,c.also)){printf("WRONG %s %s: no '%s'\n",out,c.name,c.also);++problems;}
+    if(c.forbid&&labelWith(screen,c.forbid)){printf("WRONG %s %s: shows '%s'\n",out,c.name,c.forbid);++problems;}
+    problems+=outside(screen,out,c.name,"");
+    // The same at every burn-in drift step: the content layer (EXIT included) moves.
+    lv_obj_t* node=lv_obj_get_child(screen,0);lv_obj_t* content=nullptr;
+    for(uint32_t i=0;i<lv_obj_get_child_cnt(node);++i)if(!content||lv_obj_get_child_cnt(lv_obj_get_child(node,i))>lv_obj_get_child_cnt(content))content=lv_obj_get_child(node,i);
+    static const int8_t drift[][2]={{2,-2},{-2,2},{2,2},{-2,-2},{0,3},{0,-3},{3,0},{-3,0}};
+    for(auto& d:drift){
+      const float k=size/466.f;lv_obj_set_pos(content,lv_coord_t(lroundf(d[0]*k)),lv_coord_t(lroundf(d[1]*k)));lv_obj_update_layout(screen);
+      char where[32];snprintf(where,sizeof(where)," drift(%d,%d)",d[0],d[1]);problems+=outside(screen,out,c.name,where);
     }
   }
-  return 0;
+  return problems?1:0;
 }
 """
 (work / "harness.cpp").write_text(harness)
 
+# Name, panel, defines, on-screen EXIT, and the confirm hint the board passes
+# (ui.cpp for CrowPanel and Watcher, lite_node.inc for the Waveshare Lite).
 boards = [
-    ("466", 466, "-DBOARD_AMOLED_175C", True),
-    ("480", 480, "-DBOARD_CROWPANEL_21", True),
-    ("412", 412, "-DBOARD_WATCHER", True),
-    ("360", 360, "-DBOARD_WAVESHARE_185B", True),
-    ("240", 240, "-DBOARD_XIAO_ROUND", True),
-    ("240-dial", 240, "-DBOARD_M5DIAL -DBOARD_RADAR_LITE", True),
-    ("240-lite", 240, "-DBOARD_RADAR_LITE", False),
+    ("466", 466, "-DBOARD_AMOLED_175C", True, ""),
+    ("480", 480, "-DBOARD_CROWPANEL_21", True, "PRESS CONFIRM TO LEAVE"),
+    ("412", 412, "-DBOARD_WATCHER", True, "PRESS CONFIRM TO LEAVE"),
+    ("360", 360, "-DBOARD_WAVESHARE_185B", True, ""),
+    ("240", 240, "-DBOARD_XIAO_ROUND", True, ""),
+    ("240-dial", 240, "-DBOARD_M5DIAL -DBOARD_RADAR_LITE", True, ""),
+    ("240-lite", 240, "-DBOARD_RADAR_LITE", False, "HOLD AGAIN TO LEAVE"),
 ]
 problems = 0
-for name, size, define, button in boards:
+for name, size, define, button, confirm in boards:
     exe = work / f"node-{name}"
     res = {466: 466, 480: 466, 412: 412, 360: 360, 240: 240}[size]
     cmd = ["c++", "-std=c++17", "-O1", "-w", *define.split(), f"-DSCREEN_RES={res}", *includes,
@@ -156,10 +195,15 @@ for name, size, define, button in boards:
            str(root / "firmware/src/node_logo.cpp"), str(library), "-o", str(exe)]
     (native / "board_pins.h").write_text("#pragma once\n")
     subprocess.run(cmd, check=True)
-    result = subprocess.run([str(exe), str(size), str(work / name), "1" if button else "0"], check=True, capture_output=True, text=True)
+    for old in work.glob(f"{name}-*.png"):
+        old.unlink()
+    result = subprocess.run([str(exe), str(size), str(work / name), "1" if button else "0", confirm], capture_output=True, text=True)
     if result.stdout:
         print(result.stdout, end="")
         problems += result.stdout.count("\n")
+    if result.returncode and not result.stdout:
+        print(result.stderr, end="")
+        problems += 1
     for raw in sorted(work.glob(f"{name}-*.raw")):
         data = raw.read_bytes()
         img = Image.new("RGB", (size, size))

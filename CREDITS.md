@@ -344,19 +344,30 @@ CC BY-NC-SA 4.0. Its ESP32-C5 radio capabilities differ from this ESP32-S3 board
 The JCMK Node protocol follows **ESP32DualBandWardriver** by
 **[Just Call Me Koko](https://github.com/justcallmekoko)**, MIT, Copyright (c)
 2025 Just Call Me Koko: the ENOW message layout and numbering, the channel table,
-the timing and the derivation of both ESP-NOW keys from the text key. [Its MIT
+the timing, the external-node capability text that keeps this 2.4 GHz-only node
+out of the core's channel split, and the derivation of both ESP-NOW keys from
+the text key, the empty key included. The current code was checked against
+revision `b9745dbc15211f99320ae34e63cb174222cf19fa`. [Its MIT
 notice is retained](docs/licenses/ESP32DualBandWardriver-LICENSE.txt). The link
 engine in `firmware/include/node_link.h`, the radio hand-over, the session and
 USB commands, the node screen and the simulated-core tests are original
 Dragon Detector code written from those protocol facts.
 
-The BISCUIT NODE dialect (the Biscuit Manager's unencrypted Extended mode) is
-implemented from its observable behaviour. **Piglet** by Hamspiced (see
-[above](#piglet-wardriving-workflow-reference)) was used as a behaviour reference
-only, for the Biscuit handshake and for recognising a Piglet acting as a
-JCMK-style core. No Piglet code was copied; Piglet is published under
-CC BY-NC-SA. No Biscuit code is included, and Biscuit Secure mode is not
-supported. The node screens show the owner-supplied Biscuit Shop and JCMK logos
+The BISCUIT NODE dialect (the Biscuit Manager's unencrypted Extended mode) and
+the recognition of a Piglet acting as a JCMK-style core were learned by reading
+the published source of **Piglet** by Hamspiced (see
+[above](#piglet-wardriving-workflow-reference)): `PigletNode/PigletNode.ino` and
+`TDongleC5_Piglet/TDongleC5_Piglet.ino` at revision
+`e2bf83faccea5e40a46a4826beae77b227c2bbe9`. Only protocol facts were taken, among
+them the message types 5, 7, 10, 11 and 15, the `encrypt=` mode field, the
+`channels=...;dwell=` format and how its list is read, the full 212-byte frame,
+the 500 ms (plus 0 to 200 ms) listening window, the `PIGLET1` marker, and how a
+Piglet core treats its nodes (no ESP-NOW encryption, every record logged as
+Wi-Fi, an even channel split with no opt-out). They were reimplemented
+independently, and no Piglet code or text is included; Piglet is published under
+CC BY-NC-SA 4.0. No Biscuit code was used, the dialect has not yet been checked
+against a real Biscuit, and Biscuit Secure mode is not supported. The node
+screens show the owner-supplied Biscuit Shop and JCMK logos
 credited above under Radar theme artwork · 0.13.1. These modes are
 independent implementations, not official firmware of the Biscuit,
 JustCallMeKoko or Piglet projects, and imply no endorsement.

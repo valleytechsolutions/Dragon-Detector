@@ -22,7 +22,7 @@ constexpr size_t SeenEntries=2048;         // internal RAM while running: 16 KB
 constexpr uint32_t NodeMemory=MALLOC_CAP_INTERNAL|MALLOC_CAP_8BIT;
 #else
 constexpr unsigned ReceiveDepth=16;
-constexpr size_t SeenEntries=32768;        // PSRAM while running: 256 KB, exact counts far past a day of driving
+constexpr size_t SeenEntries=32768;        // PSRAM while running: 256 KB. Counts are exact while the table has room (see Link::remember)
 constexpr uint32_t NodeMemory=MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT;
 #endif
 StaticQueue_t receiveControl;

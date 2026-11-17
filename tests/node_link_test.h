@@ -1,9 +1,13 @@
 #pragma once
 // Wardriving node link against simulated cores. The simulated cores apply the
-// acceptance rules of the real ones: a JCMK core ignores short requests and
-// text, a Biscuit Manager drops anything under 212 bytes and only registers a
-// node that completes its identify / role / channel handshake.
+// rules of the real ones, from their published source: a JCMK core ignores
+// short frames, splits its channels across the nodes that did not opt out, and
+// logs an address only if it is not among the last 200 it logged; a Biscuit
+// Manager drops anything under 212 bytes and only logs for a node that
+// completed its identify / role / channel handshake (as far as the handshake is
+// known from the outside); a Piglet core cannot decrypt and logs every record as Wi-Fi.
 #include "node_link.h"
+#include <algorithm>
 #include <array>
 #include <deque>
 #include <functional>
@@ -18,6 +22,8 @@ using Bytes=std::vector<uint8_t>;
 struct Ap {Mac bssid;std::string ssid;Auth auth;uint8_t channel;int rssi;};
 struct Heard {Mac from;Bytes data;uint32_t at;bool sealed;};
 struct Sent {Mac to;Bytes data;uint32_t at;};
+// The JCMK core's opt-out, as its WiFiOps.h spells it. Written out here so the test checks the bytes on the air.
+const std::string OptOut="C5P1;ROLE=EXTERNAL;BANDS=6";
 inline bool isBroadcast(const Mac& mac){return sameMac(mac.data(),BroadcastMac);}
 inline std::string textOf(const Bytes& frame){Frame f;assert(parseFrame(frame.data(),frame.size(),f));return std::string((const char*)f.text,f.textLength);}
 inline Bytes textFrame(uint8_t type,uint32_t counter,const std::string& text){Bytes b(FrameSize);buildFrame(b.data(),type,counter,text.data(),text.size());return b;}
@@ -25,13 +31,18 @@ inline Bytes adminFrame(uint8_t version,uint8_t index,uint8_t count,uint8_t firs
 
 struct Bench : Port {
   Link link;std::vector<Seen> table;Config config;uint32_t now=0;
+  Mac self{{0x30,0xae,0xa4,0x51,0x7e,0x09}};      // this node's own address, as the cores see it
   uint8_t channel=0,scanChannel=0;bool scanning=false,bleOn=false,inFlight=false,rejectTransmit=false,rejectScan=false,rejectPeer=false,loseScans=false;
   uint32_t scanEnds=0,flightEnds=0;Mac flightTo{};Bytes flightData;
-  std::map<Mac,Peer> peers;std::vector<Sent> log;std::deque<Heard> inbox;
+  // loopEvery: milliseconds between main-loop passes. What arrives waits for the next pass.
+  uint32_t loopEvery=1;unsigned sealedHeard=0,sealedLost=0;
+  std::map<Mac,Peer> peers;std::vector<Sent> log;std::deque<Heard> inbox,ready;
   std::map<uint8_t,std::vector<Ap>> world;std::vector<std::pair<Mac,int>> bleWorld;
   std::vector<uint8_t> scanned;unsigned scanStops=0,bleStarts=0,tunes=0;
   // The other end of the air. Returns whether a unicast frame was acknowledged.
   std::function<bool(const Mac&,const Bytes&)> air;
+  std::function<bool(const Bytes&)> refuse;          // the driver refuses this frame (busy, out of memory)
+  std::function<void()> tick;                        // the cores' own clocks, once per millisecond
 
   explicit Bench(NodeFamily family,size_t entries=256,uint32_t start=1000){
     table.resize(entries);config.family=family;config.identity="DragonDetector:0.14.8";config.seen=table.data();config.seenCount=entries;
@@ -50,7 +61,9 @@ struct Bench : Port {
     Mac m;memcpy(m.data(),to,6);
     assert(peers.count(m)||isBroadcast(m));
     if(rejectTransmit)return false;
-    inFlight=true;flightTo=m;flightData.assign(frame,frame+length);flightEnds=now+2;return true;
+    flightData.assign(frame,frame+length);
+    if(refuse&&refuse(flightData))return false;
+    inFlight=true;flightTo=m;flightEnds=now+2;return true;
   }
   bool scan(uint8_t c,uint16_t dwell) override {
     assert(!scanning&&!inFlight&&!bleOn);assert(c>=1&&c<=config.maxChannel);assert(dwell>=DwellMinMs&&dwell<=DwellMaxMs);
@@ -59,11 +72,12 @@ struct Bench : Port {
   }
   void scanStop() override {scanning=false;++scanStops;}
   void ble(bool on,uint32_t) override {assert(!scanning);if(on&&!bleOn)++bleStarts;bleOn=on;}
-  // sealed: encrypted by the sender, readable only while this node holds the key for it.
+  // sealed: encrypted by the sender, readable only if this node holds the key for it when it arrives.
   void hear(const Mac& from,const Bytes& data,uint32_t delay=1,bool sealed=false){inbox.push_back({from,data,now+delay,sealed});}
   bool keyed(const Mac& mac) const {auto it=peers.find(mac);return it!=peers.end()&&it->second==Peer::Encrypted;}
   void step(){
     ++now;
+    if(tick)tick();
     if(inFlight&&int32_t(now-flightEnds)>=0){
       inFlight=false;log.push_back({flightTo,flightData,now});
       const bool acknowledged=air?air(flightTo,flightData):false;
@@ -74,12 +88,16 @@ struct Bench : Port {
       scanning=false;link.scanned(true,now);
     }
     if(bleOn&&now%20==0)for(auto& d:bleWorld)link.ble(d.first.data(),d.second);
+    // The radio opens a sealed frame as it arrives, with the keys it holds at
+    // that moment, and loses whatever arrives while it is on another channel.
     for(size_t i=0;i<inbox.size();){
       if(int32_t(now-inbox[i].at)<0){++i;continue;}
       Heard h=inbox[i];inbox.erase(inbox.begin()+long(i));
-      if(h.sealed&&!keyed(h.from))continue;                                                  // no key: unreadable
-      if(channel==HomeChannel)link.received(h.from.data(),h.data.data(),h.data.size(),-48,now); // off channel: lost
+      if(h.sealed){++sealedHeard;if(!keyed(h.from)){++sealedLost;continue;}}     // no key: unreadable
+      if(channel==HomeChannel)ready.push_back(h);
     }
+    if(now%loopEvery)return;
+    while(!ready.empty()){const Heard h=ready.front();ready.pop_front();link.received(h.from.data(),h.data.data(),h.data.size(),-48,now);}
     link.loop(now);
   }
   void run(uint32_t ms){for(uint32_t i=0;i<ms;++i)step();}
@@ -87,21 +105,69 @@ struct Bench : Port {
   unsigned count(uint8_t type) const {unsigned n=0;for(auto& s:log)if(s.data[4]==type)++n;return n;}
   std::vector<std::string> texts() const {std::vector<std::string> out;for(auto& s:log)if(s.data[4]==Text)out.push_back(textOf(s.data));return out;}
 };
+// Sends a core's frame when the node has just come home to listen, so it is not lost off channel.
+inline void atHome(Bench& b,const Mac& from,const Bytes& frame){
+  assert(b.until([&]{return b.link.status().phase!=Phase::Listen;}));assert(b.until([&]{return b.link.status().phase==Phase::Listen;}));
+  b.hear(from,frame);
+}
 
-// JustCallMeKoko core: replies to a full-size request, assigns an index range
-// when its table changes, and only does so on a request or a heartbeat.
+// JustCallMeKoko core in Core mode, after its WiFiOps.cpp. It never scans: its
+// nodes do. It keeps up to 24 nodes, found by their last two address bytes and
+// dropped after 60 s of silence, and splits its 40 channels across those that
+// did not send the exact 26-byte external capability. Such a node gets its
+// range only in answer to its own request or heartbeat, once per change; an
+// external node never gets one. A record is acknowledged only on an open link
+// and logged only if its address is not among the last 200 logged.
 struct JcmkCore {
-  Mac mac{{0x24,0x6f,0x28,0x10,0x20,0x30}};Bench* bench=nullptr;bool alive=true,acks=false,acksUnicast=true,dirty=true,known=false;
+  struct Node {Mac mac{};bool active=false,external=false,dirty=false;uint8_t index=0,first=0,last=0;uint32_t seen=0;unsigned admins=0;};
+  Mac mac{{0x24,0x6f,0x28,0x10,0x20,0x30}};Bench* bench=nullptr;bool alive=true,acks=false,acksUnicast=true;
   // keyed: "Use Encryption" is on. The core answers a request in the clear, then
   // holds the node as an encrypted peer. mute: its radio acknowledges, its firmware does not answer.
   bool keyed=false,nodeKeyed=false,mute=false;unsigned dropReplies=0,unread=0;
-  uint8_t version=1,first=0,last=13;std::vector<std::string> records;unsigned heartbeats=0,requests=0;std::vector<uint32_t> counters;
-  bool operator()(const Mac& to,const Bytes& data){
+  uint8_t version=0;Node nodes[24];std::vector<Mac> peers;std::deque<Mac> history;
+  std::vector<std::string> records,logged;unsigned heartbeats=0,requests=0;std::vector<uint32_t> counters;
+  bool operator()(const Mac& to,const Bytes& data){return from(bench->self,to,data);}
+  // A frame from another node of the rig: a dual-band node asks with empty text.
+  void node(const Mac& source,uint8_t type){from(source,mac,textFrame(type,0,""));}
+  void restart(){for(auto& n:nodes)n=Node{};peers.clear();history.clear();records.clear();logged.clear();nodeKeyed=false;version=0;}
+  Node* find(const Mac& m){for(auto& n:nodes)if(n.active&&n.mac[4]==m[4]&&n.mac[5]==m[5])return &n;return nullptr;}
+  unsigned assignable() const {unsigned c=0;for(auto& n:nodes)if(n.active&&!n.external)++c;return c;}
+  bool coversAll() const {
+    for(unsigned i=0;i<ChannelCount;++i){bool covered=false;for(auto& n:nodes)if(n.active&&!n.external&&n.first<=i&&i<=n.last)covered=true;if(!covered)return false;}
+    return true;
+  }
+  void topology(){
+    if(++version==0)version=1;
+    const unsigned count=assignable();unsigned k=0;
+    for(auto& n:nodes){
+      if(!n.active)continue;
+      if(n.external){n.dirty=false;continue;}
+      n.index=uint8_t(k);n.first=uint8_t(k*ChannelCount/count);n.last=uint8_t((k+1)*ChannelCount/count-1);n.dirty=true;++k;
+    }
+  }
+  void expire(){bool changed=false;for(auto& n:nodes)if(n.active&&bench->now-n.seen>60000){n=Node{};changed=true;}if(changed)topology();}
+  Node* touch(const Mac& m,bool& fresh){
+    fresh=false;if(Node* n=find(m)){n->seen=bench->now;return n;}
+    for(auto& n:nodes)if(!n.active){n=Node{};n.mac=m;n.active=n.dirty=true;n.last=ChannelCount-1;n.seen=bench->now;fresh=true;return &n;}
+    return nullptr;
+  }
+  bool optOut(Node* n,const Frame& f){
+    if(!n||n->external||f.textLength!=26||memcmp(f.text,OptOut.data(),26))return false;
+    n->external=true;n->dirty=false;return true;
+  }
+  void admin(Node& n){
+    if(n.external)return;
+    ++n.admins;n.dirty=false;
+    if(n.mac==bench->self)bench->hear(mac,adminFrame(version,n.index,uint8_t(assignable()),n.first,n.last),2,keyed);
+  }
+  bool seen(const Mac& m) const {return std::find(history.begin(),history.end(),m)!=history.end();}
+  bool from(const Mac& source,const Mac& to,const Bytes& data){
     if(!alive)return false;
     if(!isBroadcast(to)&&to!=mac)return false;
     Frame f;if(!parseFrame(data.data(),data.size(),f))return true;
-    if(data.size()<FrameSize)return true;                        // the core ignores short text messages
-    if(keyed){
+    if(data.size()<FrameSize)return true;                        // the core ignores anything shorter than a text message
+    const bool dragon=source==bench->self;
+    if(keyed&&dragon){
       if(f.type==CoreRequest)assert(!bench->keyed(mac));         // asked in the clear, so the clear answer is readable
       else{
         assert(!isBroadcast(to)&&bench->keyed(mac));             // everything else is sealed and addressed
@@ -109,27 +175,36 @@ struct JcmkCore {
       }
     }
     if(mute)return acksUnicast;
-    if(f.type==CoreRequest){
-      ++requests;known=true;nodeKeyed=keyed;
-      if(dropReplies)--dropReplies;else bench->hear(mac,textFrame(CoreReply,0,""));
-      admin();
-    }
-    else if(f.type==Heartbeat){++heartbeats;counters.push_back(f.counter);if(!known){known=true;dirty=true;}admin();}
-    else if(f.type==Text){
+    expire();
+    if(f.type==CoreRequest||f.type==Heartbeat){
+      bool fresh=false;Node* n=touch(source,fresh);const bool changed=optOut(n,f);
+      if(f.type==CoreRequest){
+        if(dragon){++requests;if(dropReplies)--dropReplies;else bench->hear(mac,textFrame(CoreReply,0,""));nodeKeyed=keyed;}
+        if(std::find(peers.begin(),peers.end(),source)==peers.end())peers.push_back(source);
+      }else if(dragon){++heartbeats;counters.push_back(f.counter);}
+      if(n&&(fresh||changed))topology();
+      if(n&&n->dirty)admin(*n);
+    }else if(f.type==Text&&dragon){
       const std::string line((const char*)f.text,f.textLength);
       unsigned commas=0;for(char c:line)if(c==',')++commas;
       assert(commas==5);                                         // exactly six fields, or the core rejects it
       records.push_back(line);
-      if(acks)bench->hear(mac,textFrame(RecordAck,f.counter,line.back()=='B'?"B,0":"W,2437"),3);
+      if(acks&&!keyed&&std::find(peers.begin(),peers.end(),source)!=peers.end())bench->hear(mac,textFrame(RecordAck,f.counter,line.back()=='B'?"B,0":"W,2437"),3);
+      unsigned v[6];Mac address{};
+      if(sscanf(line.c_str(),"%2x:%2x:%2x:%2x:%2x:%2x",&v[0],&v[1],&v[2],&v[3],&v[4],&v[5])==6){
+        for(unsigned i=0;i<6;++i)address[i]=uint8_t(v[i]);
+        if(!seen(address)){history.push_back(address);if(history.size()>200)history.pop_front();logged.push_back(line);}
+      }
     }
     return acksUnicast;
   }
-  void admin(){if(dirty){dirty=false;bench->hear(mac,adminFrame(version,0,1,first,last),2,keyed);}}
 };
 // Biscuit Manager in Extended mode, as its handshake is known from the outside.
+// beatMs: it sends on its own now and then, as its own nodes expect.
 struct BiscuitCore {
-  Mac mac{{0xd8,0x3b,0xda,0x01,0x02,0x03}};Bench* bench=nullptr;bool alive=true,secure=false,registered=false,roleAcked=false,heartbeat=true;
-  std::string channels="channels=1,6,11;dwell=120",identity;std::vector<std::string> records;unsigned heartbeats=0,identifies=0;uint8_t roleEcho=0;
+  Mac mac{{0xd8,0x3b,0xda,0x01,0x02,0x03}};Bench* bench=nullptr;bool alive=true,secure=false,registered=false,roleAcked=false,ignoreIdentify=false;
+  std::string channels="channels=1,6,11;dwell=120",identity;std::vector<std::string> records;unsigned heartbeats=0,identifies=0,requests=0,beatMs=0;uint8_t roleEcho=0;uint32_t beatAt=0;
+  void tick(){if(alive&&beatMs&&bench->now-beatAt>=beatMs){beatAt=bench->now;bench->hear(mac,textFrame(Heartbeat,0,""));}}
   bool operator()(const Mac& to,const Bytes& data){
     if(!alive)return false;
     if(!isBroadcast(to)&&to!=mac)return false;
@@ -137,8 +212,8 @@ struct BiscuitCore {
     Frame f;if(!parseFrame(data.data(),data.size(),f))return true;
     const std::string text((const char*)f.text,f.textLength);
     switch(f.type){
-      case CoreRequest:registered=roleAcked=false;bench->hear(mac,textFrame(CoreReply,0,secure?"v=3;encrypt=1":"v=3;encrypt=0;nodes=20"));break;
-      case Identify:assert(!isBroadcast(to));++identifies;identity=text;{Bytes role=textFrame(Admin,0,std::string(1,char(1)));bench->hear(mac,role,4);}break;
+      case CoreRequest:++requests;registered=roleAcked=false;bench->hear(mac,textFrame(CoreReply,0,secure?"v=3;encrypt=1":"v=3;encrypt=0;nodes=20"));break;
+      case Identify:assert(!isBroadcast(to));++identifies;identity=text;if(!ignoreIdentify){Bytes role=textFrame(Admin,0,std::string(1,char(1)));bench->hear(mac,role,4);}break;
       case RoleAck:assert(!isBroadcast(to));roleAcked=true;roleEcho=uint8_t(f.counter);bench->hear(mac,textFrame(ConfigUpdate,0,channels),4);break;
       case ConfigAck:assert(!isBroadcast(to));if(roleAcked)registered=true;break;
       case Heartbeat:++heartbeats;break;
@@ -148,9 +223,37 @@ struct BiscuitCore {
     return true;
   }
 };
+// Piglet acting as a JCMK-style core: it signs its reply, gives a full-size
+// node a Biscuit-style role and channel list, has no ESP-NOW encryption, and
+// logs every text record as a Wi-Fi row whatever its type.
+struct PigletCore {
+  Mac mac{{0x34,0x85,0x18,1,2,3}};Bench* bench=nullptr;bool alive=true,roleAck=false,configAck=false;
+  std::string channels="channels=1,2,3,4,5,6,7;dwell=80";unsigned requests=0,unread=0;std::vector<std::string> records;
+  bool operator()(const Mac& to,const Bytes& data){
+    if(!alive)return false;
+    if(!isBroadcast(to)&&to!=mac)return false;
+    if(!isBroadcast(to)&&bench->keyed(mac)){++unread;return true;}  // sealed: its radio acknowledges, it cannot read it
+    Frame f;if(!parseFrame(data.data(),data.size(),f))return true;
+    switch(f.type){
+      case CoreRequest:
+        ++requests;bench->hear(mac,textFrame(CoreReply,0,std::string("PIGLET1\x01v3.08\0\0\0",16)));
+        if(data.size()>=FrameSize){bench->hear(mac,textFrame(Admin,0,"\x01"),20);bench->hear(mac,textFrame(ConfigUpdate,0,channels),30);}
+        break;
+      case RoleAck:roleAck=true;break;
+      case ConfigAck:configAck=true;break;
+      case Text:records.emplace_back((const char*)f.text,f.textLength);break;
+      default:break;
+    }
+    return true;
+  }
+};
 inline Mac bssid(unsigned n){return Mac{{0xaa,0xbb,0xcc,uint8_t(n>>16),uint8_t(n>>8),uint8_t(n)}};}
 inline bool hasLine(const std::vector<std::string>& lines,const std::string& line){for(auto& l:lines)if(l==line)return true;return false;}
 inline unsigned countLine(const std::vector<std::string>& lines,const std::string& line){unsigned n=0;for(auto& l:lines)if(l==line)++n;return n;}
+// Every request and heartbeat this node sends carries the opt-out, exactly 26 bytes.
+inline void assertOptOut(const Bench& b){
+  for(auto& s:b.log)if(s.data[4]==CoreRequest||s.data[4]==Heartbeat)assert(s.data.size()==FrameSize&&get16(s.data.data()+9)==26&&textOf(s.data)==OptOut);
+}
 }
 
 static void nodeWireTests(){
@@ -171,6 +274,8 @@ static void nodeWireTests(){
   assert(parseFrame(frame,20,f)&&f.textLength==9);                              // declared 200, only 9 arrived
   frame[9]=0xff;frame[10]=0xff;assert(parseFrame(frame,FrameSize,f)&&f.textLength==200);
   uint8_t other[FrameSize]={};memcpy(other,"ENOX",4);assert(!parseFrame(other,FrameSize,f));
+  // The JCMK core's opt-out text, byte for byte.
+  assert(ExternalCapabilityLength==26&&OptOut.size()==26&&!memcmp(ExternalCapability,OptOut.data(),26));
   // Core families.
   auto kind=[](const std::string& text){Bytes b=textFrame(CoreReply,0,text);Frame r;parseFrame(b.data(),b.size(),r);return classifyReply(r);};
   assert(kind("")==Core::Jcmk&&kind("encrypt=0")==Core::Biscuit&&kind("v=2;encrypt=0;x")==Core::Biscuit);
@@ -203,56 +308,63 @@ static void nodeWireTests(){
 static void nodeJcmkTests(){
   using namespace nodetest;
   Bench b(NodeFamily::Jcmk);JcmkCore core;core.bench=&b;core.alive=false;b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};
-  // A table that is missing, too small or not a power of two is refused.
-  {Bench bad(NodeFamily::Jcmk);bad.config.seen=nullptr;assert(!bad.begin());bad.config.seen=bad.table.data();bad.config.seenCount=100;assert(!bad.begin());bad.config.seenCount=4;assert(!bad.begin());}
+  // A table that is missing, empty, not a power of two or past a 16-bit slot number is refused. A small one is fine.
+  {Bench bad(NodeFamily::Jcmk);bad.config.seen=nullptr;assert(!bad.begin());bad.config.seen=bad.table.data();
+   for(size_t entries:{size_t(0),size_t(100),size_t(1)<<17})if(bad.config.seenCount=entries,bad.begin())assert(false);
+   bad.config.seenCount=4;assert(bad.begin());}
   assert(b.begin()&&b.link.active()&&b.link.status().phase==Phase::Search&&b.channel==HomeChannel);
-  // Search: full-size broadcast requests, first within 300 ms, then 300, 600, 1200, 2400, 4800, 5000 apart.
+  // Search: full-size broadcast requests carrying the opt-out, first within 300 ms, then 300, 600, 1200, 2400, 4800, 5000 apart.
   b.run(20000);
-  std::vector<uint32_t> at;for(auto& s:b.log){assert(s.data[4]==CoreRequest&&isBroadcast(s.to)&&s.data.size()==212&&get16(s.data.data()+9)==0);at.push_back(s.at);}
+  std::vector<uint32_t> at;for(auto& s:b.log){assert(s.data[4]==CoreRequest&&isBroadcast(s.to)&&s.data.size()==212);at.push_back(s.at);}
+  assertOptOut(b);
   assert(at.size()>=8&&at[0]-1000<=RequestFirstMs+3);
   const uint32_t gaps[]={300,600,1200,2400,4800,5000,5000};
   for(unsigned i=0;i<7;++i)assert(at[i+1]-at[i]==gaps[i]);
   assert(b.scanned.empty()&&b.bleStarts==0&&!b.link.status().linked);               // nothing to report to: only search
-  // The core appears: reply, then the assignment it sends right behind it.
+  // The core appears and answers.
   for(uint8_t ch=1;ch<=11;++ch)for(unsigned i=0;i<3;++i)b.world[ch].push_back({bssid(ch*16+i),"Net "+std::to_string(ch)+"-"+std::to_string(i),i==0?Auth::Open:i==1?Auth::Wpa2:Auth::Wpa2Enterprise,ch,-40-int(ch)-int(i)});
   b.world[6].push_back({bssid(0x999),"Cafe, upstairs",Auth::Wpa3,6,-52});
   b.bleWorld.push_back({Mac{{0x4c,0x00,0x12,0xab,0xcd,0xef}},-70});
   b.log.clear();core.alive=true;
   assert(b.until([&]{return b.link.status().linked;},6000));
-  assert(b.link.status().core==Core::Jcmk&&b.peers.at(core.mac)==Peer::Plain&&b.link.status().phase==Phase::Join);
+  assert(b.link.status().core==Core::Jcmk&&b.link.status().registered&&b.peers.at(core.mac)==Peer::Plain&&b.link.status().phase==Phase::Join);
   assert(b.until([&]{return b.link.status().cycles>=2;}));
   const Status& s=b.link.status();
-  assert(s.assigned&&!s.ownPlan&&s.planCount==11&&s.plan[0]==1&&s.plan[10]==11&&s.nodeCount==1); // 1..14 offered, 1..11 reachable
+  // It opted out of the split: the core lists it as external, sends it no range,
+  // and it scans everything it can reach itself.
+  assert(!s.assigned&&!s.ownPlan&&s.planCount==11&&s.plan[0]==1&&s.plan[10]==11&&s.nodeCount==0);
+  assert(core.find(b.self)&&core.find(b.self)->external&&core.find(b.self)->admins==0&&core.assignable()==0);
   assert(s.wifi==34&&s.ble==1&&s.sent==35&&s.failed==0&&s.dropped==0);
-  assert(core.records.size()==35);                                                   // each network told exactly once
-  assert(hasLine(core.records,"AA:BB:CC:00:00:60,Net 6-0,[OPEN],6,-46,W"));
-  assert(hasLine(core.records,"AA:BB:CC:00:00:B2,Net 11-2,[WPA2],11,-53,W"));
-  assert(hasLine(core.records,"AA:BB:CC:00:09:99,Cafe_ upstairs,[WPA3_PSK],6,-52,W"));
-  assert(hasLine(core.records,"4c:00:12:ab:cd:ef,,[BLE],0,-70,B"));
-  for(unsigned i=0;i<11;++i)assert(b.scanned[i]==i+1);                               // channels in assigned order
+  assert(core.records.size()==35&&core.logged.size()==35);                          // each network told exactly once
+  assert(hasLine(core.logged,"AA:BB:CC:00:00:60,Net 6-0,[OPEN],6,-46,W"));
+  assert(hasLine(core.logged,"AA:BB:CC:00:00:B2,Net 11-2,[WPA2],11,-53,W"));
+  assert(hasLine(core.logged,"AA:BB:CC:00:09:99,Cafe_ upstairs,[WPA3_PSK],6,-52,W"));
+  assert(hasLine(core.logged,"4c:00:12:ab:cd:ef,,[BLE],0,-70,B"));
+  for(unsigned i=0;i<11;++i)assert(b.scanned[i]==i+1);                               // channels in order
   assert(b.bleStarts>=2&&core.heartbeats>=2&&core.counters[0]==0&&core.counters[1]==1);
+  assertOptOut(b);
   // Once the core is known every report goes straight to it and its radio answers.
   for(auto& sent:b.log)if(sent.data[4]==Text||sent.data[4]==Heartbeat)assert(sent.to==core.mac);
   assert(!s.broadcast&&b.count(Identify)==0&&b.count(RoleAck)==0&&b.count(ConfigAck)==0);
   // Text counters count up from 1 so a core can acknowledge each record.
   {uint32_t expect=1;for(auto& sent:b.log)if(sent.data[4]==Text){assert(get32(sent.data.data()+5)==expect);++expect;}}
-  // A new assignment mid-run is followed. A repeated one changes nothing.
-  core.version=2;core.first=5;core.last=7;core.dirty=true;
+  // A core from before the opt-out still assigns a range: it is followed. A repeated one changes nothing.
+  atHome(b,core.mac,adminFrame(2,0,2,5,7));
   assert(b.until([&]{return b.link.status().planCount==3;}));
-  assert(s.plan[0]==6&&s.plan[1]==7&&s.plan[2]==8);
+  assert(s.assigned&&s.plan[0]==6&&s.plan[1]==7&&s.plan[2]==8&&s.nodeCount==2);
   b.run(400);b.scanned.clear();b.run(3000);assert(b.scanned.size()>=6);for(uint8_t c:b.scanned)assert(c>=6&&c<=8);
   // Only 5 GHz offered: nothing this radio can reach, so it covers all of 2.4 GHz itself.
-  core.version=3;core.first=20;core.last=39;core.dirty=true;
+  atHome(b,core.mac,adminFrame(3,1,2,20,39));
   assert(b.until([&]{return b.link.status().ownPlan;}));assert(s.planCount==11&&s.assigned);
   // A nonsense range means "everything", as on the reference node.
-  core.version=4;core.first=30;core.last=2;core.dirty=true;
+  atHome(b,core.mac,adminFrame(4,0,1,30,2));
   assert(b.until([&]{return !b.link.status().ownPlan;}));assert(s.planCount==11&&s.plan[0]==1);
-  core.version=5;core.first=0;core.last=200;core.dirty=true;b.run(4000);assert(s.planCount==11&&!s.ownPlan);
+  atHome(b,core.mac,adminFrame(5,0,1,0,200));b.run(4000);assert(s.planCount==11&&!s.ownPlan);
   // An assignment that differs only in range, same version (a core that restarted), is still applied.
-  core.first=0;core.last=0;core.dirty=true;assert(b.until([&]{return b.link.status().planCount==1;}));assert(s.plan[0]==1);
+  atHome(b,core.mac,adminFrame(5,0,1,0,0));assert(b.until([&]{return b.link.status().planCount==1;}));assert(s.plan[0]==1);
   // Frames from anyone but the linked core cannot steer the node.
   const Mac stranger{{2,2,2,2,2,2}};
-  b.hear(stranger,adminFrame(9,0,1,3,3));b.hear(stranger,textFrame(ConfigUpdate,0,"channels=9"));b.hear(stranger,textFrame(Admin,0,"\x02"));
+  atHome(b,stranger,adminFrame(9,0,1,3,3));b.hear(stranger,textFrame(ConfigUpdate,0,"channels=9"));b.hear(stranger,textFrame(Admin,0,"\x02"));
   b.run(700);assert(s.planCount==1&&s.plan[0]==1&&b.count(RoleAck)==0&&b.count(ConfigAck)==0);
   // Nothing new around: no repeats on the air, heartbeats continue.
   const size_t told=core.records.size();const unsigned beats=core.heartbeats;b.run(5000);
@@ -260,23 +372,57 @@ static void nodeJcmkTests(){
   // The core goes away. After 30 s of silence the node searches again and scans nothing.
   core.alive=false;const uint32_t lostFrom=b.now;
   assert(b.until([&]{return !b.link.status().linked;},40000));
-  assert(b.now-lostFrom>=CoreLostMs-3000&&b.now-lostFrom<=CoreLostMs+3000&&s.losses==1&&s.phase==Phase::Search&&!b.peers.count(core.mac));
+  assert(b.now-lostFrom>=CoreLostMs-3000&&b.now-lostFrom<=CoreLostMs+3000&&s.losses==1&&s.phase==Phase::Search&&!b.peers.count(core.mac)&&!s.registered);
   assert(s.failed==0);                                                               // nothing was waiting to be told
   b.scanned.clear();b.run(8000);assert(b.scanned.empty()&&!b.bleOn&&!b.scanning);
   // It comes back (restarted, so it knows nothing): everything is told again, nothing is counted twice.
-  core.alive=true;core.dirty=true;core.known=false;core.version=1;core.first=0;core.last=13;core.records.clear();
+  core.restart();core.alive=true;
   assert(b.until([&]{return b.link.status().linked;},7000));
   assert(b.until([&]{return core.records.size()>=35;}));b.run(3000);
-  assert(core.records.size()==35&&s.wifi==34&&s.ble==1&&s.links==2);
+  assert(core.records.size()==35&&core.logged.size()==35&&s.wifi==34&&s.ble==1&&s.links==2&&s.planCount==11&&!s.assigned);
   // Leaving node mode stops every radio activity and forgets the core.
   b.until([&]{return b.scanning;});b.link.end();
-  assert(!b.link.active()&&!b.scanning&&!b.bleOn&&!b.peers.count(core.mac)&&s.phase==Phase::Off);
+  assert(!b.link.active()&&!b.scanning&&!b.bleOn&&!b.peers.count(core.mac)&&s.phase==Phase::Off&&!s.registered);
   const size_t quiet=b.log.size();b.run(2000);assert(b.log.size()==quiet);
+}
+
+static void nodeRigTests(){
+  using namespace nodetest;
+  // A JCMK rig. Its core scans nothing; its dual-band nodes share the core's 40
+  // channels. Joining the rig in any order takes none of them away: the core
+  // lists this node as external and never sends it a range.
+  const Mac c5a{{0x60,0x55,0xf9,0x0a,0x10,0x20}},c5b{{0x60,0x55,0xf9,0x0b,0x30,0x40}};
+  for(unsigned order=0;order<3;++order){           // 0: this node first, 1: after one C5, 2: between two C5s
+    Bench b(NodeFamily::Jcmk);JcmkCore core;core.bench=&b;b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};
+    std::vector<Mac> rig{c5a};if(order==2)rig.push_back(c5b);
+    b.tick=[&]{if(b.now%3000==0)for(auto& m:rig)if(core.find(m))core.node(m,Heartbeat);};
+    if(order)core.node(c5a,CoreRequest);
+    assert(b.begin());assert(b.until([&]{return b.link.status().linked;},6000));b.run(3000);
+    if(!order)core.node(c5a,CoreRequest);
+    if(order==2)core.node(c5b,CoreRequest);
+    b.run(70000);                                   // past the core's 60 s node timeout: nobody is dropped
+    const JcmkCore::Node* me=core.find(b.self);const Status& s=b.link.status();
+    assert(me&&me->external&&me->admins==0&&core.assignable()==rig.size()&&core.coversAll());
+    for(auto& m:rig)assert(core.find(m)&&!core.find(m)->external&&core.find(m)->admins>=1);
+    if(order<2)assert(core.find(c5a)->first==0&&core.find(c5a)->last==ChannelCount-1);
+    assert(s.linked&&s.losses==0&&!s.assigned&&s.planCount==11&&s.nodeCount==0&&b.sealedHeard==0);
+    assertOptOut(b);
+  }
+  // BISCUIT NODE searching next to a JCMK rig: the core notes it as external and the rig keeps its channels.
+  {Bench b(NodeFamily::Biscuit);JcmkCore core;core.bench=&b;b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};
+   b.tick=[&]{if(b.now%3000==0&&core.find(c5a))core.node(c5a,Heartbeat);};core.node(c5a,CoreRequest);
+   assert(b.begin());b.run(70000);const Status& s=b.link.status();
+   assert(!s.linked&&s.other==Core::Jcmk&&core.requests>=14&&b.scanned.empty()&&b.peers.empty());
+   assert(core.find(b.self)&&core.find(b.self)->external&&core.find(b.self)->admins==0);
+   assert(core.find(c5a)->first==0&&core.find(c5a)->last==ChannelCount-1&&core.coversAll());
+   assertOptOut(b);}
 }
 
 static void nodeBiscuitTests(){
   using namespace nodetest;
-  Bench b(NodeFamily::Biscuit);BiscuitCore core;core.bench=&b;b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};
+  // A Biscuit that sends on its own now and then, as its own nodes expect.
+  Bench b(NodeFamily::Biscuit);BiscuitCore core;core.bench=&b;core.beatMs=1000;b.tick=[&]{core.tick();};
+  b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};
   for(uint8_t ch=1;ch<=11;++ch)b.world[ch].push_back({bssid(ch),"B"+std::to_string(ch),ch==6?Auth::Wpa2Enterprise:ch==11?Auth::Wapi:Auth::Wpa2,ch,-60});
   b.bleWorld.push_back({Mac{{1,2,3,4,5,6}},-50});
   assert(b.begin());
@@ -284,47 +430,136 @@ static void nodeBiscuitTests(){
   // Identify, role acknowledgement and channel acknowledgement, each straight to the Manager.
   assert(core.identifies==1&&core.identity=="DragonDetector:0.14.8"&&core.roleEcho==1&&b.count(Identify)==1&&b.count(RoleAck)==1&&b.count(ConfigAck)==1);
   const Status& s=b.link.status();
-  assert(s.linked&&s.core==Core::Biscuit&&s.assigned&&s.role==1&&s.planCount==3&&s.plan[0]==1&&s.plan[1]==6&&s.plan[2]==11&&s.dwellMs==120);
+  assert(s.linked&&s.registered&&s.core==Core::Biscuit&&s.assigned&&s.role==1&&s.planCount==3&&s.plan[0]==1&&s.plan[1]==6&&s.plan[2]==11&&s.dwellMs==120);
   assert(b.until([&]{return b.link.status().cycles>=3;}));
   assert(core.records.size()==3&&s.wifi==3&&s.ble==0&&b.bleStarts==0);               // Wi-Fi only towards a Biscuit
   assert(hasLine(core.records,"AA:BB:CC:00:00:06,B6,[WPA2_ENTERPRISE],6,-60,W")&&hasLine(core.records,"AA:BB:CC:00:00:0B,B11,[UNDEFINED],11,-60,W"));
   for(uint8_t c:b.scanned)assert(c==1||c==6||c==11);
   for(auto& sent:b.log)if(sent.data[4]!=CoreRequest)assert(sent.to==core.mac);
-  assert(core.heartbeats>=3);
+  assert(core.heartbeats>=3);assertOptOut(b);                                       // a Biscuit ignores the text
   // Slightly stronger: not repeated. Clearly stronger: told again so the Manager can place it better.
   b.world[6][0].rssi=-55;b.run(3000);assert(core.records.size()==3);
   b.world[6][0].rssi=-52;assert(b.until([&]{return core.records.size()==4;}));
   assert(core.records.back()=="AA:BB:CC:00:00:06,B6,[WPA2_ENTERPRISE],6,-52,W");b.run(3000);assert(core.records.size()==4&&s.wifi==3);
   // The Manager changes the plan: listed order is kept, channels this radio cannot reach are skipped.
-  b.hear(core.mac,textFrame(ConfigUpdate,0,"channels=149,11,36,3,104,3;dwell=9000"));
+  unsigned acked=b.count(ConfigAck);
+  atHome(b,core.mac,textFrame(ConfigUpdate,0,"channels=149,11,36,3,104,3;dwell=9000"));
   assert(b.until([&]{return b.link.status().planCount==2;}));
   assert(s.plan[0]==11&&s.plan[1]==3&&s.dwellMs==DwellMaxMs);
-  assert(b.until([&]{return b.count(ConfigAck)==2;},2000));                          // acknowledged on the next visit home
-  b.hear(core.mac,textFrame(ConfigUpdate,0,"channels=36,40,44;dwell=10"));           // nothing reachable
+  assert(b.until([&]{return b.count(ConfigAck)==acked+1;},2000));
+  atHome(b,core.mac,textFrame(ConfigUpdate,0,"channels=36,40,44;dwell=10"));           // nothing reachable
   assert(b.until([&]{return b.link.status().ownPlan;}));assert(s.planCount==11&&s.dwellMs==DwellMinMs&&s.assigned);
-  // Malformed lists are discarded whole and still acknowledged.
-  const char* bad[]={"channels=1,x,3","channels=1,,3","channels=1,2,","channels=15","channels=1 2","chan=1,2","channels=","channels=99999999999","","channels=1;2"};
-  unsigned acked=b.count(ConfigAck);
+  // Read as the reference node reads it: spaces before a number, a trailing comma,
+  // a sign and channels outside the table are fine. Anything else discards the list.
+  std::vector<std::pair<std::string,std::string>> good={{"channels=1,6,11,;dwell=80","1 6 11"},{"channels=1, 6,\t11;dwell=80","1 6 11"},{"channels= 1,6,11","1 6 11"},
+    {"channels=1,6,11,15","1 6 11"},{"channels=181,1,6,11,255","1 6 11"},{"channels=+6","6"},{"channels=1,2,","1 2"},{"channels=01,006","1 6"},{"channels=1;2","1"}};
+  {std::string longest="channels=";for(unsigned i=0;i<ChannelCount+2;++i)longest+="1,";good.push_back({longest+"x","1"});} // nothing past 42 entries is read
+  good.push_back({std::string("channels=1,6\0junk;dwell=9",25),"1 6"});                // a counted terminator ends the text
+  for(auto& g:good){
+    atHome(b,core.mac,textFrame(ConfigUpdate,0,"channels=5"));assert(b.until([&]{return b.link.status().planCount==1&&b.link.status().plan[0]==5;}));
+    atHome(b,core.mac,textFrame(ConfigUpdate,0,g.first));
+    assert(b.until([&]{return b.link.status().plan[0]!=5;}));
+    std::string plan;for(uint8_t i=0;i<s.planCount;++i)plan+=(i?" ":"")+std::to_string(s.plan[i]);
+    assert(plan==g.second&&s.assigned&&!s.ownPlan);
+  }
+  const char* bad[]={"channels=1,x,3","channels=1,,3","channels=15","channels=1 2","chan=1,2","channels=","channels=99999999999","","channels=0,1",
+    "channels=1,256","channels=1,6, ;dwell=80","channels=-1","channels=1 ,6","channels=,1","channels=6\n","channels=1,2,3x"};
+  acked=b.count(ConfigAck);
   for(const char* text:bad){
-    if(!strcmp(text,"channels=1;2"))continue;
-    b.hear(core.mac,textFrame(ConfigUpdate,0,"channels=5"));b.until([&]{return b.link.status().planCount==1;});
-    b.hear(core.mac,textFrame(ConfigUpdate,0,text));
+    atHome(b,core.mac,textFrame(ConfigUpdate,0,"channels=5"));b.until([&]{return b.link.status().planCount==1;});
+    atHome(b,core.mac,textFrame(ConfigUpdate,0,text));
     assert(b.until([&]{return b.link.status().planCount==11;}));
     assert(!s.assigned&&!s.ownPlan);acked+=2;
-    b.until([&]{return b.count(ConfigAck)==acked;});assert(b.count(ConfigAck)==acked);
+    b.until([&]{return b.count(ConfigAck)==acked;});assert(b.count(ConfigAck)==acked);  // malformed or not, it is acknowledged
   }
-  b.hear(core.mac,textFrame(ConfigUpdate,0,"channels=1;2"));assert(b.until([&]{return b.link.status().planCount==1;}));assert(s.assigned);
   // A short type-10 frame is not a Biscuit config at all.
-  b.run(900);
-  {Bytes cut=textFrame(ConfigUpdate,0,"channels=7");cut.resize(100);const unsigned before=b.count(ConfigAck);b.hear(core.mac,cut);b.run(900);assert(s.plan[0]==1&&b.count(ConfigAck)==before);}
+  atHome(b,core.mac,textFrame(ConfigUpdate,0,"channels=1"));assert(b.until([&]{return b.link.status().planCount==1;}));b.run(900);
+  {Bytes cut=textFrame(ConfigUpdate,0,"channels=7");cut.resize(100);const unsigned before=b.count(ConfigAck);atHome(b,core.mac,cut);b.run(900);assert(s.plan[0]==1&&b.count(ConfigAck)==before);}
   // Role byte missing: the counter's low byte is echoed instead.
-  {const unsigned before=b.count(RoleAck);b.hear(core.mac,textFrame(Admin,0x1234,""));assert(b.until([&]{return b.count(RoleAck)==before+1;}));
+  {const unsigned before=b.count(RoleAck);atHome(b,core.mac,textFrame(Admin,0x1234,""));assert(b.until([&]{return b.count(RoleAck)==before+1;}));
    uint32_t echoed=0;for(auto& sent:b.log)if(sent.data[4]==RoleAck)echoed=get32(sent.data.data()+5);assert(echoed==0x34);}
-  // The Manager switches to Secure mode: this node cannot follow, says so, and stops reporting.
-  core.secure=true;b.hear(core.mac,textFrame(CoreReply,0,"encrypt=1"));
-  assert(b.until([&]{return !b.link.status().linked;}));assert(s.other==Core::BiscuitSecure&&s.phase==Phase::Search);
+  // It kept talking, so in all this time it was never asked to answer, and never re-registered.
+  assert(core.requests==1&&core.identifies==1&&s.registered&&s.losses==0);
+  // The Manager switches to Secure mode and has nothing more for this node: the next question finds out.
+  core.secure=true;core.beatMs=0;
+  assert(b.until([&]{return !b.link.status().linked;},15000));assert(s.other==Core::BiscuitSecure&&s.phase==Phase::Search&&!s.registered&&core.requests==2);
   b.run(6000);assert(!s.linked&&s.other==Core::BiscuitSecure);                       // every answer renews the hint
   core.alive=false;b.run(OtherCoreMs+6000);assert(s.other==Core::None);              // and it fades once the core is gone
+}
+
+static void nodeBiscuitRecoveryTests(){
+  using namespace nodetest;
+  // These Biscuits never send on their own: the node has to ask, about every
+  // ten seconds, and the Biscuit takes each question as a new node.
+  auto rig=[](Bench& b,BiscuitCore& core){core.bench=&b;for(uint8_t ch=1;ch<=11;++ch)b.world[ch].push_back({bssid(ch),"R"+std::to_string(ch),Auth::Wpa2,ch,-60});};
+  auto net=[](unsigned n,uint8_t ch){return Ap{bssid(0x500+n),"late"+std::to_string(n),Auth::Open,ch,-55};};
+  auto line=[](unsigned n,uint8_t ch){char l[64];snprintf(l,sizeof(l),"AA:BB:CC:00:%02X:%02X,late%u,[OPEN],%u,-55,W",(0x500+n)>>8&0xff,(0x500+n)&0xff,n,ch);return std::string(l);};
+  // One handshake step lost on the air, or refused by the radio: it is offered again at once.
+  for(uint8_t lost:{uint8_t(Identify),uint8_t(RoleAck),uint8_t(ConfigAck)})for(bool refused:{false,true}){
+    Bench b(NodeFamily::Biscuit);BiscuitCore core;rig(b,core);unsigned seen=0;
+    b.air=[&](const Mac& to,const Bytes& d){if(!refused&&d[4]==lost&&++seen==1)return false;return core(to,d);};
+    if(refused)b.refuse=[&](const Bytes& d){return d[4]==lost&&++seen==1;};
+    assert(b.begin());assert(b.until([&]{return core.registered;},2000));
+    assert(b.link.status().registered&&b.count(lost)==(refused?1u:2u)&&core.identifies==1);
+    assert(b.until([&]{return core.records.size()==3;},5000));
+  }
+  // Every try of the first Identify lost: it is sent again about two seconds later.
+  // What was reported meanwhile reaches the Biscuit with the one-minute refresh.
+  {Bench b(NodeFamily::Biscuit);BiscuitCore core;rig(b,core);unsigned ids=0;
+   b.air=[&](const Mac& to,const Bytes& d){if(d[4]==Identify&&++ids<=SendTries)return false;return core(to,d);};
+   assert(b.begin());assert(b.until([&]{return b.link.status().linked;}));const uint32_t at=b.now;assert(!b.link.status().registered);
+   assert(b.until([&]{return core.registered;},6000));assert(b.now-at>=IdentifyRetryMs&&b.count(Identify)==SendTries+1u&&b.link.status().registered);
+   b.world[6].push_back(net(1,6));assert(b.until([&]{return hasLine(core.records,line(1,6));},5000));
+   assert(b.until([&]{return core.records.size()==4;},70000));}
+  // The Biscuit restarts for 3 s and forgets the node. Its radio acknowledges
+  // again at once, which proves nothing; the next question finds out.
+  {Bench b(NodeFamily::Biscuit);BiscuitCore core;rig(b,core);b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};
+   assert(b.begin());assert(b.until([&]{return core.registered;},3000));b.run(4000);
+   core.alive=false;b.run(3000);core.alive=true;core.registered=core.roleAcked=false;const unsigned ids=core.identifies;
+   assert(b.until([&]{return core.registered;},15000));assert(core.identifies>ids&&b.link.status().linked&&b.link.status().registered&&b.link.status().losses==0);
+   b.world[11].push_back(net(2,11));assert(b.until([&]{return hasLine(core.records,line(2,11));},5000));}
+  // Switched to Secure without a restart: the next question finds out.
+  {Bench b(NodeFamily::Biscuit);BiscuitCore core;rig(b,core);b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};
+   assert(b.begin());assert(b.until([&]{return core.registered;},3000));b.run(2000);core.secure=true;
+   assert(b.until([&]{return !b.link.status().linked;},15000));assert(b.link.status().other==Core::BiscuitSecure);}
+  // A Biscuit whose radio never acknowledges a unicast, though it hears them:
+  // reports go by broadcast, every question it answers is followed by Identify,
+  // and what is found keeps reaching it.
+  {Bench b(NodeFamily::Biscuit);BiscuitCore core;rig(b,core);b.air=[&](const Mac& to,const Bytes& d){const bool heard=core(to,d);return isBroadcast(to)&&heard;};
+   assert(b.begin());assert(b.until([&]{return b.link.status().broadcast;},9000));const size_t from=b.log.size();
+   for(unsigned i=0;i<7;++i){b.run(9000);const uint8_t ch=i%3==0?1:i%3==1?6:11;b.world[ch].push_back(net(10+i,ch));assert(b.until([&]{return hasLine(core.records,line(10+i,ch));},5000));}
+   const Status& s=b.link.status();assert(s.linked&&s.losses==0&&core.requests>=6&&core.identifies>=6);
+   // A missing acknowledgement says nothing here, so nothing is sent twice for it.
+   unsigned run=0;for(size_t i=from;i<b.log.size();++i){if(b.log[i].data[4]==Identify)assert(++run==1);else if(b.log[i].data[4]==CoreRequest)run=0;}}
+  // A Biscuit that never gives a role: Identify about every two seconds, five
+  // tries per registration, then the node waits, still linked, and keeps reporting.
+  for(unsigned beat:{1000u,0u}){
+    Bench b(NodeFamily::Biscuit);BiscuitCore core;rig(b,core);core.ignoreIdentify=true;core.beatMs=beat;b.tick=[&]{core.tick();};
+    b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};
+    assert(b.begin());b.run(60000);const Status& s=b.link.status();
+    assert(s.linked&&!s.registered&&s.losses==0&&s.sent>=3);
+    unsigned tries=0,run=0,most=0;uint32_t last=0;
+    for(auto& sent:b.log){
+      if(sent.data[4]==Identify){if(run)assert(sent.at-last>=IdentifyRetryMs&&sent.at-last<=3500);last=sent.at;++tries;most=std::max(most,++run);}
+      else if(sent.data[4]==CoreRequest)run=0;
+    }
+    // Heard from all along: one registration, five tries. Asked every ten seconds: five at most each time.
+    if(beat)assert(tries==IdentifyTries&&core.requests==1);else assert(most<=IdentifyTries&&core.requests>=4&&core.identifies>=4*3);
+  }
+  // A quiet Biscuit is asked every ten seconds and gives the role again each
+  // time: the node never stops counting as registered, so the screen never flickers.
+  {Bench b(NodeFamily::Biscuit);BiscuitCore core;rig(b,core);b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};
+   assert(b.begin());assert(b.until([&]{return b.link.status().registered;},3000));
+   bool dropped=false;b.tick=[&]{if(!b.link.status().registered)dropped=true;};
+   b.run(60000);b.tick=nullptr;
+   assert(!dropped&&core.requests>=5&&core.identifies>=5&&b.link.status().linked&&b.link.status().losses==0);}
+  // The same Biscuit stops giving a role: after the last unanswered try the node no longer counts as registered.
+  {Bench b(NodeFamily::Biscuit);BiscuitCore core;rig(b,core);b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};
+   assert(b.begin());assert(b.until([&]{return b.link.status().registered;},3000));
+   core.ignoreIdentify=true;const unsigned asked=core.requests;
+   assert(b.until([&]{return !b.link.status().registered;},30000));
+   assert(core.requests>asked&&b.link.status().linked&&b.link.status().losses==0);
+   core.ignoreIdentify=false;assert(b.until([&]{return b.link.status().registered;},30000));}
 }
 
 static void nodeFamilyTests(){
@@ -336,20 +571,30 @@ static void nodeFamilyTests(){
   {Bench b(NodeFamily::Jcmk);BiscuitCore core;core.bench=&b;b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};
    assert(b.begin());b.run(12000);const Status& s=b.link.status();
    assert(!s.linked&&s.other==Core::Biscuit&&core.identifies==0&&b.scanned.empty());}
-  // A Piglet core signs its reply and sends Biscuit-style role and channel messages to full-size nodes.
-  {Bench b(NodeFamily::Jcmk);const Mac piglet{{0x34,0x85,0x18,1,2,3}};std::vector<std::string> records;bool roleAck=false,configAck=false;
-   b.air=[&](const Mac& to,const Bytes& d){
-     if(!isBroadcast(to)&&to!=piglet)return false;
-     Frame f;parseFrame(d.data(),d.size(),f);
-     if(f.type==CoreRequest){b.hear(piglet,textFrame(CoreReply,0,std::string("PIGLET1\x01v3.08\0\0\0",16)));b.hear(piglet,textFrame(Admin,0,"\x01"),20);b.hear(piglet,textFrame(ConfigUpdate,0,"channels=1,2,3,4,5,6,7;dwell=80"),30);}
-     if(f.type==RoleAck)roleAck=true;
-     if(f.type==ConfigAck)configAck=true;
-     if(f.type==Text)records.push_back(std::string((const char*)f.text,f.textLength));
-     return true;};
+  // A Piglet core signs its reply and sends Biscuit-style role and channel messages
+  // to full-size nodes. It logs every record as Wi-Fi, so it gets Wi-Fi only.
+  {Bench b(NodeFamily::Jcmk);PigletCore piglet;piglet.bench=&b;b.air=[&](const Mac& to,const Bytes& d){return piglet(to,d);};
    b.world[7].push_back({bssid(7),"seven",Auth::Wpa2Enterprise,7,-33});b.world[8].push_back({bssid(8),"eight",Auth::Open,8,-33});
-   assert(b.begin());assert(b.until([&]{return b.link.status().cycles>=2;}));const Status& s=b.link.status();
-   assert(s.core==Core::Piglet&&roleAck&&configAck&&s.planCount==7&&s.plan[6]==7&&b.count(Identify)==0);
-   assert(records.size()==1&&records[0]=="AA:BB:CC:00:00:07,seven,[WPA2],7,-33,W");}   // JCMK wording, channel 8 not assigned
+   b.bleWorld.push_back({Mac{{0x11,0x22,0x33,0x44,0x55,0x66}},-70});
+   assert(b.begin());assert(b.until([&]{return b.link.status().cycles>=3;}));const Status& s=b.link.status();
+   assert(s.core==Core::Piglet&&s.registered&&piglet.roleAck&&piglet.configAck&&s.planCount==7&&s.plan[6]==7&&b.count(Identify)==0);
+   assert(piglet.records.size()==1&&piglet.records[0]=="AA:BB:CC:00:00:07,seven,[WPA2],7,-33,W");   // JCMK wording, channel 8 not assigned
+   b.run(70000);
+   for(auto& r:piglet.records)assert(r.back()=='W');
+   assert(b.bleStarts==0&&s.ble==0&&!b.bleOn&&piglet.unread==0);
+   assertOptOut(b);}
+  // A keyed JCMK Node does not join a Piglet core, which has no encryption: it
+  // says so and keeps looking. A keyed JCMK core heard later is joined.
+  {Bench b(NodeFamily::Jcmk);PigletCore piglet;JcmkCore core;piglet.bench=core.bench=&b;core.keyed=true;core.alive=false;b.config.encrypted=true;
+   b.air=[&](const Mac& to,const Bytes& d){const bool p=piglet(to,d);const bool j=core(to,d);return p||j;};
+   assert(b.begin());b.run(12000);const Status& s=b.link.status();
+   assert(!s.linked&&s.other==Core::Piglet&&piglet.requests>=5&&!b.peers.count(piglet.mac)&&piglet.unread==0&&b.scanned.empty());
+   core.alive=true;assert(b.until([&]{return b.link.status().linked;},7000));
+   assert(s.core==Core::Jcmk&&sameMac(s.coreMac,core.mac.data())&&b.keyed(core.mac)&&!b.peers.count(piglet.mac));
+   b.run(20000);assert(s.linked&&piglet.unread==0&&piglet.records.empty()&&core.unread==0);
+   // The same Piglet with no key set is joined as before.
+   Bench open(NodeFamily::Jcmk);PigletCore p2;p2.bench=&open;open.air=[&](const Mac& to,const Bytes& d){return p2(to,d);};
+   assert(open.begin());assert(open.until([&]{return open.link.status().linked;},6000));assert(open.link.status().core==Core::Piglet&&open.peers.at(p2.mac)==Peer::Plain);}
   // Bound to one core: requests go to it alone and other cores are not joined.
   {Bench b(NodeFamily::Jcmk);JcmkCore wanted,loud;wanted.bench=loud.bench=&b;loud.mac=Mac{{9,9,9,9,9,9}};wanted.alive=false;
    b.config.bound=true;memcpy(b.config.boundCore,wanted.mac.data(),6);
@@ -382,8 +627,9 @@ static void nodeDeliveryTests(){
    auto different=[&]{std::map<std::string,unsigned> seen;for(auto& r:core.records)++seen[r];return seen.size();};
    assert(b.until([&]{return different()==11;}));const Status& s=b.link.status();
    b.run(5000);const size_t settled=core.records.size();b.run(5000);assert(core.records.size()==settled); // and then no repeats
-   const unsigned requests=core.requests;b.run(45000);
+   const unsigned requests=core.requests;const size_t from=b.log.size();b.run(45000);
    assert(s.linked&&s.losses==0&&core.requests>=requests+3&&core.requests<=requests+6);   // one probe per 10 s of silence
+   for(size_t i=from;i<b.log.size();++i)if(b.log[i].data[4]==CoreRequest)assert(isBroadcast(b.log[i].to)); // the way it reports
    assert(s.failed<=6);                                                                  // only the first tries, before it switched
    core.alive=false;assert(b.until([&]{return !b.link.status().linked;},40000));}
   // Record acknowledgements from a core prove it is alive and are counted.
@@ -417,15 +663,24 @@ static void nodeDeliveryTests(){
    b.until([&]{return b.inFlight;});b.inFlight=false;const uint32_t cycles=b.link.status().cycles;
    assert(b.until([&]{return b.link.status().cycles>=cycles+2;}));}
   // More networks on one channel than the queue holds: the rest follow on later passes.
-  {Bench b(NodeFamily::Jcmk,1024);JcmkCore core;core.bench=&b;core.first=0;core.last=0;b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};
+  {Bench b(NodeFamily::Jcmk,1024);JcmkCore core;core.bench=&b;b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};
    for(unsigned i=0;i<150;++i)b.world[1].push_back({bssid(0x1000+i),"crowd"+std::to_string(i),Auth::Wpa2,1,-70});
    assert(b.begin());assert(b.until([&]{return core.records.size()>=150;},60000));b.run(3000);const Status& s=b.link.status();
    std::map<std::string,unsigned> seen;for(auto& r:core.records)++seen[r];
    assert(seen.size()==150&&core.records.size()==150&&s.wifi==150&&s.dropped>0&&s.sent==150);}
-  // A full table replaces old entries instead of failing; counting continues.
-  {Bench b(NodeFamily::Jcmk,8);JcmkCore core;core.bench=&b;core.first=0;core.last=0;b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};
+  // A table smaller than the probe window still works: a full one replaces old entries instead of failing.
+  {Bench b(NodeFamily::Jcmk,8);JcmkCore core;core.bench=&b;b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};
    for(unsigned i=0;i<40;++i)b.world[1].push_back({bssid(0x2000+i),"t",Auth::Open,1,-70});
    assert(b.begin());b.run(8000);assert(b.link.status().wifi>=40&&core.records.size()>=40&&b.link.status().linked);}
+  // Bluetooth addresses churning through a crowded table push out other
+  // addresses, not networks: a network heard again is not counted again.
+  {Bench b(NodeFamily::Jcmk,256);JcmkCore core;core.bench=&b;b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};
+   for(unsigned i=0;i<48;++i)b.world[uint8_t(1+i%11)].push_back({bssid(0x3000+i),"w",Auth::Open,uint8_t(1+i%11),-60});
+   assert(b.begin());assert(b.until([&]{return b.link.status().wifi==48;}));
+   unsigned batch=0;
+   b.tick=[&]{if(b.now%1500)return;b.bleWorld.clear();for(unsigned i=0;i<40;++i)b.bleWorld.push_back({Mac{{0x40,0x11,uint8_t(batch>>8),uint8_t(batch),uint8_t(i),0x77}},-70});++batch;};
+   b.run(60000);const Status& s=b.link.status();
+   assert(s.ble>=1000&&s.wifi==48&&s.linked);}
   // Scans that fail to start, or never finish, are counted and the cycle still completes.
   {Bench b(NodeFamily::Jcmk);JcmkCore core;core.bench=&b;b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};
    assert(b.begin());assert(b.until([&]{return b.link.status().linked;}));b.rejectScan=true;const uint32_t cycles=b.link.status().cycles;
@@ -439,7 +694,7 @@ static void nodeDeliveryTests(){
    assert(b.begin());b.run(30000);const Status& s=b.link.status();
    assert(b.now<0x10000&&s.linked&&s.losses==0&&s.links==1&&core.records.size()==1&&s.cycles>10);}
   {Bench b(NodeFamily::Biscuit,256,0xfffff800u);BiscuitCore core;core.bench=&b;b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};
-   assert(b.begin());b.run(20000);assert(b.link.status().linked&&b.link.status().losses==0&&core.registered);}
+   assert(b.begin());b.run(20000);assert(b.link.status().linked&&b.link.status().losses==0&&b.until([&]{return core.registered;},2000));}
 }
 
 static void nodeHostileTests(){
@@ -464,6 +719,7 @@ static void nodeHostileTests(){
       const Status& s=b.link.status();
       assert(s.planCount>=1&&s.planCount<=11);for(uint8_t i=0;i<s.planCount;++i)assert(s.plan[i]>=1&&s.plan[i]<=11);
       assert(s.dwellMs>=DwellMinMs&&s.dwellMs<=DwellMaxMs&&s.channel>=1&&s.channel<=11);
+      assert(!s.registered||s.linked);
     }
     b.link.received(nullptr,nullptr,0,0,b.now);b.link.received(core.data(),nullptr,50,0,b.now);
     b.link.wifi(nullptr,nullptr,0,Auth::Open,1,0);b.link.ble(nullptr,0);
@@ -503,7 +759,17 @@ static void nodeRepeatTests(){
     // After the refresh the weaker reading is the baseline, so the next approach is reported again.
     assert(b.until([&]{return countLine(records,"AA:BB:CC:00:00:01,near,[WPA2_PSK],1,-75,W")==1;},70000));
     b.world[1][0].rssi=-66;assert(b.until([&]{return countLine(records,"AA:BB:CC:00:00:01,near,[WPA2_PSK],1,-66,W")==1;},5000));
+    // A JCMK core receives every repeat but logs an address only once while it
+    // is among the last 200 it logged: there the first report stands.
+    if(family==NodeFamily::Jcmk)assert(jcmk.logged.size()==3&&hasLine(jcmk.logged,"AA:BB:CC:00:00:01,near,[WPA2_PSK],1,-70,W")&&jcmk.records.size()>jcmk.logged.size());
   }
+  // The JCMK core's history is 200 addresses: one that has left it is logged again.
+  {Bench b(NodeFamily::Jcmk,1024);JcmkCore core;core.bench=&b;b.config.ble=false;b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};
+   b.world[1].push_back({bssid(1),"first",Auth::Open,1,-70});
+   assert(b.begin());assert(b.until([&]{return core.logged.size()==1;}));
+   for(unsigned i=0;i<200;++i)b.world[2+i%10].push_back({bssid(0x4000+i),"crowd",Auth::Open,uint8_t(2+i%10),-70});
+   assert(b.until([&]{return core.logged.size()==201;},30000));
+   b.world[1][0].rssi=-60;assert(b.until([&]{return countLine(core.logged,"AA:BB:CC:00:00:01,first,[OPEN],1,-60,W")==1;},5000));}
   // The report clock survives the 49-day millisecond rollover.
   {Bench b(NodeFamily::Jcmk,256,0xffffffffu-30000);JcmkCore core;core.bench=&b;b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};
    b.world[3].push_back({bssid(3),"wrap",Auth::Open,3,-50});
@@ -518,19 +784,22 @@ static void nodeKeyedTests(){
   {Bench b(NodeFamily::Jcmk);JcmkCore core;core.bench=&b;core.keyed=true;b.config.encrypted=true;b.config.ble=false;
    b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};b.world[1].push_back({bssid(1),"one",Auth::Open,1,-30});
    assert(b.begin());assert(b.until([&]{return b.link.status().linked;}));const Status& s=b.link.status();
-   assert(b.keyed(core.mac));assert(b.until([&]{return s.assigned;},1000));           // the sealed assignment right behind the answer was readable
+   assert(b.keyed(core.mac)&&s.registered);
    assert(b.until([&]{return core.records.size()==1;}));
-   const unsigned asked=core.requests;b.run(45000);
+   // The core sends this node nothing sealed at all: no range (it opted out) and
+   // no acknowledgements (none on a keyed link). Nothing has to be read before the key is in.
+   assert(core.find(b.self)->external&&core.find(b.self)->admins==0&&b.sealedHeard==0&&!s.assigned);
+   const unsigned asked=core.requests;const size_t from=b.log.size();b.run(45000);
    assert(s.linked&&s.links==1&&s.losses==0&&core.unread==0);
    assert(core.requests>=asked+3&&core.requests<=asked+5);                            // asks again about every ten seconds
+   for(size_t i=from;i<b.log.size();++i)if(b.log[i].data[4]==CoreRequest)assert(b.log[i].to==core.mac); // its own core only
    assert(b.keyed(core.mac));
    // The core restarts and forgets the key. The next question puts it back; what was
    // said into the gap is said again at the next refresh.
-   core.nodeKeyed=false;core.known=false;core.dirty=true;core.version=2;core.first=0;core.last=0;
+   core.restart();
    b.world[1].push_back({bssid(9),"gap",Auth::Wpa2,1,-40});
    assert(b.until([&]{return core.unread>0;},12000));
-   assert(b.until([&]{return core.nodeKeyed;},12000));assert(s.linked&&s.losses==0);
-   assert(b.until([&]{return s.planCount==1&&s.plan[0]==1;},1000));
+   assert(b.until([&]{return core.nodeKeyed;},12000));assert(s.linked&&s.losses==0&&core.find(b.self)->external);
    assert(b.until([&]{return hasLine(core.records,"AA:BB:CC:00:00:09,gap,[WPA2_PSK],1,-40,W");},80000));
    // An answer that is lost: the key still goes back on before anything else is sent.
    core.dropReplies=1;const unsigned before=core.requests;assert(b.until([&]{return core.requests>before;},15000));
@@ -539,6 +808,12 @@ static void nodeKeyedTests(){
    core.mute=true;const uint32_t at=b.now;assert(b.until([&]{return !s.linked;},45000));
    assert(b.now-at>=10000&&b.now-at<=CoreLostMs+2000&&s.losses==1&&!b.peers.count(core.mac)); // thirty seconds after its last answer
    core.mute=false;assert(b.until([&]{return s.linked;},7000));assert(b.keyed(core.mac)&&s.links==2);}
+  // The same keyed link with a slow main loop (a frame waits up to 20 ms to be read): unchanged.
+  {Bench b(NodeFamily::Jcmk);JcmkCore core;core.bench=&b;core.keyed=true;b.config.encrypted=true;b.loopEvery=20;
+   b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};b.world[1].push_back({bssid(1),"one",Auth::Open,1,-30});
+   b.bleWorld.push_back({Mac{{0x10,0x20,0x30,0x40,0x50,0x61}},-60});
+   assert(b.begin());assert(b.until([&]{return core.logged.size()==2;}));b.run(40000);const Status& s=b.link.status();
+   assert(s.linked&&s.losses==0&&b.keyed(core.mac)&&core.unread==0&&b.sealedHeard==0&&b.sealedLost==0&&!s.assigned&&s.planCount==11);}
   // The same silent core on an open link stays linked: there the acknowledgement is proof enough.
   {Bench b(NodeFamily::Jcmk);JcmkCore core;core.bench=&b;b.config.ble=false;b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};
    assert(b.begin());assert(b.until([&]{return b.link.status().linked;}));const unsigned asked=core.requests;
@@ -559,6 +834,7 @@ static void nodeKeyedTests(){
 }
 
 static void nodeLinkTests(){
-  nodeWireTests();nodeJcmkTests();nodeBiscuitTests();nodeFamilyTests();nodeDeliveryTests();nodeHostileTests();nodeRepeatTests();nodeKeyedTests();
-  puts("PASS wardriving node link: wire format, JCMK and Biscuit handshakes, channel plans, repeats, keyed links, delivery, loss, rollover and hostile frames");
+  nodeWireTests();nodeJcmkTests();nodeRigTests();nodeBiscuitTests();nodeBiscuitRecoveryTests();nodeFamilyTests();
+  nodeDeliveryTests();nodeHostileTests();nodeRepeatTests();nodeKeyedTests();
+  puts("PASS wardriving node link: wire format, JCMK rig opt-out, Biscuit handshake and recovery, Piglet limits, channel plans, repeats, keyed links, delivery, loss, rollover and hostile frames");
 }

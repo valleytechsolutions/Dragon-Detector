@@ -121,6 +121,7 @@ void nodeStop(){if(nodeRunning)++nodeStops;nodeRunning=false;}
 const char* nodeError(){return stopwatch.running?"Stop the stopwatch first":"";}
 const dragon::node::Status& nodeStatus(){return nodeLink;}
 bool nodeBleReports(){return nodeRunningKind==NodeKind::Jcmk;}
+bool nodeKeyed(){return false;}
 ''')
 ui = (root/'firmware/src/ui_lite.cpp').read_text().replace('#include "app.h"', '#include "test_app.h"')
 harness = r'''
@@ -175,7 +176,7 @@ int main(int argc,char** argv){
  for(int i=0;i<3;++i)dialRotate(1);liteButtonEvent(P::Tap);assert(dialMenu==DialMenu::Modes&&dialChoice==0);render(argv[1],"09-modes");
  liteButtonEvent(P::Tap);assert(nodeKind()==NodeKind::Biscuit&&liteNodeHost&&nodeScreenShown()&&!dialMenuVisible());
  assert(lv_obj_get_index(liteNodeHost)==lv_obj_get_child_cnt(root)-1);lv_obj_update_layout(root);assert(lv_obj_get_width(lv_obj_get_child(liteNodeHost,0))==240);
- nodeLink.linked=true;nodeLink.core=dragon::node::Core::Biscuit;nodeLink.wifi=1284;nodeLink.sent=1302;nodeLink.channel=6;nodeLink.planCount=11;for(uint8_t i=0;i<11;++i)nodeLink.plan[i]=i+1;
+ nodeLink.linked=nodeLink.registered=true;nodeLink.core=dragon::node::Core::Biscuit;nodeLink.wifi=1284;nodeLink.sent=1302;nodeLink.channel=6;nodeLink.planCount=11;for(uint8_t i=0;i<11;++i)nodeLink.plan[i]=i+1;
  tick+=250;uiLoop();render(argv[1],"10-biscuit-node");assert(findObject(liteNodeHost,&lv_label_class,"1,284"));
  dialRotate(1);dialRotate(-1);assert(litePage==page&&!dialMenuVisible()&&liteNodeHost);
  uiNotify("Example camera detected","",nullptr,false);assert(lv_obj_has_flag(notice,LV_OBJ_FLAG_HIDDEN));
@@ -190,6 +191,12 @@ int main(int argc,char** argv){
  auto* exitButton=findObject(liteNodeHost,&lv_btn_class);assert(exitButton);
  lv_event_send(exitButton,LV_EVENT_CLICKED,nullptr);assert(nodeBusy());lv_event_send(exitButton,LV_EVENT_CLICKED,nullptr);assert(!nodeBusy()&&nodeStops==2&&liteNodeHost);
  uiLoop();assert(!liteNodeHost&&dialMenu==DialMenu::Modes&&dialChoice==1);
+ // A quick double press of the front button reaches LiteButton as one Double: it is both
+ // exit presses, from an unarmed screen as well as after a lapsed confirmation.
+ liteButtonEvent(P::Tap);assert(nodeKind()==NodeKind::Jcmk&&liteNodeHost);tick+=250;uiLoop();
+ liteButtonEvent(P::Double);assert(!nodeBusy()&&nodeStops==3&&liteNodeHost);uiLoop();assert(!liteNodeHost&&dialMenu==DialMenu::Modes&&dialChoice==1);
+ liteButtonEvent(P::Tap);assert(nodeBusy());tick+=250;uiLoop();liteButtonEvent(P::Tap);assert(nodeBusy());tick+=3100;uiLoop();
+ liteButtonEvent(P::Double);assert(!nodeBusy()&&nodeStops==4);uiLoop();assert(!liteNodeHost&&dialMenu==DialMenu::Modes&&dialChoice==1);
  // A refusal stays on Modes with the reason.
  stopwatch.toggle(stopwatchNow());dialRotate(-1);liteButtonEvent(P::Tap);assert(!nodeBusy()&&!liteNodeHost&&dialMenu==DialMenu::Modes&&!strcmp(lv_label_get_text(dialMenuNote),"Stop the stopwatch first"));
  render(argv[1],"13-modes-refused");stopwatch.toggle(stopwatchNow());nodeRefuses=true;dialRotate(1);dialRotate(-1);liteButtonEvent(P::Tap);assert(!strcmp(lv_label_get_text(dialMenuNote),"Could not start the node"));nodeRefuses=false;
@@ -203,7 +210,11 @@ int main(int argc,char** argv){
  uiShow("startup");assert(liteStartup&&!dialMenuVisible());assert(nodeStart(NodeKind::Biscuit));uiShow("node");
  assert(lv_obj_get_index(liteNodeHost)>lv_obj_get_index(liteStartup));tick+=2300;uiLoop();assert(!liteStartup&&liteNodeHost);
  nodeStop();uiShow("radar");assert(!standby&&!dialMenuVisible()&&!liteNodeHost&&lv_obj_get_child_cnt(root)==children);
- puts("PASS production Dial pages, ring/button menu navigation, timer, radio standby, Tools > Modes node screen (exit, refusal, USB, resume) and matching tile/full-frame rendering");
+ // Vector Potential: page headers use the watch-size mark, clear of the page title.
+ radarTheme=VectorPotentialTheme;refreshLiteTheme();setLitePage(LitePage::Status);tick+=200;uiLoop();lv_obj_update_layout(root);
+ {lv_area_t l,t;lv_obj_get_coords(logo,&l);lv_obj_get_coords(pageTitle,&t);assert(lv_img_get_src(logo)==&watch_logo_vp&&!lv_obj_has_flag(logo,LV_OBJ_FLAG_HIDDEN)&&l.y2<t.y1);}
+ render(argv[1],"14-status-vp");setLitePage(LitePage::Radar);assert(lv_obj_has_flag(logo,LV_OBJ_FLAG_HIDDEN));radarTheme=1;refreshLiteTheme();
+ puts("PASS production Dial pages, ring/button menu navigation, timer, radio standby, Tools > Modes node screen (exit, quick double press, refusal, USB, resume), Vector Potential headers and matching tile/full-frame rendering");
 }
 '''
 lite_main = r'''
@@ -223,7 +234,7 @@ int main(int argc,char** argv){
  tick+=100;uiLoop();assert(!strcmp(lv_label_get_text(pageSub),"Stop the stopwatch first"));render(argv[1],"lite-03-modes-refused");
  tick+=5000;uiLoop();assert(strstr(lv_label_get_text(pageSub),"Biscuit"));stopwatch.toggle(stopwatchNow());
  liteButtonEvent(P::Double);assert(nodeKind()==NodeKind::Biscuit&&liteNodeHost&&!findObject(liteNodeHost,&lv_btn_class)&&findObject(liteNodeHost,&lv_label_class,"HOLD BUTTON TO EXIT"));
- nodeLink.linked=true;nodeLink.core=dragon::node::Core::Biscuit;nodeLink.wifi=48213;nodeLink.sent=50111;nodeLink.channel=3;nodeLink.planCount=11;for(uint8_t i=0;i<11;++i)nodeLink.plan[i]=i+1;
+ nodeLink.linked=nodeLink.registered=true;nodeLink.core=dragon::node::Core::Biscuit;nodeLink.wifi=48213;nodeLink.sent=50111;nodeLink.channel=3;nodeLink.planCount=11;for(uint8_t i=0;i<11;++i)nodeLink.plan[i]=i+1;
  tick+=250;uiLoop();render(argv[1],"lite-04-biscuit-node");
  liteButtonEvent(P::Tap);liteButtonEvent(P::Double);assert(nodeBusy()&&litePage==LitePage::Modes&&liteModeChoice==0&&radarTheme==theme);
  for(const char* name:{"radar","clock","settings","startup","modes","node"}){uiShow(name);assert(nodeBusy()&&liteNodeHost&&!liteStartup&&litePage==LitePage::Modes);}
@@ -241,7 +252,11 @@ int main(int argc,char** argv){
  uiShow("startup");assert(liteStartup);assert(nodeStart(NodeKind::Jcmk));uiShow("node");
  assert(lv_obj_get_index(liteNodeHost)>lv_obj_get_index(liteStartup));tick+=2300;uiLoop();assert(!liteStartup&&liteNodeHost);
  nodeStop();uiShow("radar");assert(litePage==LitePage::Radar&&!standby&&!liteNodeHost&&lv_obj_get_child_cnt(root)==children);
- puts("PASS production Lite MODES page (tap/double/hold), node screen hold-to-exit, refusals, radio hand-back, resume over the splash and matching tile/full-frame rendering");
+ // Vector Potential: MODES keeps its title clear of the theme mark.
+ radarTheme=VectorPotentialTheme;refreshLiteTheme();setLitePage(LitePage::Modes);tick+=100;uiLoop();lv_obj_update_layout(root);
+ {lv_area_t l,t;lv_obj_get_coords(logo,&l);lv_obj_get_coords(pageTitle,&t);assert(lv_img_get_src(logo)==&watch_logo_vp&&!lv_obj_has_flag(logo,LV_OBJ_FLAG_HIDDEN)&&l.y2<t.y1);}
+ render(argv[1],"lite-07-modes-vp");setLitePage(LitePage::Radar);assert(lv_obj_has_flag(logo,LV_OBJ_FLAG_HIDDEN));radarTheme=theme;refreshLiteTheme();
+ puts("PASS production Lite MODES page (tap/double/hold), node screen hold-to-exit, refusals, radio hand-back, resume over the splash, Vector Potential header and matching tile/full-frame rendering");
 }
 '''
 def build(name, main, defines, folder):

@@ -1,6 +1,6 @@
-// BISCUIT NODE and JCMK Node session: start/stop rules, the remembered choice,
-// the optional JCMK key and core binding, and the USB commands. The radio side
-// is node_radio.inc; the protocol is node_link.h.
+// BISCUIT NODE and JCMK Node session: start/stop rules, the remembered choice
+// and its restart guard, the optional JCMK encryption and core binding, and the
+// USB commands. The radio side is node_radio.inc; the protocol is node_link.h.
 #include "node_mode.h"
 #include "app.h"
 #include "recon.h"
@@ -21,9 +21,22 @@ NodeKind running=NodeKind::None;
 uint32_t startedAt=0;
 char error[64]="";
 char identity[48]="";
-char key[65]="";            // JCMK "ESP-NOW key"; never printed
+char key[65]="";            // JCMK "ESP-NOW key", may be empty; never printed
 uint8_t core[6]{};
-bool bound=false,bleReports=true;
+bool bound=false,bleReports=true,encryption=false;     // saved; encryption is the core's "Use Encryption"
+bool linkBound=false,linkKeyed=false,linkBle=false;    // what the running link uses
+
+// Restart guard. RTC memory keeps its value through every reset except power-on,
+// so it counts the restarts in a row that came soon after a resume.
+RTC_NOINIT_ATTR volatile uint32_t resumeGuard[2];
+constexpr uint32_t ResumeGuardMagic=0x4e4f4445;       // "NODE"
+constexpr uint32_t ResumeQuickLimit=2;               // quick restarts in a row before the next resume is skipped
+constexpr uint32_t ResumeSettledMs=60000;            // a resumed node that ran this long is not a quick restart
+bool resumeWatch=false;
+uint32_t resumedAt=0;
+uint32_t quickRestarts(){return resumeGuard[0]==ResumeGuardMagic&&resumeGuard[1]<=ResumeQuickLimit?resumeGuard[1]:0;}
+void setQuickRestarts(uint32_t n){resumeGuard[0]=ResumeGuardMagic;resumeGuard[1]=n;}
+void settle(){resumeWatch=false;setQuickRestarts(0);}
 
 void say(const char* text){snprintf(error,sizeof(error),"%s",text);}
 void load(){
@@ -32,7 +45,9 @@ void load(){
   if(!prefsReady)return;
   bound=prefs.getBytesLength("core")==6&&prefs.getBytes("core",core,6)==6;
   bleReports=prefs.getBool("ble",true);
-  String saved=prefs.getString("key","");snprintf(key,sizeof(key),"%s",saved.c_str());
+  const bool hasKey=prefs.isKey("key");
+  String saved=hasKey?prefs.getString("key",""):String();snprintf(key,sizeof(key),"%s",saved.c_str());
+  encryption=prefs.getBool("enc",hasKey);   // settings saved before "enc" existed: a stored key meant encryption on
   saved=prefs.getString("id","");snprintf(identity,sizeof(identity),"%s",saved.c_str());
 }
 NodeKind remembered(){
@@ -41,7 +56,8 @@ NodeKind remembered(){
   return mode==1?NodeKind::Biscuit:mode==2?NodeKind::Jcmk:NodeKind::None;
 }
 void remember(NodeKind kind){if(prefsReady)prefs.putUChar("mode",uint8_t(kind));}
-// JustCallMeKoko derives both ESP-NOW keys from the text key the same way.
+// JustCallMeKoko derives both ESP-NOW keys from the text key the same way,
+// the empty text included (its "Use Encryption" with no ENOW Key typed).
 void derive(const char* suffix,uint8_t* out){
   uint8_t hash[32];String text=String(key)+suffix;
   mbedtls_sha256(reinterpret_cast<const unsigned char*>(text.c_str()),text.length(),hash,0);
@@ -55,8 +71,8 @@ bool parseMac(const String& text,uint8_t* mac){
   for(unsigned i=0;i<6;++i)mac[i]=uint8_t(v[i]);
   return !(mac[0]&1);       // a core is one device, never a group address
 }
-bool printable(const String& text,size_t limit){
-  if(!text.length()||text.length()>limit)return false;
+bool printable(const String& text,size_t limit,bool empty=false){
+  if((!empty&&!text.length())||text.length()>limit)return false;
   for(size_t i=0;i<text.length();++i){const char c=text[i];if(c<0x20||c==0x7f)return false;}
   return true;
 }
@@ -69,14 +85,49 @@ bool startRadio(NodeKind kind){
   config.ble=bleReports;
   config.bound=bound;memcpy(config.boundCore,core,6);
   uint8_t pmk[16],lmk[16];
-  const bool keyed=kind==NodeKind::Jcmk&&*key;
+  const bool keyed=kind==NodeKind::Jcmk&&encryption;
   if(keyed){derive("_pmk",pmk);derive("_lmk",lmk);}
   config.encrypted=keyed;
   char why[64]="";
   const bool ok=radioNodeBegin(config,keyed?pmk:nullptr,keyed?lmk:nullptr,why,sizeof(why));
   memset(pmk,0,sizeof(pmk));memset(lmk,0,sizeof(lmk));
   if(!ok){say(why);return false;}
-  running=kind;startedAt=millis();return true;
+  running=kind;startedAt=millis();
+  linkBound=bound;linkKeyed=keyed;linkBle=kind==NodeKind::Jcmk&&bleReports;
+  return true;
+}
+
+bool startSession(NodeKind kind){
+  load();*error=0;
+  if(kind==NodeKind::None){nodeStop();return true;}
+  if(radioNodeOwned()&&running==kind)return true;
+  const bool switching=radioNodeOwned();
+  if(!switching){
+    // Sessions that must finish on their own terms are refused, never cut off.
+    if(stopwatch.running){say("Stop the stopwatch first");return false;}
+    if(wardriveBusy()){say("Finish the GPS wardrive first");return false;}
+    if(wardriveUploadBusy()){say("Wait for the upload to finish");return false;}
+    // Everything else a node replaces ends here: BLE Lab (a repeating beeper between
+    // its attempts too), recipes, missions, radio tools and a capture still recording.
+    bleLabStop();recipeStop();
+#ifndef BOARD_RADAR_LITE
+    missionStop();
+#endif
+    reconStop();setCapture(false);audioStop();
+    if(foxTransmit())setFoxTransmit(false);
+    // Only a capture file still being finalised, or a Lab connection still closing, is waited for.
+    if(reconStorageBusy()){say("Saving the capture; try again in a moment");return false;}
+    if(bleLabOwnsRadio()){say("BLE Lab is closing; try again");return false;}
+  }else radioNodeEnd();     // switching between the two node kinds
+  if(!startRadio(kind)){
+    running=NodeKind::None;
+    // A failed switch has already ended the old node and given the radar its radios back.
+    if(switching){remember(NodeKind::None);Serial.println("NODE_STOPPED radar restored");}
+    return false;
+  }
+  remember(kind);
+  Serial.printf("NODE_STARTED %s\n",kindText(kind));
+  return true;
 }
 }
 
@@ -85,35 +136,13 @@ NodeKind nodeKind(){return radioNodeOwned()?running:NodeKind::None;}
 const char* nodeError(){return error;}
 const dragon::node::Status& nodeStatus(){return radioNodeStatus();}
 uint32_t nodeElapsedMs(){return radioNodeOwned()?millis()-startedAt:0;}
-bool nodeKeyed(){return radioNodeOwned()&&running==NodeKind::Jcmk&&*key;}
-bool nodeBleReports(){return running==NodeKind::Jcmk&&bleReports;}
+bool nodeKeyed(){return radioNodeOwned()&&linkKeyed;}
+bool nodeBleReports(){return radioNodeOwned()&&linkBle;}
 
-bool nodeStart(NodeKind kind){
-  load();*error=0;
-  if(kind==NodeKind::None){nodeStop();return true;}
-  if(radioNodeOwned()&&running==kind)return true;
-  if(!radioNodeOwned()){
-    // Sessions that must finish on their own terms are refused, never cut off.
-    if(stopwatch.running){say("Stop the stopwatch first");return false;}
-    if(wardriveBusy()){say("Finish the GPS wardrive first");return false;}
-    if(wardriveUploadBusy()){say("Wait for the upload to finish");return false;}
-    if(reconStorageBusy()){say("Wait for the save to finish");return false;}
-    if(bleLabOwnsRadio()){bleLabStop();say("BLE Lab is closing; try again");return false;}
-    recipeStop();
-#ifndef BOARD_RADAR_LITE
-    missionStop();
-#endif
-    reconStop();setCapture(false);audioStop();
-    if(foxTransmit())setFoxTransmit(false);
-  }else radioNodeEnd();     // switching between the two node kinds
-  if(!startRadio(kind)){running=NodeKind::None;return false;}
-  remember(kind);
-  Serial.printf("NODE_STARTED %s\n",kindText(kind));
-  return true;
-}
+bool nodeStart(NodeKind kind){settle();return startSession(kind);}   // a node chosen by hand is not a resume
 
 void nodeStop(){
-  load();
+  load();settle();
   const bool was=radioNodeOwned();
   radioNodeEnd();running=NodeKind::None;
   remember(NodeKind::None);
@@ -123,24 +152,38 @@ void nodeStop(){
 void nodeBegin(){
   load();
   const NodeKind kind=remembered();
+  const uint32_t quick=quickRestarts();setQuickRestarts(0);
   if(kind==NodeKind::None)return;
-  // A node that crashed the device must not trap it in a restart loop.
+  // A node must not trap the device in a restart loop: not after a crash or a watchdog
+  // reset, and not when it restarts again soon after each resume, whatever the reason
+  // (often a supply that sags when the node transmits). One quick restart, such as an
+  // engine start in a car, still resumes.
   const esp_reset_reason_t reason=esp_reset_reason();
-  if(reason==ESP_RST_PANIC||reason==ESP_RST_INT_WDT||reason==ESP_RST_TASK_WDT||reason==ESP_RST_WDT||reason==ESP_RST_CPU_LOCKUP){
+  const bool crashed=reason==ESP_RST_PANIC||reason==ESP_RST_INT_WDT||reason==ESP_RST_TASK_WDT||reason==ESP_RST_WDT||reason==ESP_RST_CPU_LOCKUP;
+  if(crashed||quick>=ResumeQuickLimit){
     remember(NodeKind::None);
-    Serial.printf("NODE_RESUME_SKIPPED %s reset=%d; choose it again from Tools > Modes\n",kindText(kind),int(reason));
+    Serial.printf("NODE_RESUME_SKIPPED %s reset=%d: %s\n",kindText(kind),int(reason),crashed?"the device crashed or a watchdog fired; choose it again from Modes"
+      :"it restarted twice within a minute of resuming; check the battery or USB supply, then choose it again from Modes");
     return;
   }
-  if(nodeStart(kind)){uiShow("node");Serial.printf("NODE_RESUMED %s\n",kindText(kind));}
-  else Serial.printf("NODE_ERROR resume %s: %s\n",kindText(kind),error);
+  setQuickRestarts(quick+1);   // counted before the radio starts, which is when a weak supply gives way
+  if(startSession(kind)){resumeWatch=true;resumedAt=millis();uiShow("node");Serial.printf("NODE_RESUMED %s\n",kindText(kind));}
+  else{setQuickRestarts(0);Serial.printf("NODE_ERROR resume %s: %s\n",kindText(kind),error);}
+}
+
+void nodeLoop(){
+  // A resumed node that has run a minute, or has ended, no longer counts as a quick restart.
+  if(resumeWatch&&(!radioNodeOwned()||millis()-resumedAt>=ResumeSettledMs))settle();
 }
 
 bool nodeAllowsCommand(const String& c){
-  static const char* const exact[]={"status","memory status","loop diagnostics","scan status","ui status","touch status",
+  // Node commands, the clock, a restart and read-only queries, USB Studio's connect queries among them.
+  static const char* const exact[]={"node","status","memory status","loop diagnostics","scan status","ui status","touch status",
     "amoled status","143c status","185b status","rotary status","watcher status","dial status","display status",
-    "badge info","screenshot","screen node","clock status","clock hardware","orientation status","system restart"};
+    "badge info","screenshot","screen node","clock status","clock hardware","orientation status",
+    "radar status","tone settings","theme info","system restart"};
   for(const char* e:exact)if(c==e)return true;
-  return c.startsWith("node ")||c.startsWith("time ")||c.startsWith("clock offset ");
+  return c.startsWith("node ")||c.startsWith("time ")||c.startsWith("clock offset ")||c.startsWith("tone get ")||c.startsWith("theme read ");
 }
 
 bool nodeCommand(const String& c){
@@ -151,36 +194,49 @@ bool nodeCommand(const String& c){
     if(s.linked)macText(s.coreMac,coreMac);
     char plan[48]="";size_t at=0;
     for(uint8_t i=0;i<s.planCount&&at+4<sizeof(plan);++i)at+=size_t(snprintf(plan+at,sizeof(plan)-at,i?",%u":"%u",s.plan[i]));
-    Serial.printf("NODE_STATUS mode=%s active=%u phase=%s core=%s linked=%u core_mac=%s core_rssi=%d channel=%u assigned=%u own_plan=%u plan=%s dwell_ms=%u role=%u node=%u/%u "
+    // bound, keyed and ble_reports: what the running link uses. node config shows the saved settings.
+    Serial.printf("NODE_STATUS mode=%s active=%u phase=%s core=%s linked=%u core_mac=%s core_rssi=%d channel=%u registered=%u assigned=%u own_plan=%u plan=%s dwell_ms=%u role=%u node=%u/%u "
       "wifi=%lu ble=%lu sent=%lu failed=%lu dropped=%lu acked=%lu cycles=%lu scans=%lu scan_errors=%lu requests=%lu links=%lu losses=%lu heartbeats=%lu core_age_ms=%lu "
       "other=%s broadcast=%u bound=%u keyed=%u ble_reports=%u rx_drops=%lu elapsed_ms=%lu remembered=%s heap=%u min_heap=%u largest=%u\n",
       kindText(nodeKind()),nodeBusy(),dragon::node::phaseName(s.phase),dragon::node::coreName(s.core),s.linked,s.linked?coreMac:"-",s.coreRssi,s.channel,
-      s.assigned,s.ownPlan,at?plan:"-",s.dwellMs,s.role,s.nodeIndex,s.nodeCount,
+      s.registered,s.assigned,s.ownPlan,at?plan:"-",s.dwellMs,s.role,s.nodeIndex,s.nodeCount,
       (unsigned long)s.wifi,(unsigned long)s.ble,(unsigned long)s.sent,(unsigned long)s.failed,(unsigned long)s.dropped,(unsigned long)s.acked,
       (unsigned long)s.cycles,(unsigned long)s.scans,(unsigned long)s.scanErrors,(unsigned long)s.requests,(unsigned long)s.links,(unsigned long)s.losses,
-      (unsigned long)s.heartbeats,(unsigned long)s.coreAgeMs,dragon::node::coreName(s.other),s.broadcast,bound,*key!=0,bleReports,
+      (unsigned long)s.heartbeats,(unsigned long)s.coreAgeMs,dragon::node::coreName(s.other),s.broadcast,nodeBusy()&&linkBound,nodeKeyed(),nodeBleReports(),
       (unsigned long)radioNodeReceiveDrops(),(unsigned long)nodeElapsedMs(),kindText(remembered()),
       unsigned(ESP.getFreeHeap()),unsigned(ESP.getMinFreeHeap()),unsigned(heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL|MALLOC_CAP_8BIT)));
     return true;
   }
   if(c=="node biscuit"||c=="node jcmk"){
     const NodeKind kind=c=="node biscuit"?NodeKind::Biscuit:NodeKind::Jcmk;
+    const bool was=nodeBusy();
     if(nodeStart(kind)){uiShow("node");Serial.printf("NODE_OK %s\n",kindText(kind));}
-    else Serial.printf("NODE_ERROR %s\n",error);
+    else{Serial.printf("NODE_ERROR %s\n",error);if(was)uiShow("modes");}   // a failed switch has ended the old node
     return true;
   }
-  if(c=="node stop"){nodeStop();uiShow("modes");Serial.println("NODE_OK stopped");return true;}
+  // With no node running this only forgets the choice; the screen stays where it is.
+  if(c=="node stop"){const bool was=nodeBusy();nodeStop();if(was)uiShow("modes");Serial.println("NODE_OK stopped");return true;}
   // Settings take effect at the next start; a running JCMK Node restarts at once.
   auto apply=[&](bool jcmkOnly){
     if(!radioNodeOwned()||(jcmkOnly&&running!=NodeKind::Jcmk))return;
     const NodeKind kind=running;radioNodeEnd();running=NodeKind::None;
-    if(!startRadio(kind)){remember(NodeKind::None);Serial.printf("NODE_ERROR %s\n",error);uiShow("modes");}
+    if(!startRadio(kind)){remember(NodeKind::None);Serial.println("NODE_STOPPED radar restored");Serial.printf("NODE_ERROR %s\n",error);uiShow("modes");}
   };
-  if(c=="node key clear"){key[0]=0;if(prefsReady)prefs.remove("key");Serial.println("NODE_OK key=0");apply(true);return true;}
+  // Encryption follows the core's "Use Encryption", apart from the key text: on with
+  // an empty key matches a core where no ENOW Key was ever typed.
+  if(c=="node encrypt on"||c=="node encrypt off"){
+    encryption=c=="node encrypt on";if(prefsReady)prefs.putBool("enc",encryption);
+    Serial.printf("NODE_OK keyed=%u\n",encryption);apply(true);return true;
+  }
+  if(c=="node key clear"){key[0]=0;encryption=false;if(prefsReady){prefs.remove("key");prefs.remove("enc");}Serial.println("NODE_OK key=0");apply(true);return true;}
   if(c.startsWith("node key ")){
-    const String text=c.substring(9);
-    if(!printable(text,64)){Serial.println("NODE_ERROR key must be 1 to 64 printable characters");return true;}
-    snprintf(key,sizeof(key),"%s",text.c_str());if(prefsReady)prefs.putString("key",key);
+    // In double quotes the key may be empty or end in spaces, which the USB line otherwise loses.
+    String text=c.substring(9);
+    const bool quoted=text.length()>=2&&text[0]=='"'&&text[text.length()-1]=='"';
+    if(quoted)text=text.substring(1,text.length()-1);
+    if(!printable(text,64,quoted)){Serial.println("NODE_ERROR key must be 1 to 64 printable characters, or 0 to 64 in double quotes");return true;}
+    snprintf(key,sizeof(key),"%s",text.c_str());encryption=true;
+    if(prefsReady){prefs.putString("key",key);prefs.putBool("enc",true);}
     Serial.println("NODE_OK key=1");apply(true);return true;
   }
   if(c=="node bind off"){bound=false;memset(core,0,6);if(prefsReady)prefs.remove("core");Serial.println("NODE_OK bound=0");apply(false);return true;}
@@ -205,9 +261,9 @@ bool nodeCommand(const String& c){
     char text[18]="-";if(bound)macText(core,text);
     uint8_t mac[6];radioNodeMac(mac);char own[18];macText(mac,own);
     Serial.printf("NODE_CONFIG remembered=%s bound=%u core=%s keyed=%u ble_reports=%u identity=%s own_mac=%s\n",
-      kindText(remembered()),bound,text,*key!=0,bleReports,*identity?identity:defaultIdentity(),own);
+      kindText(remembered()),bound,text,encryption,bleReports,*identity?identity:defaultIdentity(),own);
     return true;
   }
-  Serial.println("NODE_ERROR commands: node status|config|biscuit|jcmk|stop|key <text>|key clear|bind <mac>|bind off|identity <text>|identity default|ble on|off");
+  Serial.println("NODE_ERROR commands: node status|config|biscuit|jcmk|stop|key <text>|key \"<text>\"|key clear|encrypt on|off|bind <mac>|bind off|identity <text>|identity default|ble on|off");
   return true;
 }

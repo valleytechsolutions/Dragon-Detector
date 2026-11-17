@@ -90,6 +90,8 @@ static void setLitePage(LitePage next){
   lv_obj_set_y(pageSub,next==LitePage::Clock?187:next==LitePage::Timer?138:171);
   bool special=next==LitePage::Clock&&(radarTheme==0||radarTheme>=29);
   if(radarLogo(radarTheme)&&!special&&!(next==LitePage::Radar&&(radarTheme==LawLockToolsTheme||radarTheme==MokiTheme||radarTheme==Delta44Theme||radarTheme==ArgyleTheme||radarTheme==VectorPotentialTheme||radarTheme==32||radarTheme==CanCommanderTheme||radarTheme==MuldersRevengeTheme||greenArtTheme(radarTheme))))lv_obj_clear_flag(logo,LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(logo,LV_OBJ_FLAG_HIDDEN);
+  // Vector Potential's radar artwork is 69 px tall: its page header is the watch-size mark.
+  if(radarLogo(radarTheme))lv_img_set_src(logo,radarTheme==VectorPotentialTheme?&watch_logo_vp:radarLogo(radarTheme));
   lv_obj_align(logo,LV_ALIGN_TOP_MID,0,9);
   lv_obj_set_style_img_recolor(logo,color(radarTheme==3?0xd6b46e:LltBlue),0);
   lv_obj_set_style_img_recolor_opa(logo,(radarTheme==LawLockToolsTheme||radarTheme==3)?LV_OPA_COVER:LV_OPA_TRANSP,0);
