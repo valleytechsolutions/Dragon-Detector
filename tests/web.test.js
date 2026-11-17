@@ -144,6 +144,17 @@ test('USB reader handles fragmented ACKs, ignores health lines, and keeps early 
   await serial.write('badge info');assert.equal(new TextDecoder().decode(port.writes[0]),'badge info\n');
   await serial.close();
 });
+test('USB refusal from a running wardriving node fails at once with a plain reason',async()=>{
+  const port=mockPort(),serial=new BadgeSerial(port);await serial.open();
+  await serial.write('radar set theme 3');const waiting=serial.wait(s=>s.startsWith('RADAR_OK'));
+  port.emit('NODE_BUSY stop the node first: node stop\n');
+  await assert.rejects(waiting,error=>/wardriving node is running/.test(error.message)&&!/timed out/.test(error.message));
+  // A refusal left over from an earlier command does not fail the next one.
+  port.emit('NODE_BUSY stop the node first: node stop\n');await new Promise(r=>setTimeout(r,5));
+  await serial.write('badge info');const next=serial.wait(s=>s.startsWith('BADGE_INFO'));
+  port.emit('BADGE_INFO ok\n');assert.equal(await next,'BADGE_INFO ok');
+  await serial.close();
+});
 test('USB disconnect rejects a pending transfer and permits cleanup',async()=>{
   const port=mockPort(),serial=new BadgeSerial(port);await serial.open();
   const waiting=serial.wait(s=>s==='BADGE_OK');port.end();

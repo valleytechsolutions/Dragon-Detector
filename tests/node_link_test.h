@@ -203,7 +203,7 @@ struct JcmkCore {
 // beatMs: it sends on its own now and then, as its own nodes expect.
 struct BiscuitCore {
   Mac mac{{0xd8,0x3b,0xda,0x01,0x02,0x03}};Bench* bench=nullptr;bool alive=true,secure=false,registered=false,roleAcked=false,ignoreIdentify=false;
-  std::string channels="channels=1,6,11;dwell=120",identity;std::vector<std::string> records;unsigned heartbeats=0,identifies=0,requests=0,beatMs=0;uint8_t roleEcho=0;uint32_t beatAt=0;
+  std::string channels="channels=1,6,11;dwell=120",identity;std::vector<std::string> records;unsigned heartbeats=0,identifies=0,requests=0,beatMs=0,loseConfig=0,loseReply=0;uint8_t roleEcho=0;uint32_t beatAt=0;
   void tick(){if(alive&&beatMs&&bench->now-beatAt>=beatMs){beatAt=bench->now;bench->hear(mac,textFrame(Heartbeat,0,""));}}
   bool operator()(const Mac& to,const Bytes& data){
     if(!alive)return false;
@@ -212,9 +212,9 @@ struct BiscuitCore {
     Frame f;if(!parseFrame(data.data(),data.size(),f))return true;
     const std::string text((const char*)f.text,f.textLength);
     switch(f.type){
-      case CoreRequest:++requests;registered=roleAcked=false;bench->hear(mac,textFrame(CoreReply,0,secure?"v=3;encrypt=1":"v=3;encrypt=0;nodes=20"));break;
+      case CoreRequest:++requests;registered=roleAcked=false;if(loseReply)--loseReply;else bench->hear(mac,textFrame(CoreReply,0,secure?"v=3;encrypt=1":"v=3;encrypt=0;nodes=20"));break;
       case Identify:assert(!isBroadcast(to));++identifies;identity=text;if(!ignoreIdentify){Bytes role=textFrame(Admin,0,std::string(1,char(1)));bench->hear(mac,role,4);}break;
-      case RoleAck:assert(!isBroadcast(to));roleAcked=true;roleEcho=uint8_t(f.counter);bench->hear(mac,textFrame(ConfigUpdate,0,channels),4);break;
+      case RoleAck:assert(!isBroadcast(to));roleAcked=true;roleEcho=uint8_t(f.counter);if(loseConfig)--loseConfig;else bench->hear(mac,textFrame(ConfigUpdate,0,channels),4);break;
       case ConfigAck:assert(!isBroadcast(to));if(roleAcked)registered=true;break;
       case Heartbeat:++heartbeats;break;
       case Text:if(registered)records.push_back(text);break;
@@ -546,6 +546,34 @@ static void nodeBiscuitRecoveryTests(){
     // Heard from all along: one registration, five tries. Asked every ten seconds: five at most each time.
     if(beat)assert(tries==IdentifyTries&&core.requests==1);else assert(most<=IdentifyTries&&core.requests>=4&&core.identifies>=4*3);
   }
+  // A Biscuit that keeps sending, so it is never asked to answer: a lost
+  // channel list, or a confirmation of the role or the list that never gets
+  // through, still ends with the node registered and its records logged.
+  for(unsigned mode=0;mode<3;++mode){
+    Bench b(NodeFamily::Biscuit);BiscuitCore core;rig(b,core);core.beatMs=1000;b.tick=[&]{core.tick();};
+    if(mode==0)core.loseConfig=1;
+    const uint8_t failing=mode==1?uint8_t(RoleAck):uint8_t(ConfigAck);unsigned lost=0;
+    b.air=[&](const Mac& to,const Bytes& d){if(mode&&d[4]==failing&&++lost<=SendTries)return false;return core(to,d);};
+    assert(b.begin());assert(b.until([&]{return core.registered;},8000));
+    assert(b.link.status().registered&&b.link.status().linked&&core.requests==1&&core.identifies==2);
+    assert(b.until([&]{return core.records.size()==3;},70000));
+  }
+  // The same Biscuit restarts and forgets the node but keeps sending: it is
+  // asked again within about 90 s, and the node joins it again.
+  {Bench b(NodeFamily::Biscuit);BiscuitCore core;rig(b,core);core.beatMs=1000;b.tick=[&]{core.tick();};
+   b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};
+   assert(b.begin());assert(b.until([&]{return core.registered;},3000));b.run(4000);
+   core.alive=false;b.run(3000);core.alive=true;core.registered=core.roleAcked=false;const uint32_t back=b.now;
+   b.world[6].push_back(net(3,6));
+   assert(b.until([&]{return core.registered;},100000));assert(b.now-back<=95000&&b.link.status().linked&&b.link.status().losses==0);
+   assert(b.until([&]{return hasLine(core.records,line(3,6));},70000));}
+  // A quiet Biscuit takes the next question as a new node, but its answer is
+  // lost: the node introduces itself anyway, and is registered again in seconds.
+  {Bench b(NodeFamily::Biscuit);BiscuitCore core;rig(b,core);b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};
+   assert(b.begin());assert(b.until([&]{return core.registered;},3000));
+   core.loseReply=1;const unsigned asked=core.requests,ids=core.identifies;
+   assert(b.until([&]{return core.requests>asked;},15000));const uint32_t at=b.now;
+   assert(b.until([&]{return core.registered;},6000));assert(b.now-at<=5000&&core.identifies>ids&&b.link.status().registered&&b.link.status().losses==0);}
   // A quiet Biscuit is asked every ten seconds and gives the role again each
   // time: the node never stops counting as registered, so the screen never flickers.
   {Bench b(NodeFamily::Biscuit);BiscuitCore core;rig(b,core);b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};

@@ -189,15 +189,9 @@ void refresh(uint32_t now){
   char number[16];thousands(number,sizeof(number),s.wifi);
   if(!fits(w.count,number))snprintf(number,sizeof(number),"%lu.%luM",(unsigned long)(s.wifi/1000000u),(unsigned long)(s.wifi/100000u%10u));
   setText(w.count,lastCount,sizeof(lastCount),number);
-  // The channel being scanned. Between scans the radio visits the home channel to
-  // talk to the core, and stays on it for a moment after Scan begins again, so the
-  // home channel counts only when it is the next one in the plan.
-  if(!s.linked)scannedChannel=0;
-  else if(s.phase==Phase::Scan&&s.channel!=scannedChannel){
-    uint8_t next=s.planCount?s.plan[0]:0;
-    for(uint8_t i=0;i<s.planCount;++i)if(s.plan[i]==scannedChannel){next=s.plan[(i+1)%s.planCount];break;}
-    if(s.channel!=dragon::node::HomeChannel||s.channel==next)scannedChannel=s.channel;
-  }
+  // The channel last scanned, as the link reports it. It holds while the radio
+  // visits the home channel to talk to the core between scans.
+  scannedChannel=s.linked?s.lastScanned:0;
   const unsigned channel=scannedChannel?scannedChannel:s.channel;
   // Fullest line that fits: wide gaps, then narrow gaps, then without the channel.
   // A Piglet core logs every record as Wi-Fi, so no Bluetooth goes to it.

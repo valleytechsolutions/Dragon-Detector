@@ -151,7 +151,8 @@ int main(int argc,char** argv){
     status.other=c.other;status.wifi=c.wifi;status.ble=c.ble;status.sent=c.sent;status.channel=c.channel;
     status.planCount=11;for(uint8_t i=0;i<11;++i)status.plan[i]=i+1;status.phase=c.linked?dragon::node::Phase::Scan:dragon::node::Phase::Search;
     lv_obj_clean(screen);nodeScreenOpen(screen,options);
-    if(c.scanned){status.channel=c.scanned;hostMillis+=1000;nodeScreenLoop();status.channel=c.channel;status.phase=dragon::node::Phase::Report;}
+    status.lastScanned=c.linked?(c.scanned?c.scanned:c.channel):0;
+    if(c.scanned)status.phase=dragon::node::Phase::Report;
     if(c.arm)nodeScreenExitPress();
     hostMillis+=1000;nodeScreenLoop();
     lv_obj_invalidate(screen);lv_refr_now(nullptr);

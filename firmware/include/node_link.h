@@ -62,6 +62,7 @@ constexpr int RssiStep=8;                   // report a network again when this 
 constexpr uint8_t RefreshUnits=15;          // and again after about a minute in view (4.096 s units)
 constexpr uint32_t IdentifyRetryMs=1500;    // a Biscuit that gave no role is asked again at the next cycle end (about every 2 s)
 constexpr uint8_t IdentifyTries=5;          // Identify attempts per registration
+constexpr uint32_t BiscuitRecheckMs=90000;  // a Biscuit that keeps talking is asked again now and then: it may have restarted and forgotten this node
 // Text of every request and heartbeat, in both families: the JCMK core's own
 // opt-out (WiFiOps.h NODE_CAPABILITY_EXTERNAL_6G, MIT). That core then leaves
 // this 2.4 GHz-only node out of its channel split and sends it no assignment,
@@ -210,6 +211,7 @@ struct Status {
   uint8_t coreMac[6]={};
   int8_t coreRssi=0;
   uint8_t channel=HomeChannel,role=0,nodeIndex=0,nodeCount=0;
+  uint8_t lastScanned=0;            // channel of the latest scan started on this link; 0 before the first
   uint8_t plan[14]={},planCount=0;
   uint16_t dwellMs=DwellDefaultMs;
   uint32_t wifi=0,ble=0;            // different networks and devices found
@@ -232,7 +234,7 @@ public:
     if(config_.family!=Family::Jcmk)config_.encrypted=false;
     memset(config_.seen,0,config_.seenCount*sizeof(Seen));
     random_=config.seed?config.seed:0x9e3779b9u;
-    textCounter_=heartbeatCounter_=0;evictions_=0;identifyTries_=0;roleWanted_=false;
+    textCounter_=heartbeatCounter_=0;evictions_=0;identifyTries_=0;roleWanted_=roleSeen_=false;
     queueHead_=queueCount_=controlCount_=0;flight_=Flight::None;scanning_=scanFailed_=rekey_=false;
     resetAssignment();
     if(config_.bound)port_->peer(config_.boundCore,Peer::Plain);
@@ -310,12 +312,15 @@ public:
       case RecordAck:++status_.acked;status_.acknowledged=true;break;
       case Admin:
         if(frame.full()){                    // Biscuit style role assignment
-          status_.role=frame.textLength?frame.text[0]:uint8_t(frame.counter);status_.registered=true;roleWanted_=false;
+          status_.role=frame.textLength?frame.text[0]:uint8_t(frame.counter);status_.registered=roleSeen_=true;
           control(RoleAck,status_.role,nullptr,0);
         }else if(length>=AdminSize)applyAdmin(data);
         break;
       case ConfigUpdate:
-        if(frame.full()){applyConfig(frame.text,frame.textLength);control(ConfigAck,0,nullptr,0);}
+        if(frame.full()){
+          applyConfig(frame.text,frame.textLength);control(ConfigAck,0,nullptr,0);
+          if(roleSeen_)roleWanted_=false;    // role and channel list both in: the handshake is complete
+        }
         break;
       default:break;                         // heartbeats only prove the core is alive
     }
@@ -452,14 +457,14 @@ private:
     }else window_=JcmkWindowMs;
     enter(Phase::Join,now);
   }
-  // Tells a Biscuit who this is. It answers with a role, then a channel list.
-  // Records keep flowing meanwhile, as on the reference node. A Biscuit that
-  // already gave a role stays registered while it is asked again, so the
-  // screen does not flicker on every probe; it is dropped only when every try
-  // goes unanswered.
+  // Tells a Biscuit who this is. It answers with a role, then a channel list;
+  // until both are in, it is told again. Records keep flowing meanwhile, as on
+  // the reference node. A Biscuit that already gave a role stays registered
+  // while it is asked again, so the screen does not flicker on every probe; it
+  // is dropped only when every try goes without a role.
   void identify(uint32_t now,bool fresh){
     if(fresh)identifyTries_=0;
-    ++identifyTries_;identifyAt_=now;roleWanted_=true;
+    ++identifyTries_;identifyAt_=now;roleWanted_=true;roleSeen_=false;
     control(Identify,0,identity_,strlen(identity_));
   }
   void unlink(uint32_t now){
@@ -467,7 +472,8 @@ private:
     if(status_.phase==Phase::Ble)port_->ble(false,0);
     port_->peer(core_,Peer::Remove);
     if(config_.bound)port_->peer(config_.boundCore,Peer::Plain);
-    status_.linked=status_.registered=false;status_.core=Core::None;status_.broadcast=status_.acknowledged=false;rekey_=false;roleWanted_=false;
+    status_.linked=status_.registered=false;status_.core=Core::None;status_.broadcast=status_.acknowledged=false;rekey_=false;roleWanted_=roleSeen_=false;
+    status_.lastScanned=0;
     queueHead_=queueCount_=controlCount_=0;
     if(flight_!=Flight::None)flight_=Flight::Stale;  // still on the air: wait for its report before sending more
     // Whatever was told to the old core is told again to the next one.
@@ -549,8 +555,10 @@ private:
     if(kind==Flight::Control){
       // A handshake step that did not get through is offered again, ahead of
       // newer ones. A core known not to acknowledge unicasts may have heard it.
-      if(!delivered&&status_.linked&&(!onAir||!status_.broadcast)&&++control_.tries<SendTries&&controlCount_<ControlSize){
-        memmove(controls_+1,controls_,sizeof(Control)*controlCount_);controls_[0]=control_;++controlCount_;
+      if(!delivered&&status_.linked&&(!onAir||!status_.broadcast)){
+        if(++control_.tries<SendTries&&controlCount_<ControlSize){
+          memmove(controls_+1,controls_,sizeof(Control)*controlCount_);controls_[0]=control_;++controlCount_;
+        }else if(biscuit()&&(control_.type==RoleAck||control_.type==ConfigAck))roleWanted_=true; // start over with Identify
       }
       return;
     }
@@ -617,8 +625,15 @@ private:
       // Nothing heard for a while: a core answers a request even when it has
       // nothing new to say, which tells a live core from a lost one. A
       // Biscuit's own nodes give up after 30 s without a frame from it, so a
-      // live Biscuit is expected to send on its own and then is rarely asked.
-      if(now-lastCoreAt_>=ProbeAfterMs&&now-probeAt_>=ProbeAfterMs/2){probeAt_=now;request(now);return;}
+      // live Biscuit is expected to send on its own and then is rarely asked:
+      // about every 90 s, in case it restarted and forgot this node. Its
+      // answer starts Identify again; if that answer is lost, Identify still follows.
+      const bool recheck=biscuit()&&now-identifyAt_>=BiscuitRecheckMs;
+      if((now-lastCoreAt_>=ProbeAfterMs||recheck)&&now-probeAt_>=ProbeAfterMs/2){
+        probeAt_=now;request(now);
+        if(biscuit()){identifyTries_=0;identifyAt_=now;roleWanted_=true;}
+        return;
+      }
     }
     // Newer cores acknowledge each record. Wait for those on the first reports
     // of a link, and keep waiting only for a core that actually sends them.
@@ -627,11 +642,11 @@ private:
       if(ackProbes_)--ackProbes_;
     }
     if(cycleEnd_){
-      // Still no role: identify again, then wait home for the answer. After
-      // the last try, a Biscuit that gave a role before no longer counts as registered.
+      // Still no role or channel list: identify again, then wait home for the
+      // answer. After the last try, a Biscuit that gave no role to it no longer counts as registered.
       if(biscuit()&&roleWanted_&&now-identifyAt_>=IdentifyRetryMs){
         if(identifyTries_<IdentifyTries)identify(now,false);
-        else{roleWanted_=false;status_.registered=false;}
+        else{roleWanted_=false;if(!roleSeen_)status_.registered=false;}
       }
       window_=biscuit()?BiscuitWindowMs+random()%(BiscuitWindowJitterMs+1):JcmkWindowMs;
       enter(Phase::Listen,now);
@@ -650,7 +665,7 @@ private:
     }
     if(scanFailed_&&now-scanAt_<ScanRetryMs)return;
     scanFailed_=false;status_.channel=status_.plan[planIndex_];
-    if(port_->scan(status_.channel,status_.dwellMs)){scanning_=true;scanAt_=now;}
+    if(port_->scan(status_.channel,status_.dwellMs)){scanning_=true;scanAt_=now;status_.lastScanned=status_.channel;}
     else{++planIndex_;++status_.scanErrors;scanFailed_=true;scanAt_=now;}
   }
 
@@ -661,7 +676,7 @@ private:
   Control controls_[ControlSize]={},control_={};
   size_t queueHead_=0,queueCount_=0,controlCount_=0;
   Flight flight_=Flight::None;
-  bool flightUnicast_=false,unicastProven_=false,scanning_=false,scanFailed_=false,cycleEnd_=false,reported_=false,adminApplied_=false,rekey_=false,roleWanted_=false;
+  bool flightUnicast_=false,unicastProven_=false,scanning_=false,scanFailed_=false,cycleEnd_=false,reported_=false,adminApplied_=false,rekey_=false,roleWanted_=false,roleSeen_=false;
   uint8_t unicastFails_=0,reportStage_=0,planIndex_=0,adminVersion_=0,adminFirst_=0,adminLast_=0,ackProbes_=0,identifyTries_=0;
   uint32_t random_=1,textCounter_=0,heartbeatCounter_=0,evictions_=0;
   uint32_t phaseAt_=0,window_=0,requestAt_=0,requestWait_=0,requestInterval_=RequestFirstMs;

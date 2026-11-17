@@ -119,6 +119,11 @@ bool begin(const Config& requested,const uint8_t* pmk,const uint8_t* linkKey,cha
   auto fail=[&](const char* reason){snprintf(why,whyLength,"%s",reason);return false;};
   if(owned)return fail("Node already running");
   if(!queue||!scanner)return fail("Radio did not start");
+  // Scan results arrive as a driver event. Lite builds never needed the
+  // default event loop until now; creating it twice is harmless. It comes
+  // first, so a failure here leaves no node memory taken.
+  const esp_err_t loop=esp_event_loop_create_default();
+  if(loop!=ESP_OK&&loop!=ESP_ERR_INVALID_STATE)return fail("Wi-Fi events unavailable");
   if(!receiveQueue){
     receiveStorage=static_cast<uint8_t*>(heap_caps_malloc(ReceiveDepth*sizeof(Received),NodeMemory));
     if(!receiveStorage)return fail("Not enough memory");
@@ -127,10 +132,6 @@ bool begin(const Config& requested,const uint8_t* pmk,const uint8_t* linkKey,cha
   if(!seen)seen=static_cast<Seen*>(heap_caps_calloc(SeenEntries,sizeof(Seen),NodeMemory));
   if(!link){void* room=heap_caps_malloc(sizeof(Link),NodeMemory);if(room)link=new(room) Link();}
   if(!seen||!link){release();return fail("Not enough memory");}
-  // Scan results arrive as a driver event. Lite builds never needed the
-  // default event loop until now; creating it twice is harmless.
-  const esp_err_t loop=esp_event_loop_create_default();
-  if(loop!=ESP_OK&&loop!=ESP_ERR_INVALID_STATE)return fail("Wi-Fi events unavailable");
 
   wardriveTransition=true;
   previousTracked=trackedContact;previousLock=channelLock;previousRadio=radioEnabled;

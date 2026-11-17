@@ -311,7 +311,7 @@ $('connect').onclick=async()=>{
     $('device-label').textContent=`${match.size} × ${match.size} · ${boardProfiles[profile].lite?'LITE':'CONNECTED'}`;$('disconnect').hidden=false;
     if(boardProfiles[profile].lite){
       if(hasClockTools(profile,firmwareVersion)){await syncVerifiedClock(link,deviceProfile,firmwareVersion);await loadWearable(link);}
-      $('studio-status').textContent=$('detector-status').textContent=profile==='m5dial'?'Dial connected and hardware time verified. Firmware 0.13.27 adds Menu, separate Time/Date settings and dot actions. Turn to browse, press to select, hold to go back. See the Dial guide for controls and limits.':hasClockTools(profile,firmwareVersion)?'Lite connected and local time set. Hold BOOT to cycle radar, clock, timer, signals and status. Tap changes themes or starts/pauses the timer; double tap records a lap/open or resets a paused timer.':'Older Lite radar firmware connected. Update to 0.13.9 for clock, timer, signal and status pages.';
+      $('studio-status').textContent=$('detector-status').textContent=profile==='m5dial'?'Dial connected and hardware time verified. Firmware 0.13.27 adds Menu, separate Time/Date settings and dot actions. Turn to browse, press to select, hold to go back. See the Dial guide for controls and limits.':hasClockTools(profile,firmwareVersion)?'Lite connected and local time set. Hold BOOT to cycle radar, clock, timer, signals, status, settings and Modes. Tap changes themes or starts/pauses the timer; double tap records a lap/open or resets a paused timer.':'Older Lite radar firmware connected. Update to 0.13.9 for clock, timer, signal and status pages.';
       return;
     }
     $('studio-status').textContent=`${match.board} is ready. Choose and position your image.`;draw();
