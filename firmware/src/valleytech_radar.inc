@@ -98,7 +98,28 @@ static FxSweepStyle valleySweepStyle(){
   s.rim=166.5f*SCREEN_RES/360.f;s.rimColor=Spark;s.rimOpa=235;s.rimTail=0.55f;
   return s;
 }
+#ifndef BOARD_RADAR_LITE
 static void valleyRadarSweep(lv_draw_ctx_t* ctx,float angle){fxSweep(ctx,CENTER,CENTER,angle,valleySweepStyle());}
+#else
+// Lite and Dial redraw the whole radar each frame from vectors and keep no
+// PSRAM tables, so their sweep stays a few wedges, now in the same cyan.
+static void valleyRadarSweep(lv_draw_ctx_t* ctx,float angle){
+  using namespace valley;
+  lv_point_t center{lv_coord_t(CENTER),lv_coord_t(CENTER)};
+  lv_draw_arc_dsc_t arc;lv_draw_arc_dsc_init(&arc);arc.width=std::max(1,S(2));arc.color=color(Edge);
+  lv_draw_rect_dsc_t glow;lv_draw_rect_dsc_init(&glow);glow.bg_color=color(TrailNear);
+  for(int i=11;i>=0;--i){float a=angle-i*.035f,b=a-.035f;glow.bg_opa=31-i*2;
+    lv_point_t wedge[]={{lv_coord_t(CENTER),lv_coord_t(CENTER)},{lv_coord_t(CENTER+cosf(a)*S(157)),lv_coord_t(CENTER+sinf(a)*S(157))},{lv_coord_t(CENTER+cosf(b)*S(157)),lv_coord_t(CENTER+sinf(b)*S(157))}};
+    lv_draw_triangle(ctx,&glow,wedge);
+    int degree=int(a*57.2957795f+720)%360;arc.opa=220-i*16;lv_draw_arc(ctx,&arc,&center,S(171),(degree+357)%360,degree);
+  }
+  int x=CENTER+int(cosf(angle)*S(157)),y=CENTER+int(sinf(angle)*S(157));
+  line(ctx,CENTER,CENTER,x,y,Edge,std::max(1,S(2)),185);
+  line(ctx,CENTER,CENTER,x,y,Core,std::max(1,S(1)),210);
+  disc(ctx,CENTER+int(cosf(angle)*S(171)),CENTER+int(sinf(angle)*S(171)),std::max(1,S(2)),Spark);
+  disc(ctx,CENTER,CENTER,S(4),0x8a7143);disc(ctx,CENTER,CENTER,S(2),GoldPale);
+}
+#endif
 // Jeweled pivot with a slow breathing glow. Static size, so its repaint area
 // is fixed: valleyCenterBounds().
 static void valleyCenter(lv_draw_ctx_t* ctx,uint32_t now){

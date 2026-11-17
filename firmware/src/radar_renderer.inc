@@ -266,6 +266,10 @@ static void radarSweep(lv_draw_ctx_t* ctx){
 }
 
 // ---- frame model ---------------------------------------------------------------
+// Time since a contact event. A repaint between frames paints with the last
+// frame's time while the radio keeps updating contacts, so an event can be
+// newer than `now`; that counts as just now, not as 49 days ago.
+static inline uint32_t radarAge(uint32_t now,uint32_t at){return int32_t(now-at)<0?0:now-at;}
 // radarFrame() runs once per frame: it advances dot positions and chooses the
 // labels. radarDraw() only paints that model, for as many tiles as LVGL asks.
 struct RadarLabelPlan {int dot=-1;uint8_t slot=0;uint32_t color=0;char text[48]{};};
@@ -312,7 +316,7 @@ static void radarFrame(uint32_t now){
   if(!radarLabelPlan)labelCount=0; // dots still draw; only the callouts are skipped
 #endif
   radarLabelCount=labelCount;
-  for(unsigned j=0;j<labelCount;++j){auto& dot=dots[labels[j]];labelKeys[j]=dot.key;dot.labelSlot=slots[j];auto& c=contacts[dot.index];uint32_t age=now-c.seen;
+  for(unsigned j=0;j<labelCount;++j){auto& dot=dots[labels[j]];labelKeys[j]=dot.key;dot.labelSlot=slots[j];auto& c=contacts[dot.index];uint32_t age=radarAge(now,c.seen);
     char state[24];if(age>=10000)snprintf(state,sizeof(state),"%lus ago",(unsigned long)(age/1000));else snprintf(state,sizeof(state),"%d dBm",c.rssi);
     auto& plan=radarLabelPlan[j];plan.dot=labels[j];plan.slot=slots[j];plan.color=contactColor(c);snprintf(plan.text,sizeof(plan.text),"%s\n%s",radarFamilyName(c.match.family),state);
   }
@@ -325,7 +329,7 @@ enum class DotKind:uint8_t {Live,Fading,Stale,Tracker};
 struct RadarDotLook {int x=0,y=0;uint32_t color=0;DotKind kind=DotKind::Live;uint8_t opa=255,halo=0,ripple=0,rippleR=0;bool selected=false,tracked=false,traffic=false;uint16_t spin=0;};
 static RadarDotLook radarDotLook(const Dot& dot,uint32_t now){
   auto& c=contacts[dot.index];RadarDotLook l;l.x=dot.x;l.y=dot.y;
-  const uint32_t age=now-c.seen;const auto fresh=dragon::radarFreshness(age);l.opa=dragon::radarOpacity(age);l.color=contactColor(c);
+  const uint32_t age=radarAge(now,c.seen);const auto fresh=dragon::radarFreshness(age);l.opa=dragon::radarOpacity(age);l.color=contactColor(c);
   const Family family=visibleFamily(c,now,detector.families);
   l.kind=age>=30000?DotKind::Stale:dragon::trackerFamily(family)?DotKind::Tracker:fresh==dragon::RadarFreshness::Fading?DotKind::Fading:DotKind::Live;
   if(l.kind==DotKind::Live&&radioEnabled&&c.signal.count){
@@ -357,7 +361,7 @@ static uint32_t radarLookHash(const RadarDotLook& l){
 static void radarPaintDot(lv_draw_ctx_t* ctx,const Dot& dot,const RadarDotLook& l,const RadarPalette& theme){
   auto& c=contacts[dot.index];const int x=l.x,y=l.y;
 #ifndef BOARD_RADAR_LITE
-  if(radarTheme==24){const uint32_t age=radarFrameAt-c.seen;asciiMark(ctx,age>=30000?"?":l.tracked?"@":l.kind==DotKind::Fading?"o":"*",x*360/SCREEN_RES,y*360/SCREEN_RES,l.color);return;}
+  if(radarTheme==24){const uint32_t age=radarAge(radarFrameAt,c.seen);asciiMark(ctx,age>=30000?"?":l.tracked?"@":l.kind==DotKind::Fading?"o":"*",x*360/SCREEN_RES,y*360/SCREEN_RES,l.color);return;}
 #endif
   (void)c;
   lv_draw_arc_dsc_t arc;lv_draw_arc_dsc_init(&arc);lv_point_t point{(lv_coord_t)x,(lv_coord_t)y};
@@ -411,9 +415,20 @@ static void radarCenter(lv_draw_ctx_t* ctx,const RadarPalette& theme,uint32_t no
   else for(int y=-7;y<=6;++y){int half=(y+7)/2;line(ctx,CENTER-S(half),CENTER+S(y),CENTER+S(half),CENTER+S(y),theme.sweep,S(1)+1);}
 #endif
 }
+#ifndef BOARD_RADAR_LITE
+// Radar paints outside a frame's own refresh (a popup closing, a pressed
+// button, a screenshot) use the last frame's model while contacts keep
+// changing. radarDraw records those areas and the next frame repaints them.
+static bool radarFrameRefresh=false;
+static dragon::RadarDirty<6> radarOffFrame;
+static bool radarTouchesClip(const lv_draw_ctx_t* ctx,const dragon::RadarRect& r){const auto* c=ctx->clip_area;return r.x1<=c->x2&&r.x2>=c->x1&&r.y1<=c->y2&&r.y2>=c->y1;}
+#endif
 static void radarDraw(lv_event_t* e){
   auto* ctx=lv_event_get_draw_ctx(e);const auto& theme=radarPalette(radarTheme);
   const uint32_t now=radarFrameAt;
+#ifndef BOARD_RADAR_LITE
+  if(!radarFrameRefresh){const auto* c=ctx->clip_area;radarOffFrame.add(dragon::radarRect(c->x1,c->y1,c->x2,c->y2),SCREEN_RES);}
+#endif
   if(radarFrameBuilt!=now)radarFrame(now); // first paint after a page build
 #ifdef RADAR_BACKDROP
   if(!radarFieldAnimated(radarTheme)&&radarBackdropValid()){lv_draw_img_dsc_t d;lv_draw_img_dsc_init(&d);lv_area_t a{0,0,SCREEN_RES-1,SCREEN_RES-1};lv_draw_img(ctx,&d,&a,&radarBackdrop);}
@@ -423,9 +438,14 @@ static void radarDraw(lv_event_t* e){
   // Sweep and pulse are animation, not measurements of bearing or RF activity.
   radarSweep(ctx);
   // Paint low-priority dots first so a coincident tracker cannot cover Axon.
-  for(int i=dotCount-1;i>=0;--i){if(!radarDotCurrent(dots[i]))continue;radarPaintDot(ctx,dots[i],radarDotLook(dots[i],now),theme);}
+  for(int i=dotCount-1;i>=0;--i){if(!radarDotCurrent(dots[i]))continue;const auto look=radarDotLook(dots[i],now);
+#ifndef BOARD_RADAR_LITE
+    // Arcs build their masks before clipping, so skip dots outside this tile.
+    if(radarTheme!=24&&!radarTouchesClip(ctx,radarLookBounds(look)))continue;
+#endif
+    radarPaintDot(ctx,dots[i],look,theme);}
   for(unsigned j=0;j<radarLabelCount;++j){auto& plan=radarLabelPlan[j];if(plan.dot<0||plan.dot>=dotCount)continue;auto& dot=dots[plan.dot];if(!radarDotCurrent(dot))continue;
-    auto& c=contacts[dot.index];const uint32_t age=now-c.seen;
+    auto& c=contacts[dot.index];const uint32_t age=radarAge(now,c.seen);
     callout(ctx,dot,plan.slot,plan.text,plan.color);
 #ifndef BOARD_RADAR_LITE
     if(radarTheme==24)asciiMark(ctx,"*",dot.x*360/SCREEN_RES,dot.y*360/SCREEN_RES,plan.color);else
@@ -436,6 +456,9 @@ static void radarDraw(lv_event_t* e){
 #endif
     }
   }
+#ifndef BOARD_RADAR_LITE
+  if(radarCenterBreathes()&&!radarTouchesClip(ctx,radarCenterBounds()))return;
+#endif
   radarCenter(ctx,theme,now);
 }
 
@@ -457,7 +480,9 @@ static constexpr uint32_t RadarFastMs=66,RadarSlowMs=100;
 static void radarRecordPaint(bool full,uint32_t us,uint32_t px){
   auto& s=radarStats;++s.frames;s.full+=full;s.lastUs=us;s.maxUs=std::max(s.maxUs,us);s.totalUs+=us;s.lastPx=px;s.maxPx=std::max(s.maxPx,px);s.totalPx+=px;
   s.avgUs=s.avgUs?(s.avgUs*7+us)/8:us;
+#ifndef BOARD_WAVESHARE_185B // the 1.85B paces its UI itself and reports that interval
   s.interval=constrain(s.avgUs*4/1000,RadarFastMs,RadarSlowMs);
+#endif
 }
 static void radarPrintStats(){
   const auto& s=radarStats;const uint32_t n=std::max<uint32_t>(1,s.frames);
@@ -471,7 +496,9 @@ static bool radarInvalidate(lv_obj_t* radar,uint32_t now){
   radarFrame(now);
   if(auto* disp=lv_disp_get_default())if(!disp->driver->monitor_cb)disp->driver->monitor_cb=[](lv_disp_drv_t*,uint32_t,uint32_t px){radarPaintPixels+=px;};
   if(!radarMarks){radarMarks=(RadarMark*)heap_caps_calloc(MAX_CONTACTS+RadarRenderLabelLimit,sizeof(RadarMark),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);radarLabelMarks=radarMarks?radarMarks+MAX_CONTACTS:nullptr;}
-  dragon::RadarDirty<14> dirty;bool full=!radarMarks||!radarMarksValid||!radarPartialTheme();
+  dragon::RadarDirty<14> dirty;bool full=!radarMarks||!radarMarksValid||!radarPartialTheme()||radarOffFrame.full;
+  if(!full)for(unsigned i=0;i<radarOffFrame.count;++i)dirty.add(radarOffFrame.rects[i],SCREEN_RES);
+  radarOffFrame.clear();
   // Dots, by contact slot.
   if(radarMarks){
     static uint32_t stamp=0;++stamp;
@@ -486,7 +513,7 @@ static bool radarInvalidate(lv_obj_t* radar,uint32_t now){
   if(radarLabelMarks)for(unsigned j=0;j<RadarRenderLabelLimit;++j){auto& m=radarLabelMarks[j];RadarMark next;
     if(j<radarLabelCount){auto& plan=radarLabelPlan[j];auto& dot=dots[plan.dot];auto& c=contacts[dot.index];
       uint32_t h=2166136261u;for(const char* p=plan.text;*p;++p)h=(h^uint8_t(*p))*16777619u;
-      h=radarHashMix(h,plan.color);h=radarHashMix(h,uint32_t(dot.x)<<16|uint16_t(dot.y));h=radarHashMix(h,plan.slot|(dot.index==radarPrimary)<<8|dragon::radarOpacity(now-c.seen)<<9);
+      h=radarHashMix(h,plan.color);h=radarHashMix(h,uint32_t(dot.x)<<16|uint16_t(dot.y));h=radarHashMix(h,plan.slot|(dot.index==radarPrimary)<<8|dragon::radarOpacity(radarAge(now,c.seen))<<9);
       next.box=calloutBounds(dot,plan.slot);next.sig=h;next.on=true;next.key=dot.key;}
     if(!full&&(m.on!=next.on||(next.on&&(m.sig!=next.sig||!(m.key==next.key))))){if(m.on)dirty.add(m.box,SCREEN_RES);if(next.on)dirty.add(next.box,SCREEN_RES);}
     m=next;
@@ -509,4 +536,6 @@ static bool radarInvalidate(lv_obj_t* radar,uint32_t now){
   for(unsigned i=0;i<dirty.count;++i)invalidate(dirty.rects[i]);
   return false;
 }
+// Draws what radarInvalidate marked, now, as part of the frame.
+static void radarRefreshNow(){radarFrameRefresh=true;lv_refr_now(nullptr);radarFrameRefresh=false;}
 #endif

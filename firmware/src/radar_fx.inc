@@ -21,11 +21,6 @@ struct FxSweepStyle {
 static inline lv_color_t fxLerp(lv_color_t a,lv_color_t b,float t){
   return lv_color_mix(b,a,lv_opa_t(t<=0?0:t>=1?255:int(t*255.f+.5f)));
 }
-// Area of the sweep that the next paint will change, padded for glow.
-static dragon::RadarRect fxSweepBounds(int cx,int cy,float lead,const FxSweepStyle& s){
-  const float pad=s.edgeWidth*2+2,ahead=s.radius>1?pad/s.radius:0;
-  return dragon::sectorBounds(cx,cy,(s.rim>s.radius?s.rim+4:s.radius)+pad,lead+ahead,s.span+ahead*2);
-}
 // Angle behind the leading edge after which the trail can no longer change a
 // pixel: LVGL's 16-bit mix rounds an opacity under 4 to nothing. Beyond it
 // the trail is not drawn, and nothing there needs repainting.
@@ -40,6 +35,13 @@ static dragon::RadarOutline fxSweepOutline(int cx,int cy,float lead,const FxSwee
   const float reach=(s.rim>s.radius?s.rim+3:s.radius)+s.edgeWidth*2+1,ahead=s.edgeWidth*2+1.25f,span=fxVisibleSpan(s);
   return dragon::sweepOutline(float(cx),float(cy),lead,span,reach,ahead,ahead/sinf(span)+1);
 }
+// Box around that outline: fxSweep paints nothing outside it, so painting and
+// the repaint bands agree, including the glow that wraps round the centre.
+static dragon::RadarRect fxSweepBounds(int cx,int cy,float lead,const FxSweepStyle& s){
+  const auto o=fxSweepOutline(cx,cy,lead,s);float x1=float(cx),y1=float(cy),x2=x1,y2=y1;
+  for(unsigned i=0;i<o.n;++i){x1=std::min(x1,o.x[i]);y1=std::min(y1,o.y[i]);x2=std::max(x2,o.x[i]);y2=std::max(y2,o.y[i]);}
+  return dragon::radarRect(int(floorf(x1))-1,int(floorf(y1))-1,int(ceilf(x2))+1,int(ceilf(y2))+1);
+}
 // Polar map of the panel, built once in PSRAM: for each pixel its angle
 // around the centre (65536 per turn) and its radius in eighths of a pixel.
 // The sweep then needs no square root, division or arctangent per pixel.
@@ -48,12 +50,20 @@ static inline uint32_t fxPolarAt(int dx,int dy){
   const float r=sqrtf(float(dx*dx+dy*dy))*8.f+.5f;
   return uint32_t(uint16_t(int32_t(lroundf(atan2f(float(dy),float(dx))*FxTurn))))|uint32_t(r>65535?65535:r)<<16;
 }
-static uint32_t* fxPolar=nullptr;static int fxPolarX=-1,fxPolarY=-1;
+static uint32_t* fxPolar=nullptr;static int fxPolarX=-1,fxPolarY=-1;static bool fxPolarFailed=false;
 static const uint32_t* fxPolarTable(int cx,int cy){
   if(fxPolar&&fxPolarX==cx&&fxPolarY==cy)return fxPolar;
-  if(!fxPolar)fxPolar=(uint32_t*)ps_malloc(sizeof(uint32_t)*SCREEN_RES*SCREEN_RES);
+  if(!fxPolar&&!fxPolarFailed){fxPolar=(uint32_t*)ps_malloc(sizeof(uint32_t)*SCREEN_RES*SCREEN_RES);fxPolarFailed=!fxPolar;}
   if(!fxPolar)return nullptr; // fxSweep then computes each pixel itself
-  for(int y=0;y<SCREEN_RES;++y)for(int x=0;x<SCREEN_RES;++x)fxPolar[y*SCREEN_RES+x]=fxPolarAt(x-cx,y-cy);
+  // One octant (0 <= b <= a) is computed and mirrored to the other seven, so
+  // building the map costs an eighth of the arctangents and square roots.
+  const int reach=std::max(std::max(cx,SCREEN_RES-1-cx),std::max(cy,SCREEN_RES-1-cy));
+  auto put=[&](int dx,int dy,uint32_t angle,uint32_t radius){const int x=cx+dx,y=cy+dy;if(x>=0&&y>=0&&x<SCREEN_RES&&y<SCREEN_RES)fxPolar[y*SCREEN_RES+x]=(angle&0xffffu)|radius;};
+  for(int a=0;a<=reach;++a)for(int b=0;b<=a;++b){
+    const uint32_t e=fxPolarAt(a,b),A=e&0xffffu,r=e&0xffff0000u;
+    put(a,b,A,r);put(b,a,16384-A,r);put(-b,a,16384+A,r);put(-a,b,32768-A,r);
+    put(-a,-b,32768+A,r);put(-b,-a,49152-A,r);put(b,-a,49152+A,r);put(a,-b,65536-A,r);
+  }
   fxPolarX=cx;fxPolarY=cy;return fxPolar;
 }
 // Lookup tables for one sweep style, built once per style in PSRAM.
@@ -73,8 +83,10 @@ static uint32_t fxSweepKey(const FxSweepStyle& s){
   return h;
 }
 static const FxSweepLut* fxSweepTables(const FxSweepStyle& s){
-  static FxSweepLut* lut=nullptr;
-  if(!lut){lut=(FxSweepLut*)ps_malloc(sizeof(FxSweepLut));if(!lut)lut=(FxSweepLut*)malloc(sizeof(FxSweepLut));if(!lut)return nullptr;lut->key=0;}
+  static FxSweepLut* lut=nullptr;static bool failed=false;
+  // PSRAM only: internal RAM is kept for the radios. Without it the sweep is skipped.
+  if(!lut&&!failed){lut=(FxSweepLut*)ps_malloc(sizeof(FxSweepLut));failed=!lut;if(lut)lut->key=0;}
+  if(!lut)return nullptr;
   const uint32_t key=fxSweepKey(s)|1;if(lut->key==key)return lut;
   auto& t=*lut;const float outer=s.radius,reach=(s.rim>outer?s.rim+3:outer)+s.edgeWidth*2+1,span=s.span<1.55f?s.span:1.55f,visible=fxVisibleSpan(s);
   t.slots=std::min(FxSweepLut::Slots,int(reach*4)+2);

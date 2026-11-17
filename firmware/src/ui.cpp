@@ -996,6 +996,9 @@ void uiLoop(){
 #else
     page==Stopwatch?50:page==Radar?radarStats.interval:100;
 #endif
+#ifdef BOARD_WAVESHARE_185B
+  if(page==Radar)radarStats.interval=updateInterval; // what `radar paint` reports
+#endif
   if(millis()-lastUpdate>updateInterval){lastUpdate=millis();if(micBadge){if(audioStatus().mode==AudioMode::Recording)lv_obj_clear_flag(micBadge,LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(micBadge,LV_OBJ_FLAG_HIDDEN);}
     if(page==Stopwatch)updateTimer();
     if(page==Clock)watchTick();
@@ -1031,7 +1034,7 @@ void uiLoop(){
       // frame just measured.
       const uint32_t paintStart=micros();
       const bool full=radarInvalidate(radar,radarFrameAt);
-      radarPaintPixels=0;lv_refr_now(nullptr);
+      radarPaintPixels=0;radarRefreshNow();
       radarRecordPaint(full,micros()-paintStart,radarPaintPixels);}
     if(page==Diagnostics&&diagnosticsLabel){
       char text[360];snprintf(text,sizeof(text),"Wi-Fi frames: %lu\nBLE adverts: %lu\nQueue drops: %lu / peak %u\nMax processing: %lu us\nMax queue age: %lu ms\nContact slots: %u\nEvictions: %lu\nCache hits/misses: %lu/%lu\nFree heap: %u KB\nFree PSRAM: %u KB\nBLE: %s\n\nCounters restart at boot.\nHigher queue age means delayed\nRSSI and scan results.",wifiFrames,bleFrames,queueDrops,radioQueueHigh,radioMaxBatchUs,radioMaxLagMs,unsigned(MAX_CONTACTS),contactEvictions,contactCacheHits,contactCacheMisses,ESP.getFreeHeap()/1024,ESP.getFreePsram()/1024,activeBle?"Active / requests names":"Passive / listen only");lv_label_set_text(diagnosticsLabel,text);
