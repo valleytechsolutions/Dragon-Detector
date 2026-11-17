@@ -194,6 +194,7 @@ struct Status {
   Core core=Core::None;             // family of the linked core
   Core other=Core::None;            // a core that answered but cannot be joined in this mode
   bool linked=false,assigned=false,ownPlan=false,broadcast=false,acknowledged=false;
+  bool registered=false;             // the core has taken this node on (a Biscuit has given it a role)
   uint8_t coreMac[6]={};
   int8_t coreRssi=0;
   uint8_t channel=HomeChannel,role=0,nodeIndex=0,nodeCount=0;
