@@ -78,7 +78,10 @@ void updateTimer(){++updates;}bool uiStopwatchKey(bool start,uint64_t at=0);
 // A running BISCUIT NODE / JCMK Node: its screen counts the exit requests.
 bool nodeRunning=false,nodeShown=true;int outputBrightness=100;unsigned exitPresses=0;
 bool nodeBusy(){return nodeRunning;}bool nodeScreenShown(){return nodeShown;}
-bool nodeScreenExitPress(){++exitPresses;return false;}
+enum class NodeExitInput:uint8_t{Screen,Hold};unsigned holdPresses=0,keyHints=0;
+bool nodeScreenExitPress(NodeExitInput how=NodeExitInput::Screen){++exitPresses;if(how==NodeExitInput::Hold)++holdPresses;return false;}
+void nodeScreenKeyHint(){++keyHints;}
+struct SerialMock {void println(const char*){}void flush(){}template<class... T>void printf(const char*,T...){}} Serial;
 '''
 for signature in ['static void go(', 'static bool nodeKey(', 'bool uiStopwatchKey(', 'static const char* ui185bResourceState(',
                   'static void build185bSystem(', 'static void show185bResources(', 'static bool uiSideKeyHasMessageBox(',
@@ -130,18 +133,18 @@ int main(){
  ui185bHome();assert(pending==Recon&&driveEnds==2);driveBusy=false;
  visible(Recon,1);uploadBusy=true;ui185bHome();assert(pending==Recon&&uploadCancels==1&&reconRequest=="wardrive-upload"&&menuTab==0);
  uploadBusy=false;ui185bHome();assert(pending==Menu&&reconLeaves==1);
- // A running node keeps its screen: BOOT's cycle and hold ask it to stop (the
- // node screen confirms the second), a dark panel only wakes, and nothing else
- // (timer keys, programmatic navigation) leaves it.
+ // A running node keeps its screen: a BOOT click only shows how to leave, the
+ // BOOT hold asks it to stop (the node screen confirms the second), a dark panel
+ // only wakes, and nothing else (timer keys, programmatic navigation) leaves it.
  nodeRunning=true;visible(Node);assert(!ui185bTimerVisible());
- ui185bCycle();assert(exitPresses==1&&page==Node&&pending==Node&&lastInteraction==now);
- ui185bHome();assert(exitPresses==2&&pending==Node&&menuTab==0);
+ ui185bCycle();ui185bCycle();assert(exitPresses==0&&keyHints==2&&page==Node&&pending==Node&&lastInteraction==now);
+ ui185bHome();assert(exitPresses==1&&holdPresses==1&&pending==Node&&menuTab==0);
  assert(!uiStopwatchKey(true,1)&&stopwatch.toggles==toggles);
- outputBrightness=0;ui185bCycle();ui185bHome();assert(exitPresses==2&&pending==Node);outputBrightness=100;
- page=Boot;ui185bCycle();assert(exitPresses==2&&pending==Node);page=Node;
- nodeShown=false;ui185bHome();assert(exitPresses==2);nodeShown=true;
+ outputBrightness=0;ui185bCycle();ui185bHome();assert(exitPresses==1&&keyHints==2&&pending==Node);outputBrightness=100;
+ page=Boot;ui185bCycle();assert(exitPresses==1&&keyHints==2&&pending==Node);page=Node;
+ nodeShown=false;ui185bHome();assert(exitPresses==1);nodeShown=true;
  {const unsigned stops=recipeStops,leaves=reconLeaves;go(Radar);go(Menu);go(Recon);assert(pending==Node&&recipeStops==stops&&reconLeaves==leaves);}
- nodeRunning=false;ui185bCycle();assert(exitPresses==2&&pending==Menu&&menuTab==0);
+ nodeRunning=false;ui185bCycle();assert(exitPresses==1&&keyHints==2&&pending==Menu&&menuTab==0);
  // Recon left earlier in a pass and wanted again is built afresh, not left half-gone.
  visible(Recon);go(Badge);assert(reconLeaves==2&&page==Recon);go(Recon);assert(page==Boot&&pending==Recon&&reconLeaves==2);
  // Resource health stays visible in System without creating automatic popups.

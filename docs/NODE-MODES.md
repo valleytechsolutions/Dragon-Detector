@@ -13,7 +13,8 @@ Both modes are on every board profile: the full-UI boards, Waveshare Lite and M5
 | **BISCUIT NODE** | A Biscuit core (Biscuit Manager) set to **Extended** mode | Wi-Fi networks |
 | **JCMK Node** | A JustCallMeKoko **ESP32 Dual Band Wardriver** core, or a Piglet acting as a JCMK-style core | Wi-Fi networks and Bluetooth LE devices; Wi-Fi only to a Piglet |
 
-- A Biscuit in Secure (encrypted) mode cannot be joined. Switch it to Extended mode.
+- A Biscuit in Secure (encrypted) mode cannot be joined. Switch it to Extended mode in the Biscuit app's Node Management settings; the Biscuit does not change modes while a wardrive or another operation runs. The app can list the node as connected while the Biscuit is still in Secure mode, but nothing reaches it, and the node screen says **SET BISCUIT TO EXTENDED MODE**.
+- BISCUIT NODE works only during a Biscuit wardrive. Once linked it shows **WAITING FOR WARDRIVE** and only checks in on channel 6; it starts scanning when a wardrive started in the Biscuit app gives it its role, as the Biscuit's own nodes do.
 - BISCUIT NODE never joins a JCMK core, and JCMK Node never joins a Biscuit. If the wrong kind of core answers, the screen tells you which mode to use.
 - A Biscuit receives Wi-Fi only. A JCMK core receives Wi-Fi and Bluetooth. Bluetooth reports can be switched off with `node ble off`.
 - A Piglet marks its answer, so the screen shows **LINKED TO PIGLET CORE**. Records then use the JCMK wording. A Piglet core receives Wi-Fi only: it would log each Bluetooth device as a Wi-Fi network, so the node sends it none and the screen leaves out the BLE count.
@@ -39,7 +40,7 @@ A few things are never cut off. The node refuses to start, and changes nothing, 
 The screen is black with white artwork on every theme, so it reads the same on LCD and AMOLED panels. From top to bottom:
 
 - The mode name: **BISCUIT NODE** or **JCMK Node**.
-- The link state in a few words: green when linked, amber while searching or joining, red when something needs your attention. Small panels use shorter wording. The meanings are listed under [troubleshooting](#troubleshooting).
+- The link state in a few words: green when linked (or linked and waiting for a Biscuit wardrive), amber while searching, red when something needs your attention. Small panels use shorter wording. The meanings are listed under [troubleshooting](#troubleshooting).
 - The **Biscuit Shop** or **JCMK** logo in the middle.
 - The number of **WI-FI NETWORKS** found, in large digits.
 - A line of smaller counts: **BLE** (JCMK Node with Bluetooth reports on, not shown with a Piglet core), **SENT**, and **CH**, the channel last scanned. Where the line does not fit, the channel is left out first.
@@ -64,25 +65,26 @@ The node remembers what it has heard in one table shared by Wi-Fi networks and B
 
 ## Leave a node
 
-Leaving takes two presses, so a bump cannot end a drive.
+Leaving takes two deliberate steps, so a bump, a thumb on a side button or a bouncing contact cannot end a drive.
 
-- **Touch:** tap **EXIT**. It turns red and reads **CONFIRM**. Tap **CONFIRM** within 3 seconds. If you do not, it goes back to EXIT and the node keeps running.
-- **Buttons and knobs:** press twice. The first press arms the exit and the status line asks for a second press; a second press within 3 seconds stops the node. On full boards, keys that normally leave a page (Home, Back, BOOT, the knob, a long press) count as one press here.
-- **M5Stack Dial:** the front button counts as a press on EXIT. A quick double press of the front button counts as both presses and leaves.
-- **Waveshare Lite:** Hold BOOT, then Hold it again within 3 seconds.
+- **Touch:** tap **EXIT**. It turns red and reads **CONFIRM**. Tap **CONFIRM** between half a second and 3 seconds later. If you do not, it goes back to EXIT and the node keeps running. A quick double tap counts as one tap.
+- **Knob (CrowPanel 2.1, SenseCAP Watcher):** the knob focuses EXIT by itself; press it, then press **CONFIRM** the same way.
+- **Side buttons on full boards** (BOOT, PWR, Home, Back, the knob's own shortcuts): a short press never leaves. It wakes a dark display, or shows how to leave on the status line for 3 seconds. A **hold** counts as one tap on EXIT where the board reports holds: BOOT held 2 seconds on the Waveshare 1.75C, BOOT held 0.7 seconds on the Waveshare 1.85B and 1.43C. After a hold, tap CONFIRM or hold again within 5 seconds.
+- **M5Stack Dial:** tap EXIT, then CONFIRM, or hold the front button twice within 5 seconds. A tap or a quick double press of the front button only shows how to leave.
+- **Waveshare Lite:** Hold BOOT, then Hold it again within 5 seconds. Taps only show how to leave.
 - **USB:** `node stop`.
 
-After the first press the status line reads **TAP CONFIRM TO LEAVE** on touch boards and the M5Stack Dial, **PRESS CONFIRM TO LEAVE** on CrowPanel 2.1 and SenseCAP Watcher, and **HOLD AGAIN TO LEAVE** on Waveshare Lite.
+After the first step the status line reads **TAP CONFIRM TO LEAVE** on touch boards and the M5Stack Dial, **PRESS CONFIRM TO LEAVE** on CrowPanel 2.1 and SenseCAP Watcher, and **HOLD AGAIN TO LEAVE** on Waveshare Lite. After a short key press it reads **TAP EXIT TO LEAVE** (**PRESS EXIT TO LEAVE** with a knob, **HOLD BUTTON TO EXIT** on Waveshare Lite).
 
-On full boards, a touch or press that only wakes a dark display does not count as an exit press.
+On full boards, a touch or press that only wakes a dark display does not count.
 
 After leaving, the device returns to Modes. The radios go back to the radar as they were before the node started, and the node choice is forgotten.
 
 ## How a node works
 
 1. **Search.** The node waits on Wi-Fi channel 6, the home channel every core listens on, and broadcasts a request: the first within 0.3 seconds, then after 0.3, 0.6, 1.2, 2.4 and 4.8 seconds, then every 5 seconds. Nodes powered on together do not all call at the same moment. A bound node sends its requests to its own core only.
-2. **Join.** The first core of the right kind that answers is linked. A JCMK core lists the node as external and assigns it nothing (see [channels](#channels)); an older JCMK core may assign a range of channels and tell the node its number among the core's nodes, and a Piglet core sends a share of its channel list. A Biscuit receives the node's name (`DragonDetector:<version>` by default), assigns a role and sends a channel list and dwell time. The node confirms each step, and a handshake message the Biscuit's radio did not confirm is sent again, up to three times in all. Until the role arrives the screen says **JOINING BISCUIT**. If no role or no channel list comes, or the node's own confirmation of either does not get through, the node sends its name again at the end of a sweep, at least 1.5 seconds after the last time (about every 2 seconds on the default plan), for up to five tries in all. After that it stays linked and keeps reporting.
-3. **Scan.** The node scans each channel of its plan in turn, 80 ms per channel by default (a Biscuit can set 40 to 300 ms). This is an active Wi-Fi scan: the node sends probe requests on each channel, while the Dragon Detector's normal radar only listens. Linked to a JCMK core with Bluetooth reports on, JCMK Node then listens for Bluetooth LE for half a second without sending anything.
+2. **Join.** The first core of the right kind that answers is linked. A JCMK core lists the node as external and assigns it nothing (see [channels](#channels)); an older JCMK core may assign a range of channels and tell the node its number among the core's nodes, and a Piglet core sends a share of its channel list. A Biscuit receives the node's name (`DragonDetector:<version>` by default), assigns a role and sends a channel list and dwell time. The node confirms each step, and a handshake message the Biscuit's radio did not confirm is sent again, up to three times in all. A Biscuit gives the role when a wardrive starts in the Biscuit app, not before, so until then the screen says **WAITING FOR WARDRIVE** and the node does not scan: it stays on channel 6 and checks in with a heartbeat about every 2 seconds. If no role or no channel list comes, or the node's own confirmation of either does not get through, the node sends its name again about every 2 seconds, for up to five tries in all. After that it stays linked and waits. A role of 0 sends the node back to waiting.
+3. **Scan.** Linked to a JCMK or Piglet core, or to a Biscuit that is wardriving, the node scans each channel of its plan in turn, 80 ms per channel by default (a Biscuit can set 40 to 300 ms). This is an active Wi-Fi scan: the node sends probe requests on each channel, while the Dragon Detector's normal radar only listens. Linked to a JCMK core with Bluetooth reports on, JCMK Node then listens for Bluetooth LE for half a second without sending anything.
 4. **Report.** After a channel that found something, and at the end of each sweep, the node returns to channel 6 and sends what it found. At the end of a sweep it also sends a heartbeat and listens for new instructions from the core.
 
 Each record is one line of text: `BSSID,SSID,SECURITY,CHANNEL,RSSI,W` for Wi-Fi and `address,,[BLE],0,RSSI,B` for Bluetooth. Commas and line breaks in a network name are replaced by `_`. The core adds the time and position.
@@ -91,7 +93,7 @@ Each record is one line of text: `BSSID,SSID,SECURITY,CHANNEL,RSSI,W` for Wi-Fi 
 
 **Delivery.** Each record gets up to three tries. If all three fail, it is sent again the next time that network is heard. If the core's radio never confirms direct messages, the node sends its reports by broadcast instead and the screen says **LINKED (BROADCAST)**. A keyed JCMK link never does this. Any core in range can hear a broadcast.
 
-**Link loss.** After 10 seconds without hearing the core, the node asks it to answer. While linked, this request goes to the linked core alone (by broadcast only on a LINKED (BROADCAST) link), so no other core in range takes the node on. On an open link to a JCMK or Piglet core, the core's radio confirming a message counts as hearing the core. On a keyed link and on a Biscuit link only the core's own messages count, because the radio confirms before the core has read the message, and a Biscuit that restarted or forgot the node still confirms. A Biscuit is expected to treat every request as coming from a node that is new to it. So when it answers one, the node introduces itself again. A Biscuit that keeps sending is never silent for 10 seconds, so it is also asked about every 90 seconds: if it restarted and forgot the node, the node joins it again. The screen stays on LINKED TO BISCUIT while it does, and shows JOINING BISCUIT only if the tries run out and the last of the five gets no role. After 30 seconds of silence the link is lost and the node searches again. Once it links again, to the same core or another one, each network is sent again the next time it is heard. The counts are not doubled.
+**Link loss.** After 10 seconds without hearing the core, the node asks it to answer. While linked, this request goes to the linked core alone (by broadcast only on a LINKED (BROADCAST) link), so no other core in range takes the node on. On an open link to a JCMK or Piglet core, the core's radio confirming a message counts as hearing the core. On a keyed link and on a Biscuit link only the core's own messages count, because the radio confirms before the core has read the message, and a Biscuit that restarted or forgot the node still confirms. A Biscuit is expected to treat every request as coming from a node that is new to it. So when it answers one, the node introduces itself again. A Biscuit that keeps sending is never silent for 10 seconds, so it is also asked about every 90 seconds: if it restarted and forgot the node, the node joins it again. A real Biscuit often leaves these later introductions unanswered, so a role once given keeps its place until the link ends, and the screen does not change while the node asks. After 30 seconds of silence the link is lost and the node searches again. Once it links again, to the same core or another one, each network is sent again the next time it is heard. The counts are not doubled.
 
 ### Channels
 
@@ -161,7 +163,8 @@ The most useful `NODE_STATUS` fields:
 | `core` | The linked core: `JCMK`, `PIGLET`, `BISCUIT` or `NONE` |
 | `other` | A core that answered but cannot be joined in this mode, for example `BISCUIT SECURE`, or `PIGLET` for JCMK Node with encryption on |
 | `core_mac`, `core_rssi` | Address and signal of the linked core |
-| `registered` | 1 once the core has taken the node on: as soon as a JCMK or Piglet core is linked, and for a Biscuit once it has given a role. It stays 1 while the node introduces itself again, unless the tries run out and the last of the five gets no role |
+| `registered` | 1 once the core has taken the node on: as soon as a JCMK or Piglet core is linked, and for a Biscuit once it has given this link a role. It then stays 1 until the link ends |
+| `waiting` | 1 while linked to a Biscuit that is not wardriving (no role yet, or role 0): the node checks in and does not scan |
 | `assigned`, `plan`, `dwell_ms` | Whether the core assigned channels (0 with a JCMK core that lists the node as external), the channels being scanned, and the time per channel |
 | `role`, `node` | The role a Biscuit assigned; the node's number among a JCMK-style core's nodes (`0/0` when the core gave none) |
 | `wifi`, `ble`, `sent` | The counts on the screen |
@@ -182,12 +185,15 @@ A running node also prints a line by itself when its link changes, so a USB log 
 | Line | When |
 |---|---|
 | `NODE_EVENT linked core=...` | A core was joined |
-| `NODE_EVENT role ...`, `NODE_EVENT channels ...` | A Biscuit gave its role and its channel list while the node introduced itself; `text` holds the channel list as the Biscuit sent it |
+| `NODE_EVENT role ... text="1"` | A Biscuit gave this link its first role, or changed it; `text` is the role number (a Wi-Fi wardrive gives 1, 0 means no wardrive) |
+| `NODE_EVENT channels ...` | A Biscuit sent a channel list different from the last one on this link; `text` holds it as sent, for example `channels=1,2,3,...,161;dwell=110` |
+| `NODE_EVENT message type=... text="..."` | The linked core sent a message type this node does not use; logged once per type and link, so a field log shows it |
 | `NODE_EVENT core_lost ...` | The core was silent for 30 seconds; the node searches again |
-| `NODE_EVENT mode_changed core=BISCUIT SECURE text="..."` | The linked core's answer says it can no longer be joined, for example a Biscuit switched to Secure mode; `text` is the core's answer, word for word |
+| `NODE_EVENT mode_changed core=BISCUIT SECURE text="..."` | The linked core's answer says it can no longer be joined, for example a Biscuit switched to Secure mode; `text` is the core's answer, word for word, such as `encrypt=1;wdbatch=2;nodecfg=2;ch=6;ap6=1` |
 | `NODE_EVENT other_core core=... text="..."` | A core this mode cannot join answered; logged once per kind while its hint is on the screen |
 | `NODE_EVENT key_lost ...` | JCMK Node with encryption: the radio would not take the key back, so the link was dropped |
-| `NODE_EXIT_PRESS source=...`, `NODE_EXIT_ARMED`, `NODE_EXIT_CONFIRMED` | A key or the screen's EXIT asked to leave; the first press arms, a second within 3 seconds leaves. `source` names the input: `boot_key`, `pwr_key`, `boot_hold`, `menu_key`, `home_key`, `cycle_key`, `rotary`, `button`, `button_double` (Lite and Dial) or `screen` |
+| `NODE_EXIT_PRESS source=... counted=...` | A key or the screen's EXIT was pressed while a node runs. `source` names the input: `boot_key`, `pwr_key`, `boot_hold`, `menu_key`, `home_key`, `cycle_key`, `rotary`, `button`, `button_double`, `button_hold` (Lite and Dial) or `screen`. `counted=1` for a hold, which counts as an exit request; a short key press has `counted=0` and only shows how to leave |
+| `NODE_EXIT_ARMED`, `NODE_EXIT_CONFIRMED`, `NODE_EXIT_IGNORED reason=too_soon` | The first exit request arms, a second one leaves; one less than half a second after the first is ignored as a bounce or double tap |
 | `NODE_SCREEN_CLOSED busy=...` | The node screen closed because the node was stopped or switched another way, such as over USB |
 
 `text` shows printable characters only (others as `.`), at most 80 of them, and `length` gives the full length. Event lines are held back while a screenshot or other binary transfer is on the cable and follow it.
@@ -224,20 +230,23 @@ Where more than one core is in range, `node bind <address>` makes the node send 
 | Screen says | Meaning | What to do |
 |---|---|---|
 | SEARCHING FOR BISCUIT, SEARCHING FOR CORE, SEARCHING | No core of this kind has answered on channel 6 | Check that the core is on, set up for ESP-NOW nodes and in range. If the node is bound, check the address with `node config`. |
-| JOINING BISCUIT, JOINING | Linked to a Biscuit, which has not yet given this node its role | Nothing; it normally passes within a few seconds. If it stays, check that the Biscuit Manager lists the node, or leave and start the node again. |
+| WAITING FOR WARDRIVE, WAITING FOR DRIVE, WAITING | Linked to a Biscuit that is not wardriving; the node checks in and does not scan | Start a Wi-Fi wardrive in the Biscuit app. The node starts scanning when the Biscuit gives it its role. |
 | SET BISCUIT TO EXTENDED MODE | BISCUIT NODE is running and a Biscuit in Secure mode answered | Switch the Biscuit to Extended mode. |
 | BISCUIT FOUND: USE BISCUIT NODE | JCMK Node is running and a Biscuit answered, in either mode | Leave and start BISCUIT NODE, or send `node biscuit`. A Biscuit in Secure mode also needs Extended mode. |
 | JCMK CORE FOUND: USE JCMK Node | BISCUIT NODE is running and a JCMK core or a Piglet answered | Leave and start JCMK Node, or send `node jcmk`. |
 | PIGLET CORE: CLEAR NODE KEY | JCMK Node has encryption on and a Piglet core answered; a Piglet has no encryption | Send `node encrypt off` (or `node key clear`) to use the Piglet. A keyed JCMK core in range is still joined when it answers. |
 | LINKED TO BISCUIT, LINKED TO CORE, LINKED TO PIGLET CORE, LINKED | Linked; records are being sent | Nothing. |
 | LINKED (BROADCAST) | Linked, but the core's radio did not confirm direct messages, so reports go out by broadcast | Nothing, as long as the core is in range. Broadcast records are not confirmed, so check the core's own log if in doubt. |
-| TAP CONFIRM TO LEAVE, PRESS CONFIRM TO LEAVE, HOLD AGAIN TO LEAVE | One exit press was made: TAP CONFIRM on touch boards and the M5Stack Dial, PRESS CONFIRM on CrowPanel 2.1 and SenseCAP Watcher, HOLD AGAIN on Waveshare Lite | Press again within 3 seconds to leave, or wait to keep the node running. |
+| TAP CONFIRM TO LEAVE, PRESS CONFIRM TO LEAVE, HOLD AGAIN TO LEAVE | One exit request was made: TAP CONFIRM on touch boards and the M5Stack Dial, PRESS CONFIRM on CrowPanel 2.1 and SenseCAP Watcher, HOLD AGAIN on Waveshare Lite | Confirm within 3 seconds (5 after a hold) to leave, or wait to keep the node running. |
+| TAP EXIT TO LEAVE, PRESS EXIT TO LEAVE, HOLD BUTTON TO EXIT | A side button was pressed briefly; that never leaves | Nothing, unless you want to leave: see [leave a node](#leave-a-node). It goes after 3 seconds. |
 
-Small panels may show shorter forms, such as BISCUIT: SET EXTENDED MODE, USE EXTENDED MODE, BISCUIT: USE BISCUIT NODE, USE BISCUIT NODE, JCMK CORE: USE JCMK Node, USE JCMK Node, PIGLET: CLEAR NODE KEY or CLEAR NODE KEY. A wrong-core hint fades about 15 seconds after that core stops answering.
+Small panels may show shorter forms, such as BISCUIT: SET EXTENDED MODE, USE EXTENDED MODE, BISCUIT: USE BISCUIT NODE, USE BISCUIT NODE, JCMK CORE: USE JCMK Node, USE JCMK Node, PIGLET: CLEAR NODE KEY or CLEAR NODE KEY. A wrong-core hint fades about 45 seconds after that core stops answering, because a Biscuit can stay quiet for half a minute.
 
 Other problems:
 
-- **The count stays at 0 while linked.** The node only scans the channels in its plan; check `plan=` in `node status`. Networks on 5 GHz alone are never heard.
+- **The count stays at 0 while linked.** On BISCUIT NODE, check that a wardrive is running in the Biscuit app (`waiting=1` in `node status` means none is). Otherwise the node only scans the channels in its plan; check `plan=`. Networks on 5 GHz alone are never heard.
+- **The Biscuit app shows the node connected, but the node says SEARCHING FOR BISCUIT or SET BISCUIT TO EXTENDED MODE and finds nothing.** The Biscuit is in Secure mode. Switch it to Extended mode in the app's Node Management settings while no wardrive runs.
+- **The node left by itself.** It did not: look for `NODE_EXIT_PRESS` lines in the USB log. Since this version a short press of a side button never leaves.
 - **The core saves nothing, yet the node says LINKED and SENT rises.** Check that the [encryption](#jcmk-encryption-optional) setting matches the core.
 - **USB answers `NODE_BUSY`.** A node is running. Use `node stop`, or only the commands listed above.
 - **USB answers `WARDRIVE_BUSY` or `UPLOAD_BUSY` to a node command.** A GPS wardrive or a wardrive upload owns the radio. Stop the wardrive and wait for its save, or let the upload finish or cancel it, then start the node.
@@ -255,12 +264,14 @@ Other problems:
 
 While a GPS wardrive or a wardrive upload is running, Modes cannot be opened and USB node commands answer `WARDRIVE_BUSY` or `UPLOAD_BUSY`, so the node never gets as far as a refusal of its own.
 
-## Hardware checklist (not yet verified)
+## Hardware checklist
 
-None of these has been checked on hardware yet. The fuller per-board list is in [validation status](VALIDATION.md#biscuit-node-and-jcmk-node).
+Field results on a Waveshare 1.75C with a real Biscuit, 2026-11-17: in Secure mode the Biscuit answered with `encrypt=1;wdbatch=2;nodecfg=2;ch=6;ap6=1` and was not joined; switched to Extended mode it was joined within half a second, gave role 1 and the channel list `channels=1,...,14,36,...,161;dwell=110` when a wardrive started, and Wi-Fi records were sent with no failures and no link losses over 20 minutes. Every unexpected exit in that run was a side-button double press, which this version no longer counts. The rest of the list, and the waiting state and side-button rules of this version, are not yet checked on hardware. The fuller per-board list is in [validation status](VALIDATION.md#biscuit-node-and-jcmk-node).
 
-- [ ] BISCUIT NODE with a Biscuit in Extended mode: JOINING BISCUIT, then LINKED TO BISCUIT; the node is listed once in the Biscuit Manager under its name, and records reach the Biscuit's log with its location.
-- [ ] BISCUIT NODE with a Biscuit in Secure mode: SET BISCUIT TO EXTENDED MODE, and no records.
+- [x] BISCUIT NODE with a Biscuit in Extended mode (1.75C): linked, role and channel list received, Wi-Fi records sent. Not yet checked: records in the Biscuit's saved log with its location.
+- [ ] BISCUIT NODE before a wardrive: WAITING FOR WARDRIVE and no scans (`scans=` stays put); starting a Wi-Fi wardrive in the app starts the scans; stopping it ends them.
+- [x] BISCUIT NODE with a Biscuit in Secure mode (1.75C): no link, and `other=BISCUIT SECURE`.
+- [ ] Side buttons on each board: short presses and quick double presses never leave; the documented hold, then CONFIRM, does.
 - [ ] JCMK Node with an ESP32 Dual Band Wardriver core: LINKED TO CORE; the core's Nodes menu lists the node as 6G EXT; `assigned=0` and `plan=1,2,3,4,5,6,7,8,9,10,11`; the core's other nodes keep their full channel shares; Wi-Fi and Bluetooth records reach the core's log.
 - [ ] JCMK Node with a matching key, with a wrong key, and with `node key ""` against a core with Use Encryption ticked and no ENOW Key; `node config` never prints the key.
 - [ ] JCMK Node with a Piglet: LINKED TO PIGLET CORE, Wi-Fi records arrive, and no Bluetooth rows appear in the Piglet's log. With encryption on: PIGLET CORE: CLEAR NODE KEY, and no link.

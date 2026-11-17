@@ -170,7 +170,9 @@ int main(int argc,char** argv){
  lv_event_send(dialMenuButton,LV_EVENT_SHORT_CLICKED,nullptr);assert(dialMenu==DialMenu::Main);dialChoice=4;dialButton(dragon::LitePress::Tap);assert(dialMenu==DialMenu::Settings);render(argv[1],"08-settings");
  for(unsigned theme:{0,3,9,23,28,29,31,35,39}){uiShow("clock");radarTheme=theme;refreshLiteTheme();tick+=200;uiLoop();char label[40];snprintf(label,sizeof(label),"clock-theme-%02u",theme);render(argv[1],label);}
  uiShow("radar");assert(!standby&&!dialMenuVisible());
- // Tools > Modes: BISCUIT NODE and JCMK Node own the whole panel until two exit presses.
+ // Tools > Modes: BISCUIT NODE and JCMK Node own the whole panel until two exit
+ // requests: EXIT taps or front-button holds. A tap or a double press of the
+ // front button only shows how to leave, so a bump cannot end a drive.
  using P=dragon::LitePress;radarTheme=1;refreshLiteTheme();dialClearSelection();const uint32_t children=lv_obj_get_child_cnt(root);const LitePage page=litePage;
  liteButtonEvent(P::Tap);assert(dialMenu==DialMenu::Main);dialRotate(1);dialRotate(1);liteButtonEvent(P::Tap);assert(dialMenu==DialMenu::Tools);
  for(int i=0;i<3;++i)dialRotate(1);liteButtonEvent(P::Tap);assert(dialMenu==DialMenu::Modes&&dialChoice==0);render(argv[1],"09-modes");
@@ -182,21 +184,25 @@ int main(int argc,char** argv){
  uiNotify("Example camera detected","",nullptr,false);assert(lv_obj_has_flag(notice,LV_OBJ_FLAG_HIDDEN));
  for(const char* name:{"radar","clock","stopwatch","menu","tools","settings","modes","startup","node"}){uiShow(name);assert(nodeBusy()&&liteNodeHost&&!dialMenuVisible()&&!liteStartup&&litePage==page);}
  const bool radio=standby;setLitePage(LitePage::Clock);assert(standby==radio);setLitePage(page); // no radio change while a node runs
- liteButtonEvent(P::Tap);assert(nodeBusy());tick+=250;uiLoop();render(argv[1],"11-node-confirm");
- tick+=3100;uiLoop();liteButtonEvent(P::Hold);assert(nodeBusy()); // the confirmation lapsed, so this press only arms again
- liteButtonEvent(P::Double);assert(!nodeBusy()&&nodeStops==1&&liteNodeHost); // stopped; the screen leaves on the next pass
+ liteButtonEvent(P::Tap);assert(nodeBusy());tick+=250;uiLoop();assert(findObject(liteNodeHost,&lv_label_class,"TAP EXIT TO LEAVE"));render(argv[1],"11-node-hint");
+ for(int i=0;i<3;++i){liteButtonEvent(P::Double);liteButtonEvent(P::Tap);tick+=600;uiLoop();}assert(nodeBusy()&&nodeStops==0);
+ tick+=3100;uiLoop();assert(!findObject(liteNodeHost,&lv_label_class,"TAP EXIT TO LEAVE"));   // the hint goes again
+ liteButtonEvent(P::Hold);assert(nodeBusy());tick+=250;uiLoop();assert(findObject(liteNodeHost,&lv_label_class,"TAP CONFIRM TO LEAVE"));render(argv[1],"11-node-confirm");
+ liteButtonEvent(P::Hold);assert(nodeBusy());                      // too soon after the first: a bounce, not a second request
+ tick+=5100;uiLoop();liteButtonEvent(P::Hold);assert(nodeBusy()); // the confirmation lapsed, so this hold only arms again
+ liteButtonEvent(P::Double);liteButtonEvent(P::Tap);assert(nodeBusy()); // short presses never confirm
+ tick+=600;liteButtonEvent(P::Hold);assert(!nodeBusy()&&nodeStops==1&&liteNodeHost); // stopped; the screen leaves on the next pass
  liteButtonEvent(P::Tap);dialRotate(1);assert(!dialMenuVisible()&&litePage==page);
  uiLoop();assert(!liteNodeHost&&!nodeScreenShown()&&dialMenu==DialMenu::Modes&&dialChoice==0&&lv_obj_get_child_cnt(root)==children);
  dialRotate(1);liteButtonEvent(P::Tap);assert(nodeKind()==NodeKind::Jcmk&&liteNodeHost);nodeLink.ble=211;tick+=250;uiLoop();render(argv[1],"12-jcmk-node");
  auto* exitButton=findObject(liteNodeHost,&lv_btn_class);assert(exitButton);
- lv_event_send(exitButton,LV_EVENT_CLICKED,nullptr);assert(nodeBusy());lv_event_send(exitButton,LV_EVENT_CLICKED,nullptr);assert(!nodeBusy()&&nodeStops==2&&liteNodeHost);
+ lv_event_send(exitButton,LV_EVENT_CLICKED,nullptr);assert(nodeBusy());lv_event_send(exitButton,LV_EVENT_CLICKED,nullptr);assert(nodeBusy()); // a double tap is one request
+ tick+=600;lv_event_send(exitButton,LV_EVENT_CLICKED,nullptr);assert(!nodeBusy()&&nodeStops==2&&liteNodeHost);
  uiLoop();assert(!liteNodeHost&&dialMenu==DialMenu::Modes&&dialChoice==1);
- // A quick double press of the front button reaches LiteButton as one Double: it is both
- // exit presses, from an unarmed screen as well as after a lapsed confirmation.
+ // EXIT on the screen, then a front-button hold, also leaves.
  liteButtonEvent(P::Tap);assert(nodeKind()==NodeKind::Jcmk&&liteNodeHost);tick+=250;uiLoop();
- liteButtonEvent(P::Double);assert(!nodeBusy()&&nodeStops==3&&liteNodeHost);uiLoop();assert(!liteNodeHost&&dialMenu==DialMenu::Modes&&dialChoice==1);
- liteButtonEvent(P::Tap);assert(nodeBusy());tick+=250;uiLoop();liteButtonEvent(P::Tap);assert(nodeBusy());tick+=3100;uiLoop();
- liteButtonEvent(P::Double);assert(!nodeBusy()&&nodeStops==4);uiLoop();assert(!liteNodeHost&&dialMenu==DialMenu::Modes&&dialChoice==1);
+ lv_event_send(findObject(liteNodeHost,&lv_btn_class),LV_EVENT_CLICKED,nullptr);assert(nodeBusy());tick+=1000;uiLoop();
+ liteButtonEvent(P::Double);assert(nodeBusy());liteButtonEvent(P::Hold);assert(!nodeBusy()&&nodeStops==3);uiLoop();assert(!liteNodeHost&&dialMenu==DialMenu::Modes&&dialChoice==1);
  // A refusal stays on Modes with the reason.
  stopwatch.toggle(stopwatchNow());dialRotate(-1);liteButtonEvent(P::Tap);assert(!nodeBusy()&&!liteNodeHost&&dialMenu==DialMenu::Modes&&!strcmp(lv_label_get_text(dialMenuNote),"Stop the stopwatch first"));
  render(argv[1],"13-modes-refused");stopwatch.toggle(stopwatchNow());nodeRefuses=true;dialRotate(1);dialRotate(-1);liteButtonEvent(P::Tap);assert(!strcmp(lv_label_get_text(dialMenuNote),"Could not start the node"));nodeRefuses=false;
@@ -214,7 +220,7 @@ int main(int argc,char** argv){
  radarTheme=VectorPotentialTheme;refreshLiteTheme();setLitePage(LitePage::Status);tick+=200;uiLoop();lv_obj_update_layout(root);
  {lv_area_t l,t;lv_obj_get_coords(logo,&l);lv_obj_get_coords(pageTitle,&t);assert(lv_img_get_src(logo)==&watch_logo_vp&&!lv_obj_has_flag(logo,LV_OBJ_FLAG_HIDDEN)&&l.y2<t.y1);}
  render(argv[1],"14-status-vp");setLitePage(LitePage::Radar);assert(lv_obj_has_flag(logo,LV_OBJ_FLAG_HIDDEN));radarTheme=1;refreshLiteTheme();
- puts("PASS production Dial pages, ring/button menu navigation, timer, radio standby, Tools > Modes node screen (exit, quick double press, refusal, USB, resume), Vector Potential headers and matching tile/full-frame rendering");
+ puts("PASS production Dial pages, ring/button menu navigation, timer, radio standby, Tools > Modes node screen (EXIT or hold to leave, taps and double presses never leave, refusal, USB, resume), Vector Potential headers and matching tile/full-frame rendering");
 }
 '''
 lite_main = r'''
@@ -239,15 +245,16 @@ int main(int argc,char** argv){
  liteButtonEvent(P::Tap);liteButtonEvent(P::Double);assert(nodeBusy()&&litePage==LitePage::Modes&&liteModeChoice==0&&radarTheme==theme);
  for(const char* name:{"radar","clock","settings","startup","modes","node"}){uiShow(name);assert(nodeBusy()&&liteNodeHost&&!liteStartup&&litePage==LitePage::Modes);}
  uiNotify("Example camera detected","",nullptr,false);assert(lv_obj_has_flag(notice,LV_OBJ_FLAG_HIDDEN));
+ liteButtonEvent(P::Tap);liteButtonEvent(P::Double);assert(nodeBusy());   // short presses only show how to leave
  liteButtonEvent(P::Hold);assert(nodeBusy());tick+=250;uiLoop();assert(findObject(liteNodeHost,&lv_label_class,"HOLD AGAIN TO LEAVE"));render(argv[1],"lite-05-node-confirm");
- liteButtonEvent(P::Hold);assert(!nodeBusy()&&nodeStops==1&&liteNodeHost);liteButtonEvent(P::Hold);
+ tick+=600;liteButtonEvent(P::Hold);assert(!nodeBusy()&&nodeStops==1&&liteNodeHost);liteButtonEvent(P::Hold);
  uiLoop();assert(!liteNodeHost&&litePage==LitePage::Modes&&liteModeChoice==0&&lv_obj_get_child_cnt(root)==children);
  liteButtonEvent(P::Tap);liteButtonEvent(P::Double);assert(nodeKind()==NodeKind::Jcmk);nodeLink.ble=5120;tick+=250;uiLoop();render(argv[1],"lite-06-jcmk-node");
  nodeStop();uiShow("modes");assert(!liteNodeHost&&litePage==LitePage::Modes&&liteModeChoice==1);
  // A node started over the clock (radio standby) leaves the radio alone, then hands it back on the way to MODES.
  liteButtonEvent(P::Hold);liteButtonEvent(P::Hold);assert(litePage==LitePage::Clock&&standby);
  assert(nodeStart(NodeKind::Biscuit));uiShow("node");setLitePage(LitePage::Radar);assert(standby);setLitePage(LitePage::Clock);
- liteButtonEvent(P::Hold);liteButtonEvent(P::Hold);uiLoop();assert(litePage==LitePage::Modes&&!standby&&liteModeChoice==0);
+ liteButtonEvent(P::Hold);tick+=600;liteButtonEvent(P::Hold);uiLoop();assert(litePage==LitePage::Modes&&!standby&&liteModeChoice==0);
  // Resume after a restart: the node screen sits above the startup splash.
  uiShow("startup");assert(liteStartup);assert(nodeStart(NodeKind::Jcmk));uiShow("node");
  assert(lv_obj_get_index(liteNodeHost)>lv_obj_get_index(liteStartup));tick+=2300;uiLoop();assert(!liteStartup&&liteNodeHost);

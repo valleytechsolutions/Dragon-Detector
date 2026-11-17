@@ -8,6 +8,8 @@ struct NodeScreenOptions {
   bool exitButton=true;          // touch or rotary boards: an on-screen EXIT
   const char* exitHint=nullptr;  // boards without one: how to leave, e.g. "HOLD BUTTON TO EXIT"
   const char* confirmHint=nullptr; // after the first exit request, e.g. "HOLD AGAIN TO LEAVE"
+  const char* keyHint=nullptr;   // shown for a moment after a short key press; default TAP EXIT TO LEAVE
+  const char* keyHintShort=nullptr; // the same for a narrow status line
   void (*exited)()=nullptr;      // called after the node stopped from this screen
 };
 
@@ -18,6 +20,13 @@ void nodeScreenClose();
 bool nodeScreenShown();
 // Refreshes the numbers and state. Cheap to call on every UI pass.
 void nodeScreenLoop();
-// An exit request from the EXIT button or a hardware key. The first one arms,
-// a second within three seconds stops the node. True when the node stopped.
-bool nodeScreenExitPress();
+// How an exit request was made: EXIT on the screen (touch, or a knob that
+// presses the focused EXIT), or a key held down.
+enum class NodeExitInput : uint8_t { Screen, Hold };
+// An exit request. The first arms; a second at least half a second later and
+// within three seconds (five after a hold) stops the node, so a bouncing
+// contact or a quick double tap is never both. True when the node stopped.
+bool nodeScreenExitPress(NodeExitInput how=NodeExitInput::Screen);
+// A short key press while the node screen is up. It is never an exit request:
+// the status line says how to leave for a few seconds instead.
+void nodeScreenKeyHint();

@@ -44,7 +44,7 @@ constexpr Rows Row={56,96,208,296,350,374,404,412};
 
 constexpr uint32_t Black=0x000000,White=0xffffff,Muted=0x8b9099,Track=0x1c1f24;
 constexpr uint32_t Linked=0x34d07a,Searching=0xffb020,Problem=0xff5a52,ButtonFill=0x17191d,ButtonEdge=0x3a3f47;
-constexpr uint32_t ConfirmMs=3000,DriftMs=60000,RefreshMs=200;
+constexpr uint32_t ConfirmMs=3000,HoldConfirmMs=5000,ConfirmGapMs=500,HintMs=3000,DriftMs=60000,RefreshMs=200;
 // Small orbit that moves the text, logo and EXIT a few pixels every minute (AMOLED wear).
 constexpr int8_t Drift[][2]={{0,0},{2,-2},{-2,2},{2,2},{-2,-2},{0,3},{0,-3},{3,0},{-3,0}};
 // Rim marker: a short arc on the track, in its own small object, so a move only
@@ -59,9 +59,9 @@ NodeScreenOptions options;
 NodeKind shownKind=NodeKind::None;
 float scale=1;
 lv_coord_t panel=466,markerRadius=228,markerWidth=5;
-uint32_t refreshedAt=0,driftAt=0,armedAt=0;
+uint32_t refreshedAt=0,driftAt=0,armedAt=0,armedWindow=ConfirmMs,hintAt=0;
 unsigned driftStep=0;
-bool armed=false,leaving=false;
+bool armed=false,leaving=false,hinting=false;
 char lastStatus[64]="",lastCount[16]="",lastStats[64]="";
 uint32_t lastColor=0;
 int16_t markerAt=-1;         // marker centre, degrees clockwise from the top; -1 before the first
@@ -116,7 +116,7 @@ void paintButton(bool on){
   }
 }
 void arm(bool on){
-  armed=on;armedAt=millis();
+  armed=on;armedAt=millis();if(on)hinting=false;
   if(!w.button)return;
   paintButton(on);lv_label_set_text(w.buttonText,on?"CONFIRM":"EXIT");
   lastStatus[0]=0;           // the status line explains the second press
@@ -152,8 +152,14 @@ uint8_t describe(const char* (&out)[3],uint32_t& color){
   if(armed){
     out[0]=options.confirmHint?options.confirmHint:w.button?"TAP CONFIRM TO LEAVE":"PRESS AGAIN TO LEAVE";color=Problem;return 1;
   }
-  // A Biscuit link counts once the Biscuit has given this node its role.
-  if(s.linked&&biscuitNode&&!s.registered){color=Searching;out[0]="JOINING BISCUIT";out[1]="JOINING";return 2;}
+  // A short key press: how to leave, for a moment.
+  if(hinting){
+    color=White;
+    out[0]=options.keyHint?options.keyHint:w.button?"TAP EXIT TO LEAVE":"HOLD BUTTON TO EXIT";
+    out[1]=options.keyHintShort?options.keyHintShort:w.button?"TAP EXIT":"HOLD TO EXIT";return 2;
+  }
+  // A Biscuit gives its nodes a role when a wardrive starts; until then the node waits.
+  if(s.linked&&s.waiting){color=Linked;out[0]="WAITING FOR WARDRIVE";out[1]="WAITING FOR DRIVE";out[2]="WAITING";return 3;}
   if(s.linked){
     color=Linked;
     if(s.broadcast){out[0]="LINKED (BROADCAST)";return 1;}
@@ -217,7 +223,7 @@ void refresh(uint32_t now){
 
 void nodeScreenOpen(lv_obj_t* parent,const NodeScreenOptions& opened){
   nodeScreenClose();
-  options=opened;shownKind=nodeKind();leaving=false;armed=false;
+  options=opened;shownKind=nodeKind();leaving=false;armed=false;hinting=false;
   const lv_coord_t size=lv_obj_get_width(parent)?lv_obj_get_width(parent):lv_disp_get_hor_res(nullptr);
   panel=size;scale=float(size)/466.f;
   w.screen=lv_obj_create(parent);
@@ -275,7 +281,7 @@ void nodeScreenOpen(lv_obj_t* parent,const NodeScreenOptions& opened){
   refresh(refreshedAt);
 }
 
-void nodeScreenClose(){w=Widgets{};armed=false;}
+void nodeScreenClose(){w=Widgets{};armed=false;hinting=false;}
 bool nodeScreenShown(){return w.screen!=nullptr;}
 
 void nodeScreenLoop(){
@@ -286,7 +292,8 @@ void nodeScreenLoop(){
     Serial.printf("NODE_SCREEN_CLOSED busy=%u\n",nodeBusy());
     leaving=true;if(options.exited)options.exited();return;
   }
-  if(armed&&now-armedAt>=ConfirmMs)arm(false);
+  if(armed&&now-armedAt>=armedWindow)arm(false);
+  if(hinting&&now-hintAt>=HintMs){hinting=false;lastStatus[0]=0;refreshedAt=now-RefreshMs;}
   if(now-driftAt>=DriftMs){
     driftAt=now;driftStep=(driftStep+1)%(sizeof(Drift)/sizeof(Drift[0]));
     lv_obj_set_pos(w.content,px(Drift[driftStep][0]),px(Drift[driftStep][1]));
@@ -295,12 +302,23 @@ void nodeScreenLoop(){
   refreshedAt=now;refresh(now);
 }
 
-bool nodeScreenExitPress(){
+bool nodeScreenExitPress(NodeExitInput how){
   if(!nodeBusy())return false;
-  if(!armed||millis()-armedAt>=ConfirmMs){Serial.println("NODE_EXIT_ARMED");arm(true);if(w.screen)refresh(millis());return false;}
+  const uint32_t now=millis();
+  if(!armed||now-armedAt>=armedWindow){
+    Serial.println("NODE_EXIT_ARMED");armedWindow=how==NodeExitInput::Hold?HoldConfirmMs:ConfirmMs;
+    arm(true);if(w.screen)refresh(now);return false;
+  }
+  // A bouncing contact or a quick double tap is one press, never both.
+  if(now-armedAt<ConfirmGapMs){Serial.println("NODE_EXIT_IGNORED reason=too_soon");return false;}
   Serial.println("NODE_EXIT_CONFIRMED");
   armed=false;leaving=true;
   nodeStop();
   if(options.exited)options.exited();
   return true;
+}
+
+void nodeScreenKeyHint(){
+  if(!w.screen||leaving||armed||!nodeBusy())return;   // armed: the status line already asks for the second press
+  hinting=true;hintAt=millis();lastStatus[0]=0;refresh(hintAt);
 }

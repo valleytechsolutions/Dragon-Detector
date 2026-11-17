@@ -271,7 +271,7 @@ static void clockTab(int,bool){}
 void lv_msgbox_close(lv_obj_t* box){assert(box==&prompt);++closed;}
 static bool ui185bModalOpen(){return clockPrompt||otherDialog;}
 static void go(Page next){pending=next;}
-static bool nodeKey(){return false;}  // no node running; the 1.85B test covers the node screen
+static bool nodeKey(const char*,bool=false){return false;}  // no node running; the 1.85B test covers the node screen
 bool uiStopwatchKey(bool,uint64_t=0){return false;}
 ''' + source_function('firmware/src/clock_settings.inc', 'static void clockSetupPrompt(){') + '\n' + '\n'.join(
     ui_function(name) for name in (

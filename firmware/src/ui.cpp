@@ -166,14 +166,17 @@ if(page==BleLab&&p!=BleLab)bleLabStop();pending=p;}
 // inside an LVGL event or nodeScreenLoop(); uiLoop() changes the page next pass.
 static bool nodeLeft=false;
 static void nodeExited(){nodeLeft=true;}
-// While a node runs, every key or knob action that would leave a page asks the
-// node screen to stop it instead; a second request within 3 s confirms. A press
-// that only wakes a dark panel does nothing else. True while a node runs.
-static bool nodeKey(const char* source){
+// While a node runs, keys and the knob's own shortcuts never leave the node
+// screen. A short press wakes a dark panel, or shows for a moment how to leave;
+// it is never an exit request, so a bump or a bouncing contact cannot end a
+// drive. A key held down (hold true, where the board reports holds) counts like
+// a tap on EXIT, and a second exit request confirms. True while a node runs.
+static bool nodeKey(const char* source,bool hold=false){
   if(!nodeBusy())return false;
   const bool dark=outputBrightness==0;lastInteraction=millis();
-  Serial.printf("NODE_EXIT_PRESS source=%s dark=%u\n",source,dark);
-  if(!dark&&page==Node&&pending==Node&&nodeScreenShown())nodeScreenExitPress();
+  const bool shown=!dark&&page==Node&&pending==Node&&nodeScreenShown();
+  Serial.printf("NODE_EXIT_PRESS source=%s dark=%u counted=%u\n",source,dark,shown&&hold);
+  if(shown){if(hold)nodeScreenExitPress(NodeExitInput::Hold);else nodeScreenKeyHint();}
   return true;
 }
 static void action(lv_event_t* e);
@@ -402,7 +405,7 @@ static void build(){
     dismissNotice();lv_obj_set_style_bg_color(root,color(0x000000),0);
     NodeScreenOptions options;options.exitButton=true;options.exited=nodeExited;
 #if defined(BOARD_CROWPANEL_21) || defined(BOARD_WATCHER)
-    options.confirmHint="PRESS CONFIRM TO LEAVE";
+    options.confirmHint="PRESS CONFIRM TO LEAVE";options.keyHint="PRESS EXIT TO LEAVE";options.keyHintShort="PRESS EXIT";
 #endif
     nodeScreenOpen(root,options);return;
   }
@@ -1096,7 +1099,7 @@ static bool uiSideKeyModalOpen(){return resetBox||clockPrompt||notice||uiSideKey
 #endif
 #ifdef BOARD_AMOLED_175C
 void uiAmoled175cSleep(unsigned seconds){
-  if(nodeKey("boot_hold"))return; // the hold is an exit request; sleep would end the node unasked
+  if(nodeKey("boot_hold",true))return; // the hold is an exit request; sleep would end the node unasked
   lastInteraction=millis();
   if(uiSideKeyModalOpen()||page!=pending)return;
   const char* title="SLEEP UNAVAILABLE";
@@ -1150,7 +1153,7 @@ static bool ui143cClockPromptLater(){
 }
 #endif
 void ui185bHome(){
-  if(nodeKey("home_key"))return;
+  if(nodeKey("boot_hold",true))return; // BOOT held 0.7 s
 #ifdef BOARD_WAVESHARE_143C
   if(ui143cClockPromptLater())return;
 #endif

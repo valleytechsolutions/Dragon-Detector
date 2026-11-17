@@ -124,6 +124,7 @@ static lv_obj_t* labelWith(lv_obj_t* o,const char* part){
 }
 int main(int argc,char** argv){
   size=atoi(argv[1]);const char* out=argv[2];const bool button=atoi(argv[3]);const char* confirm=argc>4&&*argv[4]?argv[4]:nullptr;
+  const char* keyHint=argc>5&&*argv[5]?argv[5]:nullptr;const char* keyHintShort=argc>6&&*argv[6]?argv[6]:nullptr;
   lv_init();frame.assign(size*size,0);
   static lv_disp_draw_buf_t buf;static std::vector<lv_color_t> pixels(size*size);
   lv_disp_draw_buf_init(&buf,pixels.data(),nullptr,size*size);
@@ -131,13 +132,16 @@ int main(int argc,char** argv){
   lv_disp_drv_register(&drv);
   lv_obj_t* screen=lv_scr_act();lv_obj_set_style_bg_color(screen,lv_color_hex(0x203040),0);
   // The options each board passes (ui.cpp, lite_node.inc).
-  NodeScreenOptions options;options.exitButton=button;options.exitHint=button?nullptr:"HOLD BUTTON TO EXIT";options.confirmHint=confirm;
+  NodeScreenOptions options;options.exitButton=button;options.exitHint=button?nullptr:"HOLD BUTTON TO EXIT";options.confirmHint=confirm;options.keyHint=keyHint;options.keyHintShort=keyHintShort;
+  // After a short key press the status line says how to leave, in the shortest wording at least.
+  const char* hintText=keyHintShort?keyHintShort:button?"TAP EXIT":"HOLD";
   using dragon::node::Core;
   // scanned: the channel of the last scan before a visit home (Report on channel 6).
-  struct Case{const char* name;NodeKind kind;bool linked,registered;Core core,other;uint32_t wifi,ble,sent;uint8_t channel,scanned;bool arm,keyed;const char* expect;const char* also;const char* forbid;};
+  struct Case{const char* name;NodeKind kind;bool linked,registered;Core core,other;uint32_t wifi,ble,sent;uint8_t channel,scanned;bool arm,keyed;const char* expect;const char* also;const char* forbid;bool waiting=false,hint=false;};
   const Case cases[]={
     {"biscuit-linked",NodeKind::Biscuit,true,true,Core::Biscuit,Core::None,12384,0,13110,6,4,false,false,"LINKED","CH 4",nullptr},
-    {"biscuit-joining",NodeKind::Biscuit,true,false,Core::Biscuit,Core::None,0,0,0,6,0,false,false,"JOINING",nullptr,"LINKED"},
+    {"biscuit-waiting",NodeKind::Biscuit,true,false,Core::Biscuit,Core::None,0,0,0,6,0,false,false,"WAITING",nullptr,"LINKED",true},
+    {"biscuit-waiting-after",NodeKind::Biscuit,true,true,Core::Biscuit,Core::None,1840,0,1902,6,0,false,false,"WAITING","SENT 1,902","LINKED",true},
     {"biscuit-search",NodeKind::Biscuit,false,false,Core::None,Core::None,0,0,0,6,0,false,false,"SEARCHING",nullptr,nullptr},
     {"biscuit-secure",NodeKind::Biscuit,false,false,Core::None,Core::BiscuitSecure,214,0,214,6,0,false,false,"EXTENDED MODE",nullptr,nullptr},
     {"jcmk-linked",NodeKind::Jcmk,true,true,Core::Jcmk,Core::None,8742,1903,10840,11,0,false,false,"LINKED","BLE 1,903","PIGLET"},
@@ -146,16 +150,18 @@ int main(int argc,char** argv){
     {"jcmk-secure-biscuit",NodeKind::Jcmk,false,false,Core::None,Core::BiscuitSecure,0,0,0,6,0,false,false,"USE BISCUIT NODE",nullptr,"EXTENDED"},
     {"jcmk-keyed-piglet",NodeKind::Jcmk,false,false,Core::None,Core::Piglet,0,0,0,6,0,false,true,"CLEAR NODE KEY",nullptr,"USE JCMK"},
     {"jcmk-confirm",NodeKind::Jcmk,true,true,Core::Jcmk,Core::None,999999,99999,1099998,3,0,true,false,confirm?confirm:button?"TAP CONFIRM TO LEAVE":"PRESS AGAIN TO LEAVE",nullptr,nullptr},
+    {"biscuit-key-hint",NodeKind::Biscuit,true,true,Core::Biscuit,Core::None,12384,0,13110,6,4,false,false,hintText,nullptr,"LINKED",false,true},
   };
   int problems=0;
   for(const Case& c:cases){
-    kind=c.kind;busy=true;keyed=c.keyed;status={};status.linked=c.linked;status.registered=c.registered;status.core=c.core;
+    kind=c.kind;busy=true;keyed=c.keyed;status={};status.linked=c.linked;status.registered=c.registered;status.waiting=c.waiting;status.core=c.core;
     status.other=c.other;status.wifi=c.wifi;status.ble=c.ble;status.sent=c.sent;status.channel=c.channel;
     status.planCount=11;for(uint8_t i=0;i<11;++i)status.plan[i]=i+1;status.phase=c.linked?dragon::node::Phase::Scan:dragon::node::Phase::Search;
     lv_obj_clean(screen);nodeScreenOpen(screen,options);
     status.lastScanned=c.linked?(c.scanned?c.scanned:c.channel):0;
     if(c.scanned)status.phase=dragon::node::Phase::Report;
     if(c.arm)nodeScreenExitPress();
+    if(c.hint)nodeScreenKeyHint();
     hostMillis+=1000;nodeScreenLoop();
     lv_obj_invalidate(screen);lv_refr_now(nullptr);
     char path[512];snprintf(path,sizeof(path),"%s-%s.raw",out,c.name);save(path);
@@ -178,19 +184,19 @@ int main(int argc,char** argv){
 """
 (work / "harness.cpp").write_text(harness)
 
-# Name, panel, defines, on-screen EXIT, and the confirm hint the board passes
-# (ui.cpp for CrowPanel and Watcher, lite_node.inc for the Waveshare Lite).
+# Name, panel, defines, on-screen EXIT, and the confirm and key hints the board
+# passes (ui.cpp for CrowPanel and Watcher, lite_node.inc for the Waveshare Lite).
 boards = [
-    ("466", 466, "-DBOARD_AMOLED_175C", True, ""),
-    ("480", 480, "-DBOARD_CROWPANEL_21", True, "PRESS CONFIRM TO LEAVE"),
-    ("412", 412, "-DBOARD_WATCHER", True, "PRESS CONFIRM TO LEAVE"),
-    ("360", 360, "-DBOARD_WAVESHARE_185B", True, ""),
-    ("240", 240, "-DBOARD_XIAO_ROUND", True, ""),
-    ("240-dial", 240, "-DBOARD_M5DIAL -DBOARD_RADAR_LITE", True, ""),
-    ("240-lite", 240, "-DBOARD_RADAR_LITE", False, "HOLD AGAIN TO LEAVE"),
+    ("466", 466, "-DBOARD_AMOLED_175C", True, "", "", ""),
+    ("480", 480, "-DBOARD_CROWPANEL_21", True, "PRESS CONFIRM TO LEAVE", "PRESS EXIT TO LEAVE", "PRESS EXIT"),
+    ("412", 412, "-DBOARD_WATCHER", True, "PRESS CONFIRM TO LEAVE", "PRESS EXIT TO LEAVE", "PRESS EXIT"),
+    ("360", 360, "-DBOARD_WAVESHARE_185B", True, "", "", ""),
+    ("240", 240, "-DBOARD_XIAO_ROUND", True, "", "", ""),
+    ("240-dial", 240, "-DBOARD_M5DIAL -DBOARD_RADAR_LITE", True, "", "", ""),
+    ("240-lite", 240, "-DBOARD_RADAR_LITE", False, "HOLD AGAIN TO LEAVE", "", ""),
 ]
 problems = 0
-for name, size, define, button, confirm in boards:
+for name, size, define, button, confirm, key_hint, key_hint_short in boards:
     exe = work / f"node-{name}"
     res = {466: 466, 480: 466, 412: 412, 360: 360, 240: 240}[size]
     cmd = ["c++", "-std=c++17", "-O1", "-w", *define.split(), f"-DSCREEN_RES={res}", *includes,
@@ -200,7 +206,7 @@ for name, size, define, button, confirm in boards:
     subprocess.run(cmd, check=True)
     for old in work.glob(f"{name}-*.png"):
         old.unlink()
-    result = subprocess.run([str(exe), str(size), str(work / name), "1" if button else "0", confirm], capture_output=True, text=True)
+    result = subprocess.run([str(exe), str(size), str(work / name), "1" if button else "0", confirm, key_hint, key_hint_short], capture_output=True, text=True)
     if result.stdout:
         print(result.stdout, end="")
         problems += result.stdout.count("\n")

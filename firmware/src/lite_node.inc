@@ -28,7 +28,7 @@ static void liteNodeOpen(){
   lv_obj_clear_flag(liteNodeHost,LV_OBJ_FLAG_SCROLLABLE);lv_obj_update_layout(liteNodeHost); // nodeScreenOpen() sizes itself from it
   NodeScreenOptions options;options.exited=liteNodeExited;
 #ifdef BOARD_M5DIAL
-  options.exitButton=true;                  // tap EXIT, or press the front button
+  options.exitButton=true;                  // tap EXIT, or hold the front button
 #else
   options.exitButton=false;options.exitHint="HOLD BUTTON TO EXIT";options.confirmHint="HOLD AGAIN TO LEAVE";
 #endif
@@ -45,16 +45,13 @@ static bool liteNodeLoop(){
   nodeScreenLoop();return true;
 }
 // Hardware button while a node runs; true when the press belongs to the node.
-// The Dial's front button is its exit press; on the Lite only a BOOT hold is.
-// LiteButton reports two quick Dial presses as one Double: that is both presses.
+// Only a hold is an exit request, on the Lite and the Dial alike. A tap or a
+// double press shows how to leave instead, so a bump cannot end a drive.
 static bool liteNodeButton(dragon::LitePress press){
   if(!liteNodeHost&&!nodeBusy())return false;
-#ifdef BOARD_M5DIAL
-  const bool leave=press!=dragon::LitePress::None,twice=press==dragon::LitePress::Double;
-#else
-  const bool leave=press==dragon::LitePress::Hold,twice=false;
-#endif
-  if(leave&&liteNodeHost&&!liteNodeLeave)Serial.printf("NODE_EXIT_PRESS source=%s\n",twice?"button_double":"button");
-  if(leave&&liteNodeHost&&!liteNodeLeave&&!nodeScreenExitPress()&&twice&&nodeBusy()&&!liteNodeLeave)nodeScreenExitPress();
+  if(press==dragon::LitePress::None||!liteNodeHost||liteNodeLeave)return true;
+  const bool hold=press==dragon::LitePress::Hold;
+  Serial.printf("NODE_EXIT_PRESS source=%s counted=%u\n",hold?"button_hold":press==dragon::LitePress::Double?"button_double":"button",hold);
+  if(hold)nodeScreenExitPress(NodeExitInput::Hold);else nodeScreenKeyHint();
   return true;
 }

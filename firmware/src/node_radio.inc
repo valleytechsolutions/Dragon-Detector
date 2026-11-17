@@ -115,16 +115,18 @@ struct RadioPort final : Port {
   }
   // Runs on the main loop, but also inside a binary USB transfer (radioTransferTick
   // between screenshot chunks): lines wait in noteLines until no transfer runs.
-  void note(Note what,Core core,const uint8_t* text,size_t length) override {
-    static const char* const names[]={"linked","core_lost","mode_changed","key_lost","other_core","role","channels"};
-    static_assert(sizeof(names)/sizeof(names[0])==size_t(Note::Channels)+1,"one name per Note");
+  void note(Note what,Core core,const uint8_t* text,size_t length,uint8_t type) override {
+    static const char* const names[]={"linked","core_lost","mode_changed","key_lost","other_core","role","channels","message"};
+    static_assert(sizeof(names)/sizeof(names[0])==size_t(Note::Message)+1,"one name per Note");
     char shown[81];size_t n=0;
-    for(size_t i=0;text&&i<length&&n+1<sizeof(shown);++i)shown[n++]=text[i]>=32&&text[i]<127&&text[i]!='"'?char(text[i]):'.';
+    if(what==Note::Role&&text&&length)n=size_t(snprintf(shown,sizeof(shown),"%u",unsigned(text[0])));   // the role number
+    else for(size_t i=0;text&&i<length&&n+1<sizeof(shown);++i)shown[n++]=text[i]>=32&&text[i]<127&&text[i]!='"'?char(text[i]):'.';
     shown[n]=0;
     const unsigned index=unsigned(what);
     char line[192];
-    const int used=snprintf(line,sizeof(line),"NODE_EVENT %s core=%s text=\"%s\" length=%u at_ms=%lu\n",index<sizeof(names)/sizeof(names[0])?names[index]:"?",
-      dragon::node::coreName(core),shown,unsigned(length),(unsigned long)millis());
+    char kind[12]="";if(what==Note::Message)snprintf(kind,sizeof(kind)," type=%u",unsigned(type));
+    const int used=snprintf(line,sizeof(line),"NODE_EVENT %s%s core=%s text=\"%s\" length=%u at_ms=%lu\n",index<sizeof(names)/sizeof(names[0])?names[index]:"?",
+      kind,dragon::node::coreName(core),shown,unsigned(length),(unsigned long)millis());
     if(used<=0)return;
     const size_t size=size_t(used)<sizeof(line)?size_t(used):sizeof(line)-1;
     if(noteLength+size>sizeof(noteLines)){++noteDrops;return;}

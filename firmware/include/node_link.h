@@ -43,6 +43,7 @@ constexpr uint32_t RequestMaxMs=5000;
 constexpr uint32_t JcmkWindowMs=300;        // home-channel wait for an assignment
 constexpr uint32_t BiscuitWindowMs=500;
 constexpr uint32_t BiscuitWindowJitterMs=200;
+constexpr uint32_t BiscuitIdleWindowMs=2000;   // a Biscuit that is not wardriving: check in about every 2 s, as during a sweep
 constexpr uint32_t CoreLostMs=30000;        // silence before searching again
 constexpr uint32_t ProbeAfterMs=10000;      // silence before asking the core to answer
 constexpr uint32_t SendTimeoutMs=300;       // a send report that never arrives
@@ -53,7 +54,7 @@ constexpr uint32_t BleScanMs=500;
 constexpr uint32_t BleGuardMs=60;
 constexpr uint32_t ScanGraceMs=1500;        // scan result that never arrives
 constexpr uint32_t ScanRetryMs=100;
-constexpr uint32_t OtherCoreMs=15000;       // how long a "wrong core" hint stays
+constexpr uint32_t OtherCoreMs=45000;       // how long a "wrong core" hint stays: a Biscuit can go quiet for half a minute
 constexpr uint16_t DwellDefaultMs=80,DwellMinMs=40,DwellMaxMs=300;
 constexpr uint8_t SendTries=3;              // attempts per record on a unicast link
 constexpr uint8_t UnicastGiveUp=5;          // unanswered unicasts before broadcasting
@@ -80,7 +81,7 @@ enum class Kind : uint8_t {Wifi,Ble};
 enum class Auth : uint8_t {Open,Wep,Wpa,Wpa2,WpaWpa2,Wpa2Enterprise,Wpa3,Wpa2Wpa3,Wapi,Other};
 enum class Peer : uint8_t {Remove,Plain,Encrypted};
 // Link changes worth a line in the USB log.
-enum class Note : uint8_t {Linked,CoreLost,ModeChanged,KeyLost,OtherCore,Role,Channels};
+enum class Note : uint8_t {Linked,CoreLost,ModeChanged,KeyLost,OtherCore,Role,Channels,Message};
 
 // What the link needs from the hardware. Every call returns immediately.
 struct Port {
@@ -93,7 +94,8 @@ struct Port {
   virtual void scanStop()=0;
   virtual void ble(bool on,uint32_t durationMs)=0;
   // Optional: a link change, with the core's text where it explains the change.
-  virtual void note(Note what,Core core,const uint8_t* text,size_t length){(void)what;(void)core;(void)text;(void)length;}
+  // type: the message type for Note::Message, otherwise 0.
+  virtual void note(Note what,Core core,const uint8_t* text,size_t length,uint8_t type){(void)what;(void)core;(void)text;(void)length;(void)type;}
 protected:
   ~Port()=default;
 };
@@ -211,7 +213,8 @@ struct Status {
   Core core=Core::None;             // family of the linked core
   Core other=Core::None;            // a core that answered but cannot be joined in this mode
   bool linked=false,assigned=false,ownPlan=false,broadcast=false,acknowledged=false;
-  bool registered=false;            // JCMK, Piglet: while linked. Biscuit: it gave a role, and answers Identify with one
+  bool registered=false;            // JCMK, Piglet: while linked. Biscuit: it gave this link a role
+  bool waiting=false;               // linked to a Biscuit with no wardrive role (none yet, or role 0): no scanning
   uint8_t coreMac[6]={};
   int8_t coreRssi=0;
   uint8_t channel=HomeChannel,role=0,nodeIndex=0,nodeCount=0;
@@ -232,7 +235,7 @@ public:
   bool begin(Port& port,const Config& config,uint32_t now){
     // Any power of two that a 16-bit slot number can reach.
     if(!config.seen||!config.seenCount||config.seenCount>65536||(config.seenCount&(config.seenCount-1)))return false;
-    port_=&port;config_=config;status_=Status{};otherNoted_=0;now_=now;
+    port_=&port;config_=config;status_=Status{};otherNoted_=0;configHash_=0;messagesNoted_=0;now_=now;
     snprintf(identity_,sizeof(identity_),"%s",config.identity?config.identity:"");config_.identity=identity_;
     if(config_.maxChannel<1)config_.maxChannel=1;
     if(config_.maxChannel>14)config_.maxChannel=14;
@@ -264,7 +267,8 @@ public:
     now_=now;
     if(status_.other!=Core::None&&now-otherAt_>=OtherCoreMs){status_.other=Core::None;otherNoted_=0;}
     status_.coreAgeMs=status_.linked?now-lastCoreAt_:0;
-    if(status_.linked&&status_.coreAgeMs>=CoreLostMs){port_->note(Note::CoreLost,status_.core,nullptr,0);++status_.losses;unlink(now);return;}
+    if(status_.linked&&status_.coreAgeMs>=CoreLostMs){port_->note(Note::CoreLost,status_.core,nullptr,0,0);++status_.losses;unlink(now);return;}
+    status_.waiting=status_.linked&&idleBiscuit();
     switch(status_.phase){
       case Phase::Search:
         if(pump(now,false))break;
@@ -279,7 +283,11 @@ public:
         if(now-phaseAt_>=window_){
           if(!secure(now))break;
           if(status_.phase==Phase::Listen)++status_.cycles;
-          planIndex_=0;enter(Phase::Scan,now);
+          planIndex_=0;
+          // A Biscuit hands its nodes a role when a wardrive starts. Until then
+          // the node only checks in from the home channel, as its own nodes do.
+          if(idleBiscuit())report(now,true);
+          else enter(Phase::Scan,now);
         }
         break;
       case Phase::Scan:scanStep(now);break;
@@ -304,7 +312,7 @@ public:
       if(joinable(kind))link(source,kind,rssi,now);
       else{
         // Logged once per kind while its hint is up, even when two such cores answer in turn.
-        if(!(otherNoted_&1u<<unsigned(kind))){otherNoted_|=uint8_t(1u<<unsigned(kind));port_->note(Note::OtherCore,kind,frame.text,frame.textLength);}
+        if(!(otherNoted_&1u<<unsigned(kind))){otherNoted_|=uint8_t(1u<<unsigned(kind));port_->note(Note::OtherCore,kind,frame.text,frame.textLength,0);}
         status_.other=kind;otherAt_=now;
       }
       return;
@@ -312,7 +320,7 @@ public:
     if(!sameMac(source,core_))return;         // only the linked core may steer this node
     ++status_.heardCore;
     if(frame.type==CoreReply&&!joinable(classifyReply(frame))){
-      port_->note(Note::ModeChanged,classifyReply(frame),frame.text,frame.textLength);
+      port_->note(Note::ModeChanged,classifyReply(frame),frame.text,frame.textLength,0);
       status_.other=classifyReply(frame);otherAt_=now;otherNoted_=uint8_t(1u<<unsigned(status_.other));
       ++status_.losses;unlink(now);return; // its mode changed
     }
@@ -325,20 +333,26 @@ public:
       case RecordAck:++status_.acked;status_.acknowledged=true;break;
       case Admin:
         if(frame.full()){                    // Biscuit style role assignment
-          status_.role=frame.textLength?frame.text[0]:uint8_t(frame.counter);
-          if(!roleSeen_)port_->note(Note::Role,status_.core,frame.text,frame.textLength);
+          const uint8_t role=frame.textLength?frame.text[0]:uint8_t(frame.counter);
+          if(!status_.registered||role!=status_.role){status_.role=role;port_->note(Note::Role,status_.core,&status_.role,1,0);}  // the first role on this link, and each change
           status_.registered=roleSeen_=true;
           control(RoleAck,status_.role,nullptr,0);
         }else if(length>=AdminSize)applyAdmin(data);
         break;
       case ConfigUpdate:
         if(frame.full()){
-          if(roleWanted_)port_->note(Note::Channels,status_.core,frame.text,frame.textLength);
+          {const uint32_t hash=textHash(frame.text,frame.textLength);
+           if(hash!=configHash_){configHash_=hash;port_->note(Note::Channels,status_.core,frame.text,frame.textLength,0);}}  // each new list once
           applyConfig(frame.text,frame.textLength);control(ConfigAck,0,nullptr,0);
           if(roleSeen_)roleWanted_=false;    // role and channel list both in: the handshake is complete
         }
         break;
-      default:break;                         // heartbeats only prove the core is alive
+      case Heartbeat:break;                  // heartbeats only prove the core is alive
+      default:
+        // Anything else from the core goes in the USB log once per type and link,
+        // so a field log shows what a core sends that this node does not use.
+        if(frame.type<32&&!(messagesNoted_&1u<<frame.type)){messagesNoted_|=1u<<frame.type;port_->note(Note::Message,status_.core,frame.text,frame.textLength,frame.type);}
+        break;
     }
   }
   // Outcome of the last transmit(). Broadcasts always report delivered.
@@ -378,6 +392,8 @@ private:
   static int8_t clampRssi(int rssi){return int8_t(rssi<-127?-127:rssi>0?0:rssi);}
   uint32_t random(){random_^=random_<<13;random_^=random_>>17;random_^=random_<<5;return random_;}
   bool biscuit() const {return status_.core==Core::Biscuit;}
+  // Linked to a Biscuit that is not wardriving: no role yet on this link, or role 0.
+  bool idleBiscuit() const {return biscuit()&&status_.role==0;}
   // A Piglet core logs every record as a Wi-Fi network, so Bluetooth goes to a JCMK core only.
   bool bleWanted() const {return config_.ble&&config_.family==Family::Jcmk&&status_.core==Core::Jcmk;}
   // A Piglet core has no ESP-NOW encryption: a keyed node would talk to it unheard.
@@ -462,11 +478,11 @@ private:
   void link(const uint8_t* mac,Core kind,int rssi,uint32_t now){
     if(!port_->peer(mac,config_.encrypted?Peer::Encrypted:Peer::Plain))return;
     memcpy(core_,mac,6);memcpy(status_.coreMac,mac,6);
-    status_.linked=true;status_.core=kind;status_.other=Core::None;otherNoted_=0;status_.coreRssi=clampRssi(rssi);
+    status_.linked=true;status_.core=kind;status_.other=Core::None;otherNoted_=0;configHash_=0;messagesNoted_=0;status_.coreRssi=clampRssi(rssi);
     status_.broadcast=status_.acknowledged=false;++status_.links;
     lastCoreAt_=now;unicastProven_=false;unicastFails_=0;controlCount_=0;ackProbes_=AckProbes;rekey_=false;
     resetAssignment();
-    port_->note(Note::Linked,kind,nullptr,0);
+    port_->note(Note::Linked,kind,nullptr,0,0);
     status_.registered=kind!=Core::Biscuit;    // a JCMK-style core takes on whoever asked
     if(kind==Core::Biscuit){
       identify(now,true);
@@ -476,9 +492,8 @@ private:
   }
   // Tells a Biscuit who this is. It answers with a role, then a channel list;
   // until both are in, it is told again. Records keep flowing meanwhile, as on
-  // the reference node. A Biscuit that already gave a role stays registered
-  // while it is asked again, so the screen does not flicker on every probe; it
-  // is dropped when the tries run out and the last of them brought no role.
+  // the reference node. Once this link has a role it stays registered until
+  // the link ends, however a later Identify goes, so the screen never flickers.
   void identify(uint32_t now,bool fresh){
     if(fresh)identifyTries_=0;
     ++identifyTries_;identifyAt_=now;roleWanted_=true;roleSeen_=false;
@@ -598,7 +613,7 @@ private:
     if(!rekey_)return true;
     rekey_=false;
     if(port_->peer(core_,Peer::Encrypted))return true;
-    port_->note(Note::KeyLost,status_.core,nullptr,0);++status_.losses;unlink(now);return false;
+    port_->note(Note::KeyLost,status_.core,nullptr,0,0);++status_.losses;unlink(now);return false;
   }
   // Sends one waiting message. true while something is on its way out.
   bool pump(uint32_t now,bool records){
@@ -660,12 +675,14 @@ private:
     }
     if(cycleEnd_){
       // Still no role or channel list: identify again, then wait home for the
-      // answer. After the last try, a Biscuit that gave no role to it no longer counts as registered.
+      // answer. After the last try the node waits for the next question. A real
+      // Biscuit often leaves a repeated Identify unanswered while it keeps the
+      // node, so a role once given on this link keeps the node registered.
       if(biscuit()&&roleWanted_&&now-identifyAt_>=IdentifyRetryMs){
         if(identifyTries_<IdentifyTries)identify(now,false);
-        else{roleWanted_=false;if(!roleSeen_)status_.registered=false;}
+        else roleWanted_=false;
       }
-      window_=biscuit()?BiscuitWindowMs+random()%(BiscuitWindowJitterMs+1):JcmkWindowMs;
+      window_=idleBiscuit()?BiscuitIdleWindowMs+random()%(BiscuitWindowJitterMs+1):biscuit()?BiscuitWindowMs+random()%(BiscuitWindowJitterMs+1):JcmkWindowMs;
       enter(Phase::Listen,now);
     }else enter(Phase::Scan,now);
   }
@@ -699,6 +716,9 @@ private:
   uint32_t phaseAt_=0,window_=0,requestAt_=0,requestWait_=0,requestInterval_=RequestFirstMs;
   uint32_t lastCoreAt_=0,otherAt_=0,flightAt_=0,sendDoneAt_=0,scanAt_=0,probeAt_=0,identifyAt_=0,now_=0;
   uint8_t otherNoted_=0;           // wrong-core kinds already in the USB log while their hint is up
+  uint32_t configHash_=0;          // the channel list last put in the USB log on this link
+  uint32_t messagesNoted_=0;       // message types from the core already in the USB log on this link
+  static uint32_t textHash(const uint8_t* text,size_t length){uint32_t h=2166136261u;for(size_t i=0;i<length;++i)h=(h^text[i])*16777619u;return h|1u;}
 };
 
 } // namespace dragon::node
