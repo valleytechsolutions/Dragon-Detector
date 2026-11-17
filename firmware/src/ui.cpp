@@ -182,6 +182,7 @@ void uiNotify(const char* text,const char* detail,const dragon::DeviceKey* key,b
   dragon::DetectionNotice item;strlcpy(item.title,text,sizeof(item.title));strlcpy(item.detail,detail,sizeof(item.detail));item.watched=watched;item.at=millis();item.hasKey=key!=nullptr;if(key){item.key=*key;int i=findContact(*key);if(i>=0)item.family=contacts[i].match.family;}
   for(unsigned f=0;f<unsigned(Family::Count);++f)if(!strcmp(text,dragon::familyName(Family(f)))){item.family=Family(f);break;}
   if(key&&!dragon::detectionPopupAllowed(page==Radar,pending==Radar))return;
+  if(key&&notice&&noticeHasKey&&noticeKey==*key)return; // already on screen
   if(clockPrompt||page==Boot||page==Startup||page==BleLab||page==Stopwatch||page==Clock||page==ClockSettings||page==ClockWheels||page==ClockEdit||(notice&&noticePriority>=item.priority())){noticeQueue.push(item);return;}
   dismissNotice();noticeAt=millis();noticeWatch=watched;noticeHasKey=key!=nullptr;if(key)noticeKey=*key;
   noticePriority=item.priority();uint32_t accent=uiColors().accent;
@@ -561,7 +562,7 @@ static void build(){
   }else if(page==Alerts){
     title("OBSERVATIONS","Pattern evidence, not proof of intent");body=scrollBody();uint32_t count=std::min<uint32_t>(alertTotal,MAX_ALERTS);
     if(!count)label(body,"No alerts observed.\nScan gaps and silent devices\ncan hide activity.",6,25,246);
-    for(uint32_t i=0;i<count;++i){auto& a=alerts[(alertTotal-1-i)%MAX_ALERTS];String s=String(a.at/1000)+"s  "+a.title+"\n"+(detector.privacy?"Details hidden by privacy mode":a.detail);auto* l=label(body,s.c_str(),4,i*110,244,F12);lv_obj_set_height(l,S(104));}
+    for(uint32_t i=0;i<count;++i){auto& a=alerts[(alertTotal-1-i)%MAX_ALERTS];String s=String(a.at/1000)+"s  "+a.title+(a.count>1?String("  x")+a.count+", last "+(millis()-a.last)/1000+"s ago":String())+"\n"+(detector.privacy?"Details hidden by privacy mode":a.detail);auto* l=label(body,s.c_str(),4,i*110,244,F12);lv_obj_set_height(l,S(104));}
   }else if(page==Channels){
     title("CHANNEL ACTIVITY","Frames / second of observed dwell time");body=scrollBody();for(int ch=1;ch<=11;++ch){char s[96];float rate=channelDwellMs[ch]?channelFrames[ch]*1000.0/channelDwellMs[ch]:0;snprintf(s,sizeof(s),"CH %02d     %.1f f/s     %lus",ch,rate,(unsigned long)(channelDwellMs[ch]/1000));row(body,s,channelLock==ch?"Priority channel; full sweeps continue":"Tap to prioritize this channel",ch-1,200+ch);}
     button(root,"Auto",215,307,52,31,200);
@@ -603,7 +604,7 @@ static void build(){
     row(body,"Radio health","Queue, memory and reception diagnostics",n++,99);
     row(body,"Recon notebook","Passive BLE / Wi-Fi details and USB export",n++,153);
     row(body,"Watch / ignore list","Manage saved and snoozed addresses",n++,64);
-    String quiet=detector.autoQuiet?String("Auto quiet: after ")+detector.autoQuiet:"Auto quiet: off";row(body,quiet.c_str(),"Re-alert at +7 dB; resets after 30 minutes",n++,72);
+    row(body,detector.autoQuiet==0?"Alert again: after restart":detector.autoQuiet==10?"Alert again: 60 min away":"Alert again: 15 min away","One alert per device visit; repeats are counted",n++,72);
     row(body,detector.quiet?"Quiet mode: ON":"Quiet mode: OFF","Hide normal popups; continue history",n++,73);
     row(body,detector.history?"Flash history: ON":"Flash history: OFF","512 unique records / USB CSV export",n++,74);
     row(body,detector.privacy?"Display privacy: ON":"Display privacy: OFF","Mask addresses, names and coordinates",n++,75);
@@ -820,7 +821,7 @@ static void action(lv_event_t* e){
     case 82:{const uint16_t choices[]={0,30,60,120,300,600};size_t i=0;while(i<5&&choices[i]!=detector.offSeconds)++i;detector.offSeconds=choices[(i+1)%6];detectorSave();go(Display);page=Boot;break;}
     case 83:detector.wakeAlert=!detector.wakeAlert;detectorSave();go(Display);page=Boot;break;
     case 84:brightness=100;settings.putUChar("brightness",brightness);detector.dimSeconds=detector.offSeconds=0;detectorSave();outputBrightness=-1;go(Display);page=Boot;break;
-    case 89:dismissNotice();break;
+    case 89:if(noticeHasKey)noticeQueue.drop(noticeKey);dismissNotice();break;
     case 90:if(noticeHasKey){auto key=noticeKey;dismissNotice();huntDevice(key);go(Hunt);}break;
     case 91:if(noticeHasKey){if(!(deviceRules(noticeKey)&RuleSnooze))toggleRule(noticeKey,RuleSnooze);dismissNotice();}break;
     case 96:filter=0;devicePage=0;go(Devices);break;

@@ -45,7 +45,6 @@ static void parityTests(){
   SsidMonitor raw;auto similar=fo;similar.ssid[0]='?';similar.ssid[1]=0xff;auto different=fa;different.ssid[0]='?';different.ssid[1]=0xfe;
   for(unsigned t=0;t<1500;t+=250){assert(!raw.observe(similar,t,peer));assert(!raw.observe(different,t,peer));}
   a[45]=255;assert(!parseWifi(a.data(),a.size()).valid); // impossible pairwise count
-  AlertGate gate;assert(gate.allow(0,-80,5));assert(!gate.allow(100,-70,5));for(int i=1;i<5;++i)assert(gate.allow(i*30000,-80,5));assert(!gate.allow(150000,-80,5));assert(gate.allow(150001,-73,5));assert(!gate.allow(180001,-73,5));assert(gate.allow(180002,-80,5,true));assert(gate.allow(1800000,-90,5));
   SignalHistory history;for(int i=0;i<65;++i)history.add(-90+i,i*500);assert(history.count==48&&history.at(0)==-73&&history.at(47)==-26&&history.peak==-26);
   history.add(0,40000);assert(history.peak==-26);
   DeviceKey key1,key2;key1.radio=1;assert(!(key1==key2));key2.radio=1;key2.addressType=1;assert(!(key1==key2));

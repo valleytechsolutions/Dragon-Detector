@@ -6,14 +6,14 @@ struct Contact {
   bool used=false,ble=false; uint8_t addressType=0,advChannel=0,mac[6]{}; char name[64]{};
   int16_t rssi=-100; uint8_t channel=0,rxChannel=0; uint32_t seen=0,firstSeen=0,packets=0,lastLog=0;
   dragon::Match match{dragon::Family::Wifi,dragon::Confidence::None,""};
-  dragon::SignalTrack signal; uint32_t matchedAt=0,matchSince=0; uint16_t matchHits=0; bool signatureAlerted=false;
+  dragon::SignalTrack signal; uint32_t matchedAt=0,matchSince=0; uint16_t matchHits=0; bool signatureAlerted=false; uint16_t alertRevision=0; // alert decision made for this evidence run
   uint32_t wifiAlerts=0,lastWifiAlert=0;
   dragon::Family trafficFamily=dragon::Family::Deauth;
   char trafficEvidence[128]{};
   float radarX=0,radarY=0,plotRadius=0;
   uint16_t radarColor=0;
   dragon::Family radarColorFamily=dragon::Family::Count;
-  dragon::AlertGate gate;dragon::DroneInfo drone;dragon::SignalHistory trace;
+  dragon::DroneInfo drone;dragon::SignalHistory trace;
   uint32_t historyAt=0;dragon::Family historyFamily=dragon::Family::Count;
 };
 #ifdef BOARD_M5DIAL

@@ -41,7 +41,9 @@ static Match ble(const std::vector<uint8_t>& p){auto f=parseBle(p.data(),p.size(
 #include "detection_refresh_test.h"
 #include "signal_path_test.h"
 #include "nearby_test.h"
+#include "alert_policy_test.h"
 int main(){
+  alertPolicyTests();
   nearbyTests();
   signalPathTests();
   detectionRefreshTests();

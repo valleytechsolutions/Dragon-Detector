@@ -70,7 +70,7 @@ The timings, the -70 dBm level, the 12 dB margin and the address-change pairing 
 
 ## Wi-Fi deauthentication and disassociation
 
-Six received disconnect frames within a rolling three seconds trigger a medium-confidence traffic candidate, with a fifteen-second burst cooldown. A dedicated 32-entry cache suppresses interleaved retry frames using source, destination, subtype and sequence/fragment for one second. Ordinary data traffic does not evict that cache. It is bounded, so very large bursts can exceed its history.
+Six received disconnect frames within a rolling three seconds trigger a medium-confidence traffic candidate. A continuing burst can trigger again every fifteen seconds; only the first trigger on a channel notifies, and that channel stays quiet until ten minutes pass without a trigger. A dedicated 32-entry cache suppresses interleaved retry frames using source, destination, subtype and sequence/fragment for one second. Ordinary data traffic does not evict that cache. It is bounded, so very large bursts can exceed its history.
 
 Activity reports total observed disconnect frames, recent count (capped at 64), burst count, last channel and readable reason code. Protected management frames can be counted by subtype but their encrypted reason is unavailable. The contact/history stores the evidence; its displayed address is a participant and may be spoofed. A Hunt follows that observed address, not an authenticated attacker. Legitimate network disconnects can resemble a burst.
 
@@ -81,9 +81,24 @@ Four groups are monitored independently: Apple pairing, Google Fast Pair, Micros
 - Twelve distinct addresses within five seconds trigger an aggregate candidate.
 - Pairing groups also trigger at twenty-four distinct advertising payload fingerprints within five seconds, including a fixed address changing payload. Tracker telemetry is excluded from this second rule.
 - Identical repeated adverts do not create new variants. BLE address type is part of identity. Active scan-response bytes are excluded from the payload fingerprint to avoid counting an advert twice.
-- The shared table holds 96 recent address/payload facts. Counts are bounded observations, not exhaustive population estimates. Each group has a thirty-second cooldown.
+- The shared table holds 96 recent address/payload facts. Counts are bounded observations, not exhaustive population estimates. Each group can trigger again every thirty seconds, but only the first trigger notifies (see [Alerts](#alerts-one-per-visit)).
 
 Crowded environments and address rotation can trigger these heuristics. Identical high-rate advertising alone is not classified as an attack; ordinary devices can advertise quickly. A burst does not establish intent or a physical device count.
+
+## Alerts: one per visit
+
+A device notifies once per visit: one card (or title on Lite and Dial), one sound, one Alerts row and one USB `ALERT` line. While it stays around nothing repeats. That holds for watched devices too: **LOCKED ON** appears once per visit (also in quiet mode), stays until dismissed and does not come back after DISMISS.
+
+- **A visit** ends when nothing at all has been heard from that address for 15 minutes (Settings → *Alert again*: 15 min away, 60 min away, or after restart). An access point beacons constantly, so 15 minutes of silence means it is gone; a phone or tag that goes quiet for a few minutes is still the same visit. When it comes back after that, it notifies once more.
+- **A repeat** is silent: no sound, card or USB line. The original Alerts row counts it (`x5, last 40s ago`). If that row has scrolled out of the 40-row list, the repeat is only counted in `visits status`.
+- **Strict:** a better signature for the same address in the same visit (for example a camera match that later also matches Axon) does not notify again. Contact details, history and the radar still show the newer evidence.
+- **Not one device:** a deauth/disassociation burst is one incident per channel and stays quiet for 10 minutes, a BLE advert burst one per group for 10 minutes, and an open/protected SSID conflict one per pair of access points for 30 minutes. Each new trigger restarts that quiet time, so a burst that keeps going never notifies twice; after the quiet time with no trigger, a new burst notifies again.
+- **Other messages** with the same title and address within a minute of the last one fold into one row (a BLE scan that keeps failing shows one row with a count).
+- The visit table is outside the radar's contact table, so a device pushed out of a full contact table and heard again is still the same visit. It holds 512 addresses (64 on Lite and Dial); when full it reuses addresses that have left before dropping the least recently heard one. It is kept in memory only, so a restart starts every visit again.
+
+The radar, history, contact details, Hunt audio and the near count are unchanged by this rule. USB `alerts status` lists the Alerts rows with their counts and `visits status` prints the visit and incident tables (counts, quiet times, no addresses); both are read-only and work on Lite and Dial.
+
+Saved settings from older firmware start at 15 minutes away: the old *Auto quiet* values counted alerts rather than time away and do not carry over.
 
 ## Controls and limits
 
