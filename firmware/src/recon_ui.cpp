@@ -48,7 +48,12 @@ lv_obj_t* text(lv_obj_t* parent,const String& s,int x,int y,int w=326,uint32_t c
 lv_obj_t* btn(lv_obj_t* parent,const char* s,int x,int y,int w,int h,int id){auto* b=lv_btn_create(parent);dragon::labui::pos(b,x,y);dragon::labui::size(b,w,h);lv_obj_set_style_bg_color(b,lv_color_hex(uiColors().surface),0);lv_obj_set_style_border_width(b,1,0);lv_obj_set_style_border_color(b,lv_color_hex(uiColors().border),0);lv_obj_set_style_pad_all(b,dragon::labui::px(10),0);lv_obj_set_style_radius(b,uiAscii()?0:dragon::labui::px(12),0);lv_obj_set_style_shadow_width(b,0,0);lv_obj_add_event_cb(b,action,LV_EVENT_CLICKED,(void*)(intptr_t)id);if(!*s)return b;auto* l=lv_label_create(b);lv_label_set_text(l,s);lv_obj_set_style_text_font(l,uiFont(font18()),0);lv_obj_center(l);return b;}
 void row(const char* title,const char* detail,unsigned i,int id){auto* b=btn(body,"",0,i*70,338,64,id);text(b,title,0,-1,308,uiColors().ink,font18());text(b,detail,0,24,308,uiColors().muted,font14());}
 bool inputIdle(){for(auto* input=lv_indev_get_next(nullptr);input;input=lv_indev_get_next(input))if(input->proc.state==LV_INDEV_STATE_PRESSED)return false;return true;}
-void change(View v){if(view==Csi&&v!=Csi)csiSurvey(false);view=v;redraw=true;}
+// "Survey / select network" switches to Wi-Fi survey (every Wi-Fi contact on
+// the radar) only while its Networks and Stations views are open; leaving
+// returns the mode that was set before, unless something else changed it.
+bool surveyModeOwned=false,surveyRadio=true;ReconMode surveyPrevious=ReconMode::Radar;
+void surveyRestore(){if(!surveyModeOwned)return;if(reconMode()==ReconMode::Wifi){if(!reconSetMode(surveyPrevious))return;if(!surveyRadio)setRadio(false);}surveyModeOwned=false;}
+void change(View v){if(view==Csi&&v!=Csi)csiSurvey(false);if(v!=Networks&&v!=Stations)surveyRestore();view=v;redraw=true;}
 // Room motion picks its own network on its own screen: a passive list, Auto,
 // last used, and Next when a network gives no motion data. Nothing here sets
 // the attack target, a Hunt, a Watch rule or the radar channel lock.
@@ -295,7 +300,7 @@ if(id==1){recipeStop();reconStop();uiShow("radar");return;}
  case 80:{static const char* buttons[]={"WiGLE","WDGoWars","Cancel",""};auto* box=uiMessageBox(root,"Retry uncertain upload?","Check the service first. A previous upload may have arrived even when its reply was lost.",buttons,true);dragon::labui::width(box,330);lv_obj_center(box);lv_obj_add_event_cb(box,[](lv_event_t* ev){auto* box=lv_event_get_current_target(ev);unsigned choice=lv_msgbox_get_active_btn(box);if(choice<2)wardriveUploadStart(choice==1,false,true);lv_msgbox_close(box);redraw=true;},LV_EVENT_VALUE_CHANGED,nullptr);break;}
 #endif
  case 69:reconStop();uiShow("findmy-beeper");break;
- case 20:change(WifiTools);break;case 21:change(BleTools);break;case 22:if(!reconOwnsRadio()&&!bleLabOwnsRadio()){reconSetMode(ReconMode::Wifi);change(Networks);}break;
+ case 20:change(WifiTools);break;case 21:change(BleTools);break;case 22:if(!reconOwnsRadio()&&!bleLabOwnsRadio()){const ReconMode before=reconMode();const bool listening=radioEnabled;if(reconSetMode(ReconMode::Wifi)&&!surveyModeOwned&&before!=ReconMode::Wifi){surveyPrevious=before;surveyRadio=listening;surveyModeOwned=true;}change(Networks);}break;
  case 23:change(Capture);break;case 24:change(Library);break;case 25:uiShow("channels");break;
  case 26:target.hasClient=false;change(Confirm);break;case 27:change(Stations);break;
  case 28:seconds=seconds<5?5:seconds<15?15:seconds<30?30:seconds<60?60:5;redraw=true;break;
@@ -361,7 +366,7 @@ void reconViewLoop(){
 #endif
  if(view==Running||view==Capture||view==Statistics||view==Portal||view==Csi||view==Network||view==Missions||view==Recipes)updateStatus();}
 }
-void reconLeave(){reconStop();csiSurvey(false);root=body=info=nullptr;
+void reconLeave(){reconStop();csiSurvey(false);surveyRestore();root=body=info=nullptr;
 #if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
  gpsSetupStatus=nullptr;gpsClockPending=false;
 #endif
