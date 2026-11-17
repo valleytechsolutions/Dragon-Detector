@@ -53,6 +53,8 @@ The chosen boards have no supported 5 GHz, LoRa or GPS receiver in these profile
 
 History keeps encounter counts, not a claim that someone is following the wearer. Rotating BLE addresses remain separate. No cross-address identity correlation is attempted.
 
+The radar's [BLE radios near](RADAR-AND-ACTIVITY.md#ble-radios-near) line is not follow detection and not a people count. It is an independently written count of BLE addresses heard at a strong level; its only joining of two addresses is a timing-and-level rule, used in quiet places only and after the old address has stayed silent, that keeps a phone's time near across an address change, and it is neither stored nor shown.
+
 ## Signature provenance
 
 - Flock facts: [Flock Noir](https://git.churchofmalware.org/Valleytech/Flock-Noir), Colonel Panic and the credited Flock-You research; [detailed evidence](DETECTION.md).

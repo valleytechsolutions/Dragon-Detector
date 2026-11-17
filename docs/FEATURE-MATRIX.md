@@ -47,7 +47,7 @@ All five also accept one optional [personal logo theme](CUSTOM-THEME.md) from th
 | AirTag identity replay | BLE Lab legacy advertisement replay; optional random-static identity only; no keys or rotating-identity cryptography |
 | Find My Beeper | Direct, selected AirTag/FMNA/DULT request under Attacks → BLE attacks; response handling and cleanup; actual AirTag beep confirmed on 1.75C |
 | Spoof iBeacon | Configurable UUID, major/minor and measured power; selected-advertisement field copy; stable timed payload |
-| CSI motion monitor | Experimental independent amplitude-shape monitor; calibrated signal-change score, low-data state and 120-point CSV. No phase-fusion equivalence or occupancy guarantee |
+| CSI motion monitor | Experimental **Room motion** mode with the model ported from Marauder's MIT `CsiMotionModel` (amplitude, decorrelation and phase features), tone mask, Hampel spike rejection, STILL / MOTION / HOLD / LOW DATA, placement margin, PHY traffic diagnosis, detector-moved heuristic, 120-point CSV and last 12 motion intervals. Passive only; no occupancy, count, position or through-wall claim |
 | Save/load SSIDs, custom HTML, capture browser | Recon flash playlist/template/capture library; checked browser download and individual deletion |
 | Recon missions / desktop tool | Named sessions with independently encoded RCN1/PRB1/REL1 files and checked ZIP download; no GPS fix. External desktop integration is not yet tested |
 | Join / saved network profiles / IP ping scan | Connected network: eight explicit profiles, DHCP/IP/gateway/DNS, gateway ping, at most 254 local-subnet addresses, CSV; optional saved-Wi-Fi clock recovery; ordinary reconnection remains explicit |
@@ -81,6 +81,10 @@ SquachWatch pets/games/chat and social systems remain outside the user's detecto
 ## Shared features
 
 Waveshare AMOLED, M5Stack StopWatch, Spotpear and XIAO Round share the passive Recon Notebook: full bounded advertisements, common protocol metadata, probe-request inventory, protocol counters and CSV. Hunt now preserves both radios and a complete Wi-Fi sweep, including under delayed rendering. Normal USB badge/history/SD transfers cooperate with detection. All four full boards expose the 29-format toolkit in 0.13. [Details](RECON-NOTEBOOK.md).
+
+| Shared radar feature | Full boards | Waveshare Lite | M5Stack Dial |
+|---|---|---|---|
+| [BLE radios near](RADAR-AND-ACTIVITY.md#ble-radios-near): count of BLE addresses heard at a strong level; not people, not a distance, no alert or log | Radar line, Radio activity text, Settings on/off and level, USB `radar near` | Radar line, USB `radar near` only | Radar line, USB `radar near` only |
 
 The [budget report](FLASH-BUDGET.md) separates app slots, OTA allocation and user storage. The unsupported/unimplemented rows above remain explicit work or hardware limits.
 

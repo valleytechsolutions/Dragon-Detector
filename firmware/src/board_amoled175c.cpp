@@ -140,6 +140,7 @@ bool amoled175cSleep(unsigned seconds){
   detachInterrupt(TP_INT);if(touchReady)touch.sleep();
   digitalWrite(AUDIO_MUTE_PIN,LOW);
   esp_wifi_stop();NimBLEDevice::deinit(false);
+  visitsPersist(); // devices still here after a short sleep do not alert again
   Serial.printf("AMOLED_SLEEP epoch=%lu timer=%u\n",wallTime(),seconds);
   Serial.flush();
   delay(120);

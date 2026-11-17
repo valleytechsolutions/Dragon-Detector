@@ -36,6 +36,8 @@ A selected radar tag stays selected until dismissed or removed from the contact 
 
 If a contact is evicted while its details are open, the page says **SIGNAL EXPIRED**. Press to select another. Hunting is signal strength only: dot position is not a compass bearing or measured distance. A target that has not been heard for 30 seconds cannot start a new hunt. Hunt chirps stop after three seconds without reception. Hold the front button to stop hunting and return to Radar, or double press on the Signals page (USB: `dial hunt stop`).
 
+The radar can show a quiet `BLE RADIOS NEAR` line under the status row: a count of BLE radio addresses heard at a strong level, not people and not a distance. It never alerts, and the notice box can cover it. The Dial's 32-contact table makes entry into the count noisier than on larger boards. There is no menu item for it; use USB `radar near`, `radar near on|off` and `radar near level <-85..-55>`. [What it counts and its limits](RADAR-AND-ACTIVITY.md#ble-radios-near).
+
 Clock and Stopwatch pause radio scans to keep time screens quiet. They restore the previous radio/hunt state when leaving. Stopwatch timing is software based and is not retained across power loss. Silent mutes detection melodies, previews and hunt chirps. Medium and High select separate buzzer levels; hunt chirps also require an active hunt. These new levels have host-test coverage, but physical Dial loudness was not retested for 0.14.2. Web audio controls remain unavailable for the compact Dial profile.
 
 ## RTC and power

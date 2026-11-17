@@ -26,6 +26,8 @@ static Match ble(const std::vector<uint8_t>& p){auto f=parseBle(p.data(),p.size(
 #include "ble_tools_test.h"
 #include "beeper_session_test.h"
 #include "recon_analysis_test.h"
+#include "csi_motion_test.h"
+#include "csi_networks_test.h"
 #include "network_test.h"
 #include "notebook_test.h"
 #include "hid_decoder_test.h"
@@ -37,7 +39,13 @@ static Match ble(const std::vector<uint8_t>& p){auto f=parseBle(p.data(),p.size(
 #include "personal_theme_test.h"
 #include "rotary_input_test.h"
 #include "detection_refresh_test.h"
+#include "signal_path_test.h"
+#include "nearby_test.h"
+#include "alert_policy_test.h"
 int main(){
+  alertPolicyTests();
+  nearbyTests();
+  signalPathTests();
   detectionRefreshTests();
   rotaryInputTests();
   beeperSessionTests();
@@ -51,6 +59,8 @@ int main(){
   notebookTests();
   networkTests();
   reconAnalysisTests();
+  csiMotionTests();
+  csiNetworksTests();
   reconTests();
   bleToolsTests();
   bleProfileTests();

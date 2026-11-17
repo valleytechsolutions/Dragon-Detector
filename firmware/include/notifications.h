@@ -17,6 +17,8 @@ struct NoticeQueue {
     unsigned lowest=0;for(unsigned i=1;i<count;++i)if(entries[i].priority()<entries[lowest].priority())lowest=i;
     if(item.priority()>entries[lowest].priority())entries[lowest]=item;
   }
+  // A dismissed device card must not come straight back from the queue.
+  void drop(const DeviceKey& key){for(unsigned i=0;i<count;)if(entries[i].hasKey&&entries[i].key==key)entries[i]=entries[--count];else ++i;}
   bool take(uint32_t now,DetectionNotice& result){
     for(unsigned i=0;i<count;)if(uint32_t(now-entries[i].at)>=30000)entries[i]=entries[--count];else ++i;
     if(!count)return false;unsigned best=0;

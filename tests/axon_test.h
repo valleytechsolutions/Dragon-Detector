@@ -1,5 +1,6 @@
 #include "axon.h"
 #include "contacts.h"
+#include "alert_policy.h"
 #include "radio_schedule.h"
 static void axonTests(){
   const uint8_t random[]={0xc2,1,2,3,4,5},publicMac[]={0,0x25,0xdf,1,2,3},other[]={0x44,1,2,3,4,5};
@@ -59,7 +60,9 @@ static void axonTests(){
   DetectorSettings settings;settings.minimum=Confidence::Strong;
   assert(candidateVisible(contact,100,settings,false,false,false));
   settings.families&=~(1u<<unsigned(Family::Axon));assert(!candidateVisible(contact,100,settings,false,false,false));
-  AlertGate gate;assert(gate.allow(100,-60,5));assert(!gate.allow(101,-50,5));
+  // Axon takes the same once-per-visit path: a louder second packet is a repeat.
+  {static Visit table[16];VisitLedger visits;visits.begin(table,16);DeviceKey k;k.radio=1;k.mac[5]=0x4d;
+   assert(visits.claim(k,uint8_t(Family::Axon),100)==Verdict::Notify);assert(visits.claim(k,uint8_t(Family::Axon),101)==Verdict::Repeat);}
   // Every Wi-Fi slice covers eleven channels at its planned deadlines, including
   // rollover; BLE-first and boundary transitions do not depend on loop cadence.
   for(uint32_t start:{0u,0xfffffff0u})for(uint8_t first=1;first<=11;++first){

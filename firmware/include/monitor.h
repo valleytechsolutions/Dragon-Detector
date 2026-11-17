@@ -27,16 +27,6 @@ inline bool signatureAlertReady(Match match,uint16_t hits,uint32_t since,uint32_
   return hits&&(priorityDetection(match,axonPriority)||(hits>=2&&uint32_t(at-since)>=400));
 }
 inline bool alertConfidenceAllowed(Match match,Confidence minimum,bool axonPriority){return match.confidence>=minimum||priorityDetection(match,axonPriority);}
-struct AlertGate {
-  uint32_t window=0,last=0;int peak=-127;uint8_t count=0;bool active=false;
-  bool allow(uint32_t now,int rssi,uint8_t budget,bool watched=false) {
-    if(!active || uint32_t(now-window)>=1800000){*this={};active=true;window=now;}
-    bool louder=rssi>=peak+7;
-    if(count && uint32_t(now-last)<(watched?10000u:30000u))return false;
-    if(!watched && budget && count>=budget && !louder)return false;
-    last=now;peak=std::max(peak,rssi);if(count<255)++count;return true;
-  }
-};
 // Six received disconnect frames in a rolling three-second window, including
 // changing/spoofed source addresses. A participant is not an identified sender.
 struct DisconnectMonitor {

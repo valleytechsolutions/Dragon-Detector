@@ -94,6 +94,7 @@ unsigned long wallTime(){return 1794171896UL;}
 int esp_wifi_stop(){calls.push_back(WifiStop);return ESP_OK;}
 struct NimBLEDevice {static void deinit(bool clear){assert(!clear);calls.push_back(BleStop);}};
 void esp_deep_sleep_start(){calls.push_back(EnterSleep);++sleepCalls;}
+unsigned visitSaves=0;void visitsPersist(){++visitSaves;}
 void delay(unsigned ms){now+=ms;}
 void uiShow(const char* name){assert(!strcmp(name,"menu"));go(Menu);}
 void uiKey(bool home){assert(home);go(Radar);}
@@ -186,7 +187,7 @@ int main(){
  // Failed UI sleep restores the previous radio setting, including Clock's standby.
  visible(Clock);radioEnabled=false;wakeError=true;uiAmoled175cSleep();assert(!radioEnabled&&sleepCalls==sleeps&&!strcmp(dialogTitle,"SLEEP UNAVAILABLE"));wakeError=false;
  // Production shutdown sequence keeps the CPU supply on and tears down peripherals.
- calls.clear();assert(amoled175cSleep(0));
+ calls.clear();{const unsigned saves=visitSaves;assert(amoled175cSleep(0)&&visitSaves==saves+1);} // running visits saved before deep sleep
  assert((calls==std::vector<Call>{Wake,DisplayOff,SleepIn,TouchDetach,TouchSleep,Mute,WifiStop,BleStop,EnterSleep}));
  calls.clear();assert(amoled175cSleep(1234)&&timerUs==1234000000ULL);
  assert((calls==std::vector<Call>{Wake,Timer,DisplayOff,SleepIn,TouchDetach,TouchSleep,Mute,WifiStop,BleStop,EnterSleep}));
