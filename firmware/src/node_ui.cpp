@@ -121,7 +121,7 @@ void arm(bool on){
   paintButton(on);lv_label_set_text(w.buttonText,on?"CONFIRM":"EXIT");
   lastStatus[0]=0;           // the status line explains the second press
 }
-void pressed(lv_event_t*){nodeScreenExitPress();}
+void pressed(lv_event_t*){Serial.println("NODE_EXIT_PRESS source=screen");nodeScreenExitPress();}
 // The marker's arc, drawn around the panel centre inside its own small box.
 void drawMarker(lv_event_t* e){
   lv_area_t s;lv_obj_get_coords(lv_obj_get_parent(lv_event_get_target(e)),&s);
@@ -283,6 +283,7 @@ void nodeScreenLoop(){
   const uint32_t now=millis();
   if(!nodeBusy()||nodeKind()!=shownKind){
     // Stopped or switched elsewhere (USB): hand the screen back.
+    Serial.printf("NODE_SCREEN_CLOSED busy=%u\n",nodeBusy());
     leaving=true;if(options.exited)options.exited();return;
   }
   if(armed&&now-armedAt>=ConfirmMs)arm(false);
@@ -296,7 +297,8 @@ void nodeScreenLoop(){
 
 bool nodeScreenExitPress(){
   if(!nodeBusy())return false;
-  if(!armed||millis()-armedAt>=ConfirmMs){arm(true);if(w.screen)refresh(millis());return false;}
+  if(!armed||millis()-armedAt>=ConfirmMs){Serial.println("NODE_EXIT_ARMED");arm(true);if(w.screen)refresh(millis());return false;}
+  Serial.println("NODE_EXIT_CONFIRMED");
   armed=false;leaving=true;
   nodeStop();
   if(options.exited)options.exited();

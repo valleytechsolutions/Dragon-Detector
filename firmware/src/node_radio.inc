@@ -75,6 +75,14 @@ void stopScan(){
   esp_wifi_clear_ap_list();scanResult=-1;
 }
 
+// NODE_EVENT lines waiting for the end of a binary USB transfer. Printed in order.
+char noteLines[768];size_t noteLength=0;uint32_t noteDrops=0;
+void flushNotes(){
+  if(!noteLength||radioTransferDepth)return;
+  Serial.write(reinterpret_cast<const uint8_t*>(noteLines),noteLength);noteLength=0;
+  if(noteDrops){Serial.printf("NODE_EVENT dropped=%lu\n",(unsigned long)noteDrops);noteDrops=0;}
+}
+
 struct RadioPort final : Port {
   bool tune(uint8_t channel) override {
     if(esp_wifi_set_channel(channel,WIFI_SECOND_CHAN_NONE)!=ESP_OK)return false;
@@ -104,6 +112,24 @@ struct RadioPort final : Port {
   void ble(bool on,uint32_t durationMs) override {
     blePhase=on;
     if(on)scanCommand(ScanAction::Start,durationMs);else scanCommand(ScanAction::Stop);
+  }
+  // Runs on the main loop, but also inside a binary USB transfer (radioTransferTick
+  // between screenshot chunks): lines wait in noteLines until no transfer runs.
+  void note(Note what,Core core,const uint8_t* text,size_t length) override {
+    static const char* const names[]={"linked","core_lost","mode_changed","key_lost","other_core","role","channels"};
+    static_assert(sizeof(names)/sizeof(names[0])==size_t(Note::Channels)+1,"one name per Note");
+    char shown[81];size_t n=0;
+    for(size_t i=0;text&&i<length&&n+1<sizeof(shown);++i)shown[n++]=text[i]>=32&&text[i]<127&&text[i]!='"'?char(text[i]):'.';
+    shown[n]=0;
+    const unsigned index=unsigned(what);
+    char line[192];
+    const int used=snprintf(line,sizeof(line),"NODE_EVENT %s core=%s text=\"%s\" length=%u at_ms=%lu\n",index<sizeof(names)/sizeof(names[0])?names[index]:"?",
+      dragon::node::coreName(core),shown,unsigned(length),(unsigned long)millis());
+    if(used<=0)return;
+    const size_t size=size_t(used)<sizeof(line)?size_t(used):sizeof(line)-1;
+    if(noteLength+size>sizeof(noteLines)){++noteDrops;return;}
+    memcpy(noteLines+noteLength,line,size);noteLength+=size;
+    flushNotes();
   }
 };
 RadioPort port;
@@ -174,6 +200,7 @@ bool begin(const Config& requested,const uint8_t* pmk,const uint8_t* linkKey,cha
 void end(){
   if(!owned)return;
   link->end();
+  flushNotes();noteLength=0;   // what a transfer still holds back would only mislead the next session
   wardriveTransition=true;
   scanCommand(ScanAction::Stop);blePhase=false;
   stopScan();
@@ -191,6 +218,7 @@ void end(){
 
 // One pass of the application loop. Everything the link sees arrives here, in order.
 void loop(uint32_t now){
+  flushNotes();
   Received r;
   for(unsigned i=0;i<ReceiveDepth&&xQueueReceive(receiveQueue,&r,0)==pdTRUE;++i)link->received(r.from,r.data,r.length,r.rssi,now);
   const int sent=sendResult.exchange(-1);

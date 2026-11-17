@@ -79,6 +79,8 @@ enum class Phase : uint8_t {Off,Search,Join,Scan,Ble,Report,Listen};
 enum class Kind : uint8_t {Wifi,Ble};
 enum class Auth : uint8_t {Open,Wep,Wpa,Wpa2,WpaWpa2,Wpa2Enterprise,Wpa3,Wpa2Wpa3,Wapi,Other};
 enum class Peer : uint8_t {Remove,Plain,Encrypted};
+// Link changes worth a line in the USB log.
+enum class Note : uint8_t {Linked,CoreLost,ModeChanged,KeyLost,OtherCore,Role,Channels};
 
 // What the link needs from the hardware. Every call returns immediately.
 struct Port {
@@ -90,6 +92,8 @@ struct Port {
   virtual bool scan(uint8_t channel,uint16_t dwellMs)=0;
   virtual void scanStop()=0;
   virtual void ble(bool on,uint32_t durationMs)=0;
+  // Optional: a link change, with the core's text where it explains the change.
+  virtual void note(Note what,Core core,const uint8_t* text,size_t length){(void)what;(void)core;(void)text;(void)length;}
 protected:
   ~Port()=default;
 };
@@ -218,6 +222,7 @@ struct Status {
   uint32_t sent=0,failed=0,dropped=0,acked=0;
   uint32_t cycles=0,scans=0,scanErrors=0,requests=0,links=0,losses=0,heartbeats=0;
   uint32_t coreAgeMs=0;
+  uint32_t heard=0,heardCore=0;     // node messages heard from anyone, and from the linked core
 };
 
 class Link {
@@ -227,7 +232,7 @@ public:
   bool begin(Port& port,const Config& config,uint32_t now){
     // Any power of two that a 16-bit slot number can reach.
     if(!config.seen||!config.seenCount||config.seenCount>65536||(config.seenCount&(config.seenCount-1)))return false;
-    port_=&port;config_=config;status_=Status{};now_=now;
+    port_=&port;config_=config;status_=Status{};otherNoted_=0;now_=now;
     snprintf(identity_,sizeof(identity_),"%s",config.identity?config.identity:"");config_.identity=identity_;
     if(config_.maxChannel<1)config_.maxChannel=1;
     if(config_.maxChannel>14)config_.maxChannel=14;
@@ -257,9 +262,9 @@ public:
   void loop(uint32_t now){
     if(status_.phase==Phase::Off)return;
     now_=now;
-    if(status_.other!=Core::None&&now-otherAt_>=OtherCoreMs)status_.other=Core::None;
+    if(status_.other!=Core::None&&now-otherAt_>=OtherCoreMs){status_.other=Core::None;otherNoted_=0;}
     status_.coreAgeMs=status_.linked?now-lastCoreAt_:0;
-    if(status_.linked&&status_.coreAgeMs>=CoreLostMs){++status_.losses;unlink(now);return;}
+    if(status_.linked&&status_.coreAgeMs>=CoreLostMs){port_->note(Note::CoreLost,status_.core,nullptr,0);++status_.losses;unlink(now);return;}
     switch(status_.phase){
       case Phase::Search:
         if(pump(now,false))break;
@@ -291,17 +296,25 @@ public:
   void received(const uint8_t* source,const uint8_t* data,size_t length,int rssi,uint32_t now){
     Frame frame;
     if(status_.phase==Phase::Off||!source||!parseFrame(data,length,frame))return;
+    ++status_.heard;
     if(!status_.linked){
       if(frame.type!=CoreReply)return;
       if(config_.bound&&!sameMac(source,config_.boundCore))return;
       const Core kind=classifyReply(frame);
       if(joinable(kind))link(source,kind,rssi,now);
-      else{status_.other=kind;otherAt_=now;}
+      else{
+        // Logged once per kind while its hint is up, even when two such cores answer in turn.
+        if(!(otherNoted_&1u<<unsigned(kind))){otherNoted_|=uint8_t(1u<<unsigned(kind));port_->note(Note::OtherCore,kind,frame.text,frame.textLength);}
+        status_.other=kind;otherAt_=now;
+      }
       return;
     }
     if(!sameMac(source,core_))return;         // only the linked core may steer this node
+    ++status_.heardCore;
     if(frame.type==CoreReply&&!joinable(classifyReply(frame))){
-      status_.other=classifyReply(frame);otherAt_=now;++status_.losses;unlink(now);return; // its mode changed
+      port_->note(Note::ModeChanged,classifyReply(frame),frame.text,frame.textLength);
+      status_.other=classifyReply(frame);otherAt_=now;otherNoted_=uint8_t(1u<<unsigned(status_.other));
+      ++status_.losses;unlink(now);return; // its mode changed
     }
     lastCoreAt_=now;status_.coreRssi=clampRssi(rssi);  // only the core's own frames prove it is there
     if(frame.type==CoreReply&&!secure(now))return;
@@ -312,12 +325,15 @@ public:
       case RecordAck:++status_.acked;status_.acknowledged=true;break;
       case Admin:
         if(frame.full()){                    // Biscuit style role assignment
-          status_.role=frame.textLength?frame.text[0]:uint8_t(frame.counter);status_.registered=roleSeen_=true;
+          status_.role=frame.textLength?frame.text[0]:uint8_t(frame.counter);
+          if(!roleSeen_)port_->note(Note::Role,status_.core,frame.text,frame.textLength);
+          status_.registered=roleSeen_=true;
           control(RoleAck,status_.role,nullptr,0);
         }else if(length>=AdminSize)applyAdmin(data);
         break;
       case ConfigUpdate:
         if(frame.full()){
+          if(roleWanted_)port_->note(Note::Channels,status_.core,frame.text,frame.textLength);
           applyConfig(frame.text,frame.textLength);control(ConfigAck,0,nullptr,0);
           if(roleSeen_)roleWanted_=false;    // role and channel list both in: the handshake is complete
         }
@@ -446,10 +462,11 @@ private:
   void link(const uint8_t* mac,Core kind,int rssi,uint32_t now){
     if(!port_->peer(mac,config_.encrypted?Peer::Encrypted:Peer::Plain))return;
     memcpy(core_,mac,6);memcpy(status_.coreMac,mac,6);
-    status_.linked=true;status_.core=kind;status_.other=Core::None;status_.coreRssi=clampRssi(rssi);
+    status_.linked=true;status_.core=kind;status_.other=Core::None;otherNoted_=0;status_.coreRssi=clampRssi(rssi);
     status_.broadcast=status_.acknowledged=false;++status_.links;
     lastCoreAt_=now;unicastProven_=false;unicastFails_=0;controlCount_=0;ackProbes_=AckProbes;rekey_=false;
     resetAssignment();
+    port_->note(Note::Linked,kind,nullptr,0);
     status_.registered=kind!=Core::Biscuit;    // a JCMK-style core takes on whoever asked
     if(kind==Core::Biscuit){
       identify(now,true);
@@ -581,7 +598,7 @@ private:
     if(!rekey_)return true;
     rekey_=false;
     if(port_->peer(core_,Peer::Encrypted))return true;
-    ++status_.losses;unlink(now);return false;
+    port_->note(Note::KeyLost,status_.core,nullptr,0);++status_.losses;unlink(now);return false;
   }
   // Sends one waiting message. true while something is on its way out.
   bool pump(uint32_t now,bool records){
@@ -681,6 +698,7 @@ private:
   uint32_t random_=1,textCounter_=0,heartbeatCounter_=0,evictions_=0;
   uint32_t phaseAt_=0,window_=0,requestAt_=0,requestWait_=0,requestInterval_=RequestFirstMs;
   uint32_t lastCoreAt_=0,otherAt_=0,flightAt_=0,sendDoneAt_=0,scanAt_=0,probeAt_=0,identifyAt_=0,now_=0;
+  uint8_t otherNoted_=0;           // wrong-core kinds already in the USB log while their hint is up
 };
 
 } // namespace dragon::node

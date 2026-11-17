@@ -72,6 +72,13 @@ struct Bench : Port {
   }
   void scanStop() override {scanning=false;++scanStops;}
   void ble(bool on,uint32_t) override {assert(!scanning);if(on&&!bleOn)++bleStarts;bleOn=on;}
+  std::vector<std::pair<Note,std::string>> notes;std::vector<Core> notedCores;
+  void note(Note what,Core core,const uint8_t* text,size_t length) override {
+    notes.push_back({what,text&&length?std::string((const char*)text,length):std::string()});notedCores.push_back(core);
+  }
+  unsigned noted(Note what,const std::string& text="") const {
+    unsigned n=0;for(auto& e:notes)if(e.first==what&&(text.empty()||e.second==text))++n;return n;
+  }
   // sealed: encrypted by the sender, readable only if this node holds the key for it when it arrives.
   void hear(const Mac& from,const Bytes& data,uint32_t delay=1,bool sealed=false){inbox.push_back({from,data,now+delay,sealed});}
   bool keyed(const Mac& mac) const {auto it=peers.find(mac);return it!=peers.end()&&it->second==Peer::Encrypted;}
@@ -364,8 +371,10 @@ static void nodeJcmkTests(){
   atHome(b,core.mac,adminFrame(5,0,1,0,0));assert(b.until([&]{return b.link.status().planCount==1;}));assert(s.plan[0]==1);
   // Frames from anyone but the linked core cannot steer the node.
   const Mac stranger{{2,2,2,2,2,2}};
-  atHome(b,stranger,adminFrame(9,0,1,3,3));b.hear(stranger,textFrame(ConfigUpdate,0,"channels=9"));b.hear(stranger,textFrame(Admin,0,"\x02"));
+  atHome(b,stranger,adminFrame(9,0,1,3,3));const uint32_t heard=s.heard,heardCore=s.heardCore;
+  b.hear(stranger,textFrame(ConfigUpdate,0,"channels=9"));b.hear(stranger,textFrame(Admin,0,"\x02"));
   b.run(700);assert(s.planCount==1&&s.plan[0]==1&&b.count(RoleAck)==0&&b.count(ConfigAck)==0);
+  assert(s.heard==heard+3&&s.heardCore==heardCore);                                  // heard, but not from the core
   // Nothing new around: no repeats on the air, heartbeats continue.
   const size_t told=core.records.size();const unsigned beats=core.heartbeats;b.run(5000);
   assert(core.records.size()==told&&core.heartbeats>beats+2&&s.wifi==34);
@@ -480,10 +489,18 @@ static void nodeBiscuitTests(){
    uint32_t echoed=0;for(auto& sent:b.log)if(sent.data[4]==RoleAck)echoed=get32(sent.data.data()+5);assert(echoed==0x34);}
   // It kept talking, so in all this time it was never asked to answer, and never re-registered.
   assert(core.requests==1&&core.identifies==1&&s.registered&&s.losses==0);
+  // The USB log heard one link, one role and the first channel list, and nothing lost.
+  assert(b.noted(Note::Linked)==1&&b.noted(Note::Role,std::string(1,char(1)))==1&&b.noted(Note::Role)==1);
+  assert(b.noted(Note::Channels,"channels=1,6,11;dwell=120")==1&&b.noted(Note::Channels)==1);
+  for(size_t i=0;i<b.notes.size();++i)assert(b.notedCores[i]==Core::Biscuit);        // every note so far names the linked Biscuit
+  assert(!b.noted(Note::CoreLost)&&!b.noted(Note::ModeChanged)&&!b.noted(Note::OtherCore)&&!b.noted(Note::KeyLost));
+  assert(s.heard==s.heardCore+2&&s.heardCore>10);   // the core's first heartbeat and its reply came before the link
   // The Manager switches to Secure mode and has nothing more for this node: the next question finds out.
   core.secure=true;core.beatMs=0;
   assert(b.until([&]{return !b.link.status().linked;},15000));assert(s.other==Core::BiscuitSecure&&s.phase==Phase::Search&&!s.registered&&core.requests==2);
+  assert(b.noted(Note::ModeChanged,"v=3;encrypt=1")==1&&b.notedCores.back()==Core::BiscuitSecure);   // the reply that ended it, word for word
   b.run(6000);assert(!s.linked&&s.other==Core::BiscuitSecure);                       // every answer renews the hint
+  assert(!b.noted(Note::OtherCore));                                                 // the hint was already up: not logged again
   core.alive=false;b.run(OtherCoreMs+6000);assert(s.other==Core::None);              // and it fades once the core is gone
 }
 
@@ -521,7 +538,22 @@ static void nodeBiscuitRecoveryTests(){
   // Switched to Secure without a restart: the next question finds out.
   {Bench b(NodeFamily::Biscuit);BiscuitCore core;rig(b,core);b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};
    assert(b.begin());assert(b.until([&]{return core.registered;},3000));b.run(2000);core.secure=true;
-   assert(b.until([&]{return !b.link.status().linked;},15000));assert(b.link.status().other==Core::BiscuitSecure);}
+   assert(b.until([&]{return !b.link.status().linked;},15000));assert(b.link.status().other==Core::BiscuitSecure);
+   // Gone silent: the hint fades, and a Secure answer after that is logged once more, with its text.
+   core.alive=false;b.run(OtherCoreMs+6000);assert(b.link.status().other==Core::None);
+   core.alive=true;assert(b.until([&]{return b.link.status().other==Core::BiscuitSecure;},7000));
+   assert(b.noted(Note::ModeChanged,"v=3;encrypt=1")==1&&b.noted(Note::OtherCore,"v=3;encrypt=1")==1);
+   assert(b.notes.back().first==Note::OtherCore&&b.notedCores.back()==Core::BiscuitSecure);}
+  // A Secure Biscuit and a JCMK core both answer every question: each is logged once, not on every answer.
+  {Bench b(NodeFamily::Biscuit);BiscuitCore biscuit;JcmkCore jcmk;rig(b,biscuit);jcmk.bench=&b;biscuit.secure=true;
+   b.air=[&](const Mac& to,const Bytes& d){const bool a=biscuit(to,d);const bool c=jcmk(to,d);return a||c;};
+   assert(b.begin());b.run(60000);const Status& s=b.link.status();
+   assert(!s.linked&&biscuit.requests>=10&&jcmk.requests>=10&&b.notes.size()==2);
+   assert(b.noted(Note::OtherCore,"v=3;encrypt=1")==1&&b.noted(Note::OtherCore)==2);}
+  // A Biscuit that goes silent while linked: the loss is logged once.
+  {Bench b(NodeFamily::Biscuit);BiscuitCore core;rig(b,core);b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};
+   assert(b.begin());assert(b.until([&]{return core.registered;},3000));core.alive=false;
+   assert(b.until([&]{return !b.link.status().linked;},CoreLostMs+2000));assert(b.noted(Note::CoreLost)==1&&b.notedCores.back()==Core::Biscuit);}
   // A Biscuit whose radio never acknowledges a unicast, though it hears them:
   // reports go by broadcast, every question it answers is followed by Identify,
   // and what is found keeps reaching it.
@@ -857,6 +889,7 @@ static void nodeKeyedTests(){
    b.air=[&](const Mac& to,const Bytes& d){if(d[4]==CoreRequest&&b.link.status().linked)b.rejectPeer=true;return core(to,d);};
    assert(b.begin());assert(b.until([&]{return b.link.status().linked;}));
    assert(b.until([&]{return b.link.status().losses==1;},20000));assert(!b.link.status().linked);
+   assert(b.noted(Note::KeyLost)==1&&b.notedCores.back()==Core::Jcmk&&!b.noted(Note::CoreLost));   // the USB log says why: the key, not silence
    b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};b.rejectPeer=false;
    assert(b.until([&]{return b.link.status().linked;},9000));assert(b.keyed(core.mac));}
 }

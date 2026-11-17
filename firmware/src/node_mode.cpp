@@ -197,13 +197,13 @@ bool nodeCommand(const String& c){
     // bound, keyed and ble_reports: what the running link uses. node config shows the saved settings.
     Serial.printf("NODE_STATUS mode=%s active=%u phase=%s core=%s linked=%u core_mac=%s core_rssi=%d channel=%u registered=%u assigned=%u own_plan=%u plan=%s dwell_ms=%u role=%u node=%u/%u "
       "wifi=%lu ble=%lu sent=%lu failed=%lu dropped=%lu acked=%lu cycles=%lu scans=%lu scan_errors=%lu requests=%lu links=%lu losses=%lu heartbeats=%lu core_age_ms=%lu "
-      "other=%s broadcast=%u bound=%u keyed=%u ble_reports=%u rx_drops=%lu elapsed_ms=%lu remembered=%s heap=%u min_heap=%u largest=%u\n",
+      "other=%s broadcast=%u bound=%u keyed=%u ble_reports=%u rx_drops=%lu heard=%lu heard_core=%lu elapsed_ms=%lu remembered=%s heap=%u min_heap=%u largest=%u\n",
       kindText(nodeKind()),nodeBusy(),dragon::node::phaseName(s.phase),dragon::node::coreName(s.core),s.linked,s.linked?coreMac:"-",s.coreRssi,s.channel,
       s.registered,s.assigned,s.ownPlan,at?plan:"-",s.dwellMs,s.role,s.nodeIndex,s.nodeCount,
       (unsigned long)s.wifi,(unsigned long)s.ble,(unsigned long)s.sent,(unsigned long)s.failed,(unsigned long)s.dropped,(unsigned long)s.acked,
       (unsigned long)s.cycles,(unsigned long)s.scans,(unsigned long)s.scanErrors,(unsigned long)s.requests,(unsigned long)s.links,(unsigned long)s.losses,
       (unsigned long)s.heartbeats,(unsigned long)s.coreAgeMs,dragon::node::coreName(s.other),s.broadcast,nodeBusy()&&linkBound,nodeKeyed(),nodeBleReports(),
-      (unsigned long)radioNodeReceiveDrops(),(unsigned long)nodeElapsedMs(),kindText(remembered()),
+      (unsigned long)radioNodeReceiveDrops(),(unsigned long)s.heard,(unsigned long)s.heardCore,(unsigned long)nodeElapsedMs(),kindText(remembered()),
       unsigned(ESP.getFreeHeap()),unsigned(ESP.getMinFreeHeap()),unsigned(heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL|MALLOC_CAP_8BIT)));
     return true;
   }

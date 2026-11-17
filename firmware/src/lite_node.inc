@@ -54,6 +54,7 @@ static bool liteNodeButton(dragon::LitePress press){
 #else
   const bool leave=press==dragon::LitePress::Hold,twice=false;
 #endif
+  if(leave&&liteNodeHost&&!liteNodeLeave)Serial.printf("NODE_EXIT_PRESS source=%s\n",twice?"button_double":"button");
   if(leave&&liteNodeHost&&!liteNodeLeave&&!nodeScreenExitPress()&&twice&&nodeBusy()&&!liteNodeLeave)nodeScreenExitPress();
   return true;
 }

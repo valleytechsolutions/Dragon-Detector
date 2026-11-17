@@ -7,6 +7,7 @@
 #include "wardrive.h"
 #include "csi_monitor.h"
 #include "node_mode.h"
+#include "background_radio.h"
 #include <WiFi.h>
 #include <NimBLEDevice.h>
 #include <esp_wifi.h>

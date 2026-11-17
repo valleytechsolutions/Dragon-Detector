@@ -169,9 +169,10 @@ static void nodeExited(){nodeLeft=true;}
 // While a node runs, every key or knob action that would leave a page asks the
 // node screen to stop it instead; a second request within 3 s confirms. A press
 // that only wakes a dark panel does nothing else. True while a node runs.
-static bool nodeKey(){
+static bool nodeKey(const char* source){
   if(!nodeBusy())return false;
   const bool dark=outputBrightness==0;lastInteraction=millis();
+  Serial.printf("NODE_EXIT_PRESS source=%s dark=%u\n",source,dark);
   if(!dark&&page==Node&&pending==Node&&nodeScreenShown())nodeScreenExitPress();
   return true;
 }
@@ -921,7 +922,7 @@ bool uiTouch(bool pressed,int,int){
 #if defined(BOARD_CROWPANEL_21) || defined(BOARD_WATCHER)
 lv_obj_t* uiRotaryScope(){return resetBox?resetBox:clockPrompt?clockPrompt:notice?notice:root;}
 #ifdef BOARD_WATCHER
-bool uiRotaryOpenMenu(){if(nodeKey())return true;if(resetBox||clockPrompt||notice)return false;go(Menu);return true;}
+bool uiRotaryOpenMenu(){if(nodeKey("rotary"))return true;if(resetBox||clockPrompt||notice)return false;go(Menu);return true;}
 #endif
 bool uiRotaryWake(){bool wasOff=outputBrightness==0;lastInteraction=millis();return wasOff;}
 #endif
@@ -929,7 +930,7 @@ void uiShow(const String& name){
   if(name=="node"){if(nodeBusy())go(Node);else{openRadioTools=false;go(Recon);}return;}
   // A running node keeps its screen. The boards whose key opens the menu
   // (1.75, LILYGO, XIAO) ask it to stop; nothing else may move the page.
-  if(nodeBusy()){if(name=="menu")nodeKey();return;}
+  if(nodeBusy()){if(name=="menu")nodeKey("menu_key");return;}
   if(name=="startup"){go(Startup);page=Boot;return;}if(name=="radar")recipeStop();
 #ifndef BOARD_RADAR_LITE
   if(name=="modes"||name=="tools"){openRadioTools=name=="tools";go(Recon);return;}
@@ -1077,7 +1078,7 @@ void uiLoop(){
   ++radarPass;lv_timer_handler();
 }
 
-void uiKey(bool home){if(nodeKey())return;lastInteraction=millis();go(home?Radar:page==Menu?Badge:Menu);}
+void uiKey(bool home){if(nodeKey(home?"home_key":"menu_key"))return;lastInteraction=millis();go(home?Radar:page==Menu?Badge:Menu);}
 bool uiStopwatchKey(bool start,uint64_t at){
   if(page!=Stopwatch||pending!=Stopwatch)return false;lastInteraction=millis();
   if(resetBox)return true;
@@ -1095,7 +1096,7 @@ static bool uiSideKeyModalOpen(){return resetBox||clockPrompt||notice||uiSideKey
 #endif
 #ifdef BOARD_AMOLED_175C
 void uiAmoled175cSleep(unsigned seconds){
-  if(nodeKey())return; // the hold is an exit request; sleep would end the node unasked
+  if(nodeKey("boot_hold"))return; // the hold is an exit request; sleep would end the node unasked
   lastInteraction=millis();
   if(uiSideKeyModalOpen()||page!=pending)return;
   const char* title="SLEEP UNAVAILABLE";
@@ -1113,7 +1114,7 @@ void uiAmoled175cSleep(unsigned seconds){
   lv_obj_set_width(box,S(280));lv_obj_center(box);
 }
 void uiAmoled175cKey(bool primary){
-  if(nodeKey())return;
+  if(nodeKey(primary?"pwr_key":"boot_key"))return;
   lastInteraction=millis();
   if(uiSideKeyModalOpen()||page!=pending)return;
   if(uiStopwatchKey(primary))return;
@@ -1149,7 +1150,7 @@ static bool ui143cClockPromptLater(){
 }
 #endif
 void ui185bHome(){
-  if(nodeKey())return;
+  if(nodeKey("home_key"))return;
 #ifdef BOARD_WAVESHARE_143C
   if(ui143cClockPromptLater())return;
 #endif
@@ -1159,7 +1160,7 @@ void ui185bHome(){
   if(page==Menu&&pending==Menu)page=Boot;
 }
 void ui185bCycle(){
-  if(nodeKey())return;
+  if(nodeKey("cycle_key"))return;
 #ifdef BOARD_WAVESHARE_143C
   if(ui143cClockPromptLater())return;
 #endif

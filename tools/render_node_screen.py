@@ -63,6 +63,8 @@ if not library.exists():
 class String: public std::string { public: using std::string::string; String(const std::string& s):std::string(s){} bool startsWith(const char* s)const{return rfind(s,0)==0;} };
 extern uint32_t hostMillis;
 inline uint32_t millis(){return hostMillis;}
+struct SerialStub{template<class... T>void printf(T...){} template<class T>void println(T){}};
+static SerialStub Serial;
 """)
 
 harness = r"""

@@ -171,8 +171,26 @@ The most useful `NODE_STATUS` fields:
 | `links`, `losses` | Links made and lost since the node started |
 | `broadcast` | 1 when reports go out by broadcast |
 | `bound`, `keyed`, `ble_reports` | What the running node uses, all 0 when no node runs: bound to one core, encryption on, Bluetooth reports on. `keyed` and `ble_reports` are always 0 for BISCUIT NODE, and a Piglet core gets no Bluetooth even with `ble_reports=1`. The key itself is never shown. `node config` shows the saved settings |
+| `heard`, `heard_core` | Node messages heard from any core, and from the linked core, since the node started. `heard` rising while `linked=0` means a core is answering that this mode cannot join (see `other`) |
 | `remembered` | The node that resumes after a restart |
 | `heap`, `min_heap`, `largest` | Free memory, for long-run checks |
+
+### Event lines
+
+A running node also prints a line by itself when its link changes, so a USB log shows what happened and when:
+
+| Line | When |
+|---|---|
+| `NODE_EVENT linked core=...` | A core was joined |
+| `NODE_EVENT role ...`, `NODE_EVENT channels ...` | A Biscuit gave its role and its channel list while the node introduced itself; `text` holds the channel list as the Biscuit sent it |
+| `NODE_EVENT core_lost ...` | The core was silent for 30 seconds; the node searches again |
+| `NODE_EVENT mode_changed core=BISCUIT SECURE text="..."` | The linked core's answer says it can no longer be joined, for example a Biscuit switched to Secure mode; `text` is the core's answer, word for word |
+| `NODE_EVENT other_core core=... text="..."` | A core this mode cannot join answered; logged once per kind while its hint is on the screen |
+| `NODE_EVENT key_lost ...` | JCMK Node with encryption: the radio would not take the key back, so the link was dropped |
+| `NODE_EXIT_PRESS source=...`, `NODE_EXIT_ARMED`, `NODE_EXIT_CONFIRMED` | A key or the screen's EXIT asked to leave; the first press arms, a second within 3 seconds leaves. `source` names the input: `boot_key`, `pwr_key`, `boot_hold`, `menu_key`, `home_key`, `cycle_key`, `rotary`, `button`, `button_double` (Lite and Dial) or `screen` |
+| `NODE_SCREEN_CLOSED busy=...` | The node screen closed because the node was stopped or switched another way, such as over USB |
+
+`text` shows printable characters only (others as `.`), at most 80 of them, and `length` gives the full length. Event lines are held back while a screenshot or other binary transfer is on the cable and follow it.
 
 ## JCMK encryption (optional)
 
