@@ -1,4 +1,5 @@
 import {firmwareAtLeast,knownFirmware} from './firmware-version.js?v=0.14.7-143c';
+import {NodeBusyMessage,nodeBusy} from './serial.js?v=0.14.7-143c';
 export const hasNotebook=version=>firmwareAtLeast(version,'0.12.0');
 export function customAdvertCommand(text){
  const hex=String(text).replace(/[ :\-]/g,'');
@@ -13,7 +14,7 @@ export function readNotebook(link,kind){
  return new Promise((resolve,reject)=>{let collecting=false,rows=[],settled=false,off=()=>{};
   const done=(error)=>{if(settled)return;settled=true;clearTimeout(timer);off();if(error)reject(error);else resolve(rows.join('\n')+'\n');};
   const timer=setTimeout(()=>done(new Error('Notebook download timed out.')),30000);
-  off=link.onLine(line=>{if(line.startsWith('NOTEBOOK_ERROR'))return done(new Error(line));if(line==='NOTEBOOK_BEGIN'){collecting=true;return;}if(line==='NOTEBOOK_END'){if(!collecting||rows[0]!==header)return done(new Error('Invalid notebook CSV header.'));return done();}if(!collecting)return;
+  off=link.onLine(line=>{if(line===null)return done(new Error('USB disconnected.'));if(nodeBusy(line))return done(new Error(NodeBusyMessage));if(line.startsWith('NOTEBOOK_ERROR'))return done(new Error(line));if(line==='NOTEBOOK_BEGIN'){collecting=true;return;}if(line==='NOTEBOOK_END'){if(!collecting||rows[0]!==header)return done(new Error('Invalid notebook CSV header.'));return done();}if(!collecting)return;
    if(!rows.length){if(line!==header)return done(new Error('Invalid notebook CSV header.'));}
    else {const fields=line.split(',');if(rows.length>96||line.length>1600||fields.length!==header.split(',').length||!/^[a-f0-9]{2}(?::[a-f0-9]{2}){5}$/i.test(fields[0])||!/^[a-f0-9]*$/i.test(fields.at(-1))||fields.some(s=>/^[\s]*[=+@]/.test(s)||(/^\s*-/.test(s)&&!/^-[0-9]+$/.test(s))))return done(new Error('Malformed notebook row.'));}
    rows.push(line);

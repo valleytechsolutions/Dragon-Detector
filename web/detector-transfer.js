@@ -1,3 +1,4 @@
+import {NodeBusyMessage,nodeBusy} from './serial.js?v=0.14.7-143c';
 // Collect streamed CSV as it arrives; do not depend on a small serial line queue.
 export async function readHistory(link, timeout=30000) {
   let unsubscribe, timer;
@@ -7,6 +8,7 @@ export async function readHistory(link, timeout=30000) {
     unsubscribe=link.onLine(line=>{
       if(line===null){reject(link.failure??new Error('USB disconnected during export.'));return;}
       if(line==='HISTORY_ERROR'){reject(new Error('Detection history is unavailable on this board.'));return;}
+      if(nodeBusy(line)){reject(new Error(NodeBusyMessage));return;}
       if(line==='HISTORY_BEGIN'){started=true;return;}
       if(!started)return;
       if(line==='HISTORY_END'){resolve(lines.join('\r\n')+'\r\n');return;}

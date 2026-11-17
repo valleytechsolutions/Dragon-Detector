@@ -10,6 +10,9 @@ import {readFileSync} from 'node:fs';
 import {boardProfiles,connectedProfile,validateManifest,supportsBadge} from '../web/board-profiles.js';
 import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan,badgeTextLayout,drawBadgeText} from '../web/badge-editor.js';
 import {deviceQuery} from '../web/device-query.js';
+import {exportLog} from '../web/ble-lab.js';
+import {exportCapture} from '../web/recon-transfer.js';
+import {readNotebook} from '../web/notebook.js';
 
 test('stalled settings query retries safely and recovers the studio connection',async()=>{
   const writes=[];let attempts=0;
@@ -154,6 +157,20 @@ test('USB refusal from a running wardriving node fails at once with a plain reas
   await serial.write('badge info');const next=serial.wait(s=>s.startsWith('BADGE_INFO'));
   port.emit('BADGE_INFO ok\n');assert.equal(await next,'BADGE_INFO ok');
   await serial.close();
+});
+test('streamed downloads stop at once when a wardriving node refuses them',async()=>{
+  const busy=/wardriving node is running/;
+  for(const start of [l=>readHistory(l,5000),l=>exportLog(l),l=>exportCapture(l,'wifi-0000abcd.pcap'),l=>readNotebook(l,'probes')]){
+    const port=mockPort(),serial=new BadgeSerial(port);await serial.open();
+    const started=Date.now(),pending=start(serial);await new Promise(r=>setTimeout(r,5));
+    port.emit('NODE_BUSY stop the node first: node stop\n');
+    await assert.rejects(pending,busy);assert.ok(Date.now()-started<2000);await serial.close();
+  }
+});
+test('a node refusal left from an earlier command does not fail a read-only query',async()=>{
+  let attempts=0;const writes=[];
+  const link={async write(c){writes.push(c);},async wait(match){if(++attempts===1)throw new Error('A wardriving node is running on the board. Leave it from the node screen on the device, or send node stop, then try again.');const r='CLOCK_STATUS rtc=0 valid=1 epoch=5 offset=-300';assert.ok(match(r));return r;}};
+  assert.match(await deviceQuery(link,'clock status',s=>s.startsWith('CLOCK_STATUS ')),/^CLOCK_STATUS/);assert.deepEqual(writes,['clock status','clock status']);
 });
 test('USB disconnect rejects a pending transfer and permits cleanup',async()=>{
   const port=mockPort(),serial=new BadgeSerial(port);await serial.open();

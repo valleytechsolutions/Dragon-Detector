@@ -461,7 +461,7 @@ private:
   // until both are in, it is told again. Records keep flowing meanwhile, as on
   // the reference node. A Biscuit that already gave a role stays registered
   // while it is asked again, so the screen does not flicker on every probe; it
-  // is dropped only when every try goes without a role.
+  // is dropped when the tries run out and the last of them brought no role.
   void identify(uint32_t now,bool fresh){
     if(fresh)identifyTries_=0;
     ++identifyTries_;identifyAt_=now;roleWanted_=true;roleSeen_=false;
