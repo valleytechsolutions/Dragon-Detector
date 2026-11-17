@@ -12,15 +12,21 @@ namespace noderadio {
 using namespace dragon::node;
 
 struct Received {uint8_t from[6];int8_t rssi;uint8_t length;uint8_t data[ESP_NOW_MAX_DATA_LEN];};
+// The node's working memory is taken when a node starts and given back when it
+// stops (PSRAM where the board has it), so a board that never runs a node keeps
+// all of its internal RAM. Only the small receive queue stays once created,
+// because the Wi-Fi task may still be finishing a callback as ESP-NOW stops.
 #ifdef BOARD_M5DIAL
 constexpr unsigned ReceiveDepth=8;
-constexpr size_t SeenEntries=2048;         // internal RAM: 16 KB
+constexpr size_t SeenEntries=2048;         // internal RAM while running: 16 KB
+constexpr uint32_t NodeMemory=MALLOC_CAP_INTERNAL|MALLOC_CAP_8BIT;
 #else
 constexpr unsigned ReceiveDepth=16;
-constexpr size_t SeenEntries=32768;        // PSRAM: 256 KB, exact counts far past a day of driving
+constexpr size_t SeenEntries=32768;        // PSRAM while running: 256 KB, exact counts far past a day of driving
+constexpr uint32_t NodeMemory=MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT;
 #endif
 StaticQueue_t receiveControl;
-uint8_t receiveStorage[ReceiveDepth*sizeof(Received)];
+uint8_t* receiveStorage=nullptr;
 QueueHandle_t receiveQueue=nullptr;
 std::atomic<uint32_t> receiveDrops{0};
 // Send reports: only the report for the newest frame counts. A report for a
@@ -36,7 +42,7 @@ wifi_ps_type_t previousPs=WIFI_PS_MIN_MODEM;
 int previousTracked=-1;uint8_t previousLock=0;bool previousRadio=true;
 uint8_t lmk[ESP_NOW_KEY_LEN]{},ownMac[6]{};
 Seen* seen=nullptr;
-Link link;
+Link* link=nullptr;
 const Status idle{};
 
 void received(const esp_now_recv_info_t* info,const uint8_t* data,int length){
@@ -102,20 +108,25 @@ struct RadioPort final : Port {
 };
 RadioPort port;
 
+// Gives the session's working memory back. Only called while no node runs.
+void release(){
+  if(link){link->~Link();heap_caps_free(link);link=nullptr;}
+  if(seen){heap_caps_free(seen);seen=nullptr;}
+}
+
 // Called with the session's settings already chosen. Unwinds completely on failure.
 bool begin(const Config& requested,const uint8_t* pmk,const uint8_t* linkKey,char* why,size_t whyLength){
   auto fail=[&](const char* reason){snprintf(why,whyLength,"%s",reason);return false;};
   if(owned)return fail("Node already running");
   if(!queue||!scanner)return fail("Radio did not start");
-  if(!receiveQueue)receiveQueue=xQueueCreateStatic(ReceiveDepth,sizeof(Received),receiveStorage,&receiveControl);
-  if(!seen){
-#ifdef BOARD_M5DIAL
-    seen=static_cast<Seen*>(calloc(SeenEntries,sizeof(Seen)));
-#else
-    seen=static_cast<Seen*>(ps_calloc(SeenEntries,sizeof(Seen)));
-#endif
-    if(!seen)return fail("Not enough memory");
+  if(!receiveQueue){
+    receiveStorage=static_cast<uint8_t*>(heap_caps_malloc(ReceiveDepth*sizeof(Received),NodeMemory));
+    if(!receiveStorage)return fail("Not enough memory");
+    receiveQueue=xQueueCreateStatic(ReceiveDepth,sizeof(Received),receiveStorage,&receiveControl);
   }
+  if(!seen)seen=static_cast<Seen*>(heap_caps_calloc(SeenEntries,sizeof(Seen),NodeMemory));
+  if(!link){void* room=heap_caps_malloc(sizeof(Link),NodeMemory);if(room)link=new(room) Link();}
+  if(!seen||!link){release();return fail("Not enough memory");}
   // Scan results arrive as a driver event. Lite builds never needed the
   // default event loop until now; creating it twice is harmless.
   const esp_err_t loop=esp_event_loop_create_default();
@@ -144,7 +155,7 @@ bool begin(const Config& requested,const uint8_t* pmk,const uint8_t* linkKey,cha
   Config config=requested;
   config.seen=seen;config.seenCount=SeenEntries;config.encrypted=requested.encrypted&&keyed;
   config.seed=esp_random()^(uint32_t(ownMac[2])<<24|uint32_t(ownMac[3])<<16|uint32_t(ownMac[4])<<8|ownMac[5]);
-  if(ok){owned=true;ok=link.begin(port,config,millis());}
+  if(ok){owned=true;ok=link->begin(port,config,millis());}
   if(!ok){
     owned=false;
     if(espNow){esp_now_unregister_recv_cb();esp_now_unregister_send_cb();esp_now_deinit();espNow=false;}
@@ -152,7 +163,7 @@ bool begin(const Config& requested,const uint8_t* pmk,const uint8_t* linkKey,cha
     esp_wifi_set_ps(previousPs);esp_wifi_set_mode(previousMode);
     wardriveScanning=false;trackedContact=previousTracked;channelLock=previousLock;
     scanCommand(ScanAction::Configure,0,activeBle&&reconMode()==dragon::ReconMode::Radar);
-    setRadio(previousRadio);wardriveTransition=false;
+    setRadio(previousRadio);wardriveTransition=false;release();
     return fail("Wi-Fi could not switch to node mode");
   }
   radioEnabled=false;blePhase=false;lastAccounting=millis();wardriveTransition=false;
@@ -161,7 +172,7 @@ bool begin(const Config& requested,const uint8_t* pmk,const uint8_t* linkKey,cha
 
 void end(){
   if(!owned)return;
-  link.end();
+  link->end();
   wardriveTransition=true;
   scanCommand(ScanAction::Stop);blePhase=false;
   stopScan();
@@ -174,14 +185,15 @@ void end(){
   trackedContact=previousTracked;channelLock=previousLock;
   scanCommand(ScanAction::Configure,0,activeBle&&reconMode()==dragon::ReconMode::Radar);
   setRadio(previousRadio);wardriveTransition=false;
+  release();
 }
 
 // One pass of the application loop. Everything the link sees arrives here, in order.
 void loop(uint32_t now){
   Received r;
-  for(unsigned i=0;i<ReceiveDepth&&xQueueReceive(receiveQueue,&r,0)==pdTRUE;++i)link.received(r.from,r.data,r.length,r.rssi,now);
+  for(unsigned i=0;i<ReceiveDepth&&xQueueReceive(receiveQueue,&r,0)==pdTRUE;++i)link->received(r.from,r.data,r.length,r.rssi,now);
   const int sent=sendResult.exchange(-1);
-  if(sent>=0)link.sent(sent==1,now);
+  if(sent>=0)link->sent(sent==1,now);
   const int scanned=scanResult.load();
   if(scanning&&scanned>=0){
     scanWaiting=false;scanning=false;scanResult=-1;
@@ -189,14 +201,14 @@ void loop(uint32_t now){
     for(uint16_t i=0;ok&&i<count;++i){
       wifi_ap_record_t ap{};
       if(esp_wifi_scan_get_ap_record(&ap)!=ESP_OK)break;
-      link.wifi(ap.bssid,ap.ssid,strnlen(reinterpret_cast<const char*>(ap.ssid),32),auth(ap.authmode),ap.primary,ap.rssi);
+      link->wifi(ap.bssid,ap.ssid,strnlen(reinterpret_cast<const char*>(ap.ssid),32),auth(ap.authmode),ap.primary,ap.rssi);
     }
     esp_wifi_clear_ap_list();
-    link.scanned(ok,now);
+    link->scanned(ok,now);
   }
-  link.loop(now);
+  link->loop(now);
 }
-void bleSeen(const uint8_t* address,int rssi){link.ble(address,rssi);}
+void bleSeen(const uint8_t* address,int rssi){if(owned)link->ble(address,rssi);}
 }
 
 bool radioNodeBegin(const dragon::node::Config& config,const uint8_t* pmk,const uint8_t* lmk,char* why,size_t whyLength){
@@ -204,6 +216,6 @@ bool radioNodeBegin(const dragon::node::Config& config,const uint8_t* pmk,const 
 }
 void radioNodeEnd(){noderadio::end();}
 bool radioNodeOwned(){return noderadio::owned;}
-const dragon::node::Status& radioNodeStatus(){return noderadio::owned?noderadio::link.status():noderadio::idle;}
+const dragon::node::Status& radioNodeStatus(){return noderadio::owned?noderadio::link->status():noderadio::idle;}
 void radioNodeMac(uint8_t* mac){esp_read_mac(mac,ESP_MAC_WIFI_STA);}
 uint32_t radioNodeReceiveDrops(){return noderadio::receiveDrops.load();}

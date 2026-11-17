@@ -14,6 +14,8 @@
 #include <esp_timer.h>
 #include <esp_now.h>
 #include <esp_mac.h>
+#include <esp_heap_caps.h>
+#include <new>
 #include <atomic>
 #include <nimble/porting/nimble/include/nimble/nimble_port.h>
 #include "axon.h"
