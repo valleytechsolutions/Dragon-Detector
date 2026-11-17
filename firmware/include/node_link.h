@@ -36,7 +36,10 @@ constexpr size_t ChannelCount=sizeof(ChannelTable);
 enum Message : uint8_t {
   CoreRequest=1,CoreReply=2,Heartbeat=3,Text=4,Admin=5,RecordAck=6,
   // Biscuit Extended mode additions. Type 5 doubles as its role assignment.
-  Identify=7,ConfigUpdate=10,ConfigAck=11,RoleAck=15};
+  // Type 8 is what a Biscuit sent the moment its wardrive was stopped in the
+  // app (field log, November 17, 2026: once, with no text, and never while the
+  // wardrive ran); a role from it at any other time is not a wardrive.
+  Identify=7,WardriveEnd=8,ConfigUpdate=10,ConfigAck=11,RoleAck=15};
 
 constexpr uint32_t RequestFirstMs=300;      // core search backoff, doubling
 constexpr uint32_t RequestMaxMs=5000;
@@ -66,7 +69,8 @@ constexpr uint8_t IdentifyTries=5;          // Identify attempts per registratio
 constexpr uint32_t BiscuitRecheckMs=90000;  // a Biscuit that keeps talking is asked again now and then: it may have restarted and forgotten this node
 // A wardriving Biscuit answers each of those questions with the role again
 // (every time in 15 of 15 field rounds); one that is not wardriving gives none.
-// A round with no role is asked again soon, and a second one in a row ends the role.
+// A round with no role is asked again soon, and a second one in a row ends the role:
+// the fallback for a stop message (WardriveEnd) missed while the node scanned off channel.
 constexpr uint32_t RoleRecheckMs=15000;
 constexpr uint8_t RoleMissLimit=2;
 // Text of every request and heartbeat, in both families: the JCMK core's own
@@ -99,7 +103,8 @@ struct Port {
   virtual void scanStop()=0;
   virtual void ble(bool on,uint32_t durationMs)=0;
   // Optional: a link change, with the core's text where it explains the change.
-  // type: the message type for Note::Message, otherwise 0.
+  // type: the message type for Note::Message, and for Note::NoRole the one that
+  // ended the role (0 when it ended because the core stopped giving it).
   virtual void note(Note what,Core core,const uint8_t* text,size_t length,uint8_t type){(void)what;(void)core;(void)text;(void)length;(void)type;}
 protected:
   ~Port()=default;
@@ -355,11 +360,11 @@ public:
         }
         break;
       case Heartbeat:break;                  // heartbeats only prove the core is alive
+      case WardriveEnd:
+        if(biscuit()){endRole(WardriveEnd);break;}
+        logMessage(frame);break;              // not a Biscuit's: only logged
       default:
-        // Anything else from the core goes in the USB log once per type and link,
-        // so a field log shows what a core sends that this node does not use.
-        if(frame.type<32&&!(messagesNoted_&1u<<frame.type)){messagesNoted_|=1u<<frame.type;port_->note(Note::Message,status_.core,frame.text,frame.textLength,frame.type);}
-        break;
+        logMessage(frame);break;
     }
   }
   // Outcome of the last transmit(). Broadcasts always report delivered.
@@ -502,7 +507,8 @@ private:
   // until both are in, it is told again. Records keep flowing meanwhile, as on
   // the reference node. Once this link has had a role it stays registered until
   // the link ends, however a later Identify goes, so the screen never flickers
-  // back to joining; the role itself ends with role 0 or two silent rounds.
+  // back to joining; the role itself ends with the Biscuit's stop message, role 0
+  // or two silent rounds.
   void identify(uint32_t now,bool fresh){
     if(fresh){identifyTries_=0;openRound();}
     ++identifyTries_;identifyAt_=now;roleWanted_=true;roleSeen_=false;
@@ -518,12 +524,25 @@ private:
   void closeRound(uint32_t now){
     if(roundOpen_&&!roundAnswered_&&biscuit()&&status_.role!=0){
       if(!roundReplied_)identifyAt_=now-(BiscuitRecheckMs-RoleRecheckMs);
-      else if(++roleMisses_>=RoleMissLimit){
-        roleMisses_=0;status_.role=0;
-        port_->note(Note::NoRole,status_.core,&status_.role,1,0);
-      }else identifyAt_=now-(BiscuitRecheckMs-RoleRecheckMs);
+      else if(++roleMisses_>=RoleMissLimit)endRole(0);
+      else identifyAt_=now-(BiscuitRecheckMs-RoleRecheckMs);
     }
     roundOpen_=false;
+  }
+  // The Biscuit's wardrive is over: back to waiting, still linked and
+  // registered. Logged once as no_role, with the message type that ended it
+  // (0: two rounds without a role, the fallback when that message was missed).
+  // A sweep under way stops at its next channel and what it found still goes out.
+  void endRole(uint8_t why){
+    roleMisses_=0;
+    if(!status_.role)return;
+    status_.role=0;
+    port_->note(Note::NoRole,status_.core,&status_.role,1,why);
+  }
+  // Anything else from the core goes in the USB log once per type and link,
+  // so a field log shows what a core sends that this node does not use.
+  void logMessage(const Frame& frame){
+    if(frame.type<32&&!(messagesNoted_&1u<<frame.type)){messagesNoted_|=1u<<frame.type;port_->note(Note::Message,status_.core,frame.text,frame.textLength,frame.type);}
   }
   void unlink(uint32_t now){
     if(scanning_){port_->scanStop();scanning_=false;}

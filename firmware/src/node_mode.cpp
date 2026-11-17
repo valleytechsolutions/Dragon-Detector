@@ -216,6 +216,8 @@ bool nodeCommand(const String& c){
   }
   // With no node running this only forgets the choice; the screen stays where it is.
   if(c=="node stop"){const bool was=nodeBusy();nodeStop();if(was)uiShow("modes");Serial.println("NODE_OK stopped");return true;}
+  // A diagnostic for field logs: every node frame heard and sent, until `node trace off` or a restart.
+  if(c=="node trace on"||c=="node trace off"){radioNodeTrace(c=="node trace on");Serial.printf("NODE_OK trace=%u\n",unsigned(radioNodeTracing()));return true;}
   // Settings take effect at the next start; a running JCMK Node restarts at once.
   auto apply=[&](bool jcmkOnly){
     if(!radioNodeOwned()||(jcmkOnly&&running!=NodeKind::Jcmk))return;
@@ -264,6 +266,6 @@ bool nodeCommand(const String& c){
       kindText(remembered()),bound,text,encryption,bleReports,*identity?identity:defaultIdentity(),own);
     return true;
   }
-  Serial.println("NODE_ERROR commands: node status|config|biscuit|jcmk|stop|key <text>|key \"<text>\"|key clear|encrypt on|off|bind <mac>|bind off|identity <text>|identity default|ble on|off");
+  Serial.println("NODE_ERROR commands: node status|config|biscuit|jcmk|stop|trace on|off|key <text>|key \"<text>\"|key clear|encrypt on|off|bind <mac>|bind off|identity <text>|identity default|ble on|off");
   return true;
 }

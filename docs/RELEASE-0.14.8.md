@@ -25,9 +25,10 @@ M5Stack Dial and on the **MODES** page of Waveshare Lite. USB `node biscuit` and
 - **BISCUIT NODE** joins a Biscuit in Extended mode and stays a node for the
   whole Biscuit wardrive. Once linked it reads **WAITING FOR WARDRIVE** and only
   checks in. It scans when a wardrive started in the Biscuit app gives it the
-  Wi-Fi role, and goes back to waiting when the wardrive ends, about two
-  minutes after the stop at most. A new wardrive gets every network in view
-  again. A Biscuit in Secure mode is named on screen
+  Wi-Fi role, and goes back to waiting the moment the wardrive is stopped,
+  when the Biscuit says so (or about two minutes later at most, if the node
+  misses that message while it scans). A new wardrive gets every network in
+  view again. A Biscuit in Secure mode is named on screen
   (**SET BISCUIT TO EXTENDED MODE**).
 - **Leaving is deliberate**, so a bump or a thumb on a side button cannot end a
   drive. Tap EXIT, then CONFIRM, or, on boards whose button reports a hold
@@ -37,7 +38,7 @@ M5Stack Dial and on the **MODES** page of Waveshare Lite. USB `node biscuit` and
 - A node that was running resumes after a power loss.
 - USB `node status` reports the link, the role, the counts and the timing, and
   `NODE_EVENT` and `NODE_EXIT_PRESS` lines show what the core sent and which
-  presses were made.
+  presses were made. `node trace on` logs every node message, for field tests.
 
 [Cores, screen, USB commands and troubleshooting](NODE-MODES.md)
 
@@ -89,20 +90,28 @@ On a Waveshare 1.75C:
 
 - **BISCUIT NODE with a real Biscuit**, November 17, 2026. In Extended mode the
   Biscuit joined the node within half a second, gave it the Wi-Fi role and its
-  channel list when a wardrive started, and received Wi-Fi records with no
+  channel list during a wardrive, and received Wi-Fi records with no
   failures or link losses over 20 minutes. In two more listens of 10 and 15
   minutes during a running wardrive the link never dropped. A Biscuit in
   Secure mode answered and, as intended, was not joined.
+- **Waiting and the wardrive stop**, the same day. A node that joined the
+  Biscuit with no wardrive running waited without scanning. Stopping a
+  wardrive in the app made the Biscuit send its nodes a stop message, and the
+  node went back to waiting and stopped scanning. This version acts on that
+  message at once; the build used in the field noticed the stop 84 seconds
+  later by the two-round rule that is now the fallback.
+- **The new radar**, November 17, 2026: over two minutes every frame was a
+  partial repaint, taking 73 ms on average and 102 ms at most, at about 10
+  frames a second. The UI pass took 71 ms, against 168 ms in 0.14.7, and none
+  of 8,730 observations was dropped.
 - **Radar accuracy changes**, November 16, 2026, in a build without the new
   radar look: no observation was dropped out of 13,638 in 5½ minutes, where
   the previous version dropped about 30%.
 
 Not yet confirmed on hardware:
 
-- The new radar look's frame time on a real panel.
-- The waiting state, the wardrive end rule and the new exit rules with a real
-  Biscuit. The end rule is inferred from the Biscuit's replies, because no stop
-  message was seen in the field logs.
+- A wardrive started while the node waits, the immediate stop on the
+  Biscuit's stop message, and the hold-to-leave rules, with a real Biscuit.
 - **JCMK Node** with a real JustCallMeKoko core or a Piglet.
 - The node modes on any board other than the 1.75C, including the knob on the
   CrowPanel 2.1 and Watcher and the buttons on the Dial and Lite.

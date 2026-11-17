@@ -83,6 +83,51 @@ void flushNotes(){
   if(noteDrops){Serial.printf("NODE_EVENT dropped=%lu\n",(unsigned long)noteDrops);noteDrops=0;}
 }
 
+// USB `node trace on`: one NODE_FRAME line for every node frame heard and one
+// NODE_SENT line for every frame this node sends, so a field log shows exactly
+// what a core says and when. Off at every start; nothing is saved. The line
+// buffer is taken the first time the trace is turned on (PSRAM where there is
+// some) and kept, so a board that never traces keeps that memory.
+// Longest line: the header fields at their widest, all 200 text characters,
+// the payload label and every byte after an 11-byte header of a 250-byte frame in hex.
+constexpr size_t TraceLineMax=150+dragon::node::TextMax+24+2*(ESP_NOW_MAX_DATA_LEN-11)+2;
+bool traceFrames=false;uint32_t traceDrops=0;char* traceBuffer=nullptr;
+void traceLine(const char* line,size_t length){
+  if(radioTransferDepth){++traceDrops;return;}
+  flushNotes();
+  if(traceDrops){Serial.printf("NODE_FRAME dropped=%lu\n",(unsigned long)traceDrops);traceDrops=0;}
+  Serial.write(reinterpret_cast<const uint8_t*>(line),length);
+}
+// Header fields (declared= is the text length as sent, before it is limited to
+// the frame), the declared text as printable characters, and in hex every byte
+// after the header up to the last one that is not zero, so a payload sent with a
+// declared length of 0 still shows. A frame shorter than the 11-byte header,
+// such as a JCMK channel assignment, shows every byte after its type instead.
+// This node's own records show hex=-: their text says it all.
+void traceFrame(bool sent,const uint8_t* mac,int rssi,const uint8_t* data,size_t length,uint32_t now){
+  if(!traceFrames||!traceBuffer||!mac||!data||length<5)return;
+  Frame frame;if(!parseFrame(data,length,frame))return;
+  const size_t from=length<11?5:11;
+  size_t last=length;while(last>from&&!data[last-1])--last;
+  const size_t payload=last-from;
+  char* const line=traceBuffer;const size_t size=TraceLineMax;
+  int used=snprintf(line,size,"%s %s=%02X:%02X:%02X:%02X:%02X:%02X rssi=%d len=%u type=%u counter=%lu declared=%u text_len=%u at_ms=%lu text=\"",
+    sent?"NODE_SENT":"NODE_FRAME",sent?"to":"from",mac[0],mac[1],mac[2],mac[3],mac[4],mac[5],rssi,unsigned(length),unsigned(frame.type),(unsigned long)frame.counter,
+    unsigned(length>=11?get16(data+9):0),unsigned(frame.textLength),(unsigned long)now);
+  if(used<=0)return;
+  size_t at=size_t(used)<size?size_t(used):size-1;
+  for(size_t i=0;i<frame.textLength&&at+1<size;++i){const uint8_t c=frame.text[i];line[at++]=c>=32&&c<127&&c!='"'?char(c):'.';}
+  used=snprintf(line+at,size-at,"\" payload=%u hex=",unsigned(payload));
+  if(used>0)at+=size_t(used)<size-at?size_t(used):size-at-1;
+  static const char digits[]="0123456789abcdef";
+  const bool record=sent&&frame.type==Text;
+  for(size_t i=0;!record&&i<payload&&at+3<size;++i){line[at++]=digits[data[from+i]>>4];line[at++]=digits[data[from+i]&15];}
+  if((record||!payload)&&at+2<size)line[at++]='-';
+  if(at>=size)at=size-1;
+  line[at++]='\n';
+  traceLine(line,at);
+}
+
 struct RadioPort final : Port {
   bool tune(uint8_t channel) override {
     if(esp_wifi_set_channel(channel,WIFI_SECOND_CHAN_NONE)!=ESP_OK)return false;
@@ -96,6 +141,7 @@ struct RadioPort final : Port {
     return (esp_now_is_peer_exist(mac)?esp_now_mod_peer(&info):esp_now_add_peer(&info))==ESP_OK;
   }
   bool transmit(const uint8_t* destination,const uint8_t* frame,size_t length) override {
+    traceFrame(true,destination,0,frame,length,millis());
     sendResult=-1;++sendsOut;
     if(esp_now_send(destination,frame,length)==ESP_OK)return true;
     uint32_t out=sendsOut.load();while(out&&!sendsOut.compare_exchange_weak(out,out-1)){}
@@ -124,7 +170,7 @@ struct RadioPort final : Port {
     shown[n]=0;
     const unsigned index=unsigned(what);
     char line[320];
-    char kind[12]="";if(what==Note::Message)snprintf(kind,sizeof(kind)," type=%u",unsigned(type));
+    char kind[12]="";if(what==Note::Message||(what==Note::NoRole&&type))snprintf(kind,sizeof(kind)," type=%u",unsigned(type));
     const int used=snprintf(line,sizeof(line),"NODE_EVENT %s%s core=%s text=\"%s\" length=%u at_ms=%lu\n",index<sizeof(names)/sizeof(names[0])?names[index]:"?",
       kind,dragon::node::coreName(core),shown,unsigned(length),(unsigned long)millis());
     if(used<=0)return;
@@ -203,6 +249,8 @@ void end(){
   if(!owned)return;
   link->end();
   flushNotes();noteLength=0;   // what a transfer still holds back would only mislead the next session
+  if(traceDrops&&!radioTransferDepth)Serial.printf("NODE_FRAME dropped=%lu\n",(unsigned long)traceDrops);
+  traceDrops=0;                // trace lines lost to a transfer belong to this session
   wardriveTransition=true;
   scanCommand(ScanAction::Stop);blePhase=false;
   stopScan();
@@ -222,7 +270,10 @@ void end(){
 void loop(uint32_t now){
   flushNotes();
   Received r;
-  for(unsigned i=0;i<ReceiveDepth&&xQueueReceive(receiveQueue,&r,0)==pdTRUE;++i)link->received(r.from,r.data,r.length,r.rssi,now);
+  for(unsigned i=0;i<ReceiveDepth&&xQueueReceive(receiveQueue,&r,0)==pdTRUE;++i){
+    traceFrame(false,r.from,r.rssi,r.data,r.length,now);
+    link->received(r.from,r.data,r.length,r.rssi,now);
+  }
   const int sent=sendResult.exchange(-1);
   if(sent>=0)link->sent(sent==1,now);
   const int scanned=scanResult.load();
@@ -250,3 +301,12 @@ bool radioNodeOwned(){return noderadio::owned;}
 const dragon::node::Status& radioNodeStatus(){return noderadio::owned?noderadio::link->status():noderadio::idle;}
 void radioNodeMac(uint8_t* mac){esp_read_mac(mac,ESP_MAC_WIFI_STA);}
 uint32_t radioNodeReceiveDrops(){return noderadio::receiveDrops.load();}
+void radioNodeTrace(bool on){
+  using namespace noderadio;
+  if(on&&!traceBuffer){
+    traceBuffer=static_cast<char*>(heap_caps_malloc(TraceLineMax,MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT));
+    if(!traceBuffer)traceBuffer=static_cast<char*>(heap_caps_malloc(TraceLineMax,MALLOC_CAP_INTERNAL|MALLOC_CAP_8BIT));
+  }
+  traceFrames=on&&traceBuffer;traceDrops=0;   // no memory for a line: the trace stays off
+}
+bool radioNodeTracing(){return noderadio::traceFrames;}

@@ -365,8 +365,11 @@ the 500 ms (plus 0 to 200 ms) listening window, the `PIGLET1` marker, and how a
 Piglet core treats its nodes (no ESP-NOW encryption, every record logged as
 Wi-Fi, an even channel split with no opt-out). They were reimplemented
 independently, and no Piglet code or text is included; Piglet is published under
-CC BY-NC-SA 4.0. No Biscuit code was used, the dialect has not yet been checked
-against a real Biscuit, and Biscuit Secure mode is not supported. The node
+CC BY-NC-SA 4.0. No Biscuit code was used. The dialect has been tried with a
+real Biscuit in Extended mode on a Waveshare 1.75C (see the node guide's
+hardware checklist); message type 8, which the Biscuit sends when a wardrive is
+stopped in its app, was learned from that field test, not from Piglet. Biscuit
+Secure mode is not supported. The node
 screens show the owner-supplied Biscuit Shop and JCMK logos
 credited above under Radar theme artwork · 0.13.1. These modes are
 independent implementations, not official firmware of the Biscuit,

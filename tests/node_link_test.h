@@ -663,6 +663,7 @@ static void nodeBiscuitRecoveryTests(){
    std::printf("node link: Biscuit wardrive end noticed after %.1f s\n",(b.now-ended)/1000.0);
    assert(b.now-ended<=BiscuitRecheckMs+RoleRecheckMs+30000);
    assert(s.role==0&&s.linked&&s.registered&&s.losses==0&&b.noted(Note::NoRole)==1&&b.noted(Note::Role)==1);
+   for(size_t i=0;i<b.notes.size();++i)if(b.notes[i].first==Note::NoRole)assert(b.notedTypes[i]==0);   // no stop message: the fallback
    b.run(3000);const size_t scans=b.scanned.size();b.run(60000);assert(b.scanned.size()==scans&&s.waiting);
    core.ignoreIdentify=false;assert(b.until([&]{return !s.waiting&&s.role==1;},100000));assert(b.noted(Note::Role)==2);
    b.world[6].push_back(net(91,6));assert(b.until([&]{return hasLine(core.records,line(91,6));},20000));
@@ -704,8 +705,9 @@ static void nodeBiscuitRecoveryTests(){
    // The next wardrive: scanning again, and what appeared meanwhile is reported.
    atHome(b,core.mac,textFrame(Admin,0,std::string(1,char(1))));
    assert(b.until([&]{return hasLine(core.records,line(77,6));},10000));assert(!s.waiting&&b.noted(Note::Role)==3);}
-  // Role 0 while the node is home in the middle of a sweep: the rest of the
-  // sweep is skipped, and what was found before still reaches the Biscuit.
+  // Role 0 in the middle of a sweep, heard at home or while channel 6 is being
+  // scanned: no further channel is scanned, and what was found before still
+  // reaches the Biscuit.
   for(int variant=0;variant<2;++variant){
     Bench b(NodeFamily::Biscuit);BiscuitCore core;rig(b,core);core.beatMs=1000;b.tick=[&]{core.tick();};
     core.channels="channels=1,2,3,4,5,6,7,8,9,10,11;dwell=110";
@@ -713,12 +715,13 @@ static void nodeBiscuitRecoveryTests(){
     b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};
     assert(b.begin());assert(b.until([&]{return core.registered;},3000));b.run(8000);
     if(variant==0){b.world[2].push_back(net(200,2));assert(b.until([&]{return b.link.status().phase==Phase::Report&&b.link.status().lastScanned==2;},20000));}
-    else assert(b.until([&]{return b.link.status().phase==Phase::Scan&&b.link.status().channel==6;},20000));
+    else assert(b.until([&]{return b.scanning&&b.scanChannel==6;},20000));     // heard while channel 6 is being scanned
+    const uint8_t next=variant==0?3:7;b.world[next].push_back(net(400,next));   // the channel the sweep would scan next
     const size_t scans=b.scanned.size();
     b.hear(core.mac,textFrame(Admin,0,""),0);assert(b.until([&]{return b.link.status().role==0;},2000));
     for(uint8_t ch=7;ch<=11;++ch)b.world[ch].push_back(net(300+ch,ch));
     b.run(20000);
-    assert(b.scanned.size()<=scans+1&&b.link.status().waiting);   // at most the channel already being scanned
+    assert(b.scanned.size()==scans&&b.link.status().waiting&&!hasLine(core.records,line(400,next)));   // a scan under way was counted when it started
     for(uint8_t ch=7;ch<=11;++ch)assert(!hasLine(core.records,line(300+ch,ch)));
     if(variant==0)assert(hasLine(core.records,line(200,2)));
   }
@@ -744,6 +747,69 @@ static void nodeBiscuitRecoveryTests(){
    b.run(5000);core.records.clear();const uint32_t wifi=b.link.status().wifi;
    atHome(b,core.mac,textFrame(Admin,0,std::string(1,char(1))));
    assert(b.until([&]{return hasLine(core.records,line(55,6));},8000));assert(b.link.status().wifi==wifi);}
+  // The Biscuit's own stop message (type 8, no text, sent when the wardrive is
+  // stopped in the app) ends the role at once: the node waits, still linked and
+  // registered, logged once as no_role with type 8, and the Biscuit, idle now,
+  // gives no role to its later questions. A repeat changes nothing. The next
+  // wardrive's role starts it again, and every network in view goes out again
+  // even when the wardrives follow each other within the one-minute refresh.
+  {Bench b(NodeFamily::Biscuit);BiscuitCore core;rig(b,core);core.beatMs=1000;b.tick=[&]{core.tick();};
+   b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};b.world[6].push_back(net(55,6));
+   assert(b.begin());assert(b.until([&]{return hasLine(core.records,line(55,6));},10000));
+   const Status& s=b.link.status();assert(s.role==1&&!s.waiting);
+   core.ignoreIdentify=true;atHome(b,core.mac,textFrame(WardriveEnd,0,""));
+   assert(b.until([&]{return s.waiting;},50));
+   assert(s.role==0&&s.linked&&s.registered&&b.noted(Note::NoRole)==1&&b.notes.back().first==Note::NoRole&&b.notedTypes.back()==WardriveEnd);
+   b.run(3000);const size_t scans=b.scanned.size();const unsigned asked=core.requests;b.world[6].push_back(net(77,6));
+   b.run(BiscuitRecheckMs*2+30000);
+   assert(core.requests>asked&&b.scanned.size()==scans&&s.waiting&&s.linked&&s.registered&&s.losses==0&&!hasLine(core.records,line(77,6)));
+   atHome(b,core.mac,textFrame(WardriveEnd,0,""));b.run(2000);
+   assert(b.noted(Note::NoRole)==1&&!b.noted(Note::Message)&&s.waiting);
+   core.ignoreIdentify=false;atHome(b,core.mac,textFrame(Admin,0,std::string(1,char(1))));
+   assert(b.until([&]{return hasLine(core.records,line(77,6));},10000));
+   assert(!s.waiting&&s.role==1&&b.noted(Note::Role)==2&&b.noted(Note::NoRole)==1);
+   // A short wardrive stopped and started again, well inside the one-minute
+   // refresh: the new wardrive still gets every network in view at once.
+   b.run(3000);core.ignoreIdentify=true;atHome(b,core.mac,textFrame(WardriveEnd,0,""));assert(b.until([&]{return s.waiting;},50));
+   b.run(5000);core.records.clear();core.ignoreIdentify=false;atHome(b,core.mac,textFrame(Admin,0,std::string(1,char(1))));
+   assert(b.until([&]{return hasLine(core.records,line(55,6))&&hasLine(core.records,line(77,6));},8000));
+   assert(b.noted(Note::NoRole)==2&&b.noted(Note::Role)==3);}
+  // The stop message in the middle of a sweep, heard at home or while channel 6
+  // is being scanned: no further channel is scanned, and what was found before
+  // still reaches the Biscuit.
+  for(int variant=0;variant<2;++variant){
+    Bench b(NodeFamily::Biscuit);BiscuitCore core;rig(b,core);core.beatMs=1000;b.tick=[&]{core.tick();};
+    core.channels="channels=1,2,3,4,5,6,7,8,9,10,11;dwell=110";
+    for(uint8_t ch=1;ch<=11;++ch)b.world[ch].push_back(net(ch,ch));
+    b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};
+    assert(b.begin());assert(b.until([&]{return core.registered;},3000));b.run(8000);
+    if(variant==0){b.world[2].push_back(net(200,2));assert(b.until([&]{return b.link.status().phase==Phase::Report&&b.link.status().lastScanned==2;},20000));}
+    else assert(b.until([&]{return b.scanning&&b.scanChannel==6;},20000));     // heard while channel 6 is being scanned
+    const uint8_t next=variant==0?3:7;b.world[next].push_back(net(400,next));   // the channel the sweep would scan next
+    const size_t scans=b.scanned.size();core.ignoreIdentify=true;
+    b.hear(core.mac,textFrame(WardriveEnd,0,""),0);assert(b.until([&]{return b.link.status().role==0;},2000));
+    for(uint8_t ch=7;ch<=11;++ch)b.world[ch].push_back(net(300+ch,ch));
+    b.run(20000);
+    assert(b.scanned.size()==scans&&b.link.status().waiting&&b.noted(Note::NoRole)==1&&!hasLine(core.records,line(400,next)));
+    for(uint8_t ch=7;ch<=11;++ch)assert(!hasLine(core.records,line(300+ch,ch)));
+    if(variant==0)assert(hasLine(core.records,line(200,2)));
+  }
+  // A stop message before any wardrive, or from another address, changes
+  // nothing and logs nothing. One from a JCMK core is only logged.
+  {Bench b(NodeFamily::Biscuit);BiscuitCore core;rig(b,core);core.ignoreIdentify=true;core.beatMs=1000;b.tick=[&]{core.tick();};
+   b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};
+   assert(b.begin());assert(b.until([&]{return b.link.status().linked;},3000));b.run(5000);
+   atHome(b,core.mac,textFrame(WardriveEnd,0,""));b.run(2000);
+   assert(b.link.status().waiting&&!b.noted(Note::NoRole)&&!b.noted(Note::Message));
+   atHome(b,core.mac,textFrame(Admin,0,std::string(1,char(1))));assert(b.until([&]{return !b.link.status().waiting;},3000));
+   const Mac stranger{{0xd8,0x3b,0xda,9,9,9}};atHome(b,stranger,textFrame(WardriveEnd,0,""));b.run(2000);
+   assert(b.link.status().role==1&&!b.link.status().waiting&&!b.noted(Note::NoRole)&&!b.noted(Note::Message));}
+  {Bench b(NodeFamily::Jcmk);JcmkCore core;core.bench=&b;b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};
+   assert(b.begin());assert(b.until([&]{return b.link.status().linked;},5000));b.run(3000);
+   const Status& s=b.link.status();
+   for(int i=0;i<2;++i){atHome(b,core.mac,textFrame(WardriveEnd,0,""));b.run(500);}
+   assert(s.linked&&!s.waiting&&!b.noted(Note::NoRole)&&b.noted(Note::Message)==1&&b.notedTypes.back()==WardriveEnd);
+   b.world[6].push_back(net(88,6));assert(b.until([&]{return b.link.status().wifi>=1;},10000));}
   // A message type this node does not use is logged once per type and link, with its type.
   {Bench b(NodeFamily::Biscuit);BiscuitCore core;rig(b,core);b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};
    assert(b.begin());assert(b.until([&]{return b.link.status().registered;},3000));

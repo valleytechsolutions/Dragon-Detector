@@ -141,6 +141,9 @@ bool radioNodeOwned(){return sim::radio.owned;}
 const dragon::node::Status& radioNodeStatus(){return sim::radio.owned?sim::radio.status:sim::idle;}
 void radioNodeMac(uint8_t* mac){const uint8_t own[6]={0x24,0x6f,0x28,1,2,3};memcpy(mac,own,6);}
 uint32_t radioNodeReceiveDrops(){return 0;}
+namespace sim{bool trace=false,traceMemory=true;}
+void radioNodeTrace(bool on){sim::trace=on&&sim::traceMemory;}   // no memory for a line: stays off
+bool radioNodeTracing(){return sim::trace;}
 
 namespace {
 std::string run(const char* command){sim::log.clear();assert(nodeCommand(command));return sim::log;}
@@ -188,7 +191,14 @@ static void testStatusAndStop(){
   std::string out=run("node");assert(has(out,"NODE_STATUS mode=none active=0 "));
   // node stop with no node running forgets the choice and leaves the screen alone.
   sim::ui="ble-lab";out=run("node stop");assert(out=="NODE_OK stopped\n");assert(sim::ui=="ble-lab");
+  // node trace: a switch for the USB log only, answered either way, with or without a node.
+  assert(run("node trace on")=="NODE_OK trace=1\n"&&sim::trace);assert(run("node trace off")=="NODE_OK trace=0\n"&&!sim::trace);
+  assert(has(run("node trace"),"NODE_ERROR commands:")&&has(run("node trace maybe"),"trace on|off"));
   assert(run("node biscuit")=="NODE_STARTED biscuit\nNODE_OK biscuit\n");assert(sim::ui=="node");assert(savedMode()==1);
+  // While a node runs it is allowed, changes nothing else and leaves the node running.
+  assert(nodeAllowsCommand("node trace on"));
+  assert(run("node trace on")=="NODE_OK trace=1\n"&&nodeBusy()&&sim::ui=="node");assert(run("node trace off")=="NODE_OK trace=0\n"&&nodeBusy());
+  sim::traceMemory=false;assert(run("node trace on")=="NODE_OK trace=0\n"&&!sim::trace);sim::traceMemory=true;
   sim::radio.status.registered=true;sim::radio.status.linked=true;
   out=run("node status");assert(field(out,"registered")=="1");assert(field(out,"linked")=="1");
   sim::radio.status.registered=false;out=run("node status");assert(field(out,"registered")=="0");

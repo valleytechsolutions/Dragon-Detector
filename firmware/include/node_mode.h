@@ -47,3 +47,5 @@ bool radioNodeOwned();
 const dragon::node::Status& radioNodeStatus();
 void radioNodeMac(uint8_t* mac);
 uint32_t radioNodeReceiveDrops();
+void radioNodeTrace(bool on);   // USB `node trace on|off`: every node frame in and out on USB
+bool radioNodeTracing();
