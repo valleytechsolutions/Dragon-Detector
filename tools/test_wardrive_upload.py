@@ -4,15 +4,19 @@ import hashlib, subprocess, sys, urllib.request
 
 root=Path(__file__).resolve().parents[1]
 work=root/'.work'/'upload-tests';dep=work/'cjson';dep.mkdir(parents=True,exist_ok=True)
-hashes={'cJSON.c':'feec025be377e5f2b8f1d19fcc78527a7fa07ddd326e0dc83ac488647c86e679',
-        'cJSON.h':'7cdbc7f241e7cac032fe67bf00b84eb82f52f3194245f6f127fedde2a1051921',
-        'LICENSE':'b56ff5bcae5b93a530f9fa8894f41f1edf47c0d526835839f0fb76d5ce9dc971'}
+revision='acc76239bee01d8e9c858ae2cab296704e52d916'  # cJSON v1.7.18
+hashes={'cJSON.c':'75c51de8fa40ac9d7a99319c6330719bd692eb81c0a869265f3d4c682533f9b9',
+        'cJSON.h':'0578cc29132912edbc88f83207a8fc76e5db3db0605497e909a9384ef3cc474b',
+        'LICENSE':'a36dda207c36db5818729c54e7ad4e8b0c6fba847491ba64f372c1a2037b6d5c'}
 for name,expected in hashes.items():
     path=dep/name
     if not path.exists():
-        path.write_bytes(urllib.request.urlopen('https://raw.githubusercontent.com/DaveGamble/cJSON/v1.7.18/'+name,timeout=30).read())
+        path.write_bytes(urllib.request.urlopen('https://raw.githubusercontent.com/DaveGamble/cJSON/'+revision+'/'+name,timeout=30).read())
     # Git checkouts may normalize LF to CRLF. Compare the upstream LF content.
     data=path.read_bytes().replace(b'\r\n',b'\n')
+    # Older local fixtures appended one LF. Repair only an exact upstream match.
+    if hashlib.sha256(data).hexdigest()!=expected and data.endswith(b'\n') and hashlib.sha256(data[:-1]).hexdigest()==expected:
+        data=data[:-1];path.write_bytes(data)
     assert hashlib.sha256(data).hexdigest()==expected, f'Unexpected cJSON source: {name}'
 
 src=(root/'firmware/src/wardrive_upload.cpp').read_text()
