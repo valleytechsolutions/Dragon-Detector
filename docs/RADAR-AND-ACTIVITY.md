@@ -91,6 +91,6 @@ Open **Tools → Activity**, or tap a recent-activity banner on the radar. Event
 
 Balanced reception alternates Wi-Fi and BLE; hunting prioritizes one radio, so other activity can be missed. Only the currently received Wi-Fi channel is observed. These are decoded-frame detectors, not RF jamming measurements. All 158 pinned signature-table checks remain enforced. See [coverage](COVERAGE-AUDIT.md), [validation](VALIDATION.md) and [credits](../CREDITS.md).
 
-**Room motion** on full boards (Radio tools) is a separate, experimental CSI mode for a detector set down still: it senses movement near the detector, not people, position or count, and pauses radar channel hopping while it runs (Wi-Fi detections on its channel still count). See [Room motion](RADIO-TOOLKIT.md#room-motion-experimental-csi-monitor).
+**Room motion** on full boards (Radio tools) is a separate, experimental CSI mode for a detector set down still: it senses movement near the detector, not people, position or count, and pauses the radar (channel hopping, detections and alerts) while it runs. Its network is chosen on its own screen and never sets a Hunt, Watch rule or channel lock. See [Room motion](RADIO-TOOLKIT.md#room-motion-experimental-csi-monitor).
 
 The three branded themes require firmware 0.13.1 or newer. [Previews and logos](THEMES.md).

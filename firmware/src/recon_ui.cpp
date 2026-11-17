@@ -43,11 +43,38 @@ dragon::gpsuart::Config gpsSetupRendered;
 char fileNames[32][48]{};size_t fileSizes[32]{};unsigned fileCount=0,fileIndex=0;
 // Copy keys into the row model. A live scan can reuse the cache slot before tap.
 uint8_t apKeys[ApCapacity][6]{},clientKeys[ClientCapacity][6]{};unsigned apRows=0,clientRows=0;
-void action(lv_event_t*);
+void action(lv_event_t*);void updateStatus();void csiRefresh();
 lv_obj_t* text(lv_obj_t* parent,const String& s,int x,int y,int w=326,uint32_t color=uiColors().ink,const lv_font_t* font=font18()){auto* l=lv_label_create(parent);dragon::labui::pos(l,x,y);dragon::labui::width(l,w);lv_obj_set_style_text_font(l,uiFont(font),0);lv_obj_set_style_text_color(l,lv_color_hex(color),0);lv_label_set_text(l,s.c_str());return l;}
 lv_obj_t* btn(lv_obj_t* parent,const char* s,int x,int y,int w,int h,int id){auto* b=lv_btn_create(parent);dragon::labui::pos(b,x,y);dragon::labui::size(b,w,h);lv_obj_set_style_bg_color(b,lv_color_hex(uiColors().surface),0);lv_obj_set_style_border_width(b,1,0);lv_obj_set_style_border_color(b,lv_color_hex(uiColors().border),0);lv_obj_set_style_pad_all(b,dragon::labui::px(10),0);lv_obj_set_style_radius(b,uiAscii()?0:dragon::labui::px(12),0);lv_obj_set_style_shadow_width(b,0,0);lv_obj_add_event_cb(b,action,LV_EVENT_CLICKED,(void*)(intptr_t)id);if(!*s)return b;auto* l=lv_label_create(b);lv_label_set_text(l,s);lv_obj_set_style_text_font(l,uiFont(font18()),0);lv_obj_center(l);return b;}
 void row(const char* title,const char* detail,unsigned i,int id){auto* b=btn(body,"",0,i*70,338,64,id);text(b,title,0,-1,308,uiColors().ink,font18());text(b,detail,0,24,308,uiColors().muted,font14());}
-void change(View v){view=v;redraw=true;}
+bool inputIdle(){for(auto* input=lv_indev_get_next(nullptr);input;input=lv_indev_get_next(input))if(input->proc.state==LV_INDEV_STATE_PRESSED)return false;return true;}
+void change(View v){if(view==Csi&&v!=Csi)csiSurvey(false);view=v;redraw=true;}
+// Room motion picks its own network on its own screen: a passive list, Auto,
+// last used, and Next when a network gives no motion data. Nothing here sets
+// the attack target, a Hunt, a Watch rule or the radar channel lock.
+CsiNetwork csiRows[8];unsigned csiCount=0;uint32_t csiShownKey=0,csiListedAt=0;bool csiShownActive=false,csiShownNoData=false;int csiScroll=0;
+uint32_t csiKey(const CsiNetwork* r,unsigned n){uint32_t sum=n;for(unsigned i=0;i<n;++i){uint32_t h=2166136261u^unsigned(r[i].evidence)^(r[i].last<<4);for(uint8_t b:r[i].mac)h=(h^b)*16777619u;sum+=h;}return sum;}
+lv_obj_t* fit(lv_obj_t* l){lv_label_set_long_mode(l,LV_LABEL_LONG_DOT);lv_obj_set_height(l,lv_font_get_line_height(lv_obj_get_style_text_font(l,LV_PART_MAIN)));return l;}
+void csiButton(const String& s,int x,int y,int w,int id){auto* b=btn(body,"",x,y,w,42,id);auto* l=fit(text(b,s,0,0,w-24,uiColors().ink,font18()));lv_obj_set_style_text_align(l,LV_TEXT_ALIGN_CENTER,0);lv_obj_center(l);}
+String csiName(const char* name,uint8_t channel){if(*name)return displayName(name);return String("Hidden CH ")+channel;}
+void drawCsi(){csiShownActive=csiActive();csiShownNoData=csiNoData();
+ if(csiShownActive){csiButton("CHANGE NETWORK",0,0,164,87);csiButton("STOP",174,0,164,54);
+  char next[33];if(!csiShownNoData)csiButton("RECALIBRATE",0,50,334,53);else if(csiNextName(next,sizeof(next)))csiButton(String("TRY NEXT: ")+displayName(next),0,50,334,88);else csiButton("CHANGE NETWORK",0,50,334,87);
+  info=text(body,"",3,104,327,uiColors().ink,font16());updateStatus();return;}
+ csiSurvey(true);csiCount=csiNetworks(csiRows,8);csiShownKey=csiKey(csiRows,csiCount);csiListedAt=millis();
+ int last=-1;for(unsigned i=0;i<csiCount;++i)if(csiRows[i].last&&csiRows[i].evidence!=dragon::csi::Evidence::NoData)last=i;
+ if(last>=0){csiButton("AUTO",0,0,104,52);csiButton(String("LAST: ")+csiName(csiRows[last].name,csiRows[last].channel),114,0,224,89);}else csiButton("AUTO: BEST NETWORK",0,0,334,52);
+ text(body,csiMessage(),3,50,327,uiColors().muted,font14());
+ for(unsigned i=0;i<csiCount;++i){auto& r=csiRows[i];char detail[64];snprintf(detail,sizeof(detail),"CH %u / %d dBm%s%s",r.channel,r.rssi,r.evidence==dragon::csi::Evidence::Ofdm?" / motion data seen":r.evidence==dragon::csi::Evidence::NoData?" / no motion data":"",r.last?" / last used":"");
+  auto* b=btn(body,"",0,96+i*70,338,64,3000+i);fit(text(b,csiName(r.name,r.channel),0,-1,308,uiColors().ink,font18()));fit(text(b,detail,0,24,308,uiColors().muted,font14()));}
+ if(!csiCount)text(body,radioStandby()?"Leave clock or timer to list networks.":reconRadio()==2?"This radio mode hears BLE only. Pick Dragon radar or Wi-Fi survey in Modes to list networks.":"Listening for nearby networks...\nThe list fills in a few seconds.",3,96,327,uiColors().ink,font16());
+ else text(body,"Strongest first. Set the detector down, then tap. Nothing is sent and no alert is set.",3,96+csiCount*70,327,uiColors().muted,font14());
+ if(csiScroll){lv_obj_update_layout(body);lv_obj_scroll_to_y(body,csiScroll,LV_ANIM_OFF);csiScroll=0;}
+}
+// Redraw the list only when the set of networks changes, at most every 3 s, never mid-touch.
+void csiRefresh(){if(csiActive()!=csiShownActive||(csiShownActive&&csiNoData()!=csiShownNoData)){redraw=true;return;}
+ if(csiShownActive||millis()-csiListedAt<3000||!inputIdle())return;CsiNetwork r[8];unsigned n=csiNetworks(r,8);
+ if(csiKey(r,n)!=csiShownKey){csiScroll=body?lv_obj_get_scroll_y(body):0;redraw=true;}else csiListedAt=millis();}
 #if BOARD_HAS_GPS
 void updateWardrive(){
   auto s=wardriveSnapshot();
@@ -160,7 +187,7 @@ void drawUploads(){
   updateUploads();redraw=false;updated=millis();
 }
 #endif
-void updateStatus(){if(!info)return;char line[520];if(view==Wardrive){wardriveStatus(line,sizeof(line));}else if(view==Recipes){recipeStatus(line,sizeof(line));}else if(view==Missions){missionStatus(line,sizeof(line));}else if(view==Network){networkStatus(line,sizeof(line),true);}else if(view==Csi){csiStatus(line,sizeof(line));}else if(view==Portal){portalStatus(line,sizeof(line),true);}else if(view==Statistics){snprintf(line,sizeof(line),"PASSIVE WI-FI OBSERVATIONS\n\nFrames: %lu   Retries: %lu\nBeacons: %lu   Probes: %lu\nDisconnects: %lu\nEAPOL: %lu   Protected: %lu\nPwnagotchi: %lu   Detections: %lu\n\nEAPOL key-message candidates\nM1 %lu  M2 %lu  M3 %lu  M4 %lu\nCounts do not prove a complete\nhandshake. Export PCAP to inspect.",counters.frames,counters.retries,counters.beacons,counters.probes,counters.disconnect,counters.eapol,counters.protectedFrames,counters.peers,counters.detections,counters.keyMessages[1],counters.keyMessages[2],counters.keyMessages[3],counters.keyMessages[4]);}else if(view==Running){unsigned left=status.active?std::max<int>(0,int(seconds)-int((millis()-status.started)/1000)):0;snprintf(line,sizeof(line),"%s\n\n%s\n\n%us remaining\nAccepted: %lu   Errors: %lu\nAuth replies: %lu   EAPOL: %lu\n\nAccepted = driver accepted.\nEffect requires receiver verification.",attackDefinitions[unsigned(status.attack)].name,status.message,left,status.accepted,status.errors,status.responses,status.eapol);}else{snprintf(line,sizeof(line),"%s\n\n%s\n%lu records / %u KB\n\n%s\nStorage: %s",status.recording?"RECORDING":status.saving?"SAVING":"CAPTURE IDLE",status.message,status.records,unsigned(status.bytes/1024),bleLabStorageOnCard()?"64 KB queue / 32 MB SD segments.\nStop finalizes automatically.":"RAM capture / Stop then Save.",bleLabStorageName());}if(strcmp(lv_label_get_text(info),line))lv_label_set_text(info,line);}
+void updateStatus(){if(view==Csi)csiRefresh();if(!info)return;char line[520];if(view==Wardrive){wardriveStatus(line,sizeof(line));}else if(view==Recipes){recipeStatus(line,sizeof(line));}else if(view==Missions){missionStatus(line,sizeof(line));}else if(view==Network){networkStatus(line,sizeof(line),true);}else if(view==Csi){csiStatus(line,sizeof(line));}else if(view==Portal){portalStatus(line,sizeof(line),true);}else if(view==Statistics){snprintf(line,sizeof(line),"PASSIVE WI-FI OBSERVATIONS\n\nFrames: %lu   Retries: %lu\nBeacons: %lu   Probes: %lu\nDisconnects: %lu\nEAPOL: %lu   Protected: %lu\nPwnagotchi: %lu   Detections: %lu\n\nEAPOL key-message candidates\nM1 %lu  M2 %lu  M3 %lu  M4 %lu\nCounts do not prove a complete\nhandshake. Export PCAP to inspect.",counters.frames,counters.retries,counters.beacons,counters.probes,counters.disconnect,counters.eapol,counters.protectedFrames,counters.peers,counters.detections,counters.keyMessages[1],counters.keyMessages[2],counters.keyMessages[3],counters.keyMessages[4]);}else if(view==Running){unsigned left=status.active?std::max<int>(0,int(seconds)-int((millis()-status.started)/1000)):0;snprintf(line,sizeof(line),"%s\n\n%s\n\n%us remaining\nAccepted: %lu   Errors: %lu\nAuth replies: %lu   EAPOL: %lu\n\nAccepted = driver accepted.\nEffect requires receiver verification.",attackDefinitions[unsigned(status.attack)].name,status.message,left,status.accepted,status.errors,status.responses,status.eapol);}else{snprintf(line,sizeof(line),"%s\n\n%s\n%lu records / %u KB\n\n%s\nStorage: %s",status.recording?"RECORDING":status.saving?"SAVING":"CAPTURE IDLE",status.message,status.records,unsigned(status.bytes/1024),bleLabStorageOnCard()?"64 KB queue / 32 MB SD segments.\nStop finalizes automatically.":"RAM capture / Stop then Save.",bleLabStorageName());}if(strcmp(lv_label_get_text(info),line))lv_label_set_text(info,line);}
 void draw(){
  lv_obj_clean(root);info=nullptr;lv_obj_set_style_bg_color(root,lv_color_hex(uiColors().bg),0);
 #if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
@@ -191,7 +218,7 @@ void draw(){
  row("GPS setup","Receiver settings / restore clock from GPS",n++,81);
 #endif
 #endif
- row("Recon recipes","Reviewed steps / timed runs / web editor",n++,67);row("Recon sessions","Persistent observations / RCN1 export",n++,63);row("Connected network","Saved profiles / IP tools / local ping scan",n++,55);row("Room motion","Still detector / selected AP / calibrate first",n++,51);row("Portal / KARMA lab","Local AP / captured probe SSID / timed",n++,47);row("Wi-Fi statistics","Frames / EAPOL / PMKID / SAE",n++,40);row("Probe-request inventory","Requested SSIDs / signal / age",n++,41);row("Wi-Fi attacks","Select target, rate and duration",n++,20);row("BLE attacks","Timed pairing-advertisement tests",n++,21);row("Survey / select network","Passive AP + associated-client inventory",n++,22);row("Capture studio","Wi-Fi PCAP / raw BLE advertisement CSV",n++,23);row("Saved captures","Inspect files / download over USB",n++,24);row("Channel monitor","Channel activity and manual channel lock",n++,25);row("BLE Lab","Discover, save, compare and emulate GATT",n++,13);}
+ row("Recon recipes","Reviewed steps / timed runs / web editor",n++,67);row("Recon sessions","Persistent observations / RCN1 export",n++,63);row("Connected network","Saved profiles / IP tools / local ping scan",n++,55);row("Room motion","Still detector / tap a nearby network",n++,51);row("Portal / KARMA lab","Local AP / captured probe SSID / timed",n++,47);row("Wi-Fi statistics","Frames / EAPOL / PMKID / SAE",n++,40);row("Probe-request inventory","Requested SSIDs / signal / age",n++,41);row("Wi-Fi attacks","Select target, rate and duration",n++,20);row("BLE attacks","Timed pairing-advertisement tests",n++,21);row("Survey / select network","Passive AP + associated-client inventory",n++,22);row("Capture studio","Wi-Fi PCAP / raw BLE advertisement CSV",n++,23);row("Saved captures","Inspect files / download over USB",n++,24);row("Channel monitor","Channel activity and manual channel lock",n++,25);row("BLE Lab","Discover, save, compare and emulate GATT",n++,13);}
  else if(view==WifiTools||view==BleTools){if(view==BleTools)row("Find My Beeper","Choose a tracker / request one beep",n++,69);for(unsigned i=0;i<unsigned(AttackMode::Count);++i){auto& d=attackDefinitions[i];if(d.ble!=(view==BleTools))continue;row(d.name,d.needsClient?"Needs AP + observed client":d.needsAp?"Needs a recently observed AP":d.ble?"10 advertisement updates/sec maximum":"Own source / configured lab SSID",n++,200+i);}}
  else if(view==Networks){row("Save Wi-Fi survey","Snapshot to SD when mounted / internal otherwise",n++,73);apRows=0;int order[ApCapacity];unsigned count=0;for(unsigned i=0;aps&&i<ApCapacity;++i)if(aps[i].used&&millis()-aps[i].seen<30000)order[count++]=i;
  for(unsigned i=1;i<count;++i){int x=order[i],j=i;while(j&&aps[order[j-1]].rssi<aps[x].rssi){order[j]=order[j-1];--j;}order[j]=x;}
@@ -208,7 +235,7 @@ void draw(){
  else if(view==Probes){row("Refresh inventory","Requested networks are not sender identity",n++,41);for(unsigned i=0;probes&&i<96;++i){auto& p=probes[i];if(!p.used)continue;char mac[18],ssid[33],detail[95];displayMac(p.mac,mac);safeText(ssid,sizeof(ssid),p.ssid,p.length);snprintf(detail,sizeof(detail),"%s / %d dBm / %lus",mac,p.rssi,(millis()-p.seen)/1000);row(p.length?displayName(ssid).c_str():"Wildcard probe",detail,n++,-1);}}
  else if(view==Filters){row(analysis::filterNames[unsigned(captureFilter)],"Tap to cycle packet type",n++,43);row(captureSelected?"Only selected AP":"All observed APs","Tap to switch capture scope",n++,44);row("Hop: all 11 channels","180 ms per channel",n++,45);row("Hop: 1 / 6 / 11","350 ms per channel",n++,46);text(body,"Filter and hop controls apply to Wi-Fi capture/survey. Select a fresh network for AP-only recording. Settings cannot change mid-recording.",4,n*70+5,326,uiColors().muted,font16());}
  else if(view==Portal){info=text(body,"",3,0,327,uiColors().ink,font16());updateStatus();btn(body,"START 30 SECONDS",0,200,334,44,48);btn(body,"STOP PORTAL",0,252,334,44,49);btn(body,"SAVE SESSION LOG",0,304,334,44,50);text(body,"Choose the AP name, captured probe or custom HTML in web Radio tools. Default: Dragon-Lab, a clearly labeled test page.",4,366,326,uiColors().muted,font16());}
- else if(view==Csi){info=text(body,"",3,0,327,uiColors().ink,font16());updateStatus();btn(body,"START SELECTED AP",0,280,334,42,52);btn(body,"RECALIBRATE",0,330,334,42,53);btn(body,"STOP ROOM MOTION",0,380,334,42,54);}
+ else if(view==Csi)drawCsi();
  else if(view==Recipes){info=text(body,"",3,0,327,uiColors().ink,font16());updateStatus();text(body,"Create and review recipes in the web Radio tools. No automatic startup. Home cancels a running recipe and restores the previous radio mode.",3,180,327,uiColors().muted,font16());btn(body,"STOP RECIPE",0,342,334,44,68);}
  else if(view==Missions){info=text(body,"",3,0,327,uiColors().ink,font16());updateStatus();btn(body,"START WI-FI",0,310,164,42,64);btn(body,"START BLE",174,310,164,42,65);btn(body,"STOP + SAVE",0,362,334,42,66);}
  else if(view==Network){btn(body,"SAVED NETWORKS",0,0,334,42,56);info=text(body,"",3,54,327,uiColors().ink,font16());updateStatus();btn(body,"PING GATEWAY",0,390,334,42,57);btn(body,"SCAN LOCAL /24",0,440,334,42,58);btn(body,"STOP SCAN",0,490,334,42,59);btn(body,"SAVE RESULTS",0,540,334,42,60);btn(body,"DISCONNECT",0,590,334,42,61);btn(body,"CLEAR RESULTS",0,640,334,42,62);text(body,"Add profiles in the web Radio tools. Saved passwords remain on this device. No automatic connection at boot. Session limit: 15 minutes.",4,694,326,uiColors().muted,font16());}
@@ -226,6 +253,7 @@ if(id==1){recipeStop();reconStop();uiShow("radar");return;}
  if(id>=200&&id<200+unsigned(AttackMode::Count)){chosen=AttackMode(id-200);change(Confirm);return;}
  if(id>=1000&&id<1000+int(apRows)){for(unsigned i=0;aps&&i<ApCapacity;++i)if(aps[i].used&&!memcmp(aps[i].mac,apKeys[id-1000],6)){if(selectAp(i))change(Stations);break;}return;}
  if(id>=2000&&id<2000+int(clientRows)){for(unsigned i=0;clients&&i<ClientCapacity;++i)if(clients[i].used&&!memcmp(clients[i].mac,clientKeys[id-2000],6)&&!memcmp(clients[i].ap,target.bssid,6)){if(selectClient(i))change(Confirm);break;}return;}
+ if(id>=3000&&id<3000+int(csiCount)){csiStartNetwork(csiRows[id-3000].mac);redraw=true;return;}
  if(id>=700&&id<708){networkConnect(id-700);change(Network);return;}
  if(id>=600&&id<600+int(fileCount)){fileIndex=id-600;change(FileDetail);return;}
  switch(id){
@@ -272,7 +300,8 @@ if(id==1){recipeStop();reconStop();uiShow("radar");return;}
  case 34:captureStart(false);break;case 35:captureStart(true);break;case 36:captureStop();break;case 37:captureSave();break;
  case 67:change(Recipes);break;case 68:recipeStop();break;case 63:change(Missions);break;case 64:case 65:{char name[24];snprintf(name,sizeof(name),"session-%08lx",esp_random());missionStart(id==65,name);break;}case 66:missionStop();break;
  case 62:networkCommand("net clear");break;case 55:change(Network);break;case 56:change(NetworkProfiles);break;case 57:networkPingGateway();break;case 58:networkScanLocal();break;case 59:networkCommand("net scan stop");break;case 60:networkSaveResults();break;case 61:networkStop();break;
- case 51:change(Csi);break;case 52:csiStart();break;case 53:csiCommand("csi calibrate");break;case 54:csiStop();break;
+ case 51:change(Csi);break;case 52:csiStartAuto();redraw=true;break;case 53:csiCommand("csi calibrate");break;case 54:csiStop();redraw=true;break;
+ case 87:csiStop();redraw=true;break;case 88:csiStartNext();redraw=true;break;case 89:for(unsigned i=0;i<csiCount;++i)if(csiRows[i].last){csiStartNetwork(csiRows[i].mac);break;}redraw=true;break;
  case 47:change(Portal);break;case 48:seconds=30;portalStart();break;case 49:portalStop();break;case 50:portalCommand("portal save");break;
  case 40:change(Statistics);break;case 41:change(Probes);break;case 42:change(Filters);break;
  case 43:setCaptureFilter((unsigned(captureFilter)+1)%unsigned(analysis::Filter::Count),captureSelected);redraw=true;break;
@@ -326,7 +355,7 @@ void reconViewLoop(){
 #endif
  if(view==Running||view==Capture||view==Statistics||view==Portal||view==Csi||view==Network||view==Missions||view==Recipes)updateStatus();}
 }
-void reconLeave(){reconStop();root=body=info=nullptr;
+void reconLeave(){reconStop();csiSurvey(false);root=body=info=nullptr;
 #if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
  gpsSetupStatus=nullptr;gpsClockPending=false;
 #endif
