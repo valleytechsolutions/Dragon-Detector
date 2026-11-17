@@ -1,4 +1,4 @@
-import {firmwareAtLeast,knownFirmware} from './firmware-version.js?v=0.14.7-143c';
+import {firmwareAtLeast,knownFirmware} from './firmware-version.js?v=0.14.8';
 export function hasNetworkTools(version){return firmwareAtLeast(version,'0.11.1');}
 export function networkProfileCommand(slot,ssid,password){
  if(!Number.isInteger(slot)||slot<0||slot>7)throw new Error('Choose profile slot 1–8.');

@@ -26,7 +26,7 @@ config = """#ifndef LV_CONF_H
 (stub / "esp_heap_caps.h").write_text("#pragma once\n#include <stdlib.h>\n#define MALLOC_CAP_SPIRAM 0\n#define MALLOC_CAP_8BIT 0\ninline void* heap_caps_malloc(size_t n,int){return malloc(n);}\n")
 lv = root / "hardware/spotpear/lib/lvgl"
 zig = [sys.executable, "-m", "ziglang"]
-includes = ["-I"+str(stub), "-I"+str(lv), "-I"+str(root/"firmware/include"), "-DLV_CONF_INCLUDE_SIMPLE"]
+includes = ["-I"+str(stub), "-I"+str(lv), "-I"+str(root/"firmware/include"), "-I"+str(root/"firmware/src"), "-DLV_CONF_INCLUDE_SIMPLE"]
 lib = stub / "lvgl.lib"
 shared = root / ".work/can-commander/native"
 if (shared/"lv_conf.h").is_file() and (shared/"lv_conf.h").read_text(encoding='utf-8') == config and (shared/"lvgl.lib").is_file():
@@ -38,6 +38,9 @@ if not lib.exists():
     subprocess.run(zig+["build-lib","@"+str(stub/"lvgl.rsp")], check=True, cwd=root)
 renderer = (root/"firmware/src/radar_renderer.inc").read_text(encoding='utf-8')
 helpers = renderer[renderer.index("static void line("):renderer.index('#include "lpl_radar.inc"')]
+# The pasted renderer includes radar_fx.inc, which allocates its tables with ps_malloc;
+# these previews have no PSRAM, so the radar effects get no table, as on a board without PSRAM.
+helpers = "inline void* ps_malloc(size_t){return nullptr;}\n" + helpers
 art = (root/"firmware/src/cyber_runner.inc").read_text(encoding='utf-8')
 art = art[art.index("static void themeStroke"):art.index("static void boneSweep")]
 panel = (root/"firmware/src/capsule_theme.inc").read_text(encoding='utf-8')

@@ -1,4 +1,4 @@
-import {NodeBusyMessage} from './serial.js?v=0.14.7-143c';
+import {NodeBusyMessage} from './serial.js?v=0.14.8';
 // Only repeat read-only requests. Native USB can hold a short response until
 // the next host write; retrying a settings query releases it without side effects.
 // A running node answers every one of these, so a node refusal seen here

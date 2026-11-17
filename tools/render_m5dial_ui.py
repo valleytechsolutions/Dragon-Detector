@@ -204,6 +204,14 @@ int main(int argc,char** argv){
  liteButtonEvent(P::Tap);assert(nodeKind()==NodeKind::Jcmk&&liteNodeHost);tick+=250;uiLoop();
  lv_event_send(findObject(liteNodeHost,&lv_btn_class),LV_EVENT_CLICKED,nullptr);assert(nodeBusy());tick+=1000;uiLoop();
  liteButtonEvent(P::Double);assert(nodeBusy());liteButtonEvent(P::Hold);assert(!nodeBusy()&&nodeStops==3);uiLoop();assert(!liteNodeHost&&dialMenu==DialMenu::Modes&&dialChoice==1);
+ // A burst of quick EXIT taps is one request. A screen request lapses after 3 s, a hold's after 5 s.
+ liteButtonEvent(P::Tap);assert(nodeKind()==NodeKind::Jcmk&&liteNodeHost);tick+=250;uiLoop();
+ {auto* exit=findObject(liteNodeHost,&lv_btn_class);assert(exit);
+  for(uint32_t step:{0u,250u,300u}){tick+=step;lv_event_send(exit,LV_EVENT_CLICKED,nullptr);assert(nodeBusy());}
+  tick+=3100;lv_event_send(exit,LV_EVENT_CLICKED,nullptr);assert(nodeBusy());   // lapsed: this tap only arms again
+  tick+=4000;liteButtonEvent(P::Hold);assert(nodeBusy());                        // that lapsed too: this hold arms
+  tick+=4000;liteButtonEvent(P::Hold);assert(!nodeBusy()&&nodeStops==4);}       // within the hold's 5 s
+ uiLoop();assert(!liteNodeHost&&dialMenu==DialMenu::Modes&&dialChoice==1);
  // A refusal stays on Modes with the reason.
  stopwatch.toggle(stopwatchNow());dialRotate(-1);liteButtonEvent(P::Tap);assert(!nodeBusy()&&!liteNodeHost&&dialMenu==DialMenu::Modes&&!strcmp(lv_label_get_text(dialMenuNote),"Stop the stopwatch first"));
  render(argv[1],"13-modes-refused");stopwatch.toggle(stopwatchNow());nodeRefuses=true;dialRotate(1);dialRotate(-1);liteButtonEvent(P::Tap);assert(!strcmp(lv_label_get_text(dialMenuNote),"Could not start the node"));nodeRefuses=false;

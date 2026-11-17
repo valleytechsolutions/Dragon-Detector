@@ -20,7 +20,7 @@ config='''#ifndef LV_CONF_H
 '''+''.join(f'#define LV_FONT_MONTSERRAT_{n} 1\n' for n in [8,10,12,14,16,18,20,22,24,26,28,32,40,48])+'#endif\n'
 (stub/'lv_conf.h').write_text(config)
 (stub/'esp_heap_caps.h').write_text('#pragma once\n#include <stdlib.h>\n#define MALLOC_CAP_SPIRAM 0\n#define MALLOC_CAP_8BIT 0\ninline void* heap_caps_malloc(size_t n,int){return malloc(n);}\n')
-zig=[sys.executable,'-m','ziglang'];includes=['-I'+str(stub),'-I'+str(lv),'-I'+str(root/'firmware/include'),'-DLV_CONF_INCLUDE_SIMPLE']
+zig=[sys.executable,'-m','ziglang'];includes=['-I'+str(stub),'-I'+str(lv),'-I'+str(root/'firmware/include'),'-I'+str(root/'firmware/src'),'-DLV_CONF_INCLUDE_SIMPLE']
 lib=stub/'lvgl.lib'
 if not lib.exists():
  sources=[str(p) for p in (lv/'src').rglob('*.c') if 'demos' not in p.parts]
@@ -29,6 +29,9 @@ if not lib.exists():
  subprocess.run(zig+['build-lib','@'+str(stub/'lvgl.rsp')],check=True,cwd=root)
  print('Built native LVGL',flush=True)
 renderer=(root/'firmware/src/radar_renderer.inc').read_text();helpers=renderer[renderer.index('static void line('):renderer.index('#include "lpl_radar.inc"')]
+# The pasted renderer includes radar_fx.inc, which allocates its tables with ps_malloc;
+# these previews have no PSRAM, so the radar effects get no table, as on a board without PSRAM.
+helpers='inline void* ps_malloc(size_t){return nullptr;}\n'+helpers
 art=(root/'firmware/src/cyber_runner.inc').read_text();art=art[art.index('static void themeStroke'):art.index('static void boneSweep')]
 panel=(root/'firmware/src/capsule_theme.inc').read_text();panel=panel[panel.index('static void capsulePanel'):panel.index('static void capsuleShell')]
 source='''#include <lvgl.h>

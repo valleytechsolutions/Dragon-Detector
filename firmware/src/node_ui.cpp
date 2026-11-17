@@ -59,7 +59,7 @@ NodeScreenOptions options;
 NodeKind shownKind=NodeKind::None;
 float scale=1;
 lv_coord_t panel=466,markerRadius=228,markerWidth=5;
-uint32_t refreshedAt=0,driftAt=0,armedAt=0,armedWindow=ConfirmMs,hintAt=0;
+uint32_t refreshedAt=0,driftAt=0,armedAt=0,armedWindow=ConfirmMs,hintAt=0,requestAt=0;  // requestAt: the last exit request, counted or not
 unsigned driftStep=0;
 bool armed=false,leaving=false,hinting=false;
 char lastStatus[64]="",lastCount[16]="",lastStats[64]="";
@@ -305,12 +305,14 @@ void nodeScreenLoop(){
 bool nodeScreenExitPress(NodeExitInput how){
   if(!nodeBusy())return false;
   const uint32_t now=millis();
+  const uint32_t since=now-requestAt;requestAt=now;
   if(!armed||now-armedAt>=armedWindow){
     Serial.println("NODE_EXIT_ARMED");armedWindow=how==NodeExitInput::Hold?HoldConfirmMs:ConfirmMs;
     arm(true);if(w.screen)refresh(now);return false;
   }
-  // A bouncing contact or a quick double tap is one press, never both.
-  if(now-armedAt<ConfirmGapMs){Serial.println("NODE_EXIT_IGNORED reason=too_soon");return false;}
+  // A bouncing contact or a quick double tap is one press, never both. The gap
+  // counts from the last request, so a burst of quick taps never confirms either.
+  if(since<ConfirmGapMs){Serial.println("NODE_EXIT_IGNORED reason=too_soon");return false;}
   Serial.println("NODE_EXIT_CONFIRMED");
   armed=false;leaving=true;
   nodeStop();

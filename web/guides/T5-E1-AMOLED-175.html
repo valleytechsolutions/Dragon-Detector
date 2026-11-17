@@ -1,0 +1,44 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Waveshare T5-E1 AMOLED 1.75 — Beta 1 · Dragon Detector</title><style>body{margin:0;background:#07120e;color:#d9e8e0;font:16px/1.7 system-ui,sans-serif}main,nav{max-width:1000px;margin:auto;padding:24px}nav{border-bottom:1px solid #345344}a{color:#bde965}h1,h2,h3{color:#f4fff7;line-height:1.2}h1{font-size:2.5rem}h2{margin-top:2.4rem}img{max-width:100%;height:auto}table{display:block;overflow:auto;border-collapse:collapse}th,td{padding:12px;border:1px solid #345344}pre{overflow:auto;background:#11231a;padding:16px}code{font-size:.9em}blockquote{border-left:3px solid #bde965;margin-left:0;padding-left:18px}nav a{margin-right:20px}</style></head><body><nav><a href="../#install">Install firmware</a><a href="README.html">Overview</a><a href="HOSTING-STATUS.html">Hosting status</a><a href="../#theme-studio">Custom theme</a></nav><main><h1 id="waveshare-t5-e1-amoled-175-beta-1">Waveshare T5-E1 AMOLED 1.75 — Beta 1</h1>
+<p><a href="../index.html#install">Back to the Dragon Detector flasher</a></p>
+<p>This engineering beta is for <strong>Waveshare T5-E1-Touch-AMOLED-1.75</strong>, with a
+Tuya ARM processor. It has touchscreen contacts, Wi-Fi/BLE scanning, and
+signature, ALPR/camera and tracker filters. Build and 12 native checks passed;
+physical hardware testing is still pending.</p>
+<h2 id="download">Download</h2>
+<ul>
+<li><a href="../betas/t5-e1/DragonDetector-T5E1-Beta1.zip">Beta 1 package — firmware, source and instructions</a></li>
+<li><a href="../betas/t5-e1/dragon_detector_QIO_0.1.0.bin">QIO firmware BIN — v0.1.0</a></li>
+<li><a href="../betas/t5-e1/SHA256SUMS.txt">SHA-256 checksums</a></li>
+</ul>
+<p>For the <strong>ESP32-S3-Touch-AMOLED-1.75</strong>, return to the flasher and choose
+<strong>Waveshare AMOLED 1.75 — ESP32-S3 Beta</strong>. Its v0.13.26 firmware supports browser
+USB installation. The two boards' firmware and flashing tools are different.</p>
+<h2 id="install-the-t5-e1-beta">Install the T5-E1 beta</h2>
+<ol>
+<li>Download and unzip the beta package above. Open the official
+   <a href="https://github.com/tuya/tyutool/releases">Tuya tyutool</a>.</li>
+<li>Connect a USB data cable. The CH342 bridge exposes a flashing UART and a
+   logging UART. Close other programs using these ports.</li>
+<li>Preserve the original flash using the tool's Read function where supported.
+   Keep the <a href="https://www.waveshare.com/wiki/T5-E1-Touch-AMOLED-1.75">Waveshare factory recovery/demo</a>
+   available. Avoid a full-chip erase that removes RF calibration.</li>
+<li>Choose <strong>t5ai / T5</strong>, <strong>921600 baud</strong>, and
+   <strong>dragon_detector_QIO_0.1.0.bin</strong>, at <strong>0x00000000</strong>. Start flashing and follow
+   the tool's reset prompts. Use the board's RESET button if it waits for the
+   bootloader. Check the other UART if it cannot connect.</li>
+<li>Reset after the write completes. Open the logging UART at <strong>115200, 8-N-1</strong>.
+   Check the Dragon Detector startup message and radio initialization results.</li>
+</ol>
+<p>The current Dragon Detector browser USB installer supports ESP32 hardware.
+<strong>Install this T5-E1 beta with Tuya's tool.</strong> No Tuya account pairing or cloud
+credentials are required by this application. See the official
+<a href="https://docs.tuyaopen.ai/docs/tyutool/flash">Tuya flashing reference</a>.</p>
+<h2 id="first-board-test">First board test</h2>
+<p>Confirm the screen and touch, increasing Wi-Fi/BLE counters, all four filters,
+contact evidence details, and pause/resume. Contacts expire after 30 seconds.
+Save serial errors or restart logs during a 30-minute test for troubleshooting.</p>
+<p>This initial port has a compact contact interface. Full ESP32 radar themes,
+GPS, SD logging, clock/watch features and raw Wi-Fi frame analytics are not
+included. BLE vendor-address hints remain disabled pending validation of the
+T5 adapter's address ordering. Signals and vendor matches are indicators,
+not proof of a device's purpose or activity.</p></main></body></html>

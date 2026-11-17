@@ -1,5 +1,5 @@
-import {deviceQuery} from './device-query.js?v=0.14.7-143c';
-import {firmwareAtLeast} from './firmware-version.js?v=0.14.7-143c';
+import {deviceQuery} from './device-query.js?v=0.14.8';
+import {firmwareAtLeast} from './firmware-version.js?v=0.14.8';
 
 const levels=Object.freeze({silent:0,medium:50,high:100});
 const audioBoards=new Set(['waveshare_143c','guition_185_beta','waveshare_185b','watcher','waveshare','waveshare_175','waveshare_175_gps','stopwatch','spotpear']);

@@ -122,6 +122,16 @@ static lv_obj_t* labelWith(lv_obj_t* o,const char* part){
   }
   return nullptr;
 }
+// How many labels contain part.
+static int labelsWith(lv_obj_t* o,const char* part){
+  int n=0;
+  for(uint32_t i=0;i<lv_obj_get_child_cnt(o);++i){
+    lv_obj_t* c=lv_obj_get_child(o,i);
+    if(lv_obj_check_type(c,&lv_label_class)&&strstr(lv_label_get_text(c),part))++n;
+    n+=labelsWith(c,part);
+  }
+  return n;
+}
 int main(int argc,char** argv){
   size=atoi(argv[1]);const char* out=argv[2];const bool button=atoi(argv[3]);const char* confirm=argc>4&&*argv[4]?argv[4]:nullptr;
   const char* keyHint=argc>5&&*argv[5]?argv[5]:nullptr;const char* keyHintShort=argc>6&&*argv[6]?argv[6]:nullptr;
@@ -167,6 +177,8 @@ int main(int argc,char** argv){
     char path[512];snprintf(path,sizeof(path),"%s-%s.raw",out,c.name);save(path);
     // The status says what the case is about, in the wording that fits this panel.
     if(!labelWith(screen,c.expect)){printf("WRONG %s %s: no '%s'\n",out,c.name,c.expect);++problems;}
+    // Lite's fixed line under the logo already reads HOLD BUTTON TO EXIT, so the hint must be a second label: the status line.
+    if(c.hint&&labelsWith(screen,c.expect)<(options.exitHint&&strstr(options.exitHint,c.expect)?2:1)){printf("WRONG %s %s: the status line does not show '%s'\n",out,c.name,c.expect);++problems;}
     if(c.also&&!labelWith(screen,c.also)){printf("WRONG %s %s: no '%s'\n",out,c.name,c.also);++problems;}
     if(c.forbid&&labelWith(screen,c.forbid)){printf("WRONG %s %s: shows '%s'\n",out,c.name,c.forbid);++problems;}
     problems+=outside(screen,out,c.name,"");
@@ -188,8 +200,8 @@ int main(int argc,char** argv){
 # passes (ui.cpp for CrowPanel and Watcher, lite_node.inc for the Waveshare Lite).
 boards = [
     ("466", 466, "-DBOARD_AMOLED_175C", True, "", "", ""),
-    ("480", 480, "-DBOARD_CROWPANEL_21", True, "PRESS CONFIRM TO LEAVE", "PRESS EXIT TO LEAVE", "PRESS EXIT"),
-    ("412", 412, "-DBOARD_WATCHER", True, "PRESS CONFIRM TO LEAVE", "PRESS EXIT TO LEAVE", "PRESS EXIT"),
+    ("480", 480, "-DBOARD_CROWPANEL_21", True, "", "HOLD KNOB TO EXIT", "HOLD KNOB"),
+    ("412", 412, "-DBOARD_WATCHER", True, "", "HOLD KNOB TO EXIT", "HOLD KNOB"),
     ("360", 360, "-DBOARD_WAVESHARE_185B", True, "", "", ""),
     ("240", 240, "-DBOARD_XIAO_ROUND", True, "", "", ""),
     ("240-dial", 240, "-DBOARD_M5DIAL -DBOARD_RADAR_LITE", True, "", "", ""),
@@ -226,5 +238,89 @@ for name, size, define, button, confirm, key_hint, key_hint_short in boards:
         out.paste(img, (0, 0), mask)
         out.save(raw.with_suffix(".png"))
         raw.unlink()
+
+# The knob boards (CrowPanel 2.1, SenseCAP Watcher): the real rotary_ui.cpp and
+# node_ui.cpp. A knob click must never reach EXIT, so clicks only show how to
+# leave; a knob hold is an exit request and a second one leaves.
+ui_source = (root / "firmware/src/ui.cpp").read_text()
+hook = ui_source[ui_source.index("bool uiRotaryNode(bool click,bool back){"):]
+hook = hook[:hook.index("\n}\n")]
+for part in ('if(!nodeBusy())return false;', 'if(back)nodeKey("knob_hold",true);else if(click)nodeKey("knob_click");', 'return true;'):
+    if part not in hook:
+        print(f"ui.cpp uiRotaryNode changed; update the knob check: {part}")
+        problems += 1
+(native / "app.h").write_text(r"""
+#pragma once
+#include <Arduino.h>
+#include <lvgl.h>
+template<class T> T constrain(T v,T lo,T hi){return v<lo?lo:v>hi?hi:v;}
+void uiKey(bool home);
+""")
+knob_harness = r"""
+#include "node_ui.h"
+#include "node_mode.h"
+#include "rotary_ui.h"
+#include "ui_theme.h"
+#include <cstdio>
+#include <cstring>
+#include <vector>
+uint32_t hostMillis=100000;
+static dragon::node::Status status;
+static bool busy=true;
+bool nodeBusy(){return busy;}
+NodeKind nodeKind(){return NodeKind::Biscuit;}
+void nodeStop(){busy=false;}
+const dragon::node::Status& nodeStatus(){return status;}
+bool nodeBleReports(){return false;}
+bool nodeKeyed(){return false;}
+static unsigned keys=0;
+lv_obj_t* uiRotaryScope(){return lv_scr_act();}
+bool uiRotaryWake(){return false;}
+#ifdef BOARD_WATCHER
+bool uiRotaryOpenMenu(){++keys;return true;}
+#endif
+void uiKey(bool){++keys;}
+const dragon::UiPalette& uiColors(){static dragon::UiPalette p{0,0x202020,0x303030,0xffffff,0x909090,0x00c0ff,0x404040,0,false};return p;}
+// ui.cpp's uiRotaryNode, with nodeKey() on a node screen that is shown (its body is checked above).
+bool uiRotaryNode(bool click,bool back){
+  if(!nodeBusy())return false;
+  if(back)nodeScreenExitPress(NodeExitInput::Hold);else if(click)nodeScreenKeyHint();
+  return true;
+}
+static void flush(lv_disp_drv_t* d,const lv_area_t*,lv_color_t*){lv_disp_flush_ready(d);}
+static void run(uint32_t ms){for(uint32_t t=0;t<ms;t+=10){hostMillis+=10;lv_tick_inc(10);rotaryUiLoop();lv_timer_handler();nodeScreenLoop();}}
+static bool shows(lv_obj_t* o,const char* part){
+  if(lv_obj_check_type(o,&lv_label_class)&&strstr(lv_label_get_text(o),part))return true;
+  for(uint32_t i=0;i<lv_obj_get_child_cnt(o);++i)if(shows(lv_obj_get_child(o,i),part))return true;
+  return false;
+}
+#define CHECK(c) do{if(!(c)){printf("KNOB %s line %d: %s\n",BOARD,__LINE__,#c);++problems;}}while(0)
+int main(){
+  int problems=0;
+  lv_init();static lv_disp_draw_buf_t buf;static std::vector<lv_color_t> px(480*40);
+  lv_disp_draw_buf_init(&buf,px.data(),nullptr,480*40);static lv_disp_drv_t drv;lv_disp_drv_init(&drv);drv.hor_res=480;drv.ver_res=480;drv.flush_cb=flush;drv.draw_buf=&buf;lv_disp_drv_register(&drv);
+  NodeScreenOptions o;o.exitButton=true;o.keyHint="HOLD KNOB TO EXIT";o.keyHintShort="HOLD KNOB";nodeScreenOpen(lv_scr_act(),o);
+  rotaryUiBegin();run(200);
+  for(int i=0;i<12;++i){rotaryUiInput(0,true,false);run(i%2?300:700);}   // single and paired knob clicks
+  CHECK(busy);CHECK(shows(lv_scr_act(),"HOLD KNOB"));CHECK(!shows(lv_scr_act(),"CONFIRM"));
+  rotaryUiInput(3,false,false);rotaryUiInput(-2,false,false);run(300);CHECK(busy);  // turning does nothing
+  rotaryUiInput(0,false,true);run(200);CHECK(busy);CHECK(shows(lv_scr_act(),"TAP CONFIRM"));   // a hold asks
+  rotaryUiInput(0,true,false);run(200);rotaryUiInput(0,true,false);run(800);CHECK(busy);       // clicks still do not confirm
+  rotaryUiInput(0,false,true);run(200);CHECK(!busy);                                           // a second hold leaves
+  CHECK(keys==0);
+  return problems?1:0;
+}
+"""
+(work / "knob.cpp").write_text(knob_harness)
+for name, define in (("crowpanel", "-DBOARD_CROWPANEL_21"), ("watcher", "-DBOARD_WATCHER")):
+    exe = work / f"knob-{name}"
+    (native / "board_pins.h").write_text("#pragma once\n")
+    subprocess.run(["c++", "-std=c++17", "-O1", "-w", define, f'-DBOARD="{name}"', "-DSCREEN_RES=466", *includes,
+                    "-I" + str(root / "firmware/include"), str(work / "knob.cpp"), str(root / "firmware/src/rotary_ui.cpp"),
+                    str(root / "firmware/src/node_ui.cpp"), str(root / "firmware/src/node_logo.cpp"), str(library), "-o", str(exe)], check=True)
+    result = subprocess.run([str(exe)], capture_output=True, text=True)
+    print(result.stdout, end="")
+    if result.returncode:
+        problems += max(1, result.stdout.count("\n"))
 print(f"Rendered node screens to {work}; {problems} layout problem(s)")
 sys.exit(1 if problems else 0)

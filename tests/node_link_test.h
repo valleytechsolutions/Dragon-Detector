@@ -210,8 +210,10 @@ struct JcmkCore {
 };
 // Biscuit Manager in Extended mode, as its handshake is known from the outside.
 // beatMs: it sends on its own now and then, as its own nodes expect.
+// firstOnly: as a real one, it answers only the first Identify after each request.
+// skipIdentify: that many Identify answers are lost on the air.
 struct BiscuitCore {
-  Mac mac{{0xd8,0x3b,0xda,0x01,0x02,0x03}};Bench* bench=nullptr;bool alive=true,secure=false,registered=false,roleAcked=false,ignoreIdentify=false;
+  Mac mac{{0xd8,0x3b,0xda,0x01,0x02,0x03}};Bench* bench=nullptr;bool alive=true,secure=false,registered=false,roleAcked=false,ignoreIdentify=false,firstOnly=false,asked=true;unsigned skipIdentify=0;
   std::string channels="channels=1,6,11;dwell=120",identity;std::vector<std::string> records;unsigned heartbeats=0,identifies=0,requests=0,beatMs=0,loseConfig=0,loseReply=0;uint8_t roleEcho=0;uint32_t beatAt=0;
   void tick(){if(alive&&beatMs&&bench->now-beatAt>=beatMs){beatAt=bench->now;bench->hear(mac,textFrame(Heartbeat,0,""));}}
   bool operator()(const Mac& to,const Bytes& data){
@@ -221,8 +223,12 @@ struct BiscuitCore {
     Frame f;if(!parseFrame(data.data(),data.size(),f))return true;
     const std::string text((const char*)f.text,f.textLength);
     switch(f.type){
-      case CoreRequest:++requests;registered=roleAcked=false;if(loseReply)--loseReply;else bench->hear(mac,textFrame(CoreReply,0,secure?"v=3;encrypt=1":"v=3;encrypt=0;nodes=20"));break;
-      case Identify:assert(!isBroadcast(to));++identifies;identity=text;if(!ignoreIdentify){Bytes role=textFrame(Admin,0,std::string(1,char(1)));bench->hear(mac,role,4);}break;
+      case CoreRequest:++requests;registered=roleAcked=false;asked=true;if(loseReply)--loseReply;else bench->hear(mac,textFrame(CoreReply,0,secure?"v=3;encrypt=1":"v=3;encrypt=0;nodes=20"));break;
+      case Identify:{
+        assert(!isBroadcast(to));++identifies;identity=text;
+        if(ignoreIdentify||(firstOnly&&!asked))break;
+        asked=false;if(skipIdentify){--skipIdentify;break;}
+        Bytes role=textFrame(Admin,0,std::string(1,char(1)));bench->hear(mac,role,4);break;}
       case RoleAck:assert(!isBroadcast(to));roleAcked=true;roleEcho=uint8_t(f.counter);if(loseConfig)--loseConfig;else bench->hear(mac,textFrame(ConfigUpdate,0,channels),4);break;
       case ConfigAck:assert(!isBroadcast(to));if(roleAcked)registered=true;break;
       case Heartbeat:++heartbeats;break;
@@ -587,16 +593,17 @@ static void nodeBiscuitRecoveryTests(){
     // Heard from all along: one registration, five tries. Asked every ten seconds: five at most each time.
     if(beat)assert(tries==IdentifyTries&&core.requests==1);else assert(most<=IdentifyTries&&core.requests>=4&&core.identifies>=4*3);
   }
-  // A Biscuit that keeps sending, so it is never asked to answer: a lost
-  // channel list, or a confirmation of the role or the list that never gets
-  // through, still ends with the node registered and its records logged.
+  // A Biscuit that keeps sending, so it is not asked to answer on a timer: a
+  // lost channel list is asked for again by introduction, and a confirmation of
+  // the role or the list that never gets through by one new question. Either way
+  // the node ends registered and its records logged.
   for(unsigned mode=0;mode<3;++mode){
     Bench b(NodeFamily::Biscuit);BiscuitCore core;rig(b,core);core.beatMs=1000;b.tick=[&]{core.tick();};
     if(mode==0)core.loseConfig=1;
     const uint8_t failing=mode==1?uint8_t(RoleAck):uint8_t(ConfigAck);unsigned lost=0;
     b.air=[&](const Mac& to,const Bytes& d){if(mode&&d[4]==failing&&++lost<=SendTries)return false;return core(to,d);};
     assert(b.begin());assert(b.until([&]{return core.registered;},8000));
-    assert(b.link.status().registered&&b.link.status().linked&&core.requests==1&&core.identifies==2);
+    assert(b.link.status().registered&&b.link.status().linked&&core.requests==(mode?2u:1u)&&core.identifies==2);
     assert(b.until([&]{return core.records.size()==3;},70000));
   }
   // The same Biscuit restarts and forgets the node but keeps sending: it is
@@ -622,19 +629,55 @@ static void nodeBiscuitRecoveryTests(){
    bool dropped=false;b.tick=[&]{if(!b.link.status().registered)dropped=true;};
    b.run(60000);b.tick=nullptr;
    assert(!dropped&&core.requests>=5&&core.identifies>=5&&b.link.status().linked&&b.link.status().losses==0);}
-  // The same Biscuit stops answering Identify, as a real one often does while it
-  // keeps the node: the role it gave keeps the node registered for the whole
-  // link, so the screen never flickers back to joining. Ending the link clears it.
+  // The same Biscuit stops giving a role, as one does when its wardrive ends:
+  // two rounds without one end the role and the node waits, still linked and
+  // registered, so the screen never flickers back to joining. Ending the link clears it.
   {Bench b(NodeFamily::Biscuit);BiscuitCore core;rig(b,core);b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};
    assert(b.begin());assert(b.until([&]{return b.link.status().registered;},3000));
    core.ignoreIdentify=true;const unsigned asked=core.requests,identified=core.identifies;
    for(int i=0;i<200;++i){b.run(1000);assert(b.link.status().registered&&b.link.status().linked);}
    assert(core.requests>asked&&core.identifies>identified&&b.link.status().losses==0&&b.noted(Note::Role)==1);
+   assert(b.link.status().role==0&&b.link.status().waiting&&b.noted(Note::NoRole)==1);
    // A role sent on its own, late, changes the role number (logged) and nothing else.
    atHome(b,core.mac,textFrame(Admin,0,std::string(1,char(2))));assert(b.until([&]{return b.link.status().role==2;},5000));
    assert(b.link.status().registered&&!b.link.status().waiting&&b.noted(Note::Role,std::string(1,char(2)))==1&&b.noted(Note::Role)==2);
    core.alive=false;assert(b.until([&]{return !b.link.status().linked;},CoreLostMs+5000));assert(!b.link.status().registered&&b.link.status().role==0);
    core.alive=true;core.ignoreIdentify=false;assert(b.until([&]{return b.link.status().registered;},30000));assert(b.noted(Note::Role)==3);}
+  // A wardriving Biscuit as seen in the field: it sends on its own, answers the
+  // first introduction after each question with the role and ignores the repeats.
+  // A round whose answer is lost changes nothing. When the wardrive ends and no
+  // round brings a role, the node goes back to waiting within about two minutes,
+  // logged once as no_role, and the next wardrive's role starts it again.
+  {Bench b(NodeFamily::Biscuit);BiscuitCore core;rig(b,core);core.beatMs=1500;core.firstOnly=true;b.tick=[&]{core.tick();};
+   b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};
+   assert(b.begin());assert(b.until([&]{return core.registered;},5000));const Status& s=b.link.status();
+   const unsigned first=core.requests;
+   for(int i=0;i<400;++i){b.run(1000);assert(s.role==1&&!s.waiting&&s.registered&&s.linked);}
+   assert(core.requests>=first+4&&b.noted(Note::NoRole)==0&&b.noted(Note::Role)==1);
+   core.skipIdentify=1;const unsigned asked=core.requests;
+   assert(b.until([&]{return core.requests>=asked+2;},120000));          // the round with the lost answer, then the early one
+   assert(b.until([&]{return core.registered;},20000));b.run(5000);
+   assert(s.role==1&&!s.waiting&&b.noted(Note::NoRole)==0&&s.losses==0);
+   core.ignoreIdentify=true;const uint32_t ended=b.now;
+   assert(b.until([&]{return s.waiting;},160000));
+   std::printf("node link: Biscuit wardrive end noticed after %.1f s\n",(b.now-ended)/1000.0);
+   assert(b.now-ended<=BiscuitRecheckMs+RoleRecheckMs+30000);
+   assert(s.role==0&&s.linked&&s.registered&&s.losses==0&&b.noted(Note::NoRole)==1&&b.noted(Note::Role)==1);
+   b.run(3000);const size_t scans=b.scanned.size();b.run(60000);assert(b.scanned.size()==scans&&s.waiting);
+   core.ignoreIdentify=false;assert(b.until([&]{return !s.waiting&&s.role==1;},100000));assert(b.noted(Note::Role)==2);
+   b.world[6].push_back(net(91,6));assert(b.until([&]{return hasLine(core.records,line(91,6));},20000));
+   assert(b.noted(Note::NoRole)==1&&s.losses==0);}
+  // A wardriving Biscuit out of reach for 20 s, less than a lost link: its
+  // questions go unheard, which says nothing about the wardrive, so the node
+  // keeps its role and asks again until the Biscuit answers.
+  for(uint32_t gap:{16000u,20000u,26000u}){
+   Bench b(NodeFamily::Biscuit);BiscuitCore core;rig(b,core);core.beatMs=2000;core.firstOnly=true;b.tick=[&]{core.tick();};
+   b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};
+   assert(b.begin());assert(b.until([&]{return core.registered;},5000));const Status& s=b.link.status();
+   b.run(100000);assert(s.role==1&&!s.waiting);
+   core.alive=false;b.run(gap);core.alive=true;
+   for(int i=0;i<180;++i){b.run(1000);assert(s.role==1&&!s.waiting&&s.linked);}
+   assert(b.noted(Note::NoRole)==0&&s.losses==0&&core.registered);}
   // A Biscuit that answers the first Identify only after half a minute (seen on
   // a real one): joining until the role, then registered with no flicker.
   {Bench b(NodeFamily::Biscuit);BiscuitCore core;rig(b,core);core.ignoreIdentify=true;b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};
@@ -661,6 +704,46 @@ static void nodeBiscuitRecoveryTests(){
    // The next wardrive: scanning again, and what appeared meanwhile is reported.
    atHome(b,core.mac,textFrame(Admin,0,std::string(1,char(1))));
    assert(b.until([&]{return hasLine(core.records,line(77,6));},10000));assert(!s.waiting&&b.noted(Note::Role)==3);}
+  // Role 0 while the node is home in the middle of a sweep: the rest of the
+  // sweep is skipped, and what was found before still reaches the Biscuit.
+  for(int variant=0;variant<2;++variant){
+    Bench b(NodeFamily::Biscuit);BiscuitCore core;rig(b,core);core.beatMs=1000;b.tick=[&]{core.tick();};
+    core.channels="channels=1,2,3,4,5,6,7,8,9,10,11;dwell=110";
+    for(uint8_t ch=1;ch<=11;++ch)b.world[ch].push_back(net(ch,ch));
+    b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};
+    assert(b.begin());assert(b.until([&]{return core.registered;},3000));b.run(8000);
+    if(variant==0){b.world[2].push_back(net(200,2));assert(b.until([&]{return b.link.status().phase==Phase::Report&&b.link.status().lastScanned==2;},20000));}
+    else assert(b.until([&]{return b.link.status().phase==Phase::Scan&&b.link.status().channel==6;},20000));
+    const size_t scans=b.scanned.size();
+    b.hear(core.mac,textFrame(Admin,0,""),0);assert(b.until([&]{return b.link.status().role==0;},2000));
+    for(uint8_t ch=7;ch<=11;++ch)b.world[ch].push_back(net(300+ch,ch));
+    b.run(20000);
+    assert(b.scanned.size()<=scans+1&&b.link.status().waiting);   // at most the channel already being scanned
+    for(uint8_t ch=7;ch<=11;++ch)assert(!hasLine(core.records,line(300+ch,ch)));
+    if(variant==0)assert(hasLine(core.records,line(200,2)));
+  }
+  // The wardrive's role arrives on its own after the five introductions were
+  // used up, and the confirmation of the role or the channel list is lost three
+  // times. Like a real Biscuit, this one has used up its answer to the last
+  // question, so introductions alone get nothing: the node asks again at once
+  // and is registered again soon.
+  for(int which=0;which<2;++which){
+    const uint8_t failing=which==0?uint8_t(RoleAck):uint8_t(ConfigAck);
+    Bench b(NodeFamily::Biscuit);BiscuitCore core;rig(b,core);core.ignoreIdentify=true;core.beatMs=2000;b.tick=[&]{core.tick();};
+    bool failNow=false;unsigned lost=0;
+    b.air=[&](const Mac& to,const Bytes& d){if(failNow&&d[4]==failing&&lost<SendTries){++lost;return false;}return core(to,d);};
+    assert(b.begin());assert(b.until([&]{return b.link.status().linked;},3000));b.run(30000);assert(b.link.status().waiting);
+    core.firstOnly=true;core.asked=false;core.ignoreIdentify=false;failNow=true;atHome(b,core.mac,textFrame(Admin,1,""));
+    const uint32_t at=b.now;assert(b.until([&]{return core.registered;},20000));assert(b.now-at<=15000&&lost==SendTries);
+  }
+  // A new wardrive gets every network in view again, so the Biscuit's new log has them.
+  {Bench b(NodeFamily::Biscuit);BiscuitCore core;rig(b,core);core.beatMs=1000;b.tick=[&]{core.tick();};
+   b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};b.world[6].push_back(net(55,6));
+   assert(b.begin());assert(b.until([&]{return hasLine(core.records,line(55,6));},10000));
+   atHome(b,core.mac,textFrame(Admin,0,std::string(1,char(0))));assert(b.until([&]{return b.link.status().waiting;},3000));
+   b.run(5000);core.records.clear();const uint32_t wifi=b.link.status().wifi;
+   atHome(b,core.mac,textFrame(Admin,0,std::string(1,char(1))));
+   assert(b.until([&]{return hasLine(core.records,line(55,6));},8000));assert(b.link.status().wifi==wifi);}
   // A message type this node does not use is logged once per type and link, with its type.
   {Bench b(NodeFamily::Biscuit);BiscuitCore core;rig(b,core);b.air=[&](const Mac& to,const Bytes& d){return core(to,d);};
    assert(b.begin());assert(b.until([&]{return b.link.status().registered;},3000));
@@ -668,7 +751,11 @@ static void nodeBiscuitRecoveryTests(){
    atHome(b,core.mac,textFrame(Heartbeat,0,""));atHome(b,core.mac,textFrame(13,0,""));b.run(500);
    assert(b.noted(Note::Message)==2&&b.noted(Note::Message,"stop")==1);
    unsigned twelve=0,thirteen=0;for(size_t i=0;i<b.notes.size();++i)if(b.notes[i].first==Note::Message){twelve+=b.notedTypes[i]==12;thirteen+=b.notedTypes[i]==13;}
-   assert(twelve==1&&thirteen==1&&b.link.status().linked);}
+   assert(twelve==1&&thirteen==1&&b.link.status().linked);
+   // A new link logs each type again.
+   core.alive=false;assert(b.until([&]{return !b.link.status().linked;},CoreLostMs+5000));core.alive=true;
+   assert(b.until([&]{return b.link.status().registered;},30000));atHome(b,core.mac,textFrame(12,0,"stop"));b.run(500);
+   assert(b.noted(Note::Message,"stop")==2);}
 }
 
 static void nodeFamilyTests(){

@@ -23,9 +23,10 @@ void nodeScreenLoop();
 // How an exit request was made: EXIT on the screen (touch, or a knob that
 // presses the focused EXIT), or a key held down.
 enum class NodeExitInput : uint8_t { Screen, Hold };
-// An exit request. The first arms; a second at least half a second later and
-// within three seconds (five after a hold) stops the node, so a bouncing
-// contact or a quick double tap is never both. True when the node stopped.
+// An exit request. The first arms; a second within three seconds (five after a
+// hold) stops the node, if it comes at least half a second after the request
+// before it, counted or not, so a bouncing contact, a double tap or a burst of
+// quick taps is never both. True when the node stopped.
 bool nodeScreenExitPress(NodeExitInput how=NodeExitInput::Screen);
 // A short key press while the node screen is up. It is never an exit request:
 // the status line says how to leave for a few seconds instead.

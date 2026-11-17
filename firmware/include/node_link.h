@@ -64,6 +64,11 @@ constexpr uint8_t RefreshUnits=15;          // and again after about a minute in
 constexpr uint32_t IdentifyRetryMs=1500;    // a Biscuit that gave no role is asked again at the next cycle end (about every 2 s)
 constexpr uint8_t IdentifyTries=5;          // Identify attempts per registration
 constexpr uint32_t BiscuitRecheckMs=90000;  // a Biscuit that keeps talking is asked again now and then: it may have restarted and forgotten this node
+// A wardriving Biscuit answers each of those questions with the role again
+// (every time in 15 of 15 field rounds); one that is not wardriving gives none.
+// A round with no role is asked again soon, and a second one in a row ends the role.
+constexpr uint32_t RoleRecheckMs=15000;
+constexpr uint8_t RoleMissLimit=2;
 // Text of every request and heartbeat, in both families: the JCMK core's own
 // opt-out (WiFiOps.h NODE_CAPABILITY_EXTERNAL_6G, MIT). That core then leaves
 // this 2.4 GHz-only node out of its channel split and sends it no assignment,
@@ -81,7 +86,7 @@ enum class Kind : uint8_t {Wifi,Ble};
 enum class Auth : uint8_t {Open,Wep,Wpa,Wpa2,WpaWpa2,Wpa2Enterprise,Wpa3,Wpa2Wpa3,Wapi,Other};
 enum class Peer : uint8_t {Remove,Plain,Encrypted};
 // Link changes worth a line in the USB log.
-enum class Note : uint8_t {Linked,CoreLost,ModeChanged,KeyLost,OtherCore,Role,Channels,Message};
+enum class Note : uint8_t {Linked,CoreLost,ModeChanged,KeyLost,OtherCore,Role,Channels,Message,NoRole};
 
 // What the link needs from the hardware. Every call returns immediately.
 struct Port {
@@ -329,13 +334,15 @@ public:
     switch(frame.type){
       // A Biscuit takes every request, this node's probe included, as a node
       // that is new to it. It may also have restarted. Either way it has to be told who this is again.
-      case CoreReply:if(biscuit())identify(now,true);break;
+      case CoreReply:if(biscuit()){identify(now,true);roundReplied_=true;}break;
       case RecordAck:++status_.acked;status_.acknowledged=true;break;
       case Admin:
         if(frame.full()){                    // Biscuit style role assignment
           const uint8_t role=frame.textLength?frame.text[0]:uint8_t(frame.counter);
+          // A new wardrive is a new log on the Biscuit: everything in view is sent to it again.
+          if(role&&!status_.role)for(size_t i=0;i<config_.seenCount;++i)config_.seen[i].flags&=uint8_t(~SeenReported);
           if(!status_.registered||role!=status_.role){status_.role=role;port_->note(Note::Role,status_.core,&status_.role,1,0);}  // the first role on this link, and each change
-          status_.registered=roleSeen_=true;
+          status_.registered=roleSeen_=roundAnswered_=true;roleMisses_=0;
           control(RoleAck,status_.role,nullptr,0);
         }else if(length>=AdminSize)applyAdmin(data);
         break;
@@ -344,7 +351,7 @@ public:
           {const uint32_t hash=textHash(frame.text,frame.textLength);
            if(hash!=configHash_){configHash_=hash;port_->note(Note::Channels,status_.core,frame.text,frame.textLength,0);}}  // each new list once
           applyConfig(frame.text,frame.textLength);control(ConfigAck,0,nullptr,0);
-          if(roleSeen_)roleWanted_=false;    // role and channel list both in: the handshake is complete
+          if(roleSeen_){roleWanted_=false;roundOpen_=false;}    // role and channel list both in: the handshake is complete
         }
         break;
       case Heartbeat:break;                  // heartbeats only prove the core is alive
@@ -416,6 +423,7 @@ private:
   }
   void resetAssignment(){
     status_.assigned=status_.ownPlan=false;status_.role=status_.nodeIndex=status_.nodeCount=0;
+    roundOpen_=roundAnswered_=roundReplied_=false;roleMisses_=0;
     adminVersion_=adminFirst_=adminLast_=0;adminApplied_=false;
     status_.dwellMs=DwellDefaultMs;planIndex_=0;
     planClear();planFinish();
@@ -492,12 +500,30 @@ private:
   }
   // Tells a Biscuit who this is. It answers with a role, then a channel list;
   // until both are in, it is told again. Records keep flowing meanwhile, as on
-  // the reference node. Once this link has a role it stays registered until
-  // the link ends, however a later Identify goes, so the screen never flickers.
+  // the reference node. Once this link has had a role it stays registered until
+  // the link ends, however a later Identify goes, so the screen never flickers
+  // back to joining; the role itself ends with role 0 or two silent rounds.
   void identify(uint32_t now,bool fresh){
-    if(fresh)identifyTries_=0;
+    if(fresh){identifyTries_=0;openRound();}
     ++identifyTries_;identifyAt_=now;roleWanted_=true;roleSeen_=false;
     control(Identify,0,identity_,strlen(identity_));
+  }
+  // A round is one question to the Biscuit and the introductions that follow it.
+  void openRound(){if(!roundOpen_){roundOpen_=true;roundAnswered_=roundReplied_=false;}}
+  // The last introduction of a round went unanswered. A Biscuit with a wardrive
+  // running gives the role in every round it hears, so a round that it answered
+  // without a role is asked again soon, and a second one in a row means the
+  // wardrive ended: back to waiting. A question the Biscuit never answered says
+  // nothing about the wardrive (its introductions go unanswered too): it is only asked again soon.
+  void closeRound(uint32_t now){
+    if(roundOpen_&&!roundAnswered_&&biscuit()&&status_.role!=0){
+      if(!roundReplied_)identifyAt_=now-(BiscuitRecheckMs-RoleRecheckMs);
+      else if(++roleMisses_>=RoleMissLimit){
+        roleMisses_=0;status_.role=0;
+        port_->note(Note::NoRole,status_.core,&status_.role,1,0);
+      }else identifyAt_=now-(BiscuitRecheckMs-RoleRecheckMs);
+    }
+    roundOpen_=false;
   }
   void unlink(uint32_t now){
     if(scanning_){port_->scanStop();scanning_=false;}
@@ -590,7 +616,7 @@ private:
       if(!delivered&&status_.linked&&(!onAir||!status_.broadcast)){
         if(++control_.tries<SendTries&&controlCount_<ControlSize){
           memmove(controls_+1,controls_,sizeof(Control)*controlCount_);controls_[0]=control_;++controlCount_;
-        }else if(biscuit()&&(control_.type==RoleAck||control_.type==ConfigAck))roleWanted_=true; // start over with Identify
+        }else if(biscuit()&&(control_.type==RoleAck||control_.type==ConfigAck)){roleWanted_=false;identifyAt_=now-BiscuitRecheckMs;} // ask the Biscuit again at once: a real one answers only the first introduction after a question
       }
       return;
     }
@@ -663,7 +689,7 @@ private:
       const bool recheck=biscuit()&&now-identifyAt_>=BiscuitRecheckMs;
       if((now-lastCoreAt_>=ProbeAfterMs||recheck)&&now-probeAt_>=ProbeAfterMs/2){
         probeAt_=now;request(now);
-        if(biscuit()){identifyTries_=0;identifyAt_=now;roleWanted_=true;}
+        if(biscuit()){closeRound(now);identifyTries_=0;identifyAt_=now;roleWanted_=true;openRound();}  // a new question ends the last round
         return;
       }
     }
@@ -676,11 +702,12 @@ private:
     if(cycleEnd_){
       // Still no role or channel list: identify again, then wait home for the
       // answer. After the last try the node waits for the next question. A real
-      // Biscuit often leaves a repeated Identify unanswered while it keeps the
-      // node, so a role once given on this link keeps the node registered.
+      // Biscuit answers the first introduction after a question and leaves the
+      // repeats unanswered, so the node stays registered; only rounds that bring
+      // no role at all end it (closeRound).
       if(biscuit()&&roleWanted_&&now-identifyAt_>=IdentifyRetryMs){
         if(identifyTries_<IdentifyTries)identify(now,false);
-        else roleWanted_=false;
+        else{roleWanted_=false;closeRound(now);}
       }
       window_=idleBiscuit()?BiscuitIdleWindowMs+random()%(BiscuitWindowJitterMs+1):biscuit()?BiscuitWindowMs+random()%(BiscuitWindowJitterMs+1):JcmkWindowMs;
       enter(Phase::Listen,now);
@@ -692,6 +719,7 @@ private:
       port_->scanStop();scanning_=false;++planIndex_;++status_.scanErrors;scanFailed_=true;scanAt_=now;
     }
     if(queueCount_||controlCount_){report(now,false);return;}
+    if(idleBiscuit()){report(now,true);return;}   // the role ended mid-sweep: no further channel
     if(planIndex_>=status_.planCount){
       if(bleWanted()){port_->tune(HomeChannel);port_->ble(true,BleScanMs);enter(Phase::Ble,now);}
       else report(now,true);
@@ -710,8 +738,8 @@ private:
   Control controls_[ControlSize]={},control_={};
   size_t queueHead_=0,queueCount_=0,controlCount_=0;
   Flight flight_=Flight::None;
-  bool flightUnicast_=false,unicastProven_=false,scanning_=false,scanFailed_=false,cycleEnd_=false,reported_=false,adminApplied_=false,rekey_=false,roleWanted_=false,roleSeen_=false;
-  uint8_t unicastFails_=0,reportStage_=0,planIndex_=0,adminVersion_=0,adminFirst_=0,adminLast_=0,ackProbes_=0,identifyTries_=0;
+  bool flightUnicast_=false,unicastProven_=false,scanning_=false,scanFailed_=false,cycleEnd_=false,reported_=false,adminApplied_=false,rekey_=false,roleWanted_=false,roleSeen_=false,roundOpen_=false,roundAnswered_=false,roundReplied_=false;
+  uint8_t unicastFails_=0,reportStage_=0,planIndex_=0,adminVersion_=0,adminFirst_=0,adminLast_=0,ackProbes_=0,identifyTries_=0,roleMisses_=0;
   uint32_t random_=1,textCounter_=0,heartbeatCounter_=0,evictions_=0;
   uint32_t phaseAt_=0,window_=0,requestAt_=0,requestWait_=0,requestInterval_=RequestFirstMs;
   uint32_t lastCoreAt_=0,otherAt_=0,flightAt_=0,sendDoneAt_=0,scanAt_=0,probeAt_=0,identifyAt_=0,now_=0;

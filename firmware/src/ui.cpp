@@ -415,11 +415,11 @@ static void build(){
 #endif
   if(page==Node){
     // BISCUIT NODE / JCMK Node: the device does nothing but act as a node. The
-    // EXIT button is the only control; the rotary group focuses it by itself.
+    // EXIT button is the only control on screen; the knob reaches it only by a hold.
     dismissNotice();lv_obj_set_style_bg_color(root,color(0x000000),0);
     NodeScreenOptions options;options.exitButton=true;options.exited=nodeExited;
 #if defined(BOARD_CROWPANEL_21) || defined(BOARD_WATCHER)
-    options.confirmHint="PRESS CONFIRM TO LEAVE";options.keyHint="PRESS EXIT TO LEAVE";options.keyHintShort="PRESS EXIT";
+    options.keyHint="HOLD KNOB TO EXIT";options.keyHintShort="HOLD KNOB";   // a knob click only shows this; touch EXIT works as on other boards
 #endif
     nodeScreenOpen(root,options);return;
   }
@@ -947,6 +947,11 @@ lv_obj_t* uiRotaryScope(){return resetBox?resetBox:clockPrompt?clockPrompt:notic
 bool uiRotaryOpenMenu(){if(nodeKey("rotary"))return true;if(resetBox||clockPrompt||notice)return false;go(Menu);return true;}
 #endif
 bool uiRotaryWake(){bool wasOff=outputBrightness==0;lastInteraction=millis();return wasOff;}
+bool uiRotaryNode(bool click,bool back){
+  if(!nodeBusy())return false;
+  if(back)nodeKey("knob_hold",true);else if(click)nodeKey("knob_click");
+  return true;   // turning the knob does nothing while a node runs
+}
 #endif
 void uiShow(const String& name){
   if(name=="node"){if(nodeBusy())go(Node);else{openRadioTools=false;go(Recon);}return;}

@@ -15,11 +15,13 @@ GitHub source access is restored. The Cloudflare address above remains the prima
 installer; the [original GitHub Pages link](https://valleytechsolutions.github.io/Dragon-Detector/)
 forwards there. [Hosting status](docs/HOSTING-STATUS.md).
 
-[**Install firmware**](https://valleytech-dragon-detector.pages.dev/#install) · [Latest release](docs/RELEASE-0.14.7.md) · [User guides](docs/GUI.md) · [Clock setup](docs/CLOCK-SETUP.md)
+[**Install firmware**](https://valleytech-dragon-detector.pages.dev/#install) · [Latest release](docs/RELEASE-0.14.8.md) · [User guides](docs/GUI.md) · [Clock setup](docs/CLOCK-SETUP.md)
 
-**Waveshare AMOLED 1.43C · 0.14.7:** New profile for the 8 MB **ESP32-S3-Touch-AMOLED-1.43C**: the full 466 px touch interface, BOOT-button navigation, a speaker connector and a battery estimate from cell voltage. It has no SD slot, RTC or GPS, and it does not fit the plain 1.43 or 1.43-B. Pre-release builds have been installed and started on one board; the picture, touch, buttons and sound await confirmation. Other board downloads remain on their existing versions. [Setup and buttons](docs/WAVESHARE-AMOLED-143C.md) · [Release notes](docs/RELEASE-0.14.7.md).
+**0.14.8 · Wardriving node modes and a sleeker radar, on every board:** Tools → Modes now starts with **BISCUIT NODE** and **JCMK Node**, which turn the detector into a scan-only Wi-Fi node for a Biscuit or a JustCallMeKoko wardriving core. BISCUIT NODE waits for the Biscuit wardrive to start and scans until it ends; quick button presses never leave a node. On the full boards the radar gets a gold and cyan Valleytech look, redraws less per frame and loses fewer readings. [Node modes](docs/NODE-MODES.md) · [Release notes](docs/RELEASE-0.14.8.md).
 
-**Waveshare AMOLED 1.75C · 0.14.6:** Hold the smaller BOOT button for two seconds and release to sleep while the clock keeps ticking; short-press the larger PWR button to wake. The display and radios turn off during sleep. The four-screen cycle and stopwatch buttons are unchanged. Other board downloads remain on their existing versions. [Controls and release notes](docs/RELEASE-0.14.6.md).
+**Waveshare AMOLED 1.43C · 0.14.7:** New profile for the 8 MB **ESP32-S3-Touch-AMOLED-1.43C**: the full 466 px touch interface, BOOT-button navigation, a speaker connector and a battery estimate from cell voltage. It has no SD slot, RTC or GPS, and it does not fit the plain 1.43 or 1.43-B. Pre-release builds have been installed and started on one board; the picture, touch, buttons and sound await confirmation. [Setup and buttons](docs/WAVESHARE-AMOLED-143C.md) · [Release notes](docs/RELEASE-0.14.7.md).
+
+**Waveshare AMOLED 1.75C · 0.14.6:** Hold the smaller BOOT button for two seconds and release to sleep while the clock keeps ticking; short-press the larger PWR button to wake. The display and radios turn off during sleep. The four-screen cycle and stopwatch buttons are unchanged. [Controls and release notes](docs/RELEASE-0.14.6.md).
 
 **M5Stack Dial v1.1:** [Version 0.13.27](docs/M5STACK-DIAL.md) adds ring navigation, touch menus, radar dot actions and separate Time/Date settings. Display, controls and RTC restart checks passed on Dial v1.1. See the guide for the compact profile’s feature limits; original K130 remains untested.
 

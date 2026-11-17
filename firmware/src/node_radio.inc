@@ -76,7 +76,7 @@ void stopScan(){
 }
 
 // NODE_EVENT lines waiting for the end of a binary USB transfer. Printed in order.
-char noteLines[768];size_t noteLength=0;uint32_t noteDrops=0;
+char noteLines[1024];size_t noteLength=0;uint32_t noteDrops=0;
 void flushNotes(){
   if(!noteLength||radioTransferDepth)return;
   Serial.write(reinterpret_cast<const uint8_t*>(noteLines),noteLength);noteLength=0;
@@ -116,14 +116,14 @@ struct RadioPort final : Port {
   // Runs on the main loop, but also inside a binary USB transfer (radioTransferTick
   // between screenshot chunks): lines wait in noteLines until no transfer runs.
   void note(Note what,Core core,const uint8_t* text,size_t length,uint8_t type) override {
-    static const char* const names[]={"linked","core_lost","mode_changed","key_lost","other_core","role","channels","message"};
-    static_assert(sizeof(names)/sizeof(names[0])==size_t(Note::Message)+1,"one name per Note");
-    char shown[81];size_t n=0;
-    if(what==Note::Role&&text&&length)n=size_t(snprintf(shown,sizeof(shown),"%u",unsigned(text[0])));   // the role number
+    static const char* const names[]={"linked","core_lost","mode_changed","key_lost","other_core","role","channels","message","no_role"};
+    static_assert(sizeof(names)/sizeof(names[0])==size_t(Note::NoRole)+1,"one name per Note");
+    char shown[dragon::node::TextMax+1];size_t n=0;
+    if((what==Note::Role||what==Note::NoRole)&&text&&length)n=size_t(snprintf(shown,sizeof(shown),"%u",unsigned(text[0])));   // the role number
     else for(size_t i=0;text&&i<length&&n+1<sizeof(shown);++i)shown[n++]=text[i]>=32&&text[i]<127&&text[i]!='"'?char(text[i]):'.';
     shown[n]=0;
     const unsigned index=unsigned(what);
-    char line[192];
+    char line[320];
     char kind[12]="";if(what==Note::Message)snprintf(kind,sizeof(kind)," type=%u",unsigned(type));
     const int used=snprintf(line,sizeof(line),"NODE_EVENT %s%s core=%s text=\"%s\" length=%u at_ms=%lu\n",index<sizeof(names)/sizeof(names[0])?names[index]:"?",
       kind,dragon::node::coreName(core),shown,unsigned(length),(unsigned long)millis());

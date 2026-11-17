@@ -20,7 +20,7 @@ Hold BOOT for about 0.8 seconds to cycle **Radar → Clock → Timer → Signals
 | Diagnostics | No action | No action | Next page |
 | Settings | Toggle Adult Mode | No action | Next page |
 | Modes | Pick BISCUIT NODE or JCMK Node | Start the selected node | Return to radar |
-| Node running | No action | No action | Leave the node: Hold, then Hold again within 3 seconds |
+| Node running | Shows how to leave | Shows how to leave | Leave the node: Hold, then Hold again within 5 seconds |
 
 Single taps wait 300 ms to distinguish double taps. BOOT held during startup is ignored until released; BOOT + RESET download/recovery remains available. Themes save one second after the last change.
 
@@ -34,7 +34,7 @@ The new pages are build/native-test checked. Physical Lite startup and gesture t
 
 ## BISCUIT NODE and JCMK Node
 
-Lite has no Tools menu. Its **MODES** page, the last page of the BOOT hold ring, holds **BISCUIT NODE** and **JCMK Node**. Each turns the board into a scan-only wardriving node for a Biscuit in Extended mode or a JustCallMeKoko ESP32 Dual Band Wardriver core. On the MODES page, Tap picks a node and Double tap starts it; if it cannot start, the reason shows on the page for a few seconds. While a node runs, the radar, detection and the other pages pause, and the screen shows the core's logo, the number of Wi-Fi networks found and the link state. To leave, Hold BOOT: the status line reads HOLD AGAIN TO LEAVE, and a second Hold within 3 seconds stops the node. USB `node biscuit`, `node jcmk`, `node status` and `node stop` also work. Not yet verified on Lite hardware. [Node guide](NODE-MODES.md).
+Lite has no Tools menu. Its **MODES** page, the last page of the BOOT hold ring, holds **BISCUIT NODE** and **JCMK Node**. Each turns the board into a scan-only wardriving node for a Biscuit in Extended mode or a JustCallMeKoko ESP32 Dual Band Wardriver core. On the MODES page, Tap picks a node and Double tap starts it; if it cannot start, the reason shows on the page for a few seconds. While a node runs, the radar, detection and the other pages pause, and the screen shows the core's logo, the number of Wi-Fi networks found and the link state. To leave, Hold BOOT: the status line reads HOLD AGAIN TO LEAVE, and a second Hold within 5 seconds stops the node. Taps and double taps never leave; they show how to leave for 3 seconds. USB `node biscuit`, `node jcmk`, `node status` and `node stop` also work. Not yet verified on Lite hardware. [Node guide](NODE-MODES.md).
 
 ## Hardware configuration
 

@@ -9,6 +9,13 @@ for md in [ROOT/'README.md',ROOT/'CREDITS.md',*ROOT.glob('docs/*.md')]:
     for target in re.findall(r'!?\[[^\]]*\]\(([^\s)]+)',md.read_text(encoding='utf-8')):
         if '://' in target or target.startswith('#'):continue
         file=unquote(target.split('#')[0]);assert (md.parent/file).exists(),f'{md.name}: missing {file}'
+# This version's release: its notes, the links to them, and one cache token on every script.
+assert (ROOT/f'docs/RELEASE-{VERSION}.md').is_file(),f'Missing release notes docs/RELEASE-{VERSION}.md'
+for page in ('README.md','docs/HOSTING-STATUS.md'):
+    assert f'RELEASE-{VERSION}.md' in (ROOT/page).read_text(encoding='utf-8'),f'{page} does not link docs/RELEASE-{VERSION}.md'
+for page in [ROOT/'web/index.html',*sorted(ROOT.glob('web/*.js'))]:
+    for token in re.findall(r'\.js\?v=([^"\'&#\s)]+)',page.read_text(encoding='utf-8')):
+        assert token==VERSION,f'web/{page.name}: script cache token ?v={token}, expected ?v={VERSION}'
 boards=['waveshare_143c','waveshare_185b','watcher','m5dial','spotpear','waveshare','stopwatch','xiao_round','waveshare_lite','waveshare_175','waveshare_175_gps','elecrow_21','lilygo_175']
 # The separately requested beta is not part of the default stable build set.
 if (ROOT/'web/firmware/guition_185_beta').exists():boards.append('guition_185_beta')
