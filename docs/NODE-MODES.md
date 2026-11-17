@@ -20,7 +20,17 @@ Both modes are on every board profile: the full-UI boards, Waveshare Lite and M5
 - A Piglet marks its answer, so the screen shows **LINKED TO PIGLET CORE**. Records then use the JCMK wording. A Piglet core receives Wi-Fi only: it would log each Bluetooth device as a Wi-Fi network, so the node sends it none and the screen leaves out the BLE count.
 - A Piglet core has no ESP-NOW encryption. With [encryption](#jcmk-encryption-optional) on, JCMK Node does not join a Piglet and the screen says **PIGLET CORE: CLEAR NODE KEY**. Turn encryption off with `node encrypt off` to use a Piglet.
 
-Set up the core for ESP-NOW nodes as its own documentation describes. The Dragon Detector needs no pairing step: it finds the core by itself.
+Set up the core for ESP-NOW nodes as its own documentation describes. Dragon Detector discovers the core automatically, but a Biscuit Manager must first save each new node.
+
+### Add a new node to a Biscuit Manager
+
+1. Start **BISCUIT NODE** on Dragon Detector using the controls below.
+2. Stop any running Biscuit operation. In the Biscuit Manager app, open **Settings → Node Management**, select **Manager**, and choose **Extended**. Dragon Detector currently supports the unencrypted Extended link; Secure mode is unsupported.
+3. Open **Nearby** and press **Start** to open discovery. Select the new Dragon Detector and choose **Add to Memory**. USB `node config` shows its `own_mac` if you need to distinguish several boards.
+4. In **Saved**, confirm the node is **Online**. Repeat for each Dragon Detector. A board saved during earlier tests does not enroll a second board automatically.
+5. Start a Wi-Fi wardrive, or assign the node the Wi-Fi role in an All wardrive. While the wardrive is stopped, the linked node should show **WAITING FOR WARDRIVE**.
+
+A node left at **SEARCHING FOR CORE** may simply be missing from the Manager's saved list. The Manager remembers saved nodes for later sessions. See the [Biscuit node setup guide](https://codehedge.github.io/Biscuit-Wiki/devices/node.html) for its discovery and saved-node controls. Use Dragon Detector's flasher to update these boards; Biscuit's dedicated C5 node firmware is a different hardware target.
 
 ## Start a node
 
