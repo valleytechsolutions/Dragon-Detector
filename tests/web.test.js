@@ -312,18 +312,17 @@ test('MITM theme is offered only on compatible firmware',async()=>{
   for(const v of ['0.13.24','0.13.25','0.13.026','0.13.26junk',''])assert.equal(hasMitmTheme(v),false);
 });
 
-test('retired theme is absent from active controls and 44 built-in choices match firmware IDs',async()=>{
+test('firmware keeps its retired theme slot and the flasher exposes only the personal theme editor',async()=>{
   const compat=await import('../web/firmware-compat.js');
   assert.equal('hasHypnoticTheme' in compat,false);
   const html=readFileSync(new URL('../web/index.html',import.meta.url),'utf8');
-  const select=html.match(/<select id="radar-theme">([\s\S]*?)<\/select>/)[1];
-  const options=[...select.matchAll(/<option\b[^>]*\bvalue="([^"]+)"/g)].map(m=>m[1]);
+  assert.doesNotMatch(html,/id="radar-theme"|id="ble-lab"|id="detector"|id="radio-tools"/);
+  assert.match(html,/id="theme-studio"/);
   const catalog=readFileSync(new URL('../firmware/include/radar_theme_catalog.h',import.meta.url),'utf8');
   const commands=JSON.parse('['+catalog.split('radarThemeCommands[]={')[1].split('};')[0].replace(/\bnullptr\b/g,'null')+']');
   assert.ok(commands[40]===null||commands[40]==='','slot 40 must stay reserved without an active command');
   assert.deepEqual(commands.slice(41),['vectorpotential','argyle','lawlocktools','moki','44delta']);
-  assert.equal(options.filter(x=>x!=='custom').length,44);
-  assert.deepEqual(options.sort(),commands.filter(Boolean).sort());
+  assert.equal(commands.filter(x=>x&&x!=='custom').length,44);
   assert.doesNotMatch(html,/hypnotic|45 built-in themes/i);
   assert.doesNotMatch(readFileSync(new URL('../web/app.js',import.meta.url),'utf8'),/hypnotic/i);
 });

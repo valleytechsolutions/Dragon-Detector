@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import {startRadarBackground} from '../web/radar-background.js';
 test('background pauses on request, hidden tabs and reduced motion, with bounded backing size',()=>{
   const original=new Map(),events={},frames=new Map(),saved=new Map();let id=0,paints=0;
-  const ctx=new Proxy({clearRect(){paints++;}},{get:(obj,key)=>key in obj?obj[key]:()=>{}});
+  const ctx=new Proxy({clearRect(){paints++;},createRadialGradient(){return {addColorStop(){}}}},{get:(obj,key)=>key in obj?obj[key]:()=>{}});
   const canvas={getContext:()=>ctx},button={addEventListener:(name,f)=>events[name]=f,setAttribute(){}},motion={matches:false,addEventListener:(_,f)=>events.motion=f};
-  const globals={innerWidth:1000,innerHeight:800,devicePixelRatio:3,matchMedia:()=>motion,localStorage:{getItem:k=>saved.get(k),setItem:(k,v)=>saved.set(k,v)},document:{hidden:false,addEventListener:(n,f)=>events[n]=f},addEventListener:(n,f)=>events[n]=f,requestAnimationFrame:f=>{frames.set(++id,f);return id;},cancelAnimationFrame:n=>frames.delete(n)};
+  const globals={innerWidth:1000,innerHeight:800,devicePixelRatio:3,matchMedia:()=>motion,localStorage:{getItem:k=>saved.get(k),setItem:(k,v)=>saved.set(k,v)},document:{hidden:false,createElement:()=>({getContext:()=>ctx}),addEventListener:(n,f)=>events[n]=f},addEventListener:(n,f)=>events[n]=f,requestAnimationFrame:f=>{frames.set(++id,f);return id;},cancelAnimationFrame:n=>frames.delete(n)};
   for(const [key,value] of Object.entries(globals)){original.set(key,Object.getOwnPropertyDescriptor(globalThis,key));Object.defineProperty(globalThis,key,{configurable:true,writable:true,value});}
   try{
     startRadarBackground(canvas,button);assert.equal(canvas.width,1500);assert.equal(canvas.height,1200);assert.equal(frames.size,1);
