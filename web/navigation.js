@@ -1,8 +1,11 @@
-// Hash links must remain reachable inside the collapsible theme gallery.
 export function revealLocation(root=document, location=window.location) {
   const reveal=()=>{
     let id;
     try{id=decodeURIComponent(location.hash.slice(1));}catch{return;}
+    if(id==='detector'){
+      id='install';
+      window.history.replaceState(window.history.state,'','#install');
+    }
     const target=id&&root.getElementById(id);
     if(!target)return;
     for(let parent=target.parentElement;parent;parent=parent.parentElement){

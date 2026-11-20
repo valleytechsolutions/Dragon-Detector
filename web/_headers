@@ -5,10 +5,10 @@
   Cache-Control: no-cache
 
 /
-  Cache-Control: no-cache
+  Cache-Control: no-store
 
 /index.html
-  Cache-Control: no-cache
+  Cache-Control: no-store
 
 /*.js
   Cache-Control: no-cache

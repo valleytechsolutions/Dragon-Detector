@@ -11,7 +11,7 @@ import {encodeBadge} from './badge-codec.js?v=0.14.8';
 import {uploadBadge} from './badge-transfer.js?v=0.14.8';
 import {boardProfiles,connectedProfile,supportsBadge} from './board-profiles.js?v=0.14.8';
 import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan,drawBadgeText} from './badge-editor.js?v=0.14.8';
-import {revealLocation} from './navigation.js?v=0.14.8';
+import {revealLocation} from './navigation.js?v=0.14.8&ui=studio2';
 import {parseBadgeInfo,hasClockTools} from './firmware-compat.js?v=0.14.8';
 
 import {setupWorkspaceTabs} from './workspace-tabs.js?v=0.14.8';
