@@ -407,3 +407,7 @@ in the board package. The display uses the already-credited CO5300 driver, and
 the ES8311 codec driver retains its [upstream notice](lib/es8311/UPSTREAM.md)
 and [license](lib/es8311/LICENSE). The board integration, touch handling,
 button navigation and battery estimate are original MIT code.
+
+## LockpickingVlad
+
+The eagle and padlock portrait was supplied for the LockpickingVlad theme. The gold radar sweep and clock hands use the McTickler and short-hook profiles credited above under Covert Instruments and McNally.

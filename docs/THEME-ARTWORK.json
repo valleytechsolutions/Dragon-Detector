@@ -331,5 +331,12 @@
     "sha256": "c20dadf9da7491b64d002ab707f6b162faa6479c157460a9dff378fac495e18d",
     "source_bytes_match": false,
     "derivation": "Imagegen background extraction of supplied padlock photograph; prompt in docs/44DELTA.md."
+  },
+  {
+    "file": "media/theme-logos/lockpickingvlad-source.jpg",
+    "supplied_name": "channels4_profile.jpg",
+    "sha256": "51ee77e700f96bc268518e5261738f77e3704a9cebb63fbe1167c51a314a43bd",
+    "source_bytes_match": true,
+    "derivation": "Native indexed portraits retain the original eagle and padlock composition. The edges fade into the circular bezel."
   }
 ]

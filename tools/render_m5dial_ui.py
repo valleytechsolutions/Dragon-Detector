@@ -225,6 +225,10 @@ int main(int argc,char** argv){
  uiShow("startup");assert(liteStartup&&!dialMenuVisible());assert(nodeStart(NodeKind::Biscuit));uiShow("node");
  assert(lv_obj_get_index(liteNodeHost)>lv_obj_get_index(liteStartup));tick+=2300;uiLoop();assert(!liteStartup&&liteNodeHost);
  nodeStop();uiShow("radar");assert(!standby&&!dialMenuVisible()&&!liteNodeHost&&lv_obj_get_child_cnt(root)==children);
+ radarTheme=dragon::VladTheme;refreshLiteTheme();
+ setLitePage(LitePage::Clock);tick+=1000;uiLoop();render(argv[1],"vlad-clock");
+ assert(lv_obj_has_flag(pageValue,LV_OBJ_FLAG_HIDDEN));
+ setLitePage(LitePage::Timer);tick+=250;uiLoop();assert(!strcmp(lv_label_get_text(pageTitle),"LOCKSPORT TIMER"));
  // Vector Potential: page headers use the watch-size mark, clear of the page title.
  radarTheme=VectorPotentialTheme;refreshLiteTheme();setLitePage(LitePage::Status);tick+=200;uiLoop();lv_obj_update_layout(root);
  {lv_area_t l,t;lv_obj_get_coords(logo,&l);lv_obj_get_coords(pageTitle,&t);assert(lv_img_get_src(logo)==&watch_logo_vp&&!lv_obj_has_flag(logo,LV_OBJ_FLAG_HIDDEN)&&l.y2<t.y1);}
@@ -268,6 +272,10 @@ int main(int argc,char** argv){
  uiShow("startup");assert(liteStartup);assert(nodeStart(NodeKind::Jcmk));uiShow("node");
  assert(lv_obj_get_index(liteNodeHost)>lv_obj_get_index(liteStartup));tick+=2300;uiLoop();assert(!liteStartup&&liteNodeHost);
  nodeStop();uiShow("radar");assert(litePage==LitePage::Radar&&!standby&&!liteNodeHost&&lv_obj_get_child_cnt(root)==children);
+ radarTheme=dragon::VladTheme;refreshLiteTheme();
+ setLitePage(LitePage::Clock);tick+=1000;uiLoop();render(argv[1],"vlad-clock");
+ assert(lv_obj_has_flag(pageValue,LV_OBJ_FLAG_HIDDEN));
+ setLitePage(LitePage::Timer);tick+=250;uiLoop();assert(!strcmp(lv_label_get_text(pageTitle),"LOCKSPORT TIMER"));
  // Vector Potential: MODES keeps its title clear of the theme mark.
  radarTheme=VectorPotentialTheme;refreshLiteTheme();setLitePage(LitePage::Modes);tick+=100;uiLoop();lv_obj_update_layout(root);
  {lv_area_t l,t;lv_obj_get_coords(logo,&l);lv_obj_get_coords(pageTitle,&t);assert(lv_img_get_src(logo)==&watch_logo_vp&&!lv_obj_has_flag(logo,LV_OBJ_FLAG_HIDDEN)&&l.y2<t.y1);}
@@ -284,7 +292,7 @@ def build(name, main, defines, folder):
     exe = work/(name+'.exe')
     subprocess.run([sys.executable,'-m','ziglang','c++','-std=c++17','-O2','-UNDEBUG',*defines,'-DLV_CONF_INCLUDE_SIMPLE',
                    *['-I'+str(p) for p in (work,native,root/'hardware/spotpear/lib/lvgl',root/'firmware/include',root/'firmware/src',root/'lib/opendroneid/src')],
-                   str(cpp),*[str(root/'firmware/src'/source) for source in ('radar_logo.cpp','node_ui.cpp','node_logo.cpp')],str(library),'-o',str(exe)],check=True)
+                   str(cpp),*[str(root/'firmware/src'/source) for source in ('radar_logo.cpp','vlad_art.cpp','node_ui.cpp','node_logo.cpp')],str(library),'-o',str(exe)],check=True)
     subprocess.run([str(exe),str(folder)],check=True)
     paths=sorted(folder.glob('*.ppm'))
     montage=Image.new('RGB',(240*4,264*((len(paths)+3)//4)),(15,19,22))

@@ -55,6 +55,7 @@ static bool backdropReady=false;
 #include "lawlocktools_theme.inc"
 #include "moki_theme.inc"
 #include "delta44_theme.inc"
+#include "lockpickingvlad_theme.inc"
 static const char* radarFamilyName(Family f){
 #if SCREEN_RES<=240
   // Keep the family on one line, leaving the second line for signal/age.
@@ -106,7 +107,7 @@ static bool radarFieldAnimated(unsigned theme){return theme==CanCommanderTheme||
 static void radarField(lv_draw_ctx_t* ctx,uint32_t now){
   const auto& theme=radarPalette(radarTheme);
   lv_draw_arc_dsc_t arc;lv_draw_arc_dsc_init(&arc);arc.color=color(theme.ring);arc.width=std::max(1,S(1));arc.opa=160;
-  if(radarTheme==3)valleyRadarField(ctx);else if(radarTheme==Delta44Theme)delta44RadarField(ctx);else if(radarTheme==LawLockToolsTheme)lltRadarField(ctx);else if(radarTheme==MokiTheme)mokiRadarField(ctx);else if(radarTheme==ArgyleTheme)argyleRadarField(ctx);else if(radarTheme==VectorPotentialTheme)vpRadarField(ctx);else if(radarTheme==MuldersRevengeTheme)muldersRadarField(ctx);else if(greenArtTheme(radarTheme))greenRadarField(ctx,radarTheme==XombiTheme);else if(radarTheme==CanCommanderTheme)canRadarField(ctx,now,radioEnabled);else if(radarTheme==31)capsuleRadarField(ctx,now);else if(radarTheme==32)sparrowsRadarField(ctx);else{
+  if(radarTheme==dragon::VladTheme)vladDial(ctx,true);else if(radarTheme==3)valleyRadarField(ctx);else if(radarTheme==Delta44Theme)delta44RadarField(ctx);else if(radarTheme==LawLockToolsTheme)lltRadarField(ctx);else if(radarTheme==MokiTheme)mokiRadarField(ctx);else if(radarTheme==ArgyleTheme)argyleRadarField(ctx);else if(radarTheme==VectorPotentialTheme)vpRadarField(ctx);else if(radarTheme==MuldersRevengeTheme)muldersRadarField(ctx);else if(greenArtTheme(radarTheme))greenRadarField(ctx,radarTheme==XombiTheme);else if(radarTheme==CanCommanderTheme)canRadarField(ctx,now,radioEnabled);else if(radarTheme==31)capsuleRadarField(ctx,now);else if(radarTheme==32)sparrowsRadarField(ctx);else{
 #ifdef BOARD_RADAR_LITE
   if(liteBackdrop.data){lv_draw_img_dsc_t d;lv_draw_img_dsc_init(&d);lv_area_t a{0,0,SCREEN_RES-1,SCREEN_RES-1};lv_draw_img(ctx,&d,&a,&liteBackdrop);}
   else {
@@ -217,7 +218,7 @@ static void prepareRadarBackdrop(){
 enum class RadarSweep:uint8_t {Valley,Shared,Custom};
 static RadarSweep radarSweepKind(unsigned theme){
   if(theme==3)return RadarSweep::Valley;
-  if(theme==dragon::PersonalThemeId||theme==LawLockToolsTheme||theme==Delta44Theme||theme==MokiTheme||theme==ArgyleTheme||theme==CanCommanderTheme||theme==31||theme==33||theme==32||theme==29||theme==30||theme==27||theme==26||theme==28||theme==9||theme==24)return RadarSweep::Custom;
+  if(theme==dragon::VladTheme||theme==dragon::PersonalThemeId||theme==LawLockToolsTheme||theme==Delta44Theme||theme==MokiTheme||theme==ArgyleTheme||theme==CanCommanderTheme||theme==31||theme==33||theme==32||theme==29||theme==30||theme==27||theme==26||theme==28||theme==9||theme==24)return RadarSweep::Custom;
   return RadarSweep::Shared;
 }
 static FxSweepStyle radarSharedSweep(){const auto& theme=radarPalette(radarTheme);return fxThemeSweepStyle(theme.sweep,theme.bottom,theme.ring);}
@@ -231,6 +232,7 @@ static void radarSweep(lv_draw_ctx_t* ctx){
   if(radarTheme==3)valleyRadarSweep(ctx,angle);
   else if(radarTheme==dragon::PersonalThemeId)personalThemeSweep(ctx,angle);
   else if(radarTheme==LawLockToolsTheme)lltRadarSweep(ctx,angle/6.28318530718f+.25f);
+  else if(radarTheme==dragon::VladTheme)vladPick(ctx,angle/6.28318530718f+.25f,pickMcTickler,pickMcTicklerTriangles,true,1.16f);
   else if(radarTheme==Delta44Theme)delta44RadarSweep(ctx,angle/6.28318530718f+.25f);
   else if(radarTheme==MokiTheme)mokiRadarSweep(ctx,angle/6.28318530718f+.25f);
   else if(radarTheme==ArgyleTheme)argyleRadarSweep(ctx,angle/6.28318530718f+.25f);
@@ -400,7 +402,7 @@ static void radarPaintDot(lv_draw_ctx_t* ctx,const Dot& dot,const RadarDotLook& 
 static bool radarCenterBreathes(){return !RadarRenderLite&&(radarTheme==3||radarSweepKind(radarTheme)==RadarSweep::Shared);}
 static dragon::RadarRect radarCenterBounds(){return radarTheme==3?valleyCenterBounds():fxCenterBounds();}
 static void radarCenter(lv_draw_ctx_t* ctx,const RadarPalette& theme,uint32_t now){
-  if(radarTheme==CanCommanderTheme||radarTheme==ArgyleTheme||radarTheme==LawLockToolsTheme||radarTheme==MokiTheme||radarTheme==Delta44Theme)return;
+  if(radarTheme==CanCommanderTheme||radarTheme==ArgyleTheme||radarTheme==LawLockToolsTheme||radarTheme==MokiTheme||radarTheme==Delta44Theme||radarTheme==dragon::VladTheme)return;
 #ifdef BOARD_RADAR_LITE
   for(int sign:{-1,1}){line(ctx,CENTER+sign*3,CENTER,CENTER+sign*8,CENTER,theme.ring,1);line(ctx,CENTER,CENTER+sign*3,CENTER,CENTER+sign*8,theme.ring,1);}
   disc(ctx,CENTER,CENTER,1,theme.text);(void)now;

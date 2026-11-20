@@ -35,7 +35,9 @@ test('studio reads both legacy paged and 0.9.6+ single-screen radar settings',as
     const link={async write(command){assert.equal(command,'radar status');},async wait(match){const response=`RADAR_SETTINGS theme=2 labels=1 recent=1 ${tail}`;assert.ok(match(response));return response;}};
     assert.deepEqual(await readRadarSettings(link),{theme:'gold',labels:true,recent:true});
   }
-  const invalid={async write(){},async wait(){return 'RADAR_SETTINGS theme=46 labels=1 recent=1 pages=1 plotted=0 primary=-1';}};
+  const vlad={async write(){},async wait(){return 'RADAR_SETTINGS theme=46 labels=1 recent=1 pages=1 plotted=2 primary=-1 touches=0 hits=0 selected=0';}};
+  assert.deepEqual(await readRadarSettings(vlad),{theme:'lockpickingvlad',labels:true,recent:true});
+  const invalid={async write(){},async wait(){return 'RADAR_SETTINGS theme=47 labels=1 recent=1 pages=1 plotted=0 primary=-1';}};
   await assert.rejects(readRadarSettings(invalid),/Invalid radar settings/);
 });
 
@@ -116,7 +118,7 @@ test('radar settings read back every write, including when USB acknowledgment is
   let writes=[];const link={write:async s=>writes.push(s),wait:async()=> 'RADAR_SETTINGS theme=0 labels=1 recent=0 pages=1 plotted=6 primary=-1'};
   await assert.rejects(saveRadarSettings(link,{theme:'unknown',labels:true,recent:true}),/Invalid/);assert.equal(writes.length,0);
   await assert.rejects(saveRadarSettings(link,{theme:'green',labels:true,recent:true}),/not saved/);assert.deepEqual(writes,['radar theme green','radar status','radar status']);
-  for(const theme of ['46','99','100','00','-1']){link.wait=async()=> 'RADAR_SETTINGS theme='+theme+' labels=1 recent=0 pages=1 plotted=6 primary=-1';await assert.rejects(readRadarSettings(link),/Invalid radar settings/);}
+  for(const theme of ['47','99','100','00','-1']){link.wait=async()=> 'RADAR_SETTINGS theme='+theme+' labels=1 recent=0 pages=1 plotted=6 primary=-1';await assert.rejects(readRadarSettings(link),/Invalid radar settings/);}
 });
 test('CRC matches firmware IEEE CRC-32 wire contract',()=>assert.equal(crc32(new TextEncoder().encode('123456789')),0xcbf43926));
 for(const size of [240,360,466,480])test(`DDB1 ${size}: header, exact size and RGB565 byte order`,()=>{
@@ -312,7 +314,7 @@ test('MITM theme is offered only on compatible firmware',async()=>{
   for(const v of ['0.13.24','0.13.25','0.13.026','0.13.26junk',''])assert.equal(hasMitmTheme(v),false);
 });
 
-test('retired theme is absent from active controls and 44 built-in choices match firmware IDs',async()=>{
+test('retired theme is absent from active controls and the built-in choices match firmware IDs',async()=>{
   const compat=await import('../web/firmware-compat.js');
   assert.equal('hasHypnoticTheme' in compat,false);
   const html=readFileSync(new URL('../web/index.html',import.meta.url),'utf8');
@@ -321,10 +323,10 @@ test('retired theme is absent from active controls and 44 built-in choices match
   const catalog=readFileSync(new URL('../firmware/include/radar_theme_catalog.h',import.meta.url),'utf8');
   const commands=JSON.parse('['+catalog.split('radarThemeCommands[]={')[1].split('};')[0].replace(/\bnullptr\b/g,'null')+']');
   assert.ok(commands[40]===null||commands[40]==='','slot 40 must stay reserved without an active command');
-  assert.deepEqual(commands.slice(41),['vectorpotential','argyle','lawlocktools','moki','44delta']);
-  assert.equal(options.filter(x=>x!=='custom').length,44);
+  assert.deepEqual(commands.slice(41),['vectorpotential','argyle','lawlocktools','moki','44delta','lockpickingvlad']);
+  assert.equal(options.filter(x=>x!=='custom').length,45);
   assert.deepEqual(options.sort(),commands.filter(Boolean).sort());
-  assert.doesNotMatch(html,/hypnotic|45 built-in themes/i);
+  assert.doesNotMatch(html,/hypnotic/i);
   assert.doesNotMatch(readFileSync(new URL('../web/app.js',import.meta.url),'utf8'),/hypnotic/i);
 });
 
@@ -338,6 +340,16 @@ test('legacy retired ID remains readable and is never mistaken for a saved Green
     await assert.rejects(saveRadarSettings(link,{theme:'green',labels:false,recent:true}),/not saved/);
     assert.deepEqual(writes,['radar theme green','radar status','radar status'],'a failed theme save must stop before later preferences');
   }
+});
+
+test('a board without the Vlad build keeps its radar preferences',async()=>{
+  const writes=[];
+  const link={
+    async write(command){writes.push(command);},
+    async wait(){return 'RADAR_SETTINGS theme=9 labels=1 recent=0 pages=1 plotted=0 primary=-1 touches=0 hits=0 selected=0';}
+  };
+  await assert.rejects(saveRadarSettings(link,{theme:'lockpickingvlad',labels:false,recent:true}),/does not include the LockpickingVlad theme/);
+  assert.deepEqual(writes,['radar theme lockpickingvlad','radar status','radar status']);
 });
 
 test('retired and missing theme commands are rejected before any USB writes',async()=>{
