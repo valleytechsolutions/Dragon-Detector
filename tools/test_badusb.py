@@ -40,9 +40,9 @@ struct String : std::string {
   bool startsWith(const char* s)const{return compare(0,strlen(s),s)==0;}
   String substring(size_t start)const{return substr(start);}
 };
-#if !defined(__APPLE__)
-inline size_t strlcpy(char* out,const char* in,size_t cap){size_t n=strlen(in);if(cap){size_t count=std::min(n,cap-1);memcpy(out,in,count);out[count]=0;}return n;}
-#endif
+// glibc 2.38+ and macOS both declare strlcpy; a renamed mock avoids clashing with either.
+inline size_t testStrlcpy(char* out,const char* in,size_t cap){size_t n=strlen(in);if(cap){size_t count=std::min(n,cap-1);memcpy(out,in,count);out[count]=0;}return n;}
+#define strlcpy testStrlcpy
 uint32_t now=0;
 uint32_t millis(){return now;}
 struct SerialPort {
