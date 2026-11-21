@@ -117,6 +117,7 @@ static void dialUiUpdate(){
 }
 extern void dialInputStatus();
 static bool dialUiCommand(const String& c){
+  if(c=="screen badusb"&&badusbSupported()){dialMenuOpen(DialMenu::BadUsb);Serial.println("DIAL_OK");return true;}
   if(c=="screen menu"||c=="screen tools"||c=="screen settings"){dialMenuOpen(c=="screen menu"?DialMenu::Main:c=="screen tools"?DialMenu::Tools:DialMenu::Settings);Serial.println("DIAL_OK");return true;}
   if(c=="dial menu status"){Serial.printf("DIAL_MENU page=%u selection=%d editing=%u brightness=%d\n",unsigned(dialMenu),dialChoice,dialEditing,dialBrightness);return true;}
   if(c=="display status"){Serial.printf("DISPLAY_SETTINGS brightness=%d output=%d dim=0 off=0 dim_level=0 wake=0\n",dialBrightness,dialBrightness);return true;}

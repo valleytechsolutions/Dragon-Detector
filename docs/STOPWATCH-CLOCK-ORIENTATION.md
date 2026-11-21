@@ -81,7 +81,7 @@ Open **Tools → Utilities → Clock**, then swipe left or right. The chosen fac
 | 23 | Nyan Devices | The original logo colors run through the dial and menus. A pixel Nyan Cat flies across the radar with a moving rainbow trail. |
 | 24 | DMAC | Teal, pink, charcoal and silver. Two acrylic McTickler profiles with copper inlays and pearl rivets tell the time; Utilities becomes Locksport Counter. |
 | 25 | Seeed Studio | Supplied circular logo, deep teal and lime, leaf-circuit traces, Arabic numerals and broad lime/silver hands. |
-| 26 | DagNazty | White field, supplied skull silhouette, black tapered hands, fang details and restrained talon outlines. |
+| 26 | DagNazty | White field, large supplied skull, fang hour ring (paired at the quarters), crimson seconds trail, rim drips, talon outlines and a fang-weighted seconds hand. Watch 49 is the same dial for DagNazty Dark; watches 50 and 51 are the light and dark digital versions. |
 | 27 | 0ct0’s Pig | ASCII octopus and wandering pig; live 24-hour time, blinking eyes and tap reactions. |
 | 28 | DeFlock | Supplied camera-raven, navy and steel blue, viewfinder framing, large 24-hour time and an optical seconds rim. |
 | 29 | Covert Instruments × LockPickingLawyer | Original CI and LPL seal, navy/gold rope bezel, Roman numerals, two silver lockpicks, date and 24-hour window. |

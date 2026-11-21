@@ -59,6 +59,7 @@ bool wardriveUploadBusy(){return uploadBusy;}bool wardriveBusy(){return driveBus
 void wardriveUploadCancel(){++uploadCancels;}void reconEndWardrive(){++driveEnds;}
 void reconPage(const char*){}void recipeStop(){++recipeStops;}
 void reconStop(){++reconStops;}void bleLabStop(){++bleStops;}void reconLeave(){++reconLeaves;}
+unsigned badusbLeaves=0,badusbStops=0;void badusbLeave(){++badusbLeaves;}void badusbStop(){++badusbStops;}
 dragon::Stopwatch stopwatch;
 unsigned resets=0,updates=0;
 bool locksport(){return locksportTheme;}
@@ -150,6 +151,7 @@ int main(){
  dialog.hidden=true;screen.children.push_back(&dialog);pwr();assert(pending==Menu);screen.children.clear();
  // Navigation retains the existing cleanup and storage-operation guards.
  visible(Recon);pwr();assert(reconLeaves==1&&pending==Menu);
+ visible(BadUsb);pwr();assert(badusbLeaves==1&&pending==Menu);
  visible(BleLab);unsigned stopped=bleStops;pwr();assert(bleStops==stopped+1&&pending==Menu);
  visible(Recon);driveBusy=true;pwr();assert(pending==Recon&&driveEnds==1);driveBusy=false;
  uploadBusy=true;pwr();assert(pending==Recon&&uploadCancels==1);uploadBusy=false;
@@ -162,7 +164,7 @@ int main(){
  stopwatch.running=true;uiAmoled175cSleep();assert(sleepCalls==sleeps&&!strcmp(dialogTitle,"STILL ACTIVE"));stopwatch.running=false;
  clockPrompt=&marker;uiAmoled175cSleep();assert(sleepCalls==sleeps);clockPrompt=nullptr;
  pending=Clock;uiAmoled175cSleep();assert(sleepCalls==sleeps);pending=Radar;
- powerReady=false;uiAmoled175cSleep();assert(sleepCalls==sleeps&&radioEnabled&&!strcmp(dialogTitle,"SLEEP UNAVAILABLE"));powerReady=true;
+ powerReady=false;unsigned usbStops=badusbStops;uiAmoled175cSleep();assert(sleepCalls==sleeps&&radioEnabled&&!strcmp(dialogTitle,"SLEEP UNAVAILABLE")&&badusbStops==usbStops+1);powerReady=true;
  // Debounce must not turn a 1999 ms hold into sleep; subtraction survives rollover.
  using Event=dragon::Amoled175cButtonEvent;
  for(uint32_t start:{100u,UINT32_MAX-1500u}){

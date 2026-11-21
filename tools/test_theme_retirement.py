@@ -112,13 +112,13 @@ void row(void*,const char* name,const char* detail,unsigned,unsigned action){ass
 void gallery(){shown.clear();void* body=nullptr;unsigned n=0;MENU_LOOP}
 void seed(Preferences& prefs,unsigned radar,unsigned face=0){prefs.values={{"panel-v04",1},{"radar-v07",1},{"radar-theme",radar},{"theme",radar},{"watch-face",face},{"brightness",75},{"keep-user-data",123}};prefs.writes=0;}
 int main(){
- assert(RadarThemeCount==46&&dragon::UiPaletteCount==46);
+ assert(RadarThemeCount==49&&dragon::UiPaletteCount==49);
  assert(!radarThemeNames[40][0]&&!radarThemeCommands[40][0]&&!radarThemeDescriptions[40][0]);
  assert(watches[43].name==nullptr);
- const char* later[]={"vectorpotential","argyle","lawlocktools","moki","44delta"};
- for(unsigned n=0;n<5;++n){assert(std::string(radarThemeCommands[41+n])==later[n]);assert(watches[44+n].name);}
+ const char* later[]={"vectorpotential","argyle","lawlocktools","moki","44delta","dagnazty-dark","dagnazty-digital","dagnazty-dark-digital"};
+ for(unsigned n=0;n<8;++n){assert(std::string(radarThemeCommands[41+n])==later[n]);assert(watches[44+n].name);}
  for(unsigned id=0;id<256;++id){
-  loaded=true;const bool valid=id<46&&id!=40;
+  loaded=true;const bool valid=id<49&&id!=40;
   assert(radarThemeActive(id)==valid&&radarThemeAllowed(id)==valid);
   assert(savedRadarTheme(id)==(valid?id:1));
   seed(settings,id,43);fullBoot();assert(radarTheme==(valid?id:1)&&watchFace==0);
@@ -128,34 +128,34 @@ int main(){
   assert(litePrefs.writes==(valid?0u:1u));
  }
  loaded=true;for(auto id:WatchFaces){seed(settings,41,id);fullBoot();assert(watchFace==id&&radarTheme==41&&settings.writes==0&&watches[id].name);}
- for(unsigned face:{3u,4u,5u,6u,7u,43u,49u,255u,UINT_MAX})assert(!watchFaceAllowed(face));
- for(unsigned id:{40u,46u,255u,256u,UINT_MAX}){
+ for(unsigned face:{3u,4u,5u,6u,7u,43u,52u,255u,UINT_MAX})assert(!watchFaceAllowed(face));
+ for(unsigned id:{40u,49u,255u,256u,UINT_MAX}){
   radarTheme=41;watchFace=44;settings.writes=0;selectRadarTheme(id);
   assert(radarTheme==41&&watchFace==44&&settings.writes==0);
   assert(&themeUiColors(id)==&dragon::UiPalettes[1]&&&dialPalette::themeUiColors(id)==&dragon::UiPalettes[1]);
   assert(radarPalette(id).top==radarPalette(1).top&&radarLogo(id)==radarLogo(1));
  }
- for(unsigned id=41;id<46;++id){selectRadarTheme(id);assert(radarTheme==id&&watchFace==id+3&&applied==id);}
+ for(unsigned id=41;id<49;++id){selectRadarTheme(id);assert(radarTheme==id&&watchFace==id+3&&applied==id);}
  for(bool personal:{false,true}){
-  loaded=personal;gallery();assert(shown.size()==(personal?45:44));
+  loaded=personal;gallery();assert(shown.size()==(personal?48:47));
   for(auto id:shown)assert(id!=40&&radarThemeAllowed(id));
   radarTheme=0;std::vector<unsigned> cycled;
   do{uiKey(false);cycled.push_back(radarTheme);assert(radarTheme!=40&&radarThemeAllowed(radarTheme));}while(radarTheme!=0&&cycled.size()<50);
   assert(cycled.size()==shown.size());
-  radarTheme=39;uiKey(false);assert(radarTheme==41);radarTheme=45;uiKey(false);assert(radarTheme==0);
+  radarTheme=39;uiKey(false);assert(radarTheme==41);radarTheme=45;uiKey(false);assert(radarTheme==46);radarTheme=46;uiKey(false);assert(radarTheme==47);radarTheme=48;uiKey(false);assert(radarTheme==0);
   unsigned before=themeChanges;uiKey(true);assert(radarTheme==0&&themeChanges==before);
  }
  loaded=false;seed(settings,34,37);fullBoot();assert(radarTheme==1&&watchFace==0);seed(litePrefs,34);liteBoot();assert(radarTheme==1);
  loaded=true;assert(&themeUiColors(34)==&palette);
- std::vector<unsigned> dialIds;for(unsigned id=0;id<46;++id)if(id!=34&&id!=40)dialIds.push_back(id);
- assert(dialThemeCount()==44);for(int n=0;n<44;++n)assert(dialThemeAt(n)==dialIds[n]&&dialThemeLabel(dialThemeAt(n))[0]);
- assert(dialThemeAt(-1)==0&&dialThemeAt(44)==0&&!dialThemeLabel(40)[0]&&!dialThemeLabel(UINT_MAX)[0]);
+ std::vector<unsigned> dialIds;for(unsigned id=0;id<49;++id)if(id!=34&&id!=40)dialIds.push_back(id);
+ assert(dialThemeCount()==47);for(int n=0;n<47;++n)assert(dialThemeAt(n)==dialIds[n]&&dialThemeLabel(dialThemeAt(n))[0]);
+ assert(dialThemeAt(-1)==0&&dialThemeAt(47)==0&&!dialThemeLabel(40)[0]&&!dialThemeLabel(UINT_MAX)[0]);
  for(const char* command:{"radar theme hypnotic","radar theme ","radar theme 40"}){
   radarTheme=41;watchFace=44;settings.writes=0;themeChanges=0;
   assert(fullCommand(command)&&Serial.last.find("ERROR")!=std::string::npos);assert(radarTheme==41&&watchFace==44&&settings.writes==0);
   assert(dialCommand(command)&&Serial.last.find("ERROR")!=std::string::npos);assert(radarTheme==41&&themeChanges==0);
  }
- for(unsigned id=41;id<46;++id){String command="radar theme "+std::string(radarThemeCommands[id]);assert(fullCommand(command)&&radarTheme==id&&watchFace==id+3);radarTheme=0;assert(dialCommand(command)&&radarTheme==id);}
+ for(unsigned id=41;id<49;++id){String command="radar theme "+std::string(radarThemeCommands[id]);assert(fullCommand(command)&&radarTheme==id&&watchFace==id+3);radarTheme=0;assert(dialCommand(command)&&radarTheme==id);}
  loaded=false;radarTheme=1;assert(fullCommand("radar theme custom")&&radarTheme==1);assert(dialCommand("radar theme custom")&&radarTheme==1);
  puts("PASS retired themes: stable IDs, persisted full/Lite migration, unchanged valid saves, selection/gallery/cycling, Dial enumeration, USB rejection and palette bounds");
 }

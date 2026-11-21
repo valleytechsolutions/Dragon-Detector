@@ -15,7 +15,7 @@ GitHub source access is restored. The Cloudflare address above remains the prima
 installer; the [original GitHub Pages link](https://valleytechsolutions.github.io/Dragon-Detector/)
 forwards there. [Hosting status](docs/HOSTING-STATUS.md).
 
-[**Install firmware**](https://valleytech-dragon-detector.pages.dev/#install) · [Latest release](docs/RELEASE-0.14.7.md) · [User guides](docs/GUI.md) · [Clock setup](docs/CLOCK-SETUP.md)
+[**Install firmware**](https://valleytech-dragon-detector.pages.dev/#install) · [Latest release](docs/RELEASE-0.14.8.md) · [User guides](docs/GUI.md) · [Clock setup](docs/CLOCK-SETUP.md)
 
 **Waveshare AMOLED 1.43C · 0.14.7:** New profile for the 8 MB **ESP32-S3-Touch-AMOLED-1.43C**: the full 466 px touch interface, BOOT-button navigation, a speaker connector and a battery estimate from cell voltage. It has no SD slot, RTC or GPS, and it does not fit the plain 1.43 or 1.43-B. Pre-release builds have been installed and started on one board; the picture, touch, buttons and sound await confirmation. Other board downloads remain on their existing versions. [Setup and buttons](docs/WAVESHARE-AMOLED-143C.md) · [Release notes](docs/RELEASE-0.14.7.md).
 
@@ -92,9 +92,9 @@ Some store links are affiliate links. Purchases through them may earn Valleytech
 | **Seeed XIAO ESP32-S3 + Round Display** | 240 × 240 LCD | Touch, RTC, microSD, 8 MB flash; **both parts required** | [ESP32-S3 board](https://www.seeedstudio.com/XIAO-ESP32S3-p-5627.html?c_event_medium=search%3A%3Aresults&c_event_id=2529207033%3A%3Axiao+round+display&sensecap_affiliate=qV5RXdv&referring_service=link) + [Round Display](https://www.seeedstudio.com/1-28-Round-Touch-Display-for-Seeed-Studio-XIAO-ESP32.html?c_event_medium=search%3A%3Aresults_recommend&c_event_id=2529207033%3A%3Axiao+round+display&sensecap_affiliate=qV5RXdv&referring_service=link) |
 | **Waveshare ESP32-S3-LCD-1.28 Lite** | 240 × 240 LCD | BOOT button, 16 MB flash; **non-touch** model | [Waveshare](https://www.waveshare.com/esp32-s3-lcd-1.28.htm) |
 
-The eleven full profiles share the radar, 45 built-in themes, logo watch faces, timers, notebook, badge editor, radio tools, and BLE Lab. StopWatch and the Waveshare AMOLED 1.75 models support 2 MiB captures and 2 MiB recon sessions; the 8 MB AMOLED 1.43C has 1 MiB captures and 256 KiB sessions. Their total file storage differs.
+The eleven full profiles share the radar, 48 built-in themes, logo watch faces, timers, notebook, badge editor, radio tools, and BLE Lab. StopWatch and the Waveshare AMOLED 1.75 models support 2 MiB captures and 2 MiB recon sessions; the 8 MB AMOLED 1.43C has 1 MiB captures and 256 KiB sessions. Their total file storage differs.
 
-Lite provides five button-operated pages: radar, clock, timer, signals, and diagnostics. It shares detection and all 45 built-in themes, with compact clocks. It does not include Badge Studio, audio, or active labs.
+Lite provides five button-operated pages: radar, clock, timer, signals, and diagnostics. It shares detection and all 48 built-in themes, with compact clocks. It does not include Badge Studio, audio, or active labs.
 
 Firmware is board-specific. The Waveshare **1.43C**, **1.75C**, **1.75** and **1.75-G** each have a separate installer profile, and the 1.43C profile does not fit the plain 1.43 or 1.43-B. Non-C SD captures and GPS transport have passed bench checks; GPS routes still await field testing. Elecrow has passed initial checks on one unit. [Hardware guide](docs/HARDWARE.md) · [Feature comparison](docs/FEATURE-MATRIX.md) · [Tested hardware and limitations](docs/VALIDATION.md)
 
@@ -129,6 +129,7 @@ Images are firmware display captures. [Locksport gallery](https://valleytech-dra
 - **Recon:** surveys, protocol counters, packet captures, sessions, and CSV exports. [Recon guide](docs/RECON-013.md)
 - **BLE Lab:** GATT inspection, explicit pairing, profile storage, emulation, and a cached-read bridge. [Capabilities and limits](docs/FEATURE-MATRIX.md)
 - **Clock and timers:** analog/digital watches, stopwatch, locksport timing, and separate Time, Date, and Sync settings. USB sets local time and timezone. Devices without an external RTC need USB or configured Wi-Fi after complete power loss. [Clock setup](docs/CLOCK-SETUP.md)
+- **BadUSB:** locally started USB keyboard scripts on native-USB S3 boards, with a script picker, preview and Stop control. Waveshare Lite and Watcher USB bridges are excluded. [Commands, uploads and USB recovery](docs/BADUSB.md)
 - **Badge Studio:** prepare and upload your own artwork from the browser. [Open Studio](https://valleytech-dragon-detector.pages.dev/#studio)
 
 Detection matches observable radio signatures; it does not establish intent, ownership, or recording state. Radar radius represents signal strength, and its angle is decorative. Silent devices, Bluetooth Classic, and 5/6 GHz Wi-Fi are outside coverage. [Detection evidence](docs/DETECTION.md)

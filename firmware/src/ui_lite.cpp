@@ -1,4 +1,5 @@
 #include "app.h"
+#include "badusb.h"
 #include "radar_interaction.h"
 #include "radar_colors.h"
 #include "radar_layout.h"
@@ -125,7 +126,7 @@ void uiLoop(){
   }
   // Leave time between full radar draws to drain reception queues.
 #ifdef BOARD_M5DIAL
-  if(dialMenuVisible()){lv_timer_handler();return;}
+  if(dialMenuVisible()){dialBadUsbTick();lv_timer_handler();return;}
 #endif
   if(uint32_t(now-lastFrame)>=liteFrameInterval){lastFrame=radarFrameAt=now;++frames;
     if(litePage==LitePage::Radar){lv_obj_invalidate(radar);
@@ -152,6 +153,7 @@ void uiNotify(const char* title,const char*,const dragon::DeviceKey*,bool){
 }
 void uiShow(const String& name){
 #ifdef BOARD_M5DIAL
+  if(name=="badusb"&&badusbSupported()){dialMenuOpen(DialMenu::BadUsb);return;}
   if(name=="menu"||name=="tools"||name=="settings"){dialMenuOpen(name=="menu"?DialMenu::Main:name=="tools"?DialMenu::Tools:DialMenu::Settings);return;}
   if(dialMenuVisible())dialMenuClose();
 #endif

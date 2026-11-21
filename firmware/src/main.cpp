@@ -1,4 +1,6 @@
 #include "sd_resources.h"
+#include "badusb.h"
+#include "badusb_mode.h"
 #include <Arduino.h>
 #include "app.h"
 #include "wardrive.h"
@@ -94,6 +96,8 @@ static void health(){
 }
 static uint32_t loopLastUs[6]{},loopMaxUs[6]{};
 static void command(const String& c){
+  if(badusbCommand(c))return;
+  if(badusbStatus().running&&c!="status"){Serial.println("BADUSB_BUSY stop the script first");return;}
 #if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
   // The removable card is the deliberate credential-editing surface. Do not
   // expose its secrets through generic Web Serial/USB file previews or dumps.
@@ -130,7 +134,7 @@ static void command(const String& c){
   // ownership, audio, badge upload and full touch menus remain unavailable.
   const bool allowed=c=="badge info"||c=="status"||c=="contacts"||c=="selftest"||c=="screenshot"||c=="ui status"||c=="radar status"||c=="display status"||c=="axon status"||c=="traffic status"||c=="detector status";
   const bool timing=c.startsWith("time ")||c=="clock status"||c=="clock hardware"||c.startsWith("clock offset ")||c=="orientation status"||c=="stopwatch status"||c=="stopwatch laps"||c=="stopwatch start"||c=="stopwatch pause"||c=="stopwatch reset"||c=="stopwatch lap"||c=="stopwatch finish";
-  const bool page=c=="screen radar"||c=="screen clock"||c=="screen stopwatch"||c=="screen signals"||c=="screen diagnostics"||c=="screen startup";
+  const bool page=c=="screen radar"||c=="screen clock"||c=="screen stopwatch"||c=="screen signals"||c=="screen diagnostics"||c=="screen startup"||c=="screen badusb";
 #ifdef BOARD_M5DIAL
   const bool dial=c.startsWith("dial ")||c=="tone settings"||c=="tone stop"||c.startsWith("tone level ")||c.startsWith("tone config ")||c.startsWith("tone play ")||c.startsWith("radar theme ")||c=="clock diagnostics"||c=="touch status"||c=="rotary status"||c=="screen menu"||c=="screen tools"||c=="screen settings";
 #else
@@ -238,6 +242,8 @@ static void command(const String& c){
   );
 }
 void setup(){
+  // Before Serial: decide USB serial (normal) or one-shot keyboard mode.
+  dragon::badusb::bootMode();
   // The native USB CDC default is only 256 bytes. Reserve room before begin()
   // so flash writes cannot overflow incoming, acknowledged image chunks.
   // Assert the Dial power latch before startup delays or allocations.
@@ -281,9 +287,11 @@ void setup(){
 #ifdef BOARD_CROWPANEL_21
   extern void crowInputStatus();crowInputStatus();
 #endif
-  radioBegin();bleLabBegin();reconBegin();wardriveBegin();wardriveUploadBegin();Serial.println("DRAGON READY");health();
+  radioBegin();bleLabBegin();reconBegin();wardriveBegin();wardriveUploadBegin();badusbBegin();Serial.println("DRAGON READY");health();
+  if(badusbKeyboardMode())uiShow("badusb");
 }
 void loop(){
+  badusbLoop();
   uint32_t stamp=micros();auto measured=[&](int i){uint32_t end=micros();loopLastUs[i]=end-stamp;loopMaxUs[i]=std::max(loopMaxUs[i],loopLastUs[i]);stamp=end;};
   // LC76G command/reply exchanges span short cooperative waits. Other I2C
   // slaves must remain quiet until the reply has been consumed. Radios and SD

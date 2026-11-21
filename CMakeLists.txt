@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 # Only the RGB Elecrow board builds ESP-IDF from source. Other boards use Arduino.
 set(SDKCONFIG_DEFAULTS "${CMAKE_SOURCE_DIR}/hardware/elecrow-rotary-21/sdkconfig.defaults")
+include("${CMAKE_SOURCE_DIR}/hardware/elecrow-rotary-21/usb.cmake")
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(DragonDetector)
 

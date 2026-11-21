@@ -361,11 +361,83 @@ static void dagTalons(lv_draw_ctx_t* ctx,uint32_t ink){
     watchCurve(ctx,{(lv_coord_t)x,(lv_coord_t)y},{(lv_coord_t)(x+side*8),(lv_coord_t)(y+24)},{(lv_coord_t)(x+side*5),(lv_coord_t)(y+46)},{(lv_coord_t)(x-side*6),(lv_coord_t)(y+63)},ink,i?1:2);
   }
 }
-static void radarDagArt(lv_draw_ctx_t* ctx){dagTalons(ctx,0xbcbcb7);}
-static void watchDag(lv_draw_ctx_t* ctx){
-  watchLogo(ctx,watch_logo_dagnazty,60,0,false,true);dagTalons(ctx,0x93938d);
-  for(int side:{-1,1}){int x=180+side*25;lv_point_t fang[]={{(lv_coord_t)(x-4),223},{(lv_coord_t)(x+4),223},{(lv_coord_t)x,245}};watchPoly(ctx,fang,3,0x252525);}
-  watchCircle(ctx,180,180,118,0xe3e3de);
+static void radarDagArt(lv_draw_ctx_t* ctx){dagTalons(ctx,dagNaztyDarkTheme(radarTheme)?0x6e1420:0xbcbcb7);}
+
+// DagNazty watches 26 (light) and 49 (dark): a large skull, a ring of fangs for
+// hours (paired fangs at the quarters), a blood trail that fills the bezel with
+// the seconds, drips off the rim and a fang-weighted seconds hand. Static per
+// second: no animation timer and no per-frame allocation.
+struct DagInk {uint32_t fang,blood,trail,bezel,claw,tick,hourLight,hourShade,minuteLight,minuteShade,date;};
+static const DagInk DagLight{0x101010,0xa3121f,0xb8202d,0x2a2a2a,0x93938d,0xb5b5af,0x343434,0x090909,0x656560,0x151515,0x3a3a38};
+static const DagInk DagDark{0xf2ead8,0xe8323f,0xc81e2c,0x5a0e16,0x6e1420,0x4a2a2e,0xf2ead8,0x9c8f7a,0xffffff,0xb04048,0xc9b9a6};
+static void dagFang(lv_draw_ctx_t* ctx,float turns,int outer,int length,int half,uint32_t ink){
+  float spread=half/(WatchTau*outer);
+  lv_point_t fang[]={watchPolar(turns-spread,outer),watchPolar(turns+spread,outer),watchPolar(turns,outer-length)};watchPoly(ctx,fang,3,ink);
+}
+static void dagDrip(lv_draw_ctx_t* ctx,float turns,int length,uint32_t ink){
+  auto top=watchPolar(turns,168);watchLine(ctx,top.x,top.y,top.x,top.y+length,ink,3);
+  lv_point_t drop[]={{(lv_coord_t)(top.x-3),(lv_coord_t)(top.y+length)},{(lv_coord_t)(top.x+3),(lv_coord_t)(top.y+length)},{(lv_coord_t)top.x,(lv_coord_t)(top.y+length-7)}};watchPoly(ctx,drop,3,ink);
+  disc(ctx,S(top.x),S(top.y+length+1),std::max(2,S(3)),ink);
+}
+static void dagTrail(lv_draw_ctx_t* ctx,int second,uint32_t ink){
+  if(second<=0)return;
+  // LVGL arcs start at three o'clock and run clockwise; twelve o'clock is 270.
+  lv_draw_arc_dsc_t d;lv_draw_arc_dsc_init(&d);d.color=color(ink);d.width=std::max(2,S(4));d.rounded=1;
+  lv_point_t center{(lv_coord_t)S(180),(lv_coord_t)S(180)};lv_draw_arc(ctx,&d,&center,S(175),270,uint16_t((270+second*6)%360));
+}
+static void dagSecondHand(lv_draw_ctx_t* ctx,float turns,uint32_t ink){
+  watchHand(ctx,turns,150,22,2,ink);
+  lv_point_t counter[]={watchHandPoint(turns,-16,6),watchHandPoint(turns,-16,-6),watchHandPoint(turns,-42,0)};watchPoly(ctx,counter,3,ink);
+  auto tip=watchHandPoint(turns,150,0);disc(ctx,S(tip.x),S(tip.y),std::max(2,S(3)),ink);
+}
+static void dagWatch(lv_draw_ctx_t* ctx,const dragon::Calendar& d,bool valid,bool dark){
+  const DagInk& k=dark?DagDark:DagLight;char text[24];
+  watchRing(ctx,178,k.bezel,3);watchRing(ctx,171,k.blood);
+  if(valid)dagTrail(ctx,d.second,k.trail);
+  for(int i=0;i<60;++i)if(i%5)watchRay(ctx,i/60.f,161,166,k.tick,1);
+  for(int i=0;i<12;++i){
+    if(i%3){dagFang(ctx,i/12.f,167,19,4,k.fang);continue;}
+    for(float side:{-.014f,.014f})dagFang(ctx,i/12.f+side,167,28,5,k.fang);
+  }
+  for(auto drip:{std::pair<float,int>{-.09f,9},{-.045f,17},{.035f,12},{.07f,21},{.105f,7}})dagDrip(ctx,drip.first,drip.second,k.blood);
+  watchLogo(ctx,dark?watch_dial_dagnazty_dark:watch_dial_dagnazty,50);
+  dagTalons(ctx,k.claw);
+  if(!valid){watchText(ctx,"SET YOUR TIME",70,226,220,F16,k.fang);return;}
+  snprintf(text,sizeof(text),"%02d / %02d",d.month,d.day);watchText(ctx,text,112,252,136,F12,k.date);
+  float hours=(d.hour%12+d.minute/60.f+d.second/3600.f)/12.f,minutes=(d.minute+d.second/60.f)/60.f;
+  watchDauphine(ctx,hours,86,9,k.hourLight,k.hourShade);watchDauphine(ctx,minutes,122,6,k.minuteLight,k.minuteShade);
+  dagSecondHand(ctx,d.second/60.f,k.blood);
+  disc(ctx,S(180),S(180),S(9),k.bezel);disc(ctx,S(180),S(180),S(6),k.blood);disc(ctx,S(180),S(180),std::max(1,S(2)),k.fang);
+}
+
+// Digital DagNazty faces 50 (light) and 51 (dark): sixty rim fangs fill with
+// blood as the minute runs, big digits carry a blood drop shadow, and a
+// dripping fang divider separates seconds, weekday and date. Redrawn once a second.
+static int dagWeekday(int year,int month,int day){
+  static const int offset[]={0,3,2,5,0,3,5,1,4,6,2,4};if(month<1||month>12)return 0;if(month<3)--year;
+  return (year+year/4-year/100+year/400+offset[month-1]+day)%7;
+}
+static void dagDigitalWatch(lv_draw_ctx_t* ctx,const dragon::Calendar& d,bool valid,bool dark){
+  static const char* days[]={"SUN","MON","TUE","WED","THU","FRI","SAT"};
+  const DagInk& k=dark?DagDark:DagLight;char text[32];
+  watchRing(ctx,178,k.bezel,3);
+  const int lit=valid?d.second:-1;
+  for(int i=0;i<60;++i){
+    const bool quarter=i%15==0,hour=i%5==0;
+    dagFang(ctx,i/60.f,173,quarter?22:hour?16:10,quarter?5:hour?3:2,i<=lit?k.blood:hour?k.claw:k.tick);
+  }
+  watchLogo(ctx,dark?watch_skull_dagnazty_dark:watch_skull_dagnazty,34);
+  if(valid)snprintf(text,sizeof(text),"%d:%02d",dragon::hour12(d.hour),d.minute);else strcpy(text,"--:--");
+  watchText(ctx,text,48,129,270,FWATCH,k.blood);watchText(ctx,text,45,126,270,FWATCH,k.fang);
+  // Fang divider with two drips hanging off its ends.
+  watchLine(ctx,114,201,246,201,k.blood,2);
+  for(int x=126;x<=234;x+=12){lv_point_t fang[]={{(lv_coord_t)(x-4),201},{(lv_coord_t)(x+4),201},{(lv_coord_t)x,(lv_coord_t)(x%24?208:212)}};watchPoly(ctx,fang,3,k.blood);}
+  for(auto drip:{std::pair<int,int>{116,14},{244,21}}){
+    watchLine(ctx,drip.first,201,drip.first,201+drip.second,k.blood,2);disc(ctx,S(drip.first),S(202+drip.second),std::max(2,S(3)),k.blood);
+  }
+  if(valid){snprintf(text,sizeof(text),"%02d  %s",d.second,d.hour>=12?"PM":"AM");watchText(ctx,text,115,214,130,F16,k.blood);
+    snprintf(text,sizeof(text),"%s  %02d / %02d",days[dagWeekday(d.year,d.month,d.day)],d.month,d.day);watchText(ctx,text,80,244,200,F12,k.date);}
+  else watchText(ctx,"SYNC IN SETTINGS",70,226,220,F12,k.date);
 }
 
 // Viewfinder corners and an optical-scale rim echo the supplied camera-raven.

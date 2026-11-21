@@ -68,6 +68,7 @@ bool wardriveUploadBusy(){return uploadBusy;}bool wardriveBusy(){return driveBus
 void wardriveUploadCancel(){++uploadCancels;}void reconEndWardrive(){++driveEnds;}
 void reconPage(const char* name){reconRequest=name;}void recipeStop(){++recipeStops;}
 void reconStop(){++reconStops;}void bleLabStop(){++bleStops;}void reconLeave(){++reconLeaves;}
+unsigned badusbLeaves=0;void badusbLeave(){++badusbLeaves;}
 struct Timer {bool running=false;unsigned toggles=0,laps=0,finishes=0;uint64_t at=0;
  void toggle(uint64_t tick){at=tick;running=!running;++toggles;}
  void lap(uint64_t tick){at=tick;++laps;}void finish(uint64_t tick){at=tick;running=false;++finishes;}
@@ -126,6 +127,7 @@ int main(){
  ui185bHome();assert(pending==Recon&&driveEnds==2);driveBusy=false;
  visible(Recon,1);uploadBusy=true;ui185bHome();assert(pending==Recon&&uploadCancels==1&&reconRequest=="wardrive-upload"&&menuTab==0);
  uploadBusy=false;ui185bHome();assert(pending==Menu&&reconLeaves==1);
+ visible(BadUsb);ui185bHome();assert(pending==Menu&&badusbLeaves==1);
  // Resource health stays visible in System without creating automatic popups.
  for(const char* state:{"ready","missing SD vendor labels","corrupt checksum","insufficient PSRAM"}){
    vendorState=state;bleState="ready";labels.clear();build185bSystem();

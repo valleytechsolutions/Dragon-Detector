@@ -5,6 +5,8 @@
 #include "notebook.h"
 #include "vendor_registry.h"
 #include "ble_lab.h"
+#include "badusb.h"
+#include "badusb_ui.h"
 #include "recon.h"
 #ifdef BOARD_WAVESHARE_185B
 #include "recon_internal.h"
@@ -38,7 +40,7 @@ extern const lv_img_dsc_t vts_logo;
 extern const lv_img_dsc_t radar_logo;
 extern lv_img_dsc_t radar_logo_valleytech,radar_logo_biscuit,radar_logo_marauder,radar_logo_toool,radar_logo_church,watch_logo_church,radar_logo_ci,watch_logo_ci,watch_logo_mcnally;
 extern lv_img_dsc_t watch_logo_lpl;
-extern lv_img_dsc_t radar_logo_awok,watch_logo_awok,radar_logo_baph,watch_logo_baph,radar_logo_wdgwars,watch_logo_wdgwars,radar_logo_n3rdsec,watch_logo_n3rdsec,radar_logo_halehound,watch_logo_halehound,watch_logo_halehound_splash,radar_logo_waveshare,watch_logo_waveshare,radar_logo_m5stack,watch_logo_m5stack,radar_logo_lab5,watch_logo_lab5,radar_logo_sasquach,watch_logo_sasquach,radar_logo_nyan,watch_logo_nyan,radar_logo_dmac,watch_logo_dmac,radar_logo_seeed,watch_logo_seeed,radar_logo_dagnazty,watch_logo_dagnazty,radar_logo_deflock,watch_logo_deflock;
+extern lv_img_dsc_t radar_logo_awok,watch_logo_awok,radar_logo_baph,watch_logo_baph,radar_logo_wdgwars,watch_logo_wdgwars,radar_logo_n3rdsec,watch_logo_n3rdsec,radar_logo_halehound,watch_logo_halehound,watch_logo_halehound_splash,radar_logo_waveshare,watch_logo_waveshare,radar_logo_m5stack,watch_logo_m5stack,radar_logo_lab5,watch_logo_lab5,radar_logo_sasquach,watch_logo_sasquach,radar_logo_nyan,watch_logo_nyan,radar_logo_dmac,watch_logo_dmac,radar_logo_seeed,watch_logo_seeed,radar_logo_dagnazty,watch_dial_dagnazty,watch_dial_dagnazty_dark,watch_skull_dagnazty,watch_skull_dagnazty_dark,radar_logo_dagnazty_dark,radar_logo_deflock,watch_logo_deflock;
 // The layout is authored for the 360 px round panel. S() maps it onto the
 // board's panel; label/button/row helpers apply it, so callers pass 360 px units.
 #if SCREEN_RES<=240
@@ -72,7 +74,7 @@ extern lv_img_dsc_t radar_logo_awok,watch_logo_awok,radar_logo_baph,watch_logo_b
 #endif
 static const int CENTER=SCREEN_RES/2;
 #include "target_pages.h"
-enum Page {Boot,Radar,Menu,Devices,Details,Alerts,Channels,Files,Audio,Settings,About,Badge,Hunt,Detectors,History,HistoryDetail,Rules,Controls,Display,Diagnostics,Activity,RadarStyle,Stopwatch,Laps,Clock,ClockEdit,Orientation,FamilyColors,BleLab,Recon,Notebook,NotebookProbes,NotebookBle,NotebookDetail,ClockSettings,ClockWheels,Startup};
+enum Page {Boot,Radar,Menu,Devices,Details,Alerts,Channels,Files,Audio,Settings,About,Badge,Hunt,Detectors,History,HistoryDetail,Rules,Controls,Display,Diagnostics,Activity,RadarStyle,Stopwatch,Laps,Clock,ClockEdit,Orientation,FamilyColors,BleLab,Recon,Notebook,NotebookProbes,NotebookBle,NotebookDetail,ClockSettings,ClockWheels,Startup,BadUsb};
 static unsigned notebookPage=0,notebookRows=0;
 static dragon::DeviceKey notebookKeys[10];
 static dragon::notebook::Advert notebookSelection;
@@ -154,6 +156,7 @@ if(p==Radar){recipeStop();reconStop();bleLabStop();}
 #ifndef BOARD_RADAR_LITE
 if(page==Recon&&p!=Recon)reconLeave();
 #endif
+if(page==BadUsb&&p!=BadUsb)badusbLeave();
 if(page==BleLab&&p!=BleLab)bleLabStop();pending=p;}
 static void action(lv_event_t* e);
 static lv_obj_t* button(lv_obj_t* parent,const char* text,int x,int y,int w,int h,int id){
@@ -181,7 +184,7 @@ void uiNotify(const char* text,const char* detail,const dragon::DeviceKey* key,b
   dragon::DetectionNotice item;strlcpy(item.title,text,sizeof(item.title));strlcpy(item.detail,detail,sizeof(item.detail));item.watched=watched;item.at=millis();item.hasKey=key!=nullptr;if(key){item.key=*key;int i=findContact(*key);if(i>=0)item.family=contacts[i].match.family;}
   for(unsigned f=0;f<unsigned(Family::Count);++f)if(!strcmp(text,dragon::familyName(Family(f)))){item.family=Family(f);break;}
   if(key&&!dragon::detectionPopupAllowed(page==Radar,pending==Radar))return;
-  if(clockPrompt||page==Boot||page==Startup||page==BleLab||page==Stopwatch||page==Clock||page==ClockSettings||page==ClockWheels||page==ClockEdit||(notice&&noticePriority>=item.priority())){noticeQueue.push(item);return;}
+  if(clockPrompt||page==Boot||page==Startup||page==BleLab||page==BadUsb||page==Stopwatch||page==Clock||page==ClockSettings||page==ClockWheels||page==ClockEdit||(notice&&noticePriority>=item.priority())){noticeQueue.push(item);return;}
   dismissNotice();noticeAt=millis();noticeWatch=watched;noticeHasKey=key!=nullptr;if(key)noticeKey=*key;
   noticePriority=item.priority();uint32_t accent=uiColors().accent;
   if(detector.wakeAlert)lastInteraction=millis();
@@ -363,6 +366,7 @@ static void build(){
   // is rebuilt. Never retain a label from the page that is about to be freed.
   micBadge=nullptr;radarSummary=nullptr;radarGesture.clear();radarPress.clear();
   timerOrbit=nullptr;timerValue=timerState=timerLap=timerStartButton=timerSecondary=timerSplit=clockValue=clockDate=editValue=nullptr;
+  if(page==BadUsb)badusbLeave();
   badgeUnload();page=pending;pageAt=millis();statusLabel=audioLabel=audioMeter=radar=trackingLabel=huntValue=huntMeta=huntGauge=huntGraph=diagnosticsLabel=activityLabel=radarActivity=nullptr;radarPrepared=0;
   setRadioStandby(page==Clock||page==Stopwatch||page==Laps||page==ClockSettings||page==ClockWheels||page==ClockEdit);
   lv_obj_clean(root);lv_obj_set_style_bg_color(root,color(uiColors().bg),0);
@@ -373,12 +377,13 @@ static void build(){
   if(page==BleLab){bleLabView(root);return;}
   if(page==Recon){reconView(root,openRadioTools);return;}
 #endif
+  if(page==BadUsb){badusbView(root);return;}
   if(page==Startup){dismissNotice();drawStartup();return;}
   else if(page==Badge){lv_obj_set_style_bg_color(root,color(0x000000),0);badgeView(root);
   }else if(page==Radar){
     radar=lv_obj_create(root);lv_obj_remove_style_all(radar);lv_obj_set_pos(radar,0,0);lv_obj_set_size(radar,SCREEN_RES,SCREEN_RES);lv_obj_clear_flag(radar,LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN);lv_obj_add_flag(radar,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_PRESS_LOCK);
     lv_obj_add_event_cb(radar,radarDraw,LV_EVENT_DRAW_MAIN,nullptr);lv_obj_add_event_cb(radar,radarTap,LV_EVENT_PRESSED,nullptr);lv_obj_add_event_cb(radar,radarTap,LV_EVENT_CLICKED,nullptr);lv_obj_add_event_cb(radar,radarTap,LV_EVENT_PRESS_LOST,nullptr);
-    if(radarTheme==8||radarTheme==14||dmac()||radarTheme==22||radarTheme==23)circleLogo(root,radarLogo(radarTheme),17);
+    if(radarTheme==8||radarTheme==14||dmac()||radarTheme==22||radarTheme==23||radarTheme==DagNaztyDigitalTheme)circleLogo(root,radarLogo(radarTheme),17);
     else if(!lawLockTools()&&!moki()&&!delta44()&&!argyle()&&!vectorPotential()&&radarTheme!=13&&radarTheme!=24&&radarTheme!=32&&radarTheme!=CanCommanderTheme&&radarTheme!=MuldersRevengeTheme&&!greenArtTheme(radarTheme)){auto* logo=lv_img_create(root);lv_img_set_src(logo,radarLogo(radarTheme));lv_obj_align(logo,LV_ALIGN_TOP_MID,0,S(17));lv_obj_clear_flag(logo,LV_OBJ_FLAG_CLICKABLE);if(radarTheme==10||radarTheme==3){lv_obj_set_style_img_recolor(logo,color(radarTheme==3?0xd6b46e:0xffffff),0);lv_obj_set_style_img_recolor_opa(logo,LV_OPA_COVER,0);}}
     const auto& theme=radarPalette(radarTheme);
     statusLabel=label(root,"LISTENING",56,66,248,F12,theme.text);lv_obj_set_style_text_align(statusLabel,LV_TEXT_ALIGN_CENTER,0);legible(statusLabel);lv_obj_set_style_bg_color(statusLabel,color(theme.panel),0);lv_obj_set_style_bg_opa(statusLabel,LV_OPA_60,0);
@@ -442,7 +447,8 @@ static void build(){
 #else
     button(root,"Saved files",184,176,119,49,7104);
 #endif
-    button(root,"Activity",79,242,202,43,116);}
+    if(badusbSupported()){button(root,"Activity",57,242,119,43,116);button(root,"BadUSB",184,242,119,43,7200);}
+    else button(root,"Activity",79,242,202,43,116);}
 
     if(menuTab==2){
 #ifdef BOARD_WATCHER
@@ -737,6 +743,7 @@ static void action(lv_event_t* e){
   }else uiNotify("Device expired","Return to radar and select the device again.",nullptr,false);return;}
 #endif
   switch(id){
+    case 7200:if(badusbSupported())go(BadUsb);break;
     case 150:go(FamilyColors);break;
     case 161:editOffset=clockOffsetMinutes;go(ClockEdit);break;
     case 160:clockTab(0);break;
@@ -911,6 +918,7 @@ void uiShow(const String& name){if(name=="startup"){go(Startup);page=Boot;return
 #endif
     return;
   }
+  if(name=="badusb"&&badusbSupported()){go(BadUsb);return;}
   if(name=="utilities"){menuTab=1;go(Menu);return;}
   if(name=="notebook"){go(Notebook);return;}if(name=="notebook-ble"){notebookPage=0;go(NotebookBle);return;}if(name=="notebook-probes"){notebookPage=0;go(NotebookProbes);return;}
   if(name=="device-colors"){go(FamilyColors);return;}
@@ -949,6 +957,7 @@ void uiLoop(){
     if(clockPrompt){lv_obj_del(clockPrompt);clockPrompt=nullptr;}
     if(page!=Recon&&pending!=Recon){reconPage("wardrive");pending=Recon;}
   }
+  if(page==BadUsb&&badusbStatus().running)lastInteraction=millis();
   uint32_t idle=millis()-lastInteraction;
   int level=detector.offSeconds&&idle>=uint32_t(detector.offSeconds)*1000?0:detector.dimSeconds&&idle>=uint32_t(detector.dimSeconds)*1000?detector.idleBrightness:brightness;
   if(level!=outputBrightness){outputBrightness=level;set_brightness(level);}
@@ -960,7 +969,8 @@ void uiLoop(){
   if(page==Menu&&pending==Menu&&!clockPrompt&&!notice&&!resetBox&&menuWardriveAvailable!=wardriveAvailable()&&gpsMenuInputReleased())build();
 #endif
   if(page!=pending)build();
-  if(!wardriveBusy()&&!wardriveUploadBusy())clockSetupPrompt();
+  if(!wardriveBusy()&&!wardriveUploadBusy()&&page!=BadUsb)clockSetupPrompt();
+  if(page==BadUsb)badusbViewLoop();
 #ifndef BOARD_RADAR_LITE
   if(page==BleLab)bleLabViewLoop();
   if(page==Recon)reconViewLoop();
@@ -1042,7 +1052,7 @@ void uiAmoled175cSleep(unsigned seconds){
     title="STILL ACTIVE";message="Pause the timer, stop recording and radio sessions, and wait for saving before sleep.";
   }else{
     bool wasRadio=radioEnabled;
-    recipeStop();reconStop();bleLabStop();audioStop();setRadio(false);
+    badusbStop();recipeStop();reconStop();bleLabStop();audioStop();setRadio(false);
     extern bool amoled175cSleep(unsigned);
     if(amoled175cSleep(seconds))return;
     setRadio(wasRadio);

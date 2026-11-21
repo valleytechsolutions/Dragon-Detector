@@ -1,4 +1,4 @@
-import {firmwareAtLeast,knownFirmware} from './firmware-version.js?v=0.14.7-143c';
+import {firmwareAtLeast,knownFirmware} from './firmware-version.js?v=0.14.8-dagnazty';
 // Only protocol versions with a known compatible USB contract are accepted.
 export function parseBadgeInfo(line){
   const match=/^BADGE_INFO (0\.(?:[3456789]|10|11|12|13|14)\.\d+) (240|360|412|466|480) (READY|RADAR_ONLY|LITE) (.+)$/.exec(line);
@@ -51,6 +51,9 @@ export function hasMitmTheme(version){return firmwareAtLeast(version,'0.13.26');
 
 // Persistent ID 45: 44Delta, including its analog-only clock.
 export function hasDelta44Theme(version){return firmwareAtLeast(version,'0.13.41');}
+
+// Persistent IDs 46..48: DagNazty Dark and the two DagNazty digital themes (watches 49..51).
+export function hasDagNaztyDarkTheme(version){return firmwareAtLeast(version,'0.14.8');}
 
 // Persistent IDs 41..44: VectorPotential, Argyle, Law Lock Tools and Moki.
 export function hasLocksportCollection(version){return firmwareAtLeast(version,'0.13.38');}

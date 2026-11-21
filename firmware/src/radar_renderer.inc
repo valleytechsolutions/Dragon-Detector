@@ -77,6 +77,7 @@ static void prepareRadarBackdrop(lv_obj_t* parent,bool enabled){
 #include "lawlocktools_theme.inc"
 #include "moki_theme.inc"
 #include "delta44_theme.inc"
+#include "dagnazty_dark_theme.inc"
 static const char* radarFamilyName(Family f){
 #if SCREEN_RES<=240
   // Keep the family on one line, leaving the second line for signal/age.
@@ -168,7 +169,7 @@ static void radarDraw(lv_event_t* e){
   else if(radarTheme==19)radarSasquachArt(ctx);
   else if(radarTheme==20)radarNyanArt(ctx);
   else if(radarTheme==22)radarSeeedArt(ctx);
-  else if(radarTheme==23)radarDagArt(ctx);
+  else if(dagNaztyTheme(radarTheme))radarDagArt(ctx);
   else if(radarTheme==24)radarPigArt(ctx);
   else if(radarTheme==25)radarDeflockArt(ctx);
   else if(radarTheme>=26){} // Emblem is drawn once below the rings.

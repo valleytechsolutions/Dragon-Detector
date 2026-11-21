@@ -154,7 +154,7 @@ The owner supplied the unchanged [Seeed Studio PNG](media/theme-logos/seeed-stud
 
 ## DagNazty artwork · 0.13.6
 
-The owner supplied the unchanged [DagNazty skull artwork](media/theme-logos/dagnazty.jpg), originally `38539274.jpg`. Its light background is matched by the white-room palette; the original mark is circularly clipped on the radar/watch. The talon outlines, fang accents and analog hands are original native drawing code. The supplied artwork remains its owner’s work and is not covered by the project’s software license; inclusion does not imply endorsement.
+The owner supplied the unchanged [DagNazty skull artwork](media/theme-logos/dagnazty.jpg), originally `38539274.jpg`. Its light background is matched by the white-room palette; the original mark is circularly clipped on the radar/watch. The talon outlines, fang accents and analog hands are original native drawing code. DagNazty Dark (0.14.8) uses two derived images made by `tools/render_dagnazty_dark_art.py`: `dagnazty-dark.png` recolors the same artwork (bone skull, red sockets, blood-red hood and halo) for a black field, and `dagnazty-cutout.png` keeps the original colors with a transparent background for the larger watch skull. The supplied file is not modified. The supplied artwork remains its owner’s work and is not covered by the project’s software license; inclusion does not imply endorsement.
 
 ## 0ct0’s Pig and ASCII lettering · 0.13.6
 

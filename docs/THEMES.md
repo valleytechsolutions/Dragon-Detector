@@ -18,7 +18,7 @@ These are CRC-verified 466×466 logical display captures from the Waveshare, not
 
 Green radar (default), Dragon Ball and Black / gold / red keep their BWM1 logo. Existing active theme selections keep their saved IDs. Retired slot 40 falls back to Green on updated firmware; the web tools can still read it from older devices without changing settings until you explicitly save an active theme. Family-colored labels use the same [26 device-family colors](RADAR-COLORS.md) and leader lines. Since 0.13.22, each retained device gets a distinct shade within its family color range on every theme. Radio status, target count, battery indicator, RSSI placement, scan scheduling and badge images are unaffected by a theme change.
 
-USB names: `radar theme dragon`, `green`, `gold`, `valleytech`, `biscuit`, `marauder`, `toool`, `church`, `toool-dark`, `covert`, `awok`, `baph0mau5`, `wdgwars`, `ghoststrats`, `n3rdsec`, `halehound`, `waveshare`, `m5stack`, `lab5`, `sasquach`, `nyan`, `dmac`, `seeed`, `dagnazty`, `octo-pig`, `deflock`, `lpl`, `ghostbusters`, `lpu`, `hackazillarex`, `m33k-t3ch`, `capsule-corp`, `sparrows`, `dzaz`, `custom`, `can-commander`, `ogg`, `xombi`, `muldersrevenge`, `mitm`, `vectorpotential`, `argyle`, `lawlocktools`, `moki`, or `44delta` (prefix each with `radar theme`). `radar status` reports saved indices 0–45, with retired slot 40 skipped. VectorPotential, Argyle, Law Lock Tools, Moki and 44Delta keep IDs 41–45; custom is available only after installing a design. Unknown themes are rejected without changing the current selection.
+USB names: `radar theme dragon`, `green`, `gold`, `valleytech`, `biscuit`, `marauder`, `toool`, `church`, `toool-dark`, `covert`, `awok`, `baph0mau5`, `wdgwars`, `ghoststrats`, `n3rdsec`, `halehound`, `waveshare`, `m5stack`, `lab5`, `sasquach`, `nyan`, `dmac`, `seeed`, `dagnazty`, `octo-pig`, `deflock`, `lpl`, `ghostbusters`, `lpu`, `hackazillarex`, `m33k-t3ch`, `capsule-corp`, `sparrows`, `dzaz`, `custom`, `can-commander`, `ogg`, `xombi`, `muldersrevenge`, `mitm`, `vectorpotential`, `argyle`, `lawlocktools`, `moki`, `44delta`, `dagnazty-dark`, `dagnazty-digital`, or `dagnazty-dark-digital` (prefix each with `radar theme`). `radar status` reports saved indices 0–48, with retired slot 40 skipped. VectorPotential, Argyle, Law Lock Tools, Moki and 44Delta keep IDs 41–45, and the DagNazty additions are IDs 46–48; custom is available only after installing a design. Unknown themes are rejected without changing the current selection.
 
 ## TOOOL · 0.13.6
 
@@ -105,7 +105,13 @@ All nine themes below carry their colors through menus, settings, dialogs and ut
 | Nyan Devices / `nyan` | 20 / 23 | The original logo colors run through the dial and menus. A pixel Nyan Cat flies across the radar with a moving rainbow trail. |
 | DMAC / `dmac` | 21 / 24 | Teal, pink, charcoal and silver. Two acrylic McTickler profiles with copper inlays and pearl rivets tell the time; Utilities becomes Locksport Counter. |
 | Seeed Studio / `seeed` | 22 / 25 | Supplied circular logo, deep teal and lime, leaf-circuit traces and a unique Arabic analog watch. |
-| DagNazty / `dagnazty` | 23 / 26 | White field, black accents, original skull and a unique talon-and-fang analog watch. |
+| DagNazty / `dagnazty` | 23 / 26 | White field, black accents and the original skull. The fang dial has a large skull, a ring of fang hour markers (paired at the quarters), a crimson seconds trail around the bezel, drips off the rim and a fang-weighted seconds hand. |
+| DagNazty Dark / `dagnazty-dark` | 46 / 49 | Black field and blood-red interface. Uses the same fang dial in bone and blood red, with the skull recolored: bone skull, glowing red sockets, blood hood and a crimson halo. Firmware 0.14.8+. |
+
+| DagNazty Digital / `dagnazty-digital` | 47 / 50 | DagNazty colors with the digital fang clock (light). Firmware 0.14.8+. |
+| DagNazty Dark Digital / `dagnazty-dark-digital` | 48 / 51 | DagNazty Dark colors with the digital fang clock (dark). Firmware 0.14.8+. |
+
+The two digital themes open the digital watches; any theme can also swipe to them on the clock, or use `clock face 50` (light) and `clock face 51` (dark). Sixty rim fangs fill with blood red as the minute passes. The large 12-hour digits have a blood-red drop shadow and sit under the skull, followed by a dripping fang divider, seconds with AM/PM, and the weekday and date. Firmware 0.14.8+.
 | 0ct0’s Pig / `octo-pig` | 24 / 27 | Pink ASCII octopus, live speech-bubble time and interactive wandering pig. |
 | DeFlock / `deflock` | 25 / 28 | Navy and steel blue, camera-raven artwork, viewfinder radar and large 24-hour clock. |
 

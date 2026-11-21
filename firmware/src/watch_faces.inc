@@ -56,9 +56,12 @@ static const WatchPalette watches[]={
   {"Argyle",0xf5f5f2,0x111417,0x111417,0x525e65,true},
   {"Law Lock Tools",0xffffff,0x074567,0x008bc9,0x376783,true},
   {"Moki",0x000000,0xe2ffdd,0x34ff16,0x9dcf99,true},
-  {"44Delta",0x000000,0xe0f7fa,0x00dce4,0x9dbec5,true}
+  {"44Delta",0x000000,0xe0f7fa,0x00dce4,0x9dbec5,true},
+  {"DAGNAZTY DARK",0x050505,0xf2ead8,0xe8323f,0x6e1a22,true},
+  {"DAGNAZTY DIGITAL",0xf7f7f5,0x101010,0xa3121f,0x73736d,false},
+  {"DAGNAZTY DARK DIGITAL",0x050505,0xf2ead8,0xe8323f,0x6e1a22,false}
 };
-static constexpr uint8_t WatchFaces[]={0,1,2,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,44,45,46,47,48};
+static constexpr uint8_t WatchFaces[]={0,1,2,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,44,45,46,47,48,49,50,51};
 static constexpr unsigned WatchCount=sizeof(WatchFaces)/sizeof(WatchFaces[0]);
 static bool watchFaceAllowed(unsigned face){if(face==dragon::PersonalWatchId&&!personalThemeReady())return false;for(auto id:WatchFaces)if(id==face)return true;return false;}
 static unsigned watchFacePosition(){for(unsigned i=0;i<WatchCount;++i)if(WatchFaces[i]==watchFace)return i;return 0;}
@@ -298,6 +301,8 @@ static void watchDraw(lv_event_t* e){
   if(watchFace==MuldersRevengeWatch){muldersWatch(ctx,d,valid);return;}
   if(watchFace==LawLockToolsWatch){lltWatch(ctx,d,valid);return;}
   if(watchFace==Delta44Watch){delta44Watch(ctx,d,valid);return;}
+  if(watchFace==26||watchFace==DagNaztyDarkWatch){dagWatch(ctx,d,valid,watchFace==DagNaztyDarkWatch);return;}
+  if(watchFace==DagDigitalWatch||watchFace==DagDarkDigitalWatch){dagDigitalWatch(ctx,d,valid,watchFace==DagDarkDigitalWatch);return;}
   if(watchFace==MokiWatch){mokiWatch(ctx,d,valid);return;}
   if(watchFace==ArgyleWatch){argyleWatch(ctx,d,valid);return;}
   if(watchFace==VectorPotentialWatch){vpWatch(ctx,d,valid);return;}
@@ -316,7 +321,7 @@ static void watchDraw(lv_event_t* e){
   if(watchFace==12){watchCovert(ctx,d,valid);return;}
   watchRing(ctx,177,p.muted,2);watchRing(ctx,173,p.accent,2);watchRing(ctx,168,p.muted);watchRing(ctx,164,p.muted);for(int i=0;i<120;++i)watchRay(ctx,i/120.f,170,171,p.muted);
 
-  if(watchFace==13)watchAwok(ctx);else if(watchFace==14)watchBaph(ctx);else if(watchFace==15)watchWdg(ctx);else if(watchFace==16)watchGhost(ctx);else if(watchFace==17)watchN3rd(ctx);else if(watchFace==18)watchHale(ctx);else if(watchFace==19)watchWave(ctx);else if(watchFace==20)watchM5(ctx);else if(watchFace==21)watchLab(ctx);else if(watchFace==22)watchSasquach(ctx);else if(watchFace==23)watchNyan(ctx);else if(watchFace==24)watchDmac(ctx);else if(watchFace==25)watchSeeed(ctx);else if(watchFace==26)watchDag(ctx);else if(watchFace==9||watchFace==11)watchToool(ctx,p);else if(watchFace==1)watchValley(ctx,p);else if(watchFace==8)watchMechanism(ctx,p);
+  if(watchFace==13)watchAwok(ctx);else if(watchFace==14)watchBaph(ctx);else if(watchFace==15)watchWdg(ctx);else if(watchFace==16)watchGhost(ctx);else if(watchFace==17)watchN3rd(ctx);else if(watchFace==18)watchHale(ctx);else if(watchFace==19)watchWave(ctx);else if(watchFace==20)watchM5(ctx);else if(watchFace==21)watchLab(ctx);else if(watchFace==22)watchSasquach(ctx);else if(watchFace==23)watchNyan(ctx);else if(watchFace==24)watchDmac(ctx);else if(watchFace==25)watchSeeed(ctx);else if(watchFace==9||watchFace==11)watchToool(ctx,p);else if(watchFace==1)watchValley(ctx,p);else if(watchFace==8)watchMechanism(ctx,p);
   else if(watchFace==0){watchRing(ctx,119,0x332c23);watchRing(ctx,116,0x211e19);for(int i=0;i<48;++i)watchRay(ctx,i/48.f,109,112,0x2e2921);watchLogo(ctx,radar_logo,78);}
   else {watchLogo(ctx,radar_logo_marauder,75);for(int side:{-1,1}){int x=180+side*135;watchLine(ctx,x,146,x,213,p.muted);watchLine(ctx,x,146,x-side*12,146,p.accent);watchLine(ctx,x,213,x-side*12,213,p.accent);}}
   watchIndices(ctx,p);
@@ -334,14 +339,13 @@ static void watchDraw(lv_event_t* e){
       else if(watchFace==19){watchDauphine(ctx,hours,91,9,0xd8f79c,0x63862d);watchDauphine(ctx,minutes,121,6,0xffffff,0x8eaaa1);}
       else if(watchFace==20){watchDauphine(ctx,hours,91,9,0x92ddff,0x287cac);watchDauphine(ctx,minutes,121,6,0xffffff,0x99abb7);}
       else if(watchFace==25){watchDauphine(ctx,hours,90,8,0xc3e966,0x648a2c);watchDauphine(ctx,minutes,121,6,0xffffff,0x719b9f);}
-      else if(watchFace==26){watchDauphine(ctx,hours,88,8,0x343434,0x090909);watchDauphine(ctx,minutes,120,5,0x656560,0x151515);}
       else if(watchFace==24){dmacPick(ctx,hours,false);dmacPick(ctx,minutes,true);}
       else if(watchFace==22){sasquachArm(ctx,hours,82,false);sasquachArm(ctx,minutes,117,true);}
       else if(watchFace==17){watchDauphine(ctx,hours,91,10,0xffe5a3,0x9e7735);watchDauphine(ctx,minutes,121,7,0xffffff,0x9b9ca1);}
       else if(watchFace==15){watchDauphine(ctx,hours,88,8,0xec87f0,0x7a246e);watchDauphine(ctx,minutes,120,5,0xe9fcff,0x32a9bc);}
       else if(watchFace==0||watchFace==5||watchFace==6||watchFace==14){watchOrnateHand(ctx,hours,83,p.ink,p.bg);watchOrnateHand(ctx,minutes,117,p.accent,p.bg);}
       else {watchSpear(ctx,hours,84,7,p.bg,p.bg);watchSpear(ctx,minutes,118,5,p.bg,p.bg);watchSpear(ctx,hours,82,5,p.ink,p.accent);watchSpear(ctx,minutes,116,3,p.ink,p.accent);}
-      if(watchFace==22||watchFace==24||watchFace==26){auto second=watchPolar(d.second/60.f,163);disc(ctx,S(second.x),S(second.y),S(2),p.accent);}
+      if(watchFace==22||watchFace==24){auto second=watchPolar(d.second/60.f,163);disc(ctx,S(second.x),S(second.y),S(2),p.accent);}
       else {watchHand(ctx,d.second/60.f,131,25,1,p.accent);auto counter=watchPolar(d.second/60.f,-23);watchCircle(ctx,counter.x,counter.y,3,p.accent);}
       disc(ctx,CENTER,CENTER,S(7),p.bg);disc(ctx,CENTER,CENTER,S(5),p.accent);disc(ctx,CENTER,CENTER,S(2),p.ink);
     }else watchText(ctx,"SET YOUR TIME",70,169,220,F16,p.ink);
@@ -362,10 +366,12 @@ static void buildWatch(){
   watchDial=lv_obj_create(root);lv_obj_remove_style_all(watchDial);lv_obj_set_size(watchDial,SCREEN_RES,SCREEN_RES);lv_obj_clear_flag(watchDial,LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_GESTURE_BUBBLE);
   lv_obj_add_event_cb(watchDial,watchDraw,LV_EVENT_DRAW_MAIN,nullptr);lv_obj_add_event_cb(watchDial,watchGesture,LV_EVENT_GESTURE,nullptr);
   if(watchFace==27){pigFrameAt=millis();pigNextAt=millis();lv_obj_add_event_cb(watchDial,pigTap,LV_EVENT_CLICKED,nullptr);}
-  bool compact=watchFace==0||watchFace==10||watchFace==12||watchFace==27||watchFace==28||watchFace>=29;int y=watchFace==0?316:watchFace==27?315:(watchFace==12||watchFace==28||watchFace>=29)?326:watchFace==10?317:279,h=(watchFace==0||watchFace==12||watchFace==28||watchFace>=29)?21:27;
+  // DagNazty dials keep the wide button pair above their six o'clock fangs.
+  const bool dagDial=watchFace==26||watchFace==DagNaztyDarkWatch||watchFace==DagDigitalWatch||watchFace==DagDarkDigitalWatch;
+  bool compact=!dagDial&&(watchFace==0||watchFace==10||watchFace==12||watchFace==27||watchFace==28||watchFace>=29);int y=dagDial?279:watchFace==0?316:watchFace==27?315:(watchFace==12||watchFace==28||watchFace>=29)?326:watchFace==10?317:279,h=!dagDial&&(watchFace==0||watchFace==12||watchFace==28||watchFace>=29)?21:27;
   auto* b=button(watchDial,watchFace==27?"[+]":LV_SYMBOL_SETTINGS,watchFace==27?126:compact?145:108,y,watchFace==27?48:compact?34:44,h,160);auto* home=button(watchDial,watchFace==27?"[=]":LV_SYMBOL_LIST,watchFace==27?186:compact?181:208,y,watchFace==27?48:compact?34:44,h,2);
   for(auto* o:{b,home}){
-    if(watchFace>=29)lv_obj_set_y(o,S(watchFace==LawLockToolsWatch?310:watchFace>=34?326:310));
+    if(watchFace>=29&&!dagDial)lv_obj_set_y(o,S(watchFace==LawLockToolsWatch?310:watchFace>=34?326:310));
     lv_obj_set_style_pad_all(o,0,0);lv_obj_set_style_bg_opa(o,LV_OPA_TRANSP,0);lv_obj_set_style_border_width(o,0,0);
     auto* icon=lv_obj_get_child(o,0);lv_obj_set_style_text_font(icon,uiFont(F12),0);lv_obj_set_style_text_color(icon,color(watchFace==dragon::PersonalWatchId?themeUiColors(dragon::PersonalThemeId).muted:p.muted),0);lv_obj_center(icon);
   }

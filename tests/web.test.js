@@ -32,7 +32,7 @@ test('studio reads both legacy paged and 0.9.6+ single-screen radar settings',as
     const link={async write(command){assert.equal(command,'radar status');},async wait(match){const response=`RADAR_SETTINGS theme=2 labels=1 recent=1 ${tail}`;assert.ok(match(response));return response;}};
     assert.deepEqual(await readRadarSettings(link),{theme:'gold',labels:true,recent:true});
   }
-  const invalid={async write(){},async wait(){return 'RADAR_SETTINGS theme=46 labels=1 recent=1 pages=1 plotted=0 primary=-1';}};
+  const invalid={async write(){},async wait(){return 'RADAR_SETTINGS theme=49 labels=1 recent=1 pages=1 plotted=0 primary=-1';}};
   await assert.rejects(readRadarSettings(invalid),/Invalid radar settings/);
 });
 
@@ -100,7 +100,7 @@ test('Community themes require firmware 0.13.6 while preserving older branded th
 });
 
 test('radar settings read back every write, including when USB acknowledgment is held',async()=>{
-  const themes=['dragon','green','gold','valleytech','biscuit','marauder','toool','church','toool-dark','covert','awok','baph0mau5','wdgwars','ghoststrats','n3rdsec','halehound','waveshare','m5stack','lab5','sasquach','nyan','dmac','seeed','dagnazty','octo-pig','deflock','lpl','ghostbusters','lpu','hackazillarex','m33k-t3ch','capsule-corp','sparrows','dzaz','custom','can-commander','ogg','xombi','muldersrevenge','mitm',null,'vectorpotential','argyle','lawlocktools','moki','44delta'];
+  const themes=['dragon','green','gold','valleytech','biscuit','marauder','toool','church','toool-dark','covert','awok','baph0mau5','wdgwars','ghoststrats','n3rdsec','halehound','waveshare','m5stack','lab5','sasquach','nyan','dmac','seeed','dagnazty','octo-pig','deflock','lpl','ghostbusters','lpu','hackazillarex','m33k-t3ch','capsule-corp','sparrows','dzaz','custom','can-commander','ogg','xombi','muldersrevenge','mitm',null,'vectorpotential','argyle','lawlocktools','moki','44delta','dagnazty-dark','dagnazty-digital','dagnazty-dark-digital'];
   for(const [index,theme] of themes.entries()){
     if(theme===null)continue;
     const writes=[];let current={theme:index,labels:0,recent:1};
@@ -113,7 +113,7 @@ test('radar settings read back every write, including when USB acknowledgment is
   let writes=[];const link={write:async s=>writes.push(s),wait:async()=> 'RADAR_SETTINGS theme=0 labels=1 recent=0 pages=1 plotted=6 primary=-1'};
   await assert.rejects(saveRadarSettings(link,{theme:'unknown',labels:true,recent:true}),/Invalid/);assert.equal(writes.length,0);
   await assert.rejects(saveRadarSettings(link,{theme:'green',labels:true,recent:true}),/not saved/);assert.deepEqual(writes,['radar theme green','radar status','radar status']);
-  for(const theme of ['46','99','100','00','-1']){link.wait=async()=> 'RADAR_SETTINGS theme='+theme+' labels=1 recent=0 pages=1 plotted=6 primary=-1';await assert.rejects(readRadarSettings(link),/Invalid radar settings/);}
+  for(const theme of ['49','99','100','00','-1']){link.wait=async()=> 'RADAR_SETTINGS theme='+theme+' labels=1 recent=0 pages=1 plotted=6 primary=-1';await assert.rejects(readRadarSettings(link),/Invalid radar settings/);}
 });
 test('CRC matches firmware IEEE CRC-32 wire contract',()=>assert.equal(crc32(new TextEncoder().encode('123456789')),0xcbf43926));
 for(const size of [240,360,466,480])test(`DDB1 ${size}: header, exact size and RGB565 byte order`,()=>{
@@ -136,6 +136,20 @@ function mockPort(){
   let controller;const writes=[];
   return {writes,open:async()=>{},close:async()=>{},readable:new ReadableStream({start(c){controller=c;}}),writable:new WritableStream({write(b){writes.push(b);}}),emit(text){controller.enqueue(new TextEncoder().encode(text));},end(){controller.close();}};
 }
+test('native composite CDC asserts modem lines without resetting bridge boards',async()=>{
+  for(const info of [{usbVendorId:0x303a,usbProductId:2},{usbVendorId:0x303a,usbProductId:0x1001},{usbVendorId:0x1a86,usbProductId:0x55d4}]){
+    const port=mockPort(),signals=[];port.getInfo=()=>info;port.setSignals=async value=>signals.push(value);
+    const serial=new BadgeSerial(port);await serial.open();
+    assert.deepEqual(signals,info.usbProductId===2?[{dataTerminalReady:true,requestToSend:true}]:[]);
+    port.emit('CLOCK_OK\n');assert.equal(await serial.wait(line=>line==='CLOCK_OK'),'CLOCK_OK');await serial.close();
+  }
+});
+test('native CDC signal setup failure closes the port before taking stream locks',async()=>{
+  const port=mockPort();let closed=false;port.getInfo=()=>({usbVendorId:0x303a,usbProductId:2});
+  port.setSignals=async()=>{throw new Error('signals failed');};port.close=async()=>{closed=true;};
+  await assert.rejects(new BadgeSerial(port).open(),/signals failed/);
+  assert.equal(closed,true);assert.equal(port.readable.locked,false);assert.equal(port.writable.locked,false);
+});
 test('USB reader handles fragmented ACKs, ignores health lines, and keeps early responses',async()=>{
   const port=mockPort(),serial=new BadgeSerial(port);await serial.open();
   port.emit('HEALTH unrelated\nBADGE_AC');port.emit('K 10\nBADGE_OK\n');
@@ -284,7 +298,7 @@ test('MITM theme is offered only on compatible firmware',async()=>{
   for(const v of ['0.13.24','0.13.25','0.13.026','0.13.26junk',''])assert.equal(hasMitmTheme(v),false);
 });
 
-test('retired theme is absent from active controls and 44 built-in choices match firmware IDs',async()=>{
+test('retired theme is absent from active controls and 47 built-in choices match firmware IDs',async()=>{
   const compat=await import('../web/firmware-compat.js');
   assert.equal('hasHypnoticTheme' in compat,false);
   const html=readFileSync(new URL('../web/index.html',import.meta.url),'utf8');
@@ -293,10 +307,10 @@ test('retired theme is absent from active controls and 44 built-in choices match
   const catalog=readFileSync(new URL('../firmware/include/radar_theme_catalog.h',import.meta.url),'utf8');
   const commands=JSON.parse('['+catalog.split('radarThemeCommands[]={')[1].split('};')[0].replace(/\bnullptr\b/g,'null')+']');
   assert.ok(commands[40]===null||commands[40]==='','slot 40 must stay reserved without an active command');
-  assert.deepEqual(commands.slice(41),['vectorpotential','argyle','lawlocktools','moki','44delta']);
-  assert.equal(options.filter(x=>x!=='custom').length,44);
+  assert.deepEqual(commands.slice(41),['vectorpotential','argyle','lawlocktools','moki','44delta','dagnazty-dark','dagnazty-digital','dagnazty-dark-digital']);
+  assert.equal(options.filter(x=>x!=='custom').length,47);
   assert.deepEqual(options.sort(),commands.filter(Boolean).sort());
-  assert.doesNotMatch(html,/hypnotic|45 built-in themes/i);
+  assert.doesNotMatch(html,/hypnotic|46 built-in themes/i);
   assert.doesNotMatch(readFileSync(new URL('../web/app.js',import.meta.url),'utf8'),/hypnotic/i);
 });
 

@@ -85,7 +85,7 @@ static void setLitePage(LitePage next){
   lv_obj_set_style_text_font(pageValue,next==LitePage::Signals||next==LitePage::Status?&lv_font_montserrat_14:&lv_font_montserrat_22,0);
   lv_obj_set_y(pageValue,next==LitePage::Clock?158:next==LitePage::Timer?95:76);
   lv_obj_set_y(pageSub,next==LitePage::Clock?187:next==LitePage::Timer?138:171);
-  bool special=next==LitePage::Clock&&(radarTheme==0||radarTheme>=29);
+  bool special=next==LitePage::Clock&&(radarTheme==0||(radarTheme>=29&&!dagNaztyTheme(radarTheme)));
   if(radarLogo(radarTheme)&&!special&&!(next==LitePage::Radar&&(radarTheme==LawLockToolsTheme||radarTheme==MokiTheme||radarTheme==Delta44Theme||radarTheme==ArgyleTheme||radarTheme==VectorPotentialTheme||radarTheme==32||radarTheme==CanCommanderTheme||radarTheme==MuldersRevengeTheme||greenArtTheme(radarTheme))))lv_obj_clear_flag(logo,LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(logo,LV_OBJ_FLAG_HIDDEN);
   lv_obj_align(logo,LV_ALIGN_TOP_MID,0,9);
   lv_obj_set_style_img_recolor(logo,color(radarTheme==3?0xd6b46e:LltBlue),0);
