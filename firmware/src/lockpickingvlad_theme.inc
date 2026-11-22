@@ -1,14 +1,17 @@
 #include "pick_hands.inc"
-extern const lv_img_dsc_t vladPortrait;
+// The portrait, or nullptr when the packed 466 px copy could not be decoded (vlad_art.cpp).
+const lv_img_dsc_t* vladPortraitImage();
 
 static void vladDial(lv_draw_ctx_t* ctx, bool radar) {
   disc(ctx, CENTER, CENTER, S(180), 0x070708);
-  const int side = vladPortrait.header.w, inset = (SCREEN_RES - side) / 2;
-  lv_area_t bounds{lv_coord_t(inset), lv_coord_t(inset), lv_coord_t(inset+side-1), lv_coord_t(inset+side-1)};
-  lv_draw_img_dsc_t image;
-  lv_draw_img_dsc_init(&image);
-  image.opa = radar ? 196 : LV_OPA_COVER;
-  lv_draw_img(ctx, &image, &bounds, &vladPortrait);
+  if (const lv_img_dsc_t* portrait = vladPortraitImage()) {
+    const int side = portrait->header.w, inset = (SCREEN_RES - side) / 2;
+    lv_area_t bounds{lv_coord_t(inset), lv_coord_t(inset), lv_coord_t(inset+side-1), lv_coord_t(inset+side-1)};
+    lv_draw_img_dsc_t image;
+    lv_draw_img_dsc_init(&image);
+    image.opa = radar ? 196 : LV_OPA_COVER;
+    lv_draw_img(ctx, &image, &bounds, portrait);
+  }
   capsuleRing(ctx, 176, 0xb38a43);
   capsuleRing(ctx, 173, 0x584427);
   for (int i=0; i<60; ++i) {
