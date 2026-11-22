@@ -10,6 +10,11 @@ void waveshare185bI2cUnlock();
 bool waveshare185bI2cRead(uint8_t address, uint8_t reg, uint8_t* data, size_t count);
 bool waveshare185bI2cWrite(uint8_t address, uint8_t reg, const uint8_t* data, size_t count);
 void waveshare185bDiagnostics();
+// Called on the LVGL thread. Deliver waiting touch data before redrawing and
+// cancel old gestures before replacing the objects that received their press.
+bool waveshare185bServicePointer();
+void waveshare185bResetPointer();
+bool waveshare185bUsesStagedDisplay();
 // UI owns navigation state; the driver supplies only fresh physical key events.
 void ui185bCycle();
 void ui185bHome();

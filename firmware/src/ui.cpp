@@ -393,6 +393,9 @@ static void show185bResources(){
 }
 #endif
 static void build(){
+#ifdef BOARD_WAVESHARE_185B
+  waveshare185bResetPointer();
+#endif
 #ifdef BOARD_WATCHER
   rotaryUiReset();
 #endif
@@ -1033,6 +1036,10 @@ void uiLoop(){
     if(page!=Recon&&pending!=Recon){reconPage("wardrive");pending=Recon;}
   }
   if(page==BadUsb&&badusbStatus().running)lastInteraction=millis();
+#ifdef BOARD_WAVESHARE_185B
+  // Process the tap on the visible page before updating or painting that page.
+  if(page==pending)waveshare185bServicePointer();
+#endif
   uint32_t idle=millis()-lastInteraction;
   int level=detector.offSeconds&&idle>=uint32_t(detector.offSeconds)*1000?0:detector.dimSeconds&&idle>=uint32_t(detector.dimSeconds)*1000?detector.idleBrightness:brightness;
   if(level!=outputBrightness){outputBrightness=level;set_brightness(level);}
