@@ -8,6 +8,7 @@
 - **DagNazty Dark** (theme 46, watch 49), **DagNazty Digital** (47, watch 50) and **DagNazty Dark Digital** (48, watch 51), and a redesigned DagNazty analog dial, by Dag.
 - **LockpickingVlad** (theme 49, watch 52): eagle and padlock portrait, gold McTickler sweep, lockpick hands and the locksport timer. Its local test build used 46 and 49; those IDs stay with the published DagNazty themes.
 - The Dial's Tools menu lists Modes and then BadUSB; a refused node start under Modes scrolls its full reason again.
+- Waveshare 1.85B: touch reset and retry, and taps made during a radar redraw are kept for the page they were made on. SenseCAP Watcher: separate touch and wheel polling, touch-bus recovery with backoff, one pending wheel move with no backlog, touch priority over queued wheel input, `watcher touch recover` and input counters. Both were prepared for 0.14.3 and are first released here.
 - The streamlined web flasher and Badge Studio artwork repair; old detector-tool bookmarks open the installer. The DagNazty compatibility check starts at 0.14.9.
 
 ## 0.14.8

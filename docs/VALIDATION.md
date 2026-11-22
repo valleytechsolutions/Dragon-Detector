@@ -9,7 +9,8 @@ Automated and compile checks only; see the [0.14.9 notes](RELEASE-0.14.9.md#vali
 No 0.14.9 build has run on hardware. Still to confirm: BadUSB typing from
 keyboard mode on each native-USB board, BISCUIT NODE and JCMK Node on the
 combined build (including their refusals in keyboard mode), and the DagNazty
-and LockpickingVlad faces on panels other than the 1.85B.
+and LockpickingVlad faces on panels other than the 1.85B, the 1.85B touch
+queue and the Watcher touch and wheel changes.
 
 ## 0.14.8 · node release checks
 

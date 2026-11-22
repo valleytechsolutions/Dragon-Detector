@@ -77,6 +77,23 @@ next free IDs. A board that ran that test build shows DagNazty Dark after this
 update until LockpickingVlad is chosen again. The firmware cannot tell the two
 apart in saved settings, so there is no automatic migration.
 
+## Waveshare 1.85B and SenseCAP Watcher input
+
+Two input repairs that were prepared for 0.14.3 but never released are now
+included:
+
+- **Waveshare 1.85B touch.** The CST816-family touch controller gets a reset and
+  retry, and a tap made while the radar redraws is kept and acted on for the
+  page it was made on, instead of being lost or landing on the next page.
+- **SenseCAP Watcher touch and wheel.** Touch and the wheel button are polled
+  separately. A touch fault restarts only the touch bus, with a backoff. Wheel
+  turns move focus one detent at a time with no backlog after a slow frame, and
+  a touch cancels a queued wheel action. `watcher touch recover` restarts the
+  touch bus on request, and `watcher status` adds input counters.
+
+On both boards the node screen keeps its own controls: the 1.85B BOOT hold and
+the Watcher knob hold ask to leave, and nothing else reaches the page.
+
 ## Web flasher
 
 - The streamlined install page and the Badge Studio artwork repair that are
