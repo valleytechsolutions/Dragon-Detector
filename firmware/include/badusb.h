@@ -22,6 +22,9 @@ bool badusbSelect(unsigned);
 // mode: starts typing the selected script.
 bool badusbRun();
 void badusbStop();
+// Frees the idle script buffer (not in keyboard mode, a run or an upload); the next
+// refresh selects the same script again. A node start calls it.
+void badusbRelease();
 bool badusbKeyboardMode();
 // Leave keyboard mode: restarts into the normal USB serial firmware.
 void badusbExitKeyboard();

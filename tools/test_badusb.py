@@ -53,6 +53,10 @@ struct SerialPort {
 } Serial;
 bool driveBusy=false,uploadBusy=false,storageBusy=false,nodeRunning=false;
 bool nodeBusy(){return nodeRunning;} // BISCUIT NODE / JCMK Node session (node_mode.cpp)
+struct {bool running=false;} stopwatch; // timing that a restart would lose
+bool reconRadio=false,labRadio=false;
+bool reconOwnsRadio(){return reconRadio;}
+bool bleLabOwnsRadio(){return labRadio;}
 bool wardriveBusy(){return driveBusy;}
 bool wardriveUploadBusy(){return uploadBusy;}
 bool reconStorageBusy(){return storageBusy;}
@@ -156,7 +160,7 @@ inline const char* keyboardScript(){return mockScript.c_str();}
 }
 ''')
 for header in ['Arduino.h', 'app.h', 'recon.h', 'wardrive.h', 'wardrive_upload.h',
-               'node_mode.h', 'LittleFS.h', 'USB.h', 'USBHIDKeyboard.h']:
+               'node_mode.h', 'ble_lab.h', 'LittleFS.h', 'USB.h', 'USBHIDKeyboard.h']:
     (WORK / header).write_text('#pragma once\n#include "runtime.h"\n')
 
 tests = r'''
@@ -168,7 +172,7 @@ static std::string hexadecimal(const std::string& source){std::string out;const 
 static void stage(const char* name,const std::string& text){assert(ok(std::string("badusb upload ")+name+" "+std::to_string(text.size())));assert(ok("badusb chunk 0 "+hexadecimal(text)));}
 static void reset(bool card=true){
   runner.stop();runner=dragon::badusb::Runner{};cancelUpload();selected=false;selectedName[0]=0;scriptLength=0;releasePending=false;linkLost=false;
-  onCard=storageReady=false;fileCount=1;memset(names,0,sizeof(names));
+  onCard=storageReady=false;fileCount=1;memset(names,0,sizeof(names));strlcpy(names[0],"demo.txt",sizeof(names[0]));releasedName[0]=0;stopwatch.running=reconRadio=labRadio=false;
   now=0;driveBusy=uploadBusy=storageBusy=nodeRunning=false;LittleFS={};CardFS={};sdReady=card;
   connected=true;sends=disconnectOnSend=failOnSend=keyboardBegins=0;sentReports.clear();Serial.output.clear();USB.callback=nullptr;USB.begins=0;
   dragon::badusb::mockKeyboard=true;dragon::badusb::mockScript.clear();
@@ -239,7 +243,19 @@ static void modes(){
   assert(rejected("badusb keyboard")&&badusbStatus().message==std::string("Stop the node first"));
   assert(rejected("badusb select demo.txt")&&rejected("badusb list")&&rejected("badusb upload node.txt 6")&&!uploadLength);
   assert(!badusbRun()&&!badusbSelect(0)&&ok("badusb stop")&&ok("badusb cancel"));badusbLoop();assert(sends==0&&!runner.running());
-  nodeRunning=false;r=restart([]{command("badusb keyboard");});assert(r.keyboard&&r.script=="demo.txt"&&sends==0);
+  nodeRunning=false;
+  // The keyboard restart would cut off timing or a radio session, as `system restart` would: refused.
+  for(unsigned reason=0;reason<3;++reason){if(reason==0)stopwatch.running=true;if(reason==1)reconRadio=true;if(reason==2)labRadio=true;
+    assert(rejected("badusb keyboard")&&badusbStatus().message==std::string("Stop timing and radio sessions first"));assert(!badusbRun()&&sends==0);
+    assert(ok("badusb select demo.txt"));stopwatch.running=reconRadio=labRadio=false;}
+  r=restart([]{command("badusb keyboard");});assert(r.keyboard&&r.script=="demo.txt"&&sends==0);
+  // A node starting releases the idle 8 KB buffer; the next refresh selects the same script again.
+  reset();dragon::badusb::mockKeyboard=false;badusbBegin();stage("keep.txt","ENTER\n");assert(ok("badusb save")&&ok("badusb select keep.txt")&&script);
+  badusbRelease();assert(!script&&!badusbStatus().selected);badusbRefresh();assert(script&&badusbStatus().selected&&!strcmp(badusbStatus().name,"keep.txt"));
+  assert(ok("badusb upload busy.txt 6"));badusbRelease();assert(script&&uploadLength);assert(ok("badusb cancel"));
+  // A node resumed before badusbBegin() skips the first refresh; the demo is still listed and selectable.
+  reset();dragon::badusb::mockKeyboard=false;memset(names,0,sizeof(names));strlcpy(names[0],"demo.txt",sizeof(names[0]));fileCount=1;nodeRunning=true;badusbBegin();nodeRunning=false;
+  assert(badusbCount()==1&&ok("badusb select demo.txt"));
   // Keyboard boot: the selection is restored, but the script waits for Run.
   reset();dragon::badusb::mockScript="demo.txt";keyboardBegins=USB.begins=0;sentReports.clear();sends=0;selected=false;badusbBegin();
   assert(keyboardBegins==1&&USB.begins==1&&badusbStatus().keyboardMode&&badusbStatus().selected&&!strcmp(badusbStatus().name,"demo.txt"));

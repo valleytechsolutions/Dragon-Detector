@@ -119,6 +119,7 @@ bool startSession(NodeKind kind){
     missionStop();
 #endif
     reconStop();setCapture(false);audioStop();
+    badusbRelease();   // BadUSB's idle 8 KB script buffer; it is read again when BadUSB opens
     if(foxTransmit())setFoxTransmit(false);
     // Only a capture file still being finalised, or a Lab connection still closing, is waited for.
     if(reconStorageBusy()){say("Saving the capture; try again in a moment");return false;}

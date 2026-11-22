@@ -105,7 +105,7 @@ test('Community themes require firmware 0.13.6 while preserving older branded th
 });
 
 test('radar settings read back every write, including when USB acknowledgment is held',async()=>{
-  const themes=['dragon','green','gold','valleytech','biscuit','marauder','toool','church','toool-dark','covert','awok','baph0mau5','wdgwars','ghoststrats','n3rdsec','halehound','waveshare','m5stack','lab5','sasquach','nyan','dmac','seeed','dagnazty','octo-pig','deflock','lpl','ghostbusters','lpu','hackazillarex','m33k-t3ch','capsule-corp','sparrows','dzaz','custom','can-commander','ogg','xombi','muldersrevenge','mitm',null,'vectorpotential','argyle','lawlocktools','moki','44delta','dagnazty-dark','dagnazty-digital','dagnazty-dark-digital'];
+  const themes=['dragon','green','gold','valleytech','biscuit','marauder','toool','church','toool-dark','covert','awok','baph0mau5','wdgwars','ghoststrats','n3rdsec','halehound','waveshare','m5stack','lab5','sasquach','nyan','dmac','seeed','dagnazty','octo-pig','deflock','lpl','ghostbusters','lpu','hackazillarex','m33k-t3ch','capsule-corp','sparrows','dzaz','custom','can-commander','ogg','xombi','muldersrevenge','mitm',null,'vectorpotential','argyle','lawlocktools','moki','44delta','dagnazty-dark','dagnazty-digital','dagnazty-dark-digital','lockpickingvlad'];
   for(const [index,theme] of themes.entries()){
     if(theme===null)continue;
     const writes=[];let current={theme:index,labels:0,recent:1};

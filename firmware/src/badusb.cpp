@@ -8,6 +8,7 @@
 #include "badusb_script.h"
 #include "flash_budget.h"
 #include "recon.h"
+#include "ble_lab.h"
 #include "wardrive.h"
 #include "wardrive_upload.h"
 #include "node_mode.h"
@@ -27,9 +28,9 @@ USBHID reports;
 dragon::badusb::Runner runner;
 constexpr unsigned FileLimit=24;
 constexpr char Demo[]="REM Open an empty text editor before pressing Run.\nDELAY 3000\nSTRINGLN Dragon Detector USB keyboard test.\n";
-char names[FileLimit][33]{};
+char names[FileLimit][33]{"demo.txt"}; // the built-in demo is listed from boot, even when a resumed node skips the first refresh
 unsigned fileCount=1;
-char selectedName[33]{},uploadName[33]{},message[128]="Select a script; open a text editor for the demo";
+char selectedName[33]{},releasedName[33]{},uploadName[33]{},message[128]="Select a script; open a text editor for the demo";
 char* script=nullptr;
 size_t scriptLength=0,uploadLength=0,uploadReceived=0;
 uint32_t uploadAt=0;
@@ -39,6 +40,8 @@ void say(const char* text){strlcpy(message,text,sizeof(message));}
 // A running node owns the radios and the device: no selection, keyboard restart or typing.
 bool busy(){return nodeBusy()||wardriveBusy()||wardriveUploadBusy()||reconStorageBusy();}
 const char* busyReason(){return nodeBusy()?"Stop the node first":"Stop the active session first";}
+// The restart into keyboard mode ends whatever runs, like `system restart`, which refuses the same sessions.
+bool restartBlocked(){return busy()||stopwatch.running||reconOwnsRadio()||bleLabOwnsRadio();}
 bool memory(){if(!script)script=static_cast<char*>(malloc(dragon::badusb::MaxScriptBytes+1));if(!script)say("Script memory unavailable");return script;}
 fs::FS* filesystem(){
 #if BOARD_HAS_SD
@@ -127,8 +130,8 @@ void badusbBegin(){
     say(selected?"Keyboard mode / press Run to type":"Keyboard mode / select a script");
   }
 }
-void badusbRefresh(){
-  if(runner.running()||uploadLength||busy())return;
+namespace {
+void listScripts(){
   strlcpy(names[0],"demo.txt",sizeof(names[0]));fileCount=1;
   auto* fs=filesystem();if(!fs)return;CardLock lock;
   if(!fs->exists(directory())&&!fs->mkdir(directory()))return;
@@ -140,6 +143,13 @@ void badusbRefresh(){
   }
   dir.close();
   for(unsigned i=1;i<fileCount;++i)for(unsigned j=i+1;j<fileCount;++j)if(strcmp(names[i],names[j])>0){char tmp[33];memcpy(tmp,names[i],33);memcpy(names[i],names[j],33);memcpy(names[j],tmp,33);}
+}
+}
+void badusbRefresh(){
+  if(runner.running()||uploadLength||busy())return;
+  listScripts();
+  // After badusbRelease(): select the same script again (the card lock is free again here).
+  if(!selected&&releasedName[0]){char wanted[33];strlcpy(wanted,releasedName,sizeof(wanted));releasedName[0]=0;for(unsigned i=0;i<fileCount;++i)if(!strcmp(names[i],wanted)){badusbSelect(i);break;}}
 }
 unsigned badusbCount(){return fileCount;}
 const char* badusbName(unsigned i){return i<fileCount?names[i]:"";}
@@ -163,7 +173,10 @@ bool badusbRun(){
   if(!selected||uploadLength||busy()){say("Select a valid script and finish other sessions");return false;}
   // Normal mode: restart as a USB keyboard with this script selected. The
   // script still waits for a second, explicit Run press after the restart.
-  if(!badusbKeyboardMode()){say("Restarting as USB keyboard");dragon::badusb::restartIntoKeyboard(selectedName);return false;}
+  if(!badusbKeyboardMode()){
+    if(restartBlocked()){say("Stop timing and radio sessions first");return false;}
+    say("Restarting as USB keyboard");dragon::badusb::restartIntoKeyboard(selectedName);return false;
+  }
   if(!reports.ready()||!release()){say("Connect native USB to an awake host");return false;}
   linkLost=false;
   dragon::badusb::Error error{};
@@ -171,6 +184,12 @@ bool badusbRun(){
   say("Running / Stop releases all keys");return true;
 }
 void badusbStop(){runner.stop();release();say("Stopped / press Run to start again");}
+void badusbRelease(){
+  // A node needs the internal heap more than an idle selection does (the Dial has no PSRAM).
+  if(badusbKeyboardMode()||runner.running()||uploadLength||!script)return;
+  if(selected)strlcpy(releasedName,selectedName,sizeof(releasedName));
+  free(script);script=nullptr;scriptLength=0;selected=false;selectedName[0]=0;
+}
 void badusbExitKeyboard(){
   if(!badusbKeyboardMode())return;
   runner.stop();release();say("Restarting as USB serial");dragon::badusb::restartIntoSerial();
@@ -199,6 +218,7 @@ bool badusbCommand(const String& c){
   // Switching modes never starts a script; Run is still pressed on the detector.
   if(c=="badusb keyboard"){if(badusbKeyboardMode()){say("Already in keyboard mode");reply(false);return true;}
     if(uploadLength){say("Finish or cancel the upload first");reply(false);return true;}
+    if(restartBlocked()){say("Stop timing and radio sessions first");reply(false);return true;}
     say("Restarting as USB keyboard");reply(true);Serial.flush();dragon::badusb::restartIntoKeyboard(selected?selectedName:"");}
   if(c.startsWith("badusb upload ")){
     const char* input=c.c_str()+14;const char* split=strchr(input,' ');char name[33]{};size_t length=0;
@@ -246,6 +266,7 @@ const char* badusbName(unsigned){return "";}
 bool badusbSelect(unsigned){return false;}
 bool badusbRun(){return false;}
 void badusbStop(){}
+void badusbRelease(){}
 const char* badusbPreview(){return "";}
 BadUsbStatus badusbStatus(){return {false,false,false,0,"",badusbUnavailableReason(),"unavailable",false};}
 bool badusbKeyboardMode(){return false;}

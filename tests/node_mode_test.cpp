@@ -124,7 +124,8 @@ bool wardriveUploadBusy(){return sim::upload;}
 #include "../firmware/src/node_mode.cpp"
 
 // BadUSB (badusb.cpp): keyboard mode is decided at boot; a script types only in it.
-namespace sim {bool keyboardMode=false,scriptRunning=false;}
+namespace sim {bool keyboardMode=false,scriptRunning=false;int badusbReleases=0;}
+void badusbRelease(){++sim::badusbReleases;}
 bool badusbKeyboardMode(){return sim::keyboardMode;}
 BadUsbStatus badusbStatus(){BadUsbStatus s{};s.keyboardMode=sim::keyboardMode;s.running=sim::scriptRunning;s.connected=sim::keyboardMode;s.name=s.message=s.medium="";return s;}
 
@@ -379,6 +380,9 @@ static void testBadUsb(){
   // Skipped keyboard boots do not count as quick restarts of a resumed node.
   for(int i=0;i<4;++i){sim::keyboardMode=true;reboot(ESP_RST_SW);assert(!nodeBusy());sim::keyboardMode=false;reboot(ESP_RST_SW);assert(nodeBusy());sim::now+=60000;nodeLoop();}
   run("node stop");sim::keyboardMode=true;reboot(ESP_RST_SW);assert(sim::log.empty()&&!nodeBusy());sim::keyboardMode=false;
+  // A node start frees BadUSB's idle script memory; a refused one leaves it alone.
+  const int releases=sim::badusbReleases;sim::scriptRunning=true;run("node jcmk");assert(sim::badusbReleases==releases);sim::scriptRunning=false;
+  run("node jcmk");assert(nodeBusy()&&sim::badusbReleases==releases+1);run("node stop");
 }
 
 int main(){
