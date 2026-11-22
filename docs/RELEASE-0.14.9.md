@@ -104,7 +104,12 @@ Run on the combined source on November 22, 2026, on Windows with PlatformIO
   AddressSanitizer.
 - **Renders:** the node screen at every panel size (84 images, no layout
   problems) and the production Dial and Lite screens passed.
-- **Builds:** BUILD-RESULTS
+- **Builds:** all 14 board profiles (the 13 stable boards and the Guition
+  beta) compiled and packaged from one commit, and every application fits its
+  slot with the 5% reserve. The tightest are the Waveshare 1.75 (3,915,824 of
+  4,194,304 bytes, 6.64% free), the 1.75-G (6.94%), the XIAO Round (7.53%) and
+  the StopWatch (9.02%). The release validator, the browser manifest check and
+  the Dial package test passed.
 
 The size check caught one integration problem: with BadUSB and the DagNazty
 art added, the Waveshare 1.75 and 1.75-G images overran the 5% reserve of their
