@@ -3,18 +3,26 @@
 Codex, Claude and any other agent working in this repository follow this file.
 `CLAUDE.md` only points here.
 
-## Standing rules from the owner (November 17, 2026)
+## Standing rules from the owner (November 17, 2026; GitHub releases added November 22, 2026)
 
 These replace any older instruction in a local `CLAUDE.md`, a notes file or a
 chat history that says to push, tag or publish source.
 
-- **No pushes to GitHub or any other git host.** Never run `git push`, never
-  open a pull request, never create a tag or release on a host, and never
-  upload source, bundles or archives anywhere. Commits stay in the local
-  repository. This covers GitHub, Gitea and every other remote.
-- **Releases ship only through the web flasher** (Cloudflare Pages project
-  `valleytech-dragon-detector`, https://valleytech-dragon-detector.pages.dev/).
-  The steps are under [Release a web flasher update](#release-a-web-flasher-update).
+- **Agents do not push or publish.** Never run `git push`, never open a pull
+  request, never create a tag or release on a host, and never upload source,
+  bundles or archives anywhere unless the owner asks for that exact step in
+  the session. Commits stay in the local repository. This covers GitHub, Gitea
+  and every other remote.
+- **Releases ship through the web flasher and GitHub Releases.** The web
+  flasher is the Cloudflare Pages project `valleytech-dragon-detector`,
+  https://valleytech-dragon-detector.pages.dev/; the steps are under
+  [Release a web flasher update](#release-a-web-flasher-update). GitHub
+  Releases come from `.github/workflows/build.yml`: when the owner pushes a new
+  `DRAGON_VERSION` to `main` and all 13 stable boards build, its `release` job
+  creates release `v<version>` with `docs/RELEASE-<version>.md` as the notes and
+  each board's ZIP plus `SHA256SUMS.txt`. It never replaces an existing
+  release, so a version number is published once. The Guition beta stays a
+  separate workflow artifact.
 - **Say nothing public about it.** Do not add a notice to the README, the docs
   or the website about where the source lives, do not archive or rename the
   repository, and leave existing links alone unless the owner asks.
@@ -45,7 +53,7 @@ The owner set this showcase preference on October 20, 2026:
 ## Release a web flasher update
 
 The site is built from this repository plus the firmware packages built here.
-Nothing comes from GitHub Actions any more. Run every step from the repository
+The web flasher does not take files from GitHub Actions. Run every step from the repository
 root. On the owner's Windows PC, use PlatformIO's Python:
 
 ```powershell
@@ -64,7 +72,8 @@ $py = "$env:USERPROFILE\.platformio\penv\Scripts\python.exe"
    yet confirmed on hardware), and point the "Latest release" link in
    `README.md` and the release-notes link and version line in
    `docs/HOSTING-STATUS.md` at it.
-4. Commit locally. Do not push.
+4. Commit locally. Do not push; the owner pushes to `main`, which also
+   publishes the GitHub release for the new version.
 
 ### 2. Tests
 

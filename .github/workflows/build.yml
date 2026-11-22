@@ -98,3 +98,72 @@ jobs:
           name: dragon-detector-${{ matrix.board }}
           path: web/firmware/${{ matrix.board }}
           if-no-files-found: error
+  # Publishes a GitHub release for each new DRAGON_VERSION that reaches main.
+  # Runs only after every board built and passed; an existing release is never
+  # replaced, so re-runs and later commits on the same version do nothing.
+  release:
+    needs: build
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: github-release
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Read version
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(sed -n 's/^#define DRAGON_VERSION "\([0-9.]*\)"$/\1/p' firmware/include/dragon_version.h)
+          test -n "$version" || { echo "::error::DRAGON_VERSION not found"; exit 1; }
+          test -f "docs/RELEASE-$version.md" || { echo "::error::docs/RELEASE-$version.md is missing"; exit 1; }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if gh release view "v$version" >/dev/null 2>&1; then
+            echo "Release v$version already exists; nothing to publish."
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        if: steps.version.outputs.exists == 'false'
+        with:
+          pattern: dragon-detector-*
+          path: dist
+      - name: Check packages and collect release files
+        if: steps.version.outputs.exists == 'false'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib, shutil
+          version = os.environ['VERSION']
+          dist, out = pathlib.Path('dist'), pathlib.Path('release')
+          out.mkdir()
+          folders = sorted(p for p in dist.iterdir() if p.is_dir())
+          assert len(folders) == 13, f'expected 13 board packages, found {len(folders)}'
+          sums = []
+          for folder in folders:
+              board = folder.name.removeprefix('dragon-detector-')
+              info = json.loads((folder / 'build-info.json').read_text())
+              assert info.get('version') == version, f'{board}: package version {info.get("version")}, expected {version}'
+              zips = list(folder.glob('*.zip'))
+              assert len(zips) == 1, f'{board}: expected one ZIP, found {len(zips)}'
+              target = out / f'dragon-detector-{board}-{version}.zip'
+              shutil.copyfile(zips[0], target)
+              sums.append(f'{hashlib.sha256(target.read_bytes()).hexdigest()}  {target.name}')
+          (out / 'SHA256SUMS.txt').write_text('\n'.join(sums) + '\n')
+          print('\n'.join(sums))
+          PY
+      - name: Publish release
+        if: steps.version.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          gh release create "v$VERSION" release/* \
+            --target "$GITHUB_SHA" \
+            --title "Dragon Detector $VERSION" \
+            --notes-file "docs/RELEASE-$VERSION.md"
