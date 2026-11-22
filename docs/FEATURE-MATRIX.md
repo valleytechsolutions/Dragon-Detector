@@ -47,7 +47,7 @@ All five also accept one optional [personal logo theme](CUSTOM-THEME.md) from th
 | AirTag identity replay | BLE Lab legacy advertisement replay; optional random-static identity only; no keys or rotating-identity cryptography |
 | Find My Beeper | Direct, selected AirTag/FMNA/DULT request under Attacks → BLE attacks; response handling and cleanup; actual AirTag beep confirmed on 1.75C |
 | Spoof iBeacon | Configurable UUID, major/minor and measured power; selected-advertisement field copy; stable timed payload |
-| CSI motion monitor | Experimental independent amplitude-shape monitor; calibrated signal-change score, low-data state and 120-point CSV. No phase-fusion equivalence or occupancy guarantee |
+| CSI motion monitor | Experimental **Room motion** mode with the model ported from Marauder's MIT `CsiMotionModel` (amplitude, decorrelation and phase features), tone mask, Hampel spike rejection, STILL / MOTION / HOLD / LOW DATA, placement margin, PHY traffic diagnosis, detector-moved heuristic, 120-point CSV and last 12 motion intervals. Passive only; no occupancy, count, position or through-wall claim |
 | Save/load SSIDs, custom HTML, capture browser | Recon flash playlist/template/capture library; checked browser download and individual deletion |
 | Recon missions / desktop tool | Named sessions with independently encoded RCN1/PRB1/REL1 files and checked ZIP download; no GPS fix. External desktop integration is not yet tested |
 | Join / saved network profiles / IP ping scan | Connected network: eight explicit profiles, DHCP/IP/gateway/DNS, gateway ping, at most 254 local-subnet addresses, CSV; optional saved-Wi-Fi clock recovery; ordinary reconnection remains explicit |
@@ -82,6 +82,10 @@ SquachWatch pets/games/chat and social systems remain outside the user's detecto
 
 Waveshare AMOLED, M5Stack StopWatch, Spotpear and XIAO Round share the passive Recon Notebook: full bounded advertisements, common protocol metadata, probe-request inventory, protocol counters and CSV. Hunt now preserves both radios and a complete Wi-Fi sweep, including under delayed rendering. Normal USB badge/history/SD transfers cooperate with detection. All four full boards expose the 29-format toolkit in 0.13. [Details](RECON-NOTEBOOK.md).
 
+| Shared radar feature | Full boards | Waveshare Lite | M5Stack Dial |
+|---|---|---|---|
+| [BLE radios near](RADAR-AND-ACTIVITY.md#ble-radios-near): count of BLE addresses heard at a strong level; not people, not a distance, no alert or log | Radar line, Radio activity text, Settings on/off and level, USB `radar near` | Radar line, USB `radar near` only | Radar line, USB `radar near` only |
+
 The [budget report](FLASH-BUDGET.md) separates app slots, OTA allocation and user storage. The unsupported/unimplemented rows above remain explicit work or hardware limits.
 
 The [0.13 guide](RECON-013.md) documents session, recipe, archive, HID and bridge limits. USB BadUSB/DuckyScript and Chimera JSON protocol compatibility remain unimplemented; unsupported radio bands and external GPS require different hardware.
@@ -102,3 +106,12 @@ This full profile shares the detector, radio tools, BLE Lab, themes, badge and t
 ## Waveshare AMOLED 1.43C · 0.14.7
 
 This full profile shares the detector, radio tools, BLE Lab, themes, badge and timing workflows on a 466 px touch AMOLED with 8 MB PSRAM. Its 8 MB flash gives 3.94 MiB of internal storage, so captures are limited to 1 MiB and recon sessions to 256 KiB. There is no SD slot, RTC or GPS: saved files download over USB, and the clock needs USB or saved-Wi-Fi recovery after power loss. Sound needs a speaker on the board's connector. BOOT navigates and runs the timer; PWR is a hardware power button. [Setup and physical validation](WAVESHARE-AMOLED-143C.md).
+
+## Wardriving node modes · unreleased
+
+| Node mode | Full boards | Waveshare Lite | M5Stack Dial |
+|---|---|---|---|
+| [BISCUIT NODE](NODE-MODES.md): scan-only node for a Biscuit in Extended mode; sends Wi-Fi only, 2.4 GHz channels 1 to 11; the Biscuit adds the position | Tools → Modes; tap EXIT then CONFIRM, or, where the board reports a hold (1.75C, 1.85B and 1.43C BOOT, CrowPanel 2.1 and Watcher knob), hold, then hold again or tap CONFIRM within 5 s; quick presses never leave; USB `node biscuit` | No Tools menu: Hold BOOT to the MODES page; Tap picks, Double tap starts; on the node screen Hold, then Hold again within 5 s, leaves; USB `node biscuit` | Menu → Tools → Modes; tap EXIT then CONFIRM, or hold the front button twice within 5 s; taps and double presses never leave; USB `node biscuit` |
+| [JCMK Node](NODE-MODES.md): scan-only node for a JustCallMeKoko ESP32 Dual Band Wardriver core or a Piglet acting as one; sends Wi-Fi and Bluetooth LE (Wi-Fi only to a Piglet); scans 2.4 GHz channels 1 to 11, and a JCMK core leaves it out of its channel split; the core adds the position; optional ESP-NOW encryption, which a Piglet does not have | Tools → Modes; same exit; USB `node jcmk` | MODES page, same controls; USB `node jcmk` | Menu → Tools → Modes; same exit; USB `node jcmk` |
+
+While a node runs, the board does nothing else: detection, alerts, audio and the other radio tools pause until it stops. The node has no GPS of its own and saves nothing on the board. The protocol is covered by native tests against simulated cores. BISCUIT NODE has run with a real Biscuit on a Waveshare 1.75C; JCMK Node and the other boards are not yet verified on hardware.

@@ -94,6 +94,15 @@ void rotaryUiInput(int steps,bool click,bool back){
 #endif
     return;
   }
+  // On the node screen a knob click would land on EXIT, and two clicks would
+  // leave: the knob is no screen tap there, so nothing reaches LVGL.
+  if(uiRotaryNode(click,back)){
+#ifdef BOARD_WATCHER
+    cancelEncoder();
+#endif
+    navigation.clear();pendingClicks=0;releasing=false;lv_group_set_editing(group,false);
+    return;
+  }
   if(back){
 #ifdef BOARD_WATCHER
     cancelEncoder();

@@ -1,5 +1,6 @@
-import {firmwareAtLeast,knownFirmware} from './firmware-version.js?v=0.14.8-dagnazty';
-import {crc32} from './ble-lab.js?v=0.14.8-dagnazty';
+import {firmwareAtLeast,knownFirmware} from './firmware-version.js?v=0.14.8';
+import {crc32} from './ble-lab.js?v=0.14.8';
+import {NodeBusyMessage,nodeBusy} from './serial.js?v=0.14.8';
 export function hasReconTools(version){return firmwareAtLeast(version,'0.10.0');}
 export function captureName(value){if(!/^(wifi-[a-f0-9]{8}(?:-\d{4,10})?\.pcap|(?:ble|portal|net|wigle)-[a-f0-9]{8}(?:-\d{4,10})?\.csv)$/.test(value))throw new Error('Choose a saved capture.');return value;}
 export async function reconLines(link,command){
@@ -15,7 +16,7 @@ export function exportReconFile(link,command,onProgress=()=>{}){
   let data=null,received=0,settled=false,off=()=>{};
   const finish=(error,result)=>{if(settled)return;settled=true;clearTimeout(timer);off();error?reject(error):resolve(result);};
   const timer=setTimeout(()=>finish(new Error('Capture download timed out.')),1800000);
-  off=link.onLine(line=>{try{let m;if(line===null||line?.startsWith('RECON_ERROR')||line?.startsWith('WARDRIVE_BUSY'))throw new Error(line||'USB disconnected.');
+  off=link.onLine(line=>{try{let m;if(nodeBusy(line))throw new Error(NodeBusyMessage);if(line===null||line?.startsWith('RECON_ERROR')||line?.startsWith('WARDRIVE_BUSY'))throw new Error(line||'USB disconnected.');
    if((m=/^RECON_FILE (\d+)$/.exec(line))){const n=Number(m[1]);if(data||n<1||n>64*1024*1024)throw new Error('Invalid capture size.');data=new Uint8Array(n);}
    else if((m=/^RECON_DATA (\d+) ([a-f0-9]+)$/i.exec(line))){if(!data||Number(m[1])!==received||m[2].length%2||m[2].length>256)throw new Error('Capture chunk is missing or malformed.');const b=Uint8Array.from(m[2].match(/../g),s=>parseInt(s,16));if(received+b.length>data.length)throw new Error('Capture exceeds announced size.');data.set(b,received);received+=b.length;onProgress(Math.floor(received*100/data.length));}
    else if((m=/^RECON_END (\d+) ([a-f0-9]{8})$/i.exec(line))){if(!data||received!==data.length||received!==Number(m[1])||crc32(data)!==parseInt(m[2],16))throw new Error('Incomplete capture or checksum mismatch.');finish(null,data);}

@@ -59,9 +59,10 @@ static const WatchPalette watches[]={
   {"44Delta",0x000000,0xe0f7fa,0x00dce4,0x9dbec5,true},
   {"DAGNAZTY DARK",0x050505,0xf2ead8,0xe8323f,0x6e1a22,true},
   {"DAGNAZTY DIGITAL",0xf7f7f5,0x101010,0xa3121f,0x73736d,false},
-  {"DAGNAZTY DARK DIGITAL",0x050505,0xf2ead8,0xe8323f,0x6e1a22,false}
+  {"DAGNAZTY DARK DIGITAL",0x050505,0xf2ead8,0xe8323f,0x6e1a22,false},
+  {"LockpickingVlad",0x070708,0xffedcb,0xf0ce83,0xb5955f,true}
 };
-static constexpr uint8_t WatchFaces[]={0,1,2,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,44,45,46,47,48,49,50,51};
+static constexpr uint8_t WatchFaces[]={0,1,2,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,44,45,46,47,48,49,50,51,dragon::VladWatch};
 static constexpr unsigned WatchCount=sizeof(WatchFaces)/sizeof(WatchFaces[0]);
 static bool watchFaceAllowed(unsigned face){if(face==dragon::PersonalWatchId&&!personalThemeReady())return false;for(auto id:WatchFaces)if(id==face)return true;return false;}
 static unsigned watchFacePosition(){for(unsigned i=0;i<WatchCount;++i)if(WatchFaces[i]==watchFace)return i;return 0;}
@@ -245,7 +246,6 @@ static void watchBinary(lv_draw_ctx_t* ctx,const dragon::Calendar& d,bool valid)
   watchText(ctx,"M",m.x-10,m.y-6,20,F12,0xffffff);watchText(ctx,"S",s.x-10,s.y-6,20,F12,0xffffff);
   for(unsigned i=0;i<WatchCount;++i)disc(ctx,S(180+(int(i)*2-int(WatchCount-1))*3),S(338),std::max(1,S(i==watchFacePosition()?2:1)),i==watchFacePosition()?0xffffff:0x555555);
 }
-#include "pick_hands.inc"
 template<size_t N,size_t T> static void watchPick(lv_draw_ctx_t* ctx,float turns,const lv_point_t (&profile)[N],const uint8_t (&triangles)[T][3],bool minute,float scale=1.f){
   auto point=[turns,scale](int along,int across){return watchHandPoint(turns,lroundf(along*scale),lroundf(across*scale));};
   lv_point_t points[N];for(unsigned i=0;i<N;++i)points[i]=point(profile[i].x,profile[i].y);
@@ -300,6 +300,7 @@ static void watchDraw(lv_event_t* e){
   if(watchFace==dragon::PersonalWatchId){personalThemeClock(ctx,d,valid);return;}
   if(watchFace==MuldersRevengeWatch){muldersWatch(ctx,d,valid);return;}
   if(watchFace==LawLockToolsWatch){lltWatch(ctx,d,valid);return;}
+  if(watchFace==dragon::VladWatch){vladWatch(ctx,d,valid);return;}
   if(watchFace==Delta44Watch){delta44Watch(ctx,d,valid);return;}
   if(watchFace==26||watchFace==DagNaztyDarkWatch){dagWatch(ctx,d,valid,watchFace==DagNaztyDarkWatch);return;}
   if(watchFace==DagDigitalWatch||watchFace==DagDarkDigitalWatch){dagDigitalWatch(ctx,d,valid,watchFace==DagDarkDigitalWatch);return;}
@@ -421,6 +422,7 @@ static void buildChronographFrame(){
     }
     if(lpu()&&page==Stopwatch){watchLogo(ctx,radar_logo_lpu,14);watchText(ctx,"LOCKSPORT TIMER",48,74,264,F20,uiColors().accent);}
     if(lawLockTools()&&page==Stopwatch){lltArtwork(ctx,radar_logo_llt,59);watchText(ctx,"LOCKSPORT TIMER",48,90,264,F16,LltInk);}
+    if(radarTheme==dragon::VladTheme&&page==Stopwatch){themeArtwork(ctx,vladSeal,18);watchText(ctx,"LOCKSPORT TIMER",48,74,264,F20,uiColors().accent);}
     if(delta44()&&page==Stopwatch){themeArtwork(ctx,watch_logo_delta44,26);watchText(ctx,"LOCKSPORT TIMER",48,74,264,F20,uiColors().accent);}
     if(moki()&&page==Stopwatch){themeArtwork(ctx,radar_logo_moki,19);watchText(ctx,"LOCKSPORT TIMER",48,74,264,F20,uiColors().accent);}
     if(argyle()&&page==Stopwatch){argyleArtwork(ctx,radar_logo_argyle,20);watchText(ctx,"LOCKSPORT TIMER",48,74,264,F20,uiColors().accent);}

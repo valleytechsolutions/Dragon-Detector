@@ -54,7 +54,7 @@ static SdRecords cardCapture;static bool captureOnCard=false;
 static File saveFile;static String savePath;static size_t saveOffset=0;static uint32_t saveCrc=0xffffffffu;
 static char ssids[32][33]{};static unsigned ssidCount=0;
 void say(const char* s){strlcpy(status.message,s,sizeof(status.message));}
-static bool busy(){return wardriveBusy()||cardCapture.busy()||status.active||status.saving||portalActive()||csiActive()||networkActive()||bleLabOwnsRadio();}
+static bool busy(){return nodeBusy()||wardriveBusy()||cardCapture.busy()||status.active||status.saving||portalActive()||csiActive()||networkActive()||bleLabOwnsRadio();}
 static bool saveList(){auto* fs=bleLabStorage();if(!fs||!bleLabStorageSpace(8192))return false;fs->mkdir("/lists");File f=fs->open("/lists/ssids.part",FILE_WRITE);if(!f)return false;bool ok=true;
  for(unsigned i=0;i<ssidCount&&ok;++i)ok=f.print(ssids[i])==strlen(ssids[i])&&f.write('\n')==1;
  f.flush();f.close();ok=ok&&dragon::replaceFile(*fs,String("/lists/ssids.part"),String("/lists/ssids.txt"));if(!ok)fs->remove("/lists/ssids.part");return ok;
@@ -192,7 +192,7 @@ uint8_t reconRadio(){return reconModes[unsigned(mode)].radio;}
 bool reconAll(){return reconModes[unsigned(mode)].all;}
 bool reconAccepts(Family family,bool ble){return modeAccepts(mode,family,ble);}
 bool reconStorageBusy(){return status.saving||cardCapture.busy();}
-bool reconOwnsRadio(){return wardriveBusy()||wardriveUploadBusy()||status.active||portalActive()||csiActive()||networkActive();}
+bool reconOwnsRadio(){return nodeBusy()||wardriveBusy()||wardriveUploadBusy()||status.active||portalActive()||csiActive()||networkActive();}
 bool reconRecording(){return wifiRecording.load();}
 bool reconSetMode(ReconMode next){if(!validMode(unsigned(next))||busy())return false;if(status.recording&&next!=mode)captureStop();mode=next;prefs.putUChar("mode",unsigned(mode));trackedContact=-1;channelLock=0;radioApplyMode();return true;}
 void reconStop(){wardriveStop();networkStop();csiStop();portalStop();stop();captureStop();}

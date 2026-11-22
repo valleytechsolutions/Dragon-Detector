@@ -85,7 +85,7 @@ def package(source, output):
     }
     (output / 'M5BURNER-VERIFICATION.json').write_text(json.dumps(report, indent=2) + '\n', encoding='utf-8')
     (output / 'M5BURNER-SHA256SUMS.txt').write_text(f"{report['sha256']}  {filename}\n", encoding='ascii')
-    for name in ('FONT-LICENSE.txt', 'ASCII-FONT-NOTICE.txt'):
+    for name in ('FONT-LICENSE.txt', 'ASCII-FONT-NOTICE.txt', 'ESP32DualBandWardriver-LICENSE.txt'):
         shutil.copyfile(source / name, output / name)
     print(json.dumps(report, indent=2))
 

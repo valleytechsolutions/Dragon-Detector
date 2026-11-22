@@ -3,17 +3,17 @@
 #include "tracking.h"
 
 struct Contact {
-  bool used=false,ble=false; uint8_t addressType=0,mac[6]{}; char name[64]{};
-  int16_t rssi=-100; uint8_t channel=0; uint32_t seen=0,firstSeen=0,packets=0,lastLog=0;
+  bool used=false,ble=false; uint8_t addressType=0,advChannel=0,mac[6]{}; char name[64]{};
+  int16_t rssi=-100; uint8_t channel=0,rxChannel=0; uint32_t seen=0,firstSeen=0,packets=0,lastLog=0;
   dragon::Match match{dragon::Family::Wifi,dragon::Confidence::None,""};
-  dragon::SignalTrack signal; uint32_t matchedAt=0,matchSince=0; uint16_t matchHits=0; bool signatureAlerted=false;
+  dragon::SignalTrack signal; uint32_t matchedAt=0,matchSince=0; uint16_t matchHits=0; bool signatureAlerted=false; uint16_t alertRevision=0; // alert decision made for this evidence run
   uint32_t wifiAlerts=0,lastWifiAlert=0;
   dragon::Family trafficFamily=dragon::Family::Deauth;
   char trafficEvidence[128]{};
   float radarX=0,radarY=0,plotRadius=0;
   uint16_t radarColor=0;
   dragon::Family radarColorFamily=dragon::Family::Count;
-  dragon::AlertGate gate;dragon::DroneInfo drone;dragon::SignalHistory trace;
+  dragon::DroneInfo drone;dragon::SignalHistory trace;
   uint32_t historyAt=0;dragon::Family historyFamily=dragon::Family::Count;
 };
 #ifdef BOARD_M5DIAL
@@ -60,6 +60,32 @@ inline bool recentCandidateVisible(const Contact& c,uint32_t now,const dragon::D
   return watch || (settings.enabled(c.match.family)&&c.match.confidence!=dragon::Confidence::None&&c.matchHits&&uint32_t(now-c.matchedAt)<120000);
 }
 inline dragon::Family visibleFamily(const Contact& c,uint32_t now,uint32_t families=0xffffffffu){return trafficFresh(c,now)&&(families&(1u<<unsigned(c.trafficFamily)))?c.trafficFamily:c.match.family;}
+// A DSSS beacon is often decoded one or two channels away from where it was
+// sent, so the receive channel is a poor Hunt lock. Prefer the channel the
+// frame itself states (DS Parameter Set). Only an AP's beacon/probe response
+// is remembered: a probing station names each channel it visits. The receive
+// channel is kept for diagnostics and RSSI samples are not rejected. An AP
+// that moves to channel 12-14 is forgotten, so the lock follows where its
+// frames are still received instead of the channel it left.
+inline bool radarChannel(uint8_t channel){return channel>=1&&channel<=11;}
+inline void noteChannel(Contact& c,uint8_t received,uint8_t advertised,bool remember){
+  c.rxChannel=received;if(remember&&advertised>=12&&advertised<=14)c.advChannel=0;
+  if(!radarChannel(advertised))advertised=0;
+  if(advertised&&remember)c.advChannel=advertised;
+  c.channel=advertised?advertised:c.advChannel?c.advChannel:received;
+}
+// Replacement order for a full table; the highest score goes first and 0 is
+// protected. Long-silent contacts, then unwatched ones, then unclassified
+// contacts the radar is not showing, then lower family priority, then age.
+// Without the third term a crowd of anonymous addresses and a classified
+// low-priority contact (a tracker) were ranked by family alone.
+inline uint32_t evictionScore(const Contact& c,uint32_t now,bool watched,bool visible,dragon::Family incoming){
+  uint32_t age=std::min<uint32_t>(uint32_t(now-c.seen),3600000);
+  // New tracker addresses cannot evict a live higher-priority detection.
+  if(age<30000&&dragon::familyPriority(c.match.family)>dragon::familyPriority(incoming))return 0;
+  bool classified=c.match.confidence!=dragon::Confidence::None&&c.matchHits;
+  return 1 + age + (age>=30000?200000000u:0) + (!watched?100000000u:0) + (!classified&&!visible?50000000u:0) + (100-dragon::familyPriority(c.match.family))*100000u;
+}
 inline bool huntSweep(const Contact& c,uint32_t now){return !c.ble && (!c.packets || uint32_t(now-c.seen)>=12000);}
 inline bool preferContact(const Contact& a,const Contact& b,uint32_t now){
   bool staleA=uint32_t(now-a.seen)>=30000,staleB=uint32_t(now-b.seen)>=30000;

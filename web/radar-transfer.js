@@ -1,11 +1,11 @@
 import {deviceQuery} from './device-query.js';
 // Persistent device IDs: slot 40 is retired; never shift later theme IDs.
-const radarThemes=['dragon','green','gold','valleytech','biscuit','marauder','toool','church','toool-dark','covert','awok','baph0mau5','wdgwars','ghoststrats','n3rdsec','halehound','waveshare','m5stack','lab5','sasquach','nyan','dmac','seeed','dagnazty','octo-pig','deflock','lpl','ghostbusters','lpu','hackazillarex','m33k-t3ch','capsule-corp','sparrows','dzaz','custom','can-commander','ogg','xombi','muldersrevenge','mitm',null,'vectorpotential','argyle','lawlocktools','moki','44delta','dagnazty-dark','dagnazty-digital','dagnazty-dark-digital'];
+const radarThemes=['dragon','green','gold','valleytech','biscuit','marauder','toool','church','toool-dark','covert','awok','baph0mau5','wdgwars','ghoststrats','n3rdsec','halehound','waveshare','m5stack','lab5','sasquach','nyan','dmac','seeed','dagnazty','octo-pig','deflock','lpl','ghostbusters','lpu','hackazillarex','m33k-t3ch','capsule-corp','sparrows','dzaz','custom','can-commander','ogg','xombi','muldersrevenge','mitm',null,'vectorpotential','argyle','lawlocktools','moki','44delta','dagnazty-dark','dagnazty-digital','dagnazty-dark-digital','lockpickingvlad'];
 export async function readRadarSettings(link){
   const line=await deviceQuery(link,'radar status',s=>s.startsWith('RADAR_SETTINGS '));
   // 0.9.6 removed paging and added the selected primary target. Accept both
   // known schemas so reading radar preferences cannot block badge connection.
-  const m=/^RADAR_SETTINGS theme=(0|[1-9]\d?) labels=([01]) recent=([01]) (?:page=\d+ pages=\d+ plotted=\d+|pages=1 plotted=\d+ primary=-?\d+)$/.exec(line);
+  const m=/^RADAR_SETTINGS theme=(0|[1-9]\d?) labels=([01]) recent=([01]) (?:page=\d+ pages=\d+ plotted=\d+|pages=1 plotted=\d+ primary=-?\d+(?: touches=\d+ hits=\d+ selected=[01])?)$/.exec(line);
   if(!m||Number(m[1])>=radarThemes.length)throw new Error('Invalid radar settings response.');
   // Keep old devices readable without treating the retired ID as a saved default.
   return {theme:radarThemes[Number(m[1])],labels:m[2]==='1',recent:m[3]==='1'};
@@ -18,6 +18,7 @@ export async function saveRadarSettings(link,{theme,labels,recent}){
     // also releases short acknowledgments held by some native USB devices.
     await link.write(command);let saved=await readRadarSettings(link);
     if(saved[key]!==expected)saved=await readRadarSettings(link);
+    if(saved[key]!==expected&&key==='theme'&&theme==='lockpickingvlad')throw new Error('This firmware does not include the LockpickingVlad theme.');
     if(saved[key]!==expected)throw new Error('Radar setting was not saved. Reconnect to reload saved preferences.');
   }
 }

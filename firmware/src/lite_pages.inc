@@ -1,13 +1,16 @@
 #include "lite_button.h"
-enum class LitePage {Radar,Clock,Timer,Signals,Status,Settings};
+enum class LitePage {Radar,Clock,Timer,Signals,Status,Settings,Modes};
+static constexpr unsigned LitePageCount=7;
 static LitePage litePage=LitePage::Radar;
-static const char* litePageNames[]={"radar","clock","stopwatch","signals","diagnostics","settings"};
+static const char* litePageNames[LitePageCount]={"radar","clock","stopwatch","signals","diagnostics","settings","modes"};
+static unsigned liteModeChoice=0;    // MODES page: 0 BISCUIT NODE, 1 JCMK Node
+static uint32_t liteModeFailedAt=0;  // a refused start shows nodeError() for a few seconds
 static lv_obj_t *pageCanvas,*pageTitle,*pageValue,*pageSub,*pageHint;
 static unsigned signalIndex=0;
 static uint64_t timerFrame=0;
 static dragon::Calendar clockFrame;
 static bool clockValid=false;
-static bool liteLocksport(){return radarTheme==6||radarTheme==8||radarTheme==9||radarTheme==21||radarTheme==26||radarTheme==28||radarTheme==32||radarTheme==VectorPotentialTheme||radarTheme==ArgyleTheme||radarTheme==LawLockToolsTheme||radarTheme==MokiTheme||radarTheme==Delta44Theme||(radarTheme==dragon::PersonalThemeId&&(personalTheme().flags&8));}
+static bool liteLocksport(){return radarTheme==6||radarTheme==8||radarTheme==9||radarTheme==21||radarTheme==26||radarTheme==28||radarTheme==32||radarTheme==VectorPotentialTheme||radarTheme==ArgyleTheme||radarTheme==LawLockToolsTheme||radarTheme==MokiTheme||radarTheme==Delta44Theme||radarTheme==dragon::VladTheme||(radarTheme==dragon::PersonalThemeId&&(personalTheme().flags&8));}
 static void pageText(lv_draw_ctx_t* ctx,const char* value,int x,int y,int width,uint32_t rgb){
   lv_draw_label_dsc_t d;lv_draw_label_dsc_init(&d);d.color=color(rgb);d.font=&lv_font_montserrat_10;d.align=LV_TEXT_ALIGN_CENTER;
   lv_area_t a{lv_coord_t(x),lv_coord_t(y),lv_coord_t(x+width-1),lv_coord_t(y+15)};lv_draw_label(ctx,&d,&a,value,nullptr);
@@ -22,6 +25,7 @@ static void liteHand(lv_draw_ctx_t* ctx,float angle,float length,uint32_t rgb,bo
 static void litePageDraw(lv_event_t* e){
   auto* ctx=lv_event_get_draw_ctx(e);const auto& p=themeUiColors(radarTheme);
   if(litePage==LitePage::Clock&&radarTheme==LawLockToolsTheme){lltWatch(ctx,clockFrame,clockValid);return;}
+  if(litePage==LitePage::Clock&&radarTheme==dragon::VladTheme){vladWatch(ctx,clockFrame,clockValid);return;}
   if(litePage==LitePage::Clock&&radarTheme==Delta44Theme){delta44Watch(ctx,clockFrame,clockValid);return;}
   if(litePage==LitePage::Clock&&radarTheme==MokiTheme){mokiWatch(ctx,clockFrame,clockValid);return;}
   if(litePage==LitePage::Clock&&radarTheme==ArgyleTheme){argyleWatch(ctx,clockFrame,clockValid);return;}
@@ -72,7 +76,7 @@ static void litePageDraw(lv_event_t* e){
   }
 }
 static void setLitePage(LitePage next){
-  setRadioStandby(next==LitePage::Clock||next==LitePage::Timer);
+  if(!nodeBusy())setRadioStandby(next==LitePage::Clock||next==LitePage::Timer); // a node owns the radio until it stops
   litePage=next;noticeAt=0;
 #ifdef BOARD_M5DIAL
   dialPageChanged();
@@ -82,16 +86,18 @@ static void setLitePage(LitePage next){
   for(auto* o:{pageCanvas,pageTitle,pageValue,pageSub})lv_obj_add_flag(o,LV_OBJ_FLAG_HIDDEN);
   if(next==LitePage::Radar){for(auto* o:{radar,status,pageLabel})lv_obj_clear_flag(o,LV_OBJ_FLAG_HIDDEN);}
   else for(auto* o:{pageCanvas,pageTitle,pageValue,pageSub})lv_obj_clear_flag(o,LV_OBJ_FLAG_HIDDEN);
-  lv_obj_set_style_text_font(pageValue,next==LitePage::Signals||next==LitePage::Status?&lv_font_montserrat_14:&lv_font_montserrat_22,0);
+  lv_obj_set_style_text_font(pageValue,next==LitePage::Signals||next==LitePage::Status||next==LitePage::Modes?&lv_font_montserrat_14:&lv_font_montserrat_22,0);
   lv_obj_set_y(pageValue,next==LitePage::Clock?158:next==LitePage::Timer?95:76);
   lv_obj_set_y(pageSub,next==LitePage::Clock?187:next==LitePage::Timer?138:171);
   bool special=next==LitePage::Clock&&(radarTheme==0||(radarTheme>=29&&!dagNaztyTheme(radarTheme)));
-  if(radarLogo(radarTheme)&&!special&&!(next==LitePage::Radar&&(radarTheme==LawLockToolsTheme||radarTheme==MokiTheme||radarTheme==Delta44Theme||radarTheme==ArgyleTheme||radarTheme==VectorPotentialTheme||radarTheme==32||radarTheme==CanCommanderTheme||radarTheme==MuldersRevengeTheme||greenArtTheme(radarTheme))))lv_obj_clear_flag(logo,LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(logo,LV_OBJ_FLAG_HIDDEN);
+  if(radarLogo(radarTheme)&&!special&&!(next==LitePage::Radar&&(radarTheme==LawLockToolsTheme||radarTheme==MokiTheme||radarTheme==Delta44Theme||radarTheme==dragon::VladTheme||radarTheme==ArgyleTheme||radarTheme==VectorPotentialTheme||radarTheme==32||radarTheme==CanCommanderTheme||radarTheme==MuldersRevengeTheme||greenArtTheme(radarTheme))))lv_obj_clear_flag(logo,LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(logo,LV_OBJ_FLAG_HIDDEN);
+  // Vector Potential's radar artwork is 69 px tall: its page header is the watch-size mark.
+  if(radarLogo(radarTheme))lv_img_set_src(logo,radarTheme==VectorPotentialTheme?&watch_logo_vp:radarLogo(radarTheme));
   lv_obj_align(logo,LV_ALIGN_TOP_MID,0,9);
   lv_obj_set_style_img_recolor(logo,color(radarTheme==3?0xd6b46e:LltBlue),0);
   lv_obj_set_style_img_recolor_opa(logo,(radarTheme==LawLockToolsTheme||radarTheme==3)?LV_OPA_COVER:LV_OPA_TRANSP,0);
   if(special){lv_obj_add_flag(pageTitle,LV_OBJ_FLAG_HIDDEN);lv_obj_set_y(pageValue,radarTheme==29?24:157);lv_obj_set_y(pageSub,radarTheme==29?48:188);}
-  if(next==LitePage::Clock&&(radarTheme==MitmTheme||radarTheme==31||radarTheme==32||radarTheme==VectorPotentialTheme||radarTheme==ArgyleTheme||radarTheme==LawLockToolsTheme||radarTheme==MokiTheme||radarTheme==Delta44Theme||radarTheme==33||radarTheme==CanCommanderTheme||radarTheme==MuldersRevengeTheme||greenArtTheme(radarTheme)||radarTheme==dragon::PersonalThemeId))for(auto* o:{pageTitle,pageValue,pageSub,pageHint})lv_obj_add_flag(o,LV_OBJ_FLAG_HIDDEN);
+  if(next==LitePage::Clock&&(radarTheme==MitmTheme||radarTheme==31||radarTheme==32||radarTheme==VectorPotentialTheme||radarTheme==ArgyleTheme||radarTheme==LawLockToolsTheme||radarTheme==MokiTheme||radarTheme==Delta44Theme||radarTheme==dragon::VladTheme||radarTheme==33||radarTheme==CanCommanderTheme||radarTheme==MuldersRevengeTheme||greenArtTheme(radarTheme)||radarTheme==dragon::PersonalThemeId))for(auto* o:{pageTitle,pageValue,pageSub,pageHint})lv_obj_add_flag(o,LV_OBJ_FLAG_HIDDEN);
   lv_obj_invalidate(root);
 }
 static void createLitePages(){
@@ -124,7 +130,16 @@ static void updateLitePage(){
     snprintf(value,sizeof(value),"%s / %lu %s",stopwatch.running?"RUNNING":stopwatch.finished?"OPEN":timerFrame?"PAUSED":"READY",stopwatch.lapCount,liteLocksport()?"SPLITS":"LAPS");lv_label_set_text(pageSub,value);
     lv_label_set_text(pageHint,stopwatch.running?(liteLocksport()?"TAP PAUSE / 2x OPEN":"TAP PAUSE / 2x LAP"):"TAP START / 2x RESET");
   }else if(litePage==LitePage::Settings){
-    lv_label_set_text(pageTitle,"SETTINGS");lv_label_set_text(pageValue,detector.enabled(Family::Adult)?"Adult Mode: ON":"Adult Mode: OFF");lv_label_set_text(pageSub,"18+ / passive BLE candidates");lv_label_set_text(pageHint,"TAP TO TOGGLE / HOLD RADAR");
+    lv_label_set_text(pageTitle,"SETTINGS");lv_label_set_text(pageValue,detector.enabled(Family::Adult)?"Adult Mode: ON":"Adult Mode: OFF");lv_label_set_text(pageSub,"18+ / passive BLE candidates");lv_label_set_text(pageHint,"TAP TO TOGGLE / HOLD MODES");
+  }else if(litePage==LitePage::Modes){
+    // The Lite's Tools > Modes: tap picks a node, double tap starts it, hold moves on.
+    lv_label_set_text(pageTitle,"MODES");const char* names[]={NodeBiscuitName,NodeJcmkName};char row[2][40];
+    for(unsigned i=0;i<2;++i)snprintf(row[i],sizeof(row[i]),i==liteModeChoice?LV_SYMBOL_RIGHT "  %s  " LV_SYMBOL_LEFT:"%s",names[i]);
+    snprintf(value,sizeof(value),"%s\n\n%s",row[0],row[1]);lv_label_set_text(pageValue,value);
+    const bool failed=liteModeFailedAt&&uint32_t(millis()-liteModeFailedAt)<5000;
+    lv_label_set_text(pageSub,failed?liteNodeError():liteModeChoice?"JCMK wardriving node\nWi-Fi + BLE":"Biscuit wardriving node\nWi-Fi");
+    if(failed)lv_obj_set_style_text_color(pageSub,color(p.accent),0);
+    lv_label_set_text(pageHint,"TAP NEXT / 2x START");
   }else if(litePage==LitePage::Signals){
 #ifdef BOARD_M5DIAL
     dialSignalUpdate();return;
@@ -143,13 +158,17 @@ static void updateLitePage(){
   }
 }
 void liteButtonEvent(dragon::LitePress event){
-  if(!root)return;
+  if(!root||liteNodeButton(event))return;
 #ifdef BOARD_M5DIAL
   dialButton(event);return;
 #endif
-  if(event==dragon::LitePress::Hold){setLitePage(LitePage((unsigned(litePage)+1)%6));return;}
+  if(event==dragon::LitePress::Hold){setLitePage(LitePage((unsigned(litePage)+1)%LitePageCount));return;}
   if(litePage==LitePage::Timer){if(event==dragon::LitePress::Tap)stopwatch.toggle(stopwatchNow());else if(event==dragon::LitePress::Double){if(stopwatch.running){if(liteLocksport())stopwatch.finish(stopwatchNow());else stopwatch.lap(stopwatchNow());}else stopwatch.reset();}}
   else if(litePage==LitePage::Settings){if(event==dragon::LitePress::Tap)setAdultMode(!detector.enabled(Family::Adult));}
+  else if(litePage==LitePage::Modes){
+    if(event==dragon::LitePress::Tap){liteModeChoice^=1;liteModeFailedAt=0;}
+    else if(event==dragon::LitePress::Double&&!liteNodeBegin(liteModeChoice?NodeKind::Jcmk:NodeKind::Biscuit))liteModeFailedAt=millis()|1; // stays on MODES
+  }
   else if(litePage==LitePage::Signals)++signalIndex;
   else if(litePage!=LitePage::Status)uiKey(false);
 }

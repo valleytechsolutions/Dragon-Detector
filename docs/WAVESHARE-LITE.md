@@ -6,9 +6,9 @@ First supported in **0.9.4**, build profile `waveshare_lite`. Use the [exact non
 
 Actual 240×240 framebuffer capture from the connected board, not a panel photograph. The displayed signal is a protocol candidate; it does not identify a particular accessory model.
 
-## Five BOOT-operated pages · 0.13.9
+## Seven BOOT-operated pages
 
-Hold BOOT for about 0.8 seconds to cycle **Radar → Clock → Timer → Signals → Diagnostics**. Release between holds. Detection continues on each page. Boot still opens the saved radar theme at full brightness; 100% means backlight, not battery charge.
+Hold BOOT for about 0.8 seconds to cycle **Radar → Clock → Timer → Signals → Diagnostics → Settings → Modes**. Release between holds. Lite has no menus, so it has no Tools menu: the MODES page, six holds from Radar, is where the two wardriving node modes live. Detection continues on each page except while a node runs. Boot still opens the saved radar theme at full brightness; 100% means backlight, not battery charge.
 
 | Page | Tap | Double tap | Hold |
 |---|---|---|---|
@@ -17,7 +17,10 @@ Hold BOOT for about 0.8 seconds to cycle **Radar → Clock → Timer → Signals
 | Locksport timer, running | Pause | OPEN (final split and stop) | Next page |
 | Timer, paused | Start/resume | Reset attempt and laps | Next page |
 | Signals | Next recent visible contact | Next contact | Next page |
-| Diagnostics | No action | No action | Return to radar |
+| Diagnostics | No action | No action | Next page |
+| Settings | Toggle Adult Mode | No action | Next page |
+| Modes | Pick BISCUIT NODE or JCMK Node | Start the selected node | Return to radar |
+| Node running | Shows how to leave | Shows how to leave | Leave the node: Hold, then Hold again within 5 seconds |
 
 Single taps wait 300 ms to distinguish double taps. BOOT held during startup is ignored until released; BOOT + RESET download/recovery remains available. Themes save one second after the last change.
 
@@ -28,6 +31,10 @@ Timer durations are monotonic and independent of clock corrections. The last 50 
 Radar retains all 26 detector families and displays recent contacts using filtered RSSI. Signal radius and decorative sweep angle are not measured distance or bearing. The signal page shows name/family, protocol, RSSI, MAC and age; diagnostics shows reception/drop counters, memory, uptime and clock state. Passive Wi-Fi/BLE alternate on the shared 2.4 GHz radio; channel hopping creates listening gaps. There is no touch, badge, speaker, SD capture, active lab or persistent history.
 
 The new pages are build/native-test checked. Physical Lite startup and gesture testing remain unverified; troubleshooting was stopped at the owner's request.
+
+## BISCUIT NODE and JCMK Node
+
+Lite has no Tools menu. Its **MODES** page, the last page of the BOOT hold ring, holds **BISCUIT NODE** and **JCMK Node**. Each turns the board into a scan-only wardriving node for a Biscuit in Extended mode or a JustCallMeKoko ESP32 Dual Band Wardriver core. On the MODES page, Tap picks a node and Double tap starts it; if it cannot start, the reason shows on the page for a few seconds. While a node runs, the radar, detection and the other pages pause, and the screen shows the core's logo, the number of Wi-Fi networks found and the link state. To leave, Hold BOOT: the status line reads HOLD AGAIN TO LEAVE, and a second Hold within 5 seconds stops the node. Taps and double taps never leave; they show how to leave for 3 seconds. USB `node biscuit`, `node jcmk`, `node status` and `node stop` also work. Not yet verified on Lite hardware. [Node guide](NODE-MODES.md).
 
 ## Hardware configuration
 
@@ -51,7 +58,9 @@ Fresh installation erases the previous firmware/data. Back up a third-party port
 
 Build: `python -m platformio run -e waveshare_lite`. Package: `python tools/build_release.py --board waveshare_lite`. Factory/update manifests and SHA-256 checksums are published with the other boards. The badge editor recognizes Lite but disables incompatible controls.
 
-Read-only USB diagnostics: `status`, `contacts`, `selftest`, `axon status`, `traffic status`, `detector status`, `radar status`, `display status`, `ui status`, `loop diagnostics`, `badge info`. The developer `screenshot` command briefly pauses reception for its serial transfer and resumes it afterward. Timing commands include `time <epoch>`, `clock offset <minutes>`, `clock status`, `stopwatch start/pause/lap/finish/reset/status/laps`, and `screen radar/clock/stopwatch/signals/diagnostics` (choose one command alternative). `system restart` restarts when idle. Commands that enter Hunt, transmit, change display settings or upload a badge are rejected.
+Read-only USB diagnostics: `status`, `contacts`, `selftest`, `axon status`, `traffic status`, `detector status`, `radar status`, `radar signal`, `radar near`, `scan status`, `display status`, `ui status`, `loop diagnostics`, `badge info`. The developer `screenshot` command briefly pauses reception for its serial transfer and resumes it afterward. Timing commands include `time <epoch>`, `clock offset <minutes>`, `clock status`, `stopwatch start/pause/lap/finish/reset/status/laps`, and `screen radar/clock/stopwatch/signals/diagnostics` (choose one command alternative). `system restart` restarts when idle. Commands that enter Hunt, transmit, change display settings or upload a badge are rejected.
+
+The radar can show a quiet `BLE RADIOS NEAR` line under the status row: a count of BLE radio addresses heard at a strong level, not people and not a distance. It never alerts. Lite has no on-device control for it; use USB `radar near on|off` and `radar near level <-85..-55>`. [What it counts and its limits](RADAR-AND-ACTIVITY.md#ble-radios-near).
 
 See [validation status](VALIDATION.md) for checks actually completed. A matching signature is evidence of a radio pattern, not proof of malicious intent or recording state.
 

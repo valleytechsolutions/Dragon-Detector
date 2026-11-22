@@ -32,9 +32,14 @@ inline unsigned selectRadarLabels(const RadarLabelCandidate* candidates,unsigned
 }
 // Keep markers clear of the logo/status and bottom controls. Only the
 // decorative angle changes; radius still represents exactly the same RSSI.
+// An outer ring has two legal arcs, left and right. The hash angle is spread
+// evenly over its side's arc: clamping y instead stacked most weak contacts
+// on the two limit rows. Inside radius 62 the angle is unchanged.
+constexpr float RadarPlotAbove=76,RadarPlotBelow=62;
 inline RadarPoint radarPlotPoint(float radius,float unitX,float unitY){
-  float y=radius*unitY;if(y<-76)y=-76;if(y>62)y=62;
-  float square=radius*radius-y*y;float x=sqrtf(square>0?square:0);if(unitX<0)x=-x;
+  const float quarter=1.57079633f,up=radius>RadarPlotAbove?asinf(RadarPlotAbove/radius):quarter,down=radius>RadarPlotBelow?asinf(RadarPlotBelow/radius):quarter;
+  const float angle=(asinf(unitY<-1?-1:unitY>1?1:unitY)+quarter)*(up+down)/(2*quarter)-up;
+  float x=radius*cosf(angle),y=radius*sinf(angle);if(unitX<0)x=-x;
   return {180+int(lroundf(x)),180+int(lroundf(y))};
 }
 struct RadarLabelBox {int x,y,w=94,h=32;};

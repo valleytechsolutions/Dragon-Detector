@@ -52,6 +52,8 @@ jobs:
       - run: python tools/test_core.py --cxx g++ --sanitize
       - run: python tools/test_badusb.py --cxx g++
       - run: python tools/test_badusb.py --cxx g++ --sanitize
+      - run: python tools/test_nearby.py
+      - run: python tools/test_alert_policy.py
       - run: python tools/test_theme_assets.py --cxx g++
       - run: python tools/test_theme_retirement.py --cxx g++
       - run: python tools/test_audio_levels.py --cxx g++

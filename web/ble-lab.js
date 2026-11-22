@@ -1,4 +1,5 @@
 // Original MIT DDG1 profile reader and acknowledged USB transport.
+import {NodeBusyMessage,nodeBusy} from './serial.js?v=0.14.8';
 export const HEADER=580,ATTRIBUTE=559,MAX_PROFILE=HEADER+128*ATTRIBUTE;
 export function crc32(data){let c=0xffffffff;for(const b of data){c^=b;for(let i=0;i<8;i++)c=(c>>>1)^((c&1)?0xedb88320:0);}return (c^0xffffffff)>>>0;}
 const decoder=new TextDecoder();
@@ -27,7 +28,7 @@ function receiveTransfer(link,command,timeout,consume){
   let settled=false,off=()=>{};
   const finish=(error,result)=>{if(settled)return;settled=true;clearTimeout(timer);off();error?reject(error):resolve(result);};
   const timer=setTimeout(()=>finish(new Error('USB transfer timed out.')),timeout);
-  off=link.onLine(line=>{try{if(line===null||line?.startsWith('LAB_ERROR'))throw new Error(line||'USB disconnected.');const result=consume(line);if(result!==undefined)finish(null,result);}catch(e){finish(e);}});
+  off=link.onLine(line=>{try{if(nodeBusy(line))throw new Error(NodeBusyMessage);if(line===null||line?.startsWith('LAB_ERROR'))throw new Error(line||'USB disconnected.');const result=consume(line);if(result!==undefined)finish(null,result);}catch(e){finish(e);}});
   Promise.resolve().then(()=>link.write(command)).catch(error=>finish(error));
  });
 }

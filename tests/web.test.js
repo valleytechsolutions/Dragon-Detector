@@ -10,6 +10,9 @@ import {readFileSync} from 'node:fs';
 import {boardProfiles,connectedProfile,validateManifest,supportsBadge} from '../web/board-profiles.js';
 import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan,badgeTextLayout,drawBadgeText} from '../web/badge-editor.js';
 import {deviceQuery} from '../web/device-query.js';
+import {exportLog} from '../web/ble-lab.js';
+import {exportCapture} from '../web/recon-transfer.js';
+import {readNotebook} from '../web/notebook.js';
 
 test('stalled settings query retries safely and recovers the studio connection',async()=>{
   const writes=[];let attempts=0;
@@ -32,7 +35,9 @@ test('studio reads both legacy paged and 0.9.6+ single-screen radar settings',as
     const link={async write(command){assert.equal(command,'radar status');},async wait(match){const response=`RADAR_SETTINGS theme=2 labels=1 recent=1 ${tail}`;assert.ok(match(response));return response;}};
     assert.deepEqual(await readRadarSettings(link),{theme:'gold',labels:true,recent:true});
   }
-  const invalid={async write(){},async wait(){return 'RADAR_SETTINGS theme=49 labels=1 recent=1 pages=1 plotted=0 primary=-1';}};
+  const vlad={async write(){},async wait(){return 'RADAR_SETTINGS theme=49 labels=1 recent=1 pages=1 plotted=2 primary=-1 touches=0 hits=0 selected=0';}};
+  assert.deepEqual(await readRadarSettings(vlad),{theme:'lockpickingvlad',labels:true,recent:true});
+  const invalid={async write(){},async wait(){return 'RADAR_SETTINGS theme=50 labels=1 recent=1 pages=1 plotted=0 primary=-1';}};
   await assert.rejects(readRadarSettings(invalid),/Invalid radar settings/);
 });
 
@@ -113,7 +118,7 @@ test('radar settings read back every write, including when USB acknowledgment is
   let writes=[];const link={write:async s=>writes.push(s),wait:async()=> 'RADAR_SETTINGS theme=0 labels=1 recent=0 pages=1 plotted=6 primary=-1'};
   await assert.rejects(saveRadarSettings(link,{theme:'unknown',labels:true,recent:true}),/Invalid/);assert.equal(writes.length,0);
   await assert.rejects(saveRadarSettings(link,{theme:'green',labels:true,recent:true}),/not saved/);assert.deepEqual(writes,['radar theme green','radar status','radar status']);
-  for(const theme of ['49','99','100','00','-1']){link.wait=async()=> 'RADAR_SETTINGS theme='+theme+' labels=1 recent=0 pages=1 plotted=6 primary=-1';await assert.rejects(readRadarSettings(link),/Invalid radar settings/);}
+  for(const theme of ['50','99','100','00','-1']){link.wait=async()=> 'RADAR_SETTINGS theme='+theme+' labels=1 recent=0 pages=1 plotted=6 primary=-1';await assert.rejects(readRadarSettings(link),/Invalid radar settings/);}
 });
 test('CRC matches firmware IEEE CRC-32 wire contract',()=>assert.equal(crc32(new TextEncoder().encode('123456789')),0xcbf43926));
 for(const size of [240,360,466,480])test(`DDB1 ${size}: header, exact size and RGB565 byte order`,()=>{
@@ -157,6 +162,31 @@ test('USB reader handles fragmented ACKs, ignores health lines, and keeps early 
   assert.equal(await serial.wait(s=>s==='BADGE_OK'),'BADGE_OK');
   await serial.write('badge info');assert.equal(new TextDecoder().decode(port.writes[0]),'badge info\n');
   await serial.close();
+});
+test('USB refusal from a running wardriving node fails at once with a plain reason',async()=>{
+  const port=mockPort(),serial=new BadgeSerial(port);await serial.open();
+  await serial.write('radar set theme 3');const waiting=serial.wait(s=>s.startsWith('RADAR_OK'));
+  port.emit('NODE_BUSY stop the node first: node stop\n');
+  await assert.rejects(waiting,error=>/wardriving node is running/.test(error.message)&&!/timed out/.test(error.message));
+  // A refusal left over from an earlier command does not fail the next one.
+  port.emit('NODE_BUSY stop the node first: node stop\n');await new Promise(r=>setTimeout(r,5));
+  await serial.write('badge info');const next=serial.wait(s=>s.startsWith('BADGE_INFO'));
+  port.emit('BADGE_INFO ok\n');assert.equal(await next,'BADGE_INFO ok');
+  await serial.close();
+});
+test('streamed downloads stop at once when a wardriving node refuses them',async()=>{
+  const busy=/wardriving node is running/;
+  for(const start of [l=>readHistory(l,5000),l=>exportLog(l),l=>exportCapture(l,'wifi-0000abcd.pcap'),l=>readNotebook(l,'probes')]){
+    const port=mockPort(),serial=new BadgeSerial(port);await serial.open();
+    const started=Date.now(),pending=start(serial);await new Promise(r=>setTimeout(r,5));
+    port.emit('NODE_BUSY stop the node first: node stop\n');
+    await assert.rejects(pending,busy);assert.ok(Date.now()-started<2000);await serial.close();
+  }
+});
+test('a node refusal left from an earlier command does not fail a read-only query',async()=>{
+  let attempts=0;const writes=[];
+  const link={async write(c){writes.push(c);},async wait(match){if(++attempts===1)throw new Error('A wardriving node is running on the board. Leave it from the node screen on the device, or send node stop, then try again.');const r='CLOCK_STATUS rtc=0 valid=1 epoch=5 offset=-300';assert.ok(match(r));return r;}};
+  assert.match(await deviceQuery(link,'clock status',s=>s.startsWith('CLOCK_STATUS ')),/^CLOCK_STATUS/);assert.deepEqual(writes,['clock status','clock status']);
 });
 test('USB disconnect rejects a pending transfer and permits cleanup',async()=>{
   const port=mockPort(),serial=new BadgeSerial(port);await serial.open();
@@ -298,7 +328,7 @@ test('MITM theme is offered only on compatible firmware',async()=>{
   for(const v of ['0.13.24','0.13.25','0.13.026','0.13.26junk',''])assert.equal(hasMitmTheme(v),false);
 });
 
-test('retired theme is absent from active controls and 47 built-in choices match firmware IDs',async()=>{
+test('retired theme is absent from active controls and the built-in choices match firmware IDs',async()=>{
   const compat=await import('../web/firmware-compat.js');
   assert.equal('hasHypnoticTheme' in compat,false);
   const html=readFileSync(new URL('../web/index.html',import.meta.url),'utf8');
@@ -307,10 +337,10 @@ test('retired theme is absent from active controls and 47 built-in choices match
   const catalog=readFileSync(new URL('../firmware/include/radar_theme_catalog.h',import.meta.url),'utf8');
   const commands=JSON.parse('['+catalog.split('radarThemeCommands[]={')[1].split('};')[0].replace(/\bnullptr\b/g,'null')+']');
   assert.ok(commands[40]===null||commands[40]==='','slot 40 must stay reserved without an active command');
-  assert.deepEqual(commands.slice(41),['vectorpotential','argyle','lawlocktools','moki','44delta','dagnazty-dark','dagnazty-digital','dagnazty-dark-digital']);
-  assert.equal(options.filter(x=>x!=='custom').length,47);
+  assert.deepEqual(commands.slice(41),['vectorpotential','argyle','lawlocktools','moki','44delta','dagnazty-dark','dagnazty-digital','dagnazty-dark-digital','lockpickingvlad']);
+  assert.equal(options.filter(x=>x!=='custom').length,48);
   assert.deepEqual(options.sort(),commands.filter(Boolean).sort());
-  assert.doesNotMatch(html,/hypnotic|46 built-in themes/i);
+  assert.doesNotMatch(html,/hypnotic/i);
   assert.doesNotMatch(readFileSync(new URL('../web/app.js',import.meta.url),'utf8'),/hypnotic/i);
 });
 
@@ -324,6 +354,16 @@ test('legacy retired ID remains readable and is never mistaken for a saved Green
     await assert.rejects(saveRadarSettings(link,{theme:'green',labels:false,recent:true}),/not saved/);
     assert.deepEqual(writes,['radar theme green','radar status','radar status'],'a failed theme save must stop before later preferences');
   }
+});
+
+test('a board without the Vlad build keeps its radar preferences',async()=>{
+  const writes=[];
+  const link={
+    async write(command){writes.push(command);},
+    async wait(){return 'RADAR_SETTINGS theme=9 labels=1 recent=0 pages=1 plotted=0 primary=-1 touches=0 hits=0 selected=0';}
+  };
+  await assert.rejects(saveRadarSettings(link,{theme:'lockpickingvlad',labels:false,recent:true}),/does not include the LockpickingVlad theme/);
+  assert.deepEqual(writes,['radar theme lockpickingvlad','radar status','radar status']);
 });
 
 test('retired and missing theme commands are rejected before any USB writes',async()=>{

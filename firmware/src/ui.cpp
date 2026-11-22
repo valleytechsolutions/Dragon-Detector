@@ -28,6 +28,8 @@
 #include "notifications.h"
 #include "ui_theme.h"
 #include "rotary_ui.h"
+#include "node_mode.h"
+#include "node_ui.h"
 #include <lvgl.h>
 #include <math.h>
 #include <esp_heap_caps.h>
@@ -74,7 +76,7 @@ extern lv_img_dsc_t radar_logo_awok,watch_logo_awok,radar_logo_baph,watch_logo_b
 #endif
 static const int CENTER=SCREEN_RES/2;
 #include "target_pages.h"
-enum Page {Boot,Radar,Menu,Devices,Details,Alerts,Channels,Files,Audio,Settings,About,Badge,Hunt,Detectors,History,HistoryDetail,Rules,Controls,Display,Diagnostics,Activity,RadarStyle,Stopwatch,Laps,Clock,ClockEdit,Orientation,FamilyColors,BleLab,Recon,Notebook,NotebookProbes,NotebookBle,NotebookDetail,ClockSettings,ClockWheels,Startup,BadUsb};
+enum Page {Boot,Radar,Menu,Devices,Details,Alerts,Channels,Files,Audio,Settings,About,Badge,Hunt,Detectors,History,HistoryDetail,Rules,Controls,Display,Diagnostics,Activity,RadarStyle,Stopwatch,Laps,Clock,ClockEdit,Orientation,FamilyColors,BleLab,Recon,Notebook,NotebookProbes,NotebookBle,NotebookDetail,ClockSettings,ClockWheels,Startup,BadUsb,Node};
 static unsigned notebookPage=0,notebookRows=0;
 static dragon::DeviceKey notebookKeys[10];
 static dragon::notebook::Advert notebookSelection;
@@ -102,7 +104,7 @@ static bool moki(){return radarTheme==44;}
 static bool argyle(){return radarTheme==42;}
 static bool vectorPotential(){return radarTheme==41;}
 static bool dmac(){return radarTheme==21;}
-static bool locksport(){return radarTheme==6||radarTheme==8||covert()||dmac()||lpl()||lpu()||sparrows()||vectorPotential()||argyle()||lawLockTools()||moki()||delta44()||(radarTheme==dragon::PersonalThemeId&&(personalTheme().flags&8));}
+static bool locksport(){return radarTheme==6||radarTheme==8||covert()||dmac()||lpl()||lpu()||sparrows()||vectorPotential()||argyle()||lawLockTools()||moki()||delta44()||radarTheme==dragon::VladTheme||(radarTheme==dragon::PersonalThemeId&&(personalTheme().flags&8));}
 static bool locksportDark(){return locksport()&&radarTheme!=6&&!argyle()&&!lawLockTools();}
 static uint32_t locksportBg(){return uiColors().bg;}
 static uint32_t locksportInk(){return uiColors().ink;}
@@ -113,6 +115,7 @@ static int devicePage=0,deviceRows=0,deviceTotal=0,devicePages=1;
 static dragon::DeviceKey deviceKeys[10];
 static lv_obj_t* diagnosticsLabel=nullptr;
 static lv_obj_t *activityLabel=nullptr,*radarActivity=nullptr;
+static bool radarActivityCue=false; // the label shows the near count, in the theme text colour
 static uint32_t radarPrepared=0;
 static uint32_t radarFrameAt=0;
 static int radarOrder[MAX_CONTACTS],radarCount=0;
@@ -150,14 +153,35 @@ static lv_obj_t* label(lv_obj_t* parent,const char* text,int x,int y,int w=0,con
   auto* o=lv_label_create(parent);lv_label_set_text(o,text);lv_obj_set_pos(o,S(x),S(y));if(w)lv_obj_set_width(o,S(w));lv_obj_set_style_text_font(o,uiFont(font),0);lv_obj_set_style_text_color(o,color(c),0);return o;
 }
 static void go(Page p){
+// A wardriving node keeps its screen up; a key asks it to stop instead (nodeKey).
+if(nodeBusy()&&p!=Node)return;
 if(wardriveUploadBusy()&&p!=Recon){wardriveUploadCancel();reconPage("wardrive-upload");pending=Recon;return;}
 if(wardriveBusy()&&p!=Recon){reconEndWardrive();pending=Recon;return;}
 if(p==Radar){recipeStop();reconStop();bleLabStop();}
 #ifndef BOARD_RADAR_LITE
+// Recon was already left in this pass (its view forgot the screen): build it again.
+if(page==Recon&&p==Recon&&pending!=Recon)page=Boot;
 if(page==Recon&&p!=Recon)reconLeave();
 #endif
 if(page==BadUsb&&p!=BadUsb)badusbLeave();
 if(page==BleLab&&p!=BleLab)bleLabStop();pending=p;}
+// The node screen calls this when the node has stopped (or changed kind) from
+// inside an LVGL event or nodeScreenLoop(); uiLoop() changes the page next pass.
+static bool nodeLeft=false;
+static void nodeExited(){nodeLeft=true;}
+// While a node runs, keys and the knob's own shortcuts never leave the node
+// screen. A short press wakes a dark panel, or shows for a moment how to leave;
+// it is never an exit request, so a bump or a bouncing contact cannot end a
+// drive. A key held down (hold true, where the board reports holds) counts like
+// a tap on EXIT, and a second exit request confirms. True while a node runs.
+static bool nodeKey(const char* source,bool hold=false){
+  if(!nodeBusy())return false;
+  const bool dark=outputBrightness==0;lastInteraction=millis();
+  const bool shown=!dark&&page==Node&&pending==Node&&nodeScreenShown();
+  Serial.printf("NODE_EXIT_PRESS source=%s dark=%u counted=%u\n",source,dark,shown&&hold);
+  if(shown){if(hold)nodeScreenExitPress(NodeExitInput::Hold);else nodeScreenKeyHint();}
+  return true;
+}
 static void action(lv_event_t* e);
 static lv_obj_t* button(lv_obj_t* parent,const char* text,int x,int y,int w,int h,int id){
   auto* b=lv_btn_create(parent);lv_obj_set_pos(b,S(x),S(y));lv_obj_set_size(b,S(w),S(h));lv_obj_set_style_pad_all(b,S(8),0);lv_obj_set_style_bg_color(b,color(uiColors().surface),0);lv_obj_set_style_radius(b,uiAscii()?0:S(13),0);lv_obj_set_style_border_width(b,1,0);lv_obj_set_style_border_color(b,color(uiColors().border),0);lv_obj_set_style_shadow_width(b,0,0);
@@ -180,10 +204,11 @@ static void locksportColors(lv_obj_t* object){
   for(unsigned i=0;i<lv_obj_get_child_cnt(object);++i)locksportColors(lv_obj_get_child(object,i));
 }
 void uiNotify(const char* text,const char* detail,const dragon::DeviceKey* key,bool watched){
-  if(wardriveBusy()||wardriveUploadBusy())return;
+  if(wardriveBusy()||wardriveUploadBusy()||nodeBusy())return;
   dragon::DetectionNotice item;strlcpy(item.title,text,sizeof(item.title));strlcpy(item.detail,detail,sizeof(item.detail));item.watched=watched;item.at=millis();item.hasKey=key!=nullptr;if(key){item.key=*key;int i=findContact(*key);if(i>=0)item.family=contacts[i].match.family;}
   for(unsigned f=0;f<unsigned(Family::Count);++f)if(!strcmp(text,dragon::familyName(Family(f)))){item.family=Family(f);break;}
   if(key&&!dragon::detectionPopupAllowed(page==Radar,pending==Radar))return;
+  if(key&&notice&&noticeHasKey&&noticeKey==*key)return; // already on screen
   if(clockPrompt||page==Boot||page==Startup||page==BleLab||page==BadUsb||page==Stopwatch||page==Clock||page==ClockSettings||page==ClockWheels||page==ClockEdit||(notice&&noticePriority>=item.priority())){noticeQueue.push(item);return;}
   dismissNotice();noticeAt=millis();noticeWatch=watched;noticeHasKey=key!=nullptr;if(key)noticeKey=*key;
   noticePriority=item.priority();uint32_t accent=uiColors().accent;
@@ -205,6 +230,12 @@ static void title(const char* text,const char* subtitle=nullptr){
   button(root,LV_SYMBOL_HOME,149,307,62,lawLockTools()?23:33,1);
 }
 static void legible(lv_obj_t* o){lv_obj_set_style_bg_color(o,color(uiColors().surface),0);lv_obj_set_style_bg_opa(o,LV_OPA_80,0);lv_obj_set_style_radius(o,7,0);}
+// Each LVGL setter invalidates its object even when nothing changes, and on
+// the radar that repaints the field beneath it. Per-frame updates use these.
+static void setText(lv_obj_t* o,const char* text){if(strcmp(lv_label_get_text(o),text))lv_label_set_text(o,text);}
+static void setTextColor(lv_obj_t* o,uint32_t c){const lv_color_t v=color(c);if(lv_obj_get_style_text_color(o,0).full!=v.full)lv_obj_set_style_text_color(o,v,0);}
+static void setBgColor(lv_obj_t* o,uint32_t c){const lv_color_t v=color(c);if(lv_obj_get_style_bg_color(o,0).full!=v.full)lv_obj_set_style_bg_color(o,v,0);}
+static void setHidden(lv_obj_t* o,bool hidden){if(lv_obj_has_flag(o,LV_OBJ_FLAG_HIDDEN)==hidden)return;if(hidden)lv_obj_add_flag(o,LV_OBJ_FLAG_HIDDEN);else lv_obj_clear_flag(o,LV_OBJ_FLAG_HIDDEN);}
 static lv_obj_t* scrollBody(int y=91,int h=211){
   auto* o=lv_obj_create(root);lv_obj_set_pos(o,S(44),S(y));lv_obj_set_size(o,S(272),S(h));lv_obj_set_style_bg_opa(o,LV_OPA_TRANSP,0);lv_obj_set_style_border_width(o,0,0);lv_obj_set_style_pad_all(o,0,0);lv_obj_set_scroll_dir(o,LV_DIR_VER);return o;
 }
@@ -272,7 +303,7 @@ static void selectRadarTheme(unsigned selected){
   radarTheme=selected;dismissNotice();uiApplyTheme(radarTheme);settings.putUChar("radar-theme",radarTheme);
   if(radarTheme==dragon::PersonalThemeId){watchFace=dragon::PersonalWatchId;settings.putUChar("watch-face",watchFace);return;}
   if(radarTheme==0){watchFace=0;settings.putUChar("watch-face",watchFace);}
-  if(locksport()){watchFace=delta44()?Delta44Watch:lawLockTools()?LawLockToolsWatch:moki()?MokiWatch:argyle()?ArgyleWatch:vectorPotential()?VectorPotentialWatch:sparrows()?35:lpu()?31:lpl()?29:dmac()?24:covert()?12:locksportDark()?11:9;settings.putUChar("watch-face",watchFace);}
+  if(locksport()){watchFace=radarTheme==dragon::VladTheme?dragon::VladWatch:delta44()?Delta44Watch:lawLockTools()?LawLockToolsWatch:moki()?MokiWatch:argyle()?ArgyleWatch:vectorPotential()?VectorPotentialWatch:sparrows()?35:lpu()?31:lpl()?29:dmac()?24:covert()?12:locksportDark()?11:9;settings.putUChar("watch-face",watchFace);}
   else if(radarTheme==7){watchFace=10;settings.putUChar("watch-face",watchFace);}
   else if(radarTheme>=10){watchFace=radarTheme+3;settings.putUChar("watch-face",watchFace);}
 }
@@ -289,13 +320,20 @@ static void huntDraw(lv_event_t* e){
     line(ctx,area.x1+S((i-1)*240/47),area.y1+S(a),area.x1+S(i*240/47),area.y1+S(b),uiColors().accent,2);
   }
 }
+// Themes drawn with the phosphor sweep also get dark glass pills with a
+// hairline in the sweep colour. Locksport themes keep their own styling.
+static bool radarSleek(){return !locksport()&&radarSweepKind(radarTheme)!=RadarSweep::Custom&&radarTheme!=24;}
+static uint32_t radarHairline(){return radarTheme==3?0xb89a5c:radarPalette(radarTheme).sweep;}
+static uint32_t radarPlate(){return fxBlend(radarPalette(radarTheme).panel,0x000000,.5f);}
+static uint32_t radarCueText(){return radarTheme==3?valley::Ice:radarPalette(radarTheme).text;}
+static uint32_t radarCuePlate(){return radarSleek()?radarPlate():radarPalette(radarTheme).panel;}
 static void updateRadarSummary(){
   if(!radarSummary)return;
   int index=radarHasSelection&&uint32_t(millis()-radarSelectedAt)<10000?findContact(radarSelectedKey):-1;
-  if(index<0){lv_obj_add_flag(radarSummary,LV_OBJ_FLAG_HIDDEN);return;}
+  if(index<0){setHidden(radarSummary,true);return;}
   auto& c=contacts[index];char summary[160];
   snprintf(summary,sizeof(summary),"%s / %02X:%02X\n%d dBm / tap here for details",radarFamilyName(c.match.family),c.mac[4],c.mac[5],c.rssi);
-  lv_label_set_text(radarSummary,summary);lv_obj_set_style_text_color(radarSummary,color(contactColor(c)),0);lv_obj_clear_flag(radarSummary,LV_OBJ_FLAG_HIDDEN);
+  setText(radarSummary,summary);setTextColor(radarSummary,contactColor(c));setHidden(radarSummary,false);
 }
 static void radarTap(lv_event_t* event){
   auto code=lv_event_get_code(event);
@@ -318,7 +356,7 @@ static void radarTap(lv_event_t* event){
   if(idx>=0){
     ++radarHits;radarSelectedKey=contactKey(contacts[idx]);radarHasSelection=true;radarSelectedAt=millis();radarPress.begin(radarSelectedKey);
   }else{radarGesture.clear();radarHasSelection=false;}
-  updateRadarSummary();lv_obj_invalidate(radar);
+  updateRadarSummary();radarForgetMarks();lv_obj_invalidate(radar); // the next frame repaints in full too
 }
 #if BOARD_HAS_SD
 static void loadFiles(){
@@ -368,26 +406,38 @@ static void build(){
   timerOrbit=nullptr;timerValue=timerState=timerLap=timerStartButton=timerSecondary=timerSplit=clockValue=clockDate=editValue=nullptr;
   if(page==BadUsb)badusbLeave();
   badgeUnload();page=pending;pageAt=millis();statusLabel=audioLabel=audioMeter=radar=trackingLabel=huntValue=huntMeta=huntGauge=huntGraph=diagnosticsLabel=activityLabel=radarActivity=nullptr;radarPrepared=0;
-  setRadioStandby(page==Clock||page==Stopwatch||page==Laps||page==ClockSettings||page==ClockWheels||page==ClockEdit);
-  lv_obj_clean(root);lv_obj_set_style_bg_color(root,color(uiColors().bg),0);
-#if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
-  prepareRadarBackdrop(root,page==Radar);
+  // A node owns the radios: standby is left as it was and settles after the node.
+  if(!nodeBusy())setRadioStandby(page==Clock||page==Stopwatch||page==Laps||page==ClockSettings||page==ClockWheels||page==ClockEdit);
+  nodeScreenClose();lv_obj_clean(root);lv_obj_set_style_bg_color(root,color(uiColors().bg),0);
+#ifdef RADAR_BACKDROP
+  radarForgetMarks();
+  if(page==Radar)prepareRadarBackdrop();
 #endif
   #ifndef BOARD_RADAR_LITE
   if(page==BleLab){bleLabView(root);return;}
   if(page==Recon){reconView(root,openRadioTools);return;}
 #endif
   if(page==BadUsb){badusbView(root);return;}
+  if(page==Node){
+    // BISCUIT NODE / JCMK Node: the device does nothing but act as a node. The
+    // EXIT button is the only control on screen; the knob reaches it only by a hold.
+    dismissNotice();lv_obj_set_style_bg_color(root,color(0x000000),0);
+    NodeScreenOptions options;options.exitButton=true;options.exited=nodeExited;
+#if defined(BOARD_CROWPANEL_21) || defined(BOARD_WATCHER)
+    options.keyHint="HOLD KNOB TO EXIT";options.keyHintShort="HOLD KNOB";   // a knob click only shows this; touch EXIT works as on other boards
+#endif
+    nodeScreenOpen(root,options);return;
+  }
   if(page==Startup){dismissNotice();drawStartup();return;}
   else if(page==Badge){lv_obj_set_style_bg_color(root,color(0x000000),0);badgeView(root);
   }else if(page==Radar){
     radar=lv_obj_create(root);lv_obj_remove_style_all(radar);lv_obj_set_pos(radar,0,0);lv_obj_set_size(radar,SCREEN_RES,SCREEN_RES);lv_obj_clear_flag(radar,LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN);lv_obj_add_flag(radar,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_PRESS_LOCK);
     lv_obj_add_event_cb(radar,radarDraw,LV_EVENT_DRAW_MAIN,nullptr);lv_obj_add_event_cb(radar,radarTap,LV_EVENT_PRESSED,nullptr);lv_obj_add_event_cb(radar,radarTap,LV_EVENT_CLICKED,nullptr);lv_obj_add_event_cb(radar,radarTap,LV_EVENT_PRESS_LOST,nullptr);
     if(radarTheme==8||radarTheme==14||dmac()||radarTheme==22||radarTheme==23||radarTheme==DagNaztyDigitalTheme)circleLogo(root,radarLogo(radarTheme),17);
-    else if(!lawLockTools()&&!moki()&&!delta44()&&!argyle()&&!vectorPotential()&&radarTheme!=13&&radarTheme!=24&&radarTheme!=32&&radarTheme!=CanCommanderTheme&&radarTheme!=MuldersRevengeTheme&&!greenArtTheme(radarTheme)){auto* logo=lv_img_create(root);lv_img_set_src(logo,radarLogo(radarTheme));lv_obj_align(logo,LV_ALIGN_TOP_MID,0,S(17));lv_obj_clear_flag(logo,LV_OBJ_FLAG_CLICKABLE);if(radarTheme==10||radarTheme==3){lv_obj_set_style_img_recolor(logo,color(radarTheme==3?0xd6b46e:0xffffff),0);lv_obj_set_style_img_recolor_opa(logo,LV_OPA_COVER,0);}}
+    else if(radarTheme!=dragon::VladTheme&&!lawLockTools()&&!moki()&&!delta44()&&!argyle()&&!vectorPotential()&&radarTheme!=13&&radarTheme!=24&&radarTheme!=32&&radarTheme!=CanCommanderTheme&&radarTheme!=MuldersRevengeTheme&&!greenArtTheme(radarTheme)){auto* logo=lv_img_create(root);lv_img_set_src(logo,radarLogo(radarTheme));lv_obj_align(logo,LV_ALIGN_TOP_MID,0,S(17));lv_obj_clear_flag(logo,LV_OBJ_FLAG_CLICKABLE);if(radarTheme==10||radarTheme==3){lv_obj_set_style_img_recolor(logo,color(radarTheme==3?0xd6b46e:0xffffff),0);lv_obj_set_style_img_recolor_opa(logo,LV_OPA_COVER,0);}}
     const auto& theme=radarPalette(radarTheme);
-    statusLabel=label(root,"LISTENING",56,66,248,F12,theme.text);lv_obj_set_style_text_align(statusLabel,LV_TEXT_ALIGN_CENTER,0);legible(statusLabel);lv_obj_set_style_bg_color(statusLabel,color(theme.panel),0);lv_obj_set_style_bg_opa(statusLabel,LV_OPA_60,0);
-    radarActivity=label(root,"",75,84,210,F12,0xffbc76);lv_obj_set_style_text_align(radarActivity,LV_TEXT_ALIGN_CENTER,0);legible(radarActivity);lv_obj_add_flag(radarActivity,LV_OBJ_FLAG_CLICKABLE);lv_obj_add_event_cb(radarActivity,action,LV_EVENT_CLICKED,(void*)116);
+    statusLabel=label(root,"LISTENING",56,radarTheme==dragon::VladTheme?30:66,248,F12,theme.text);lv_obj_set_style_text_align(statusLabel,LV_TEXT_ALIGN_CENTER,0);legible(statusLabel);lv_obj_set_style_bg_color(statusLabel,color(theme.panel),0);lv_obj_set_style_bg_opa(statusLabel,LV_OPA_60,0);
+    radarActivity=label(root,"",75,radarTheme==dragon::VladTheme?48:84,210,F12,0xffbc76);lv_obj_set_style_text_align(radarActivity,LV_TEXT_ALIGN_CENTER,0);legible(radarActivity);lv_obj_add_flag(radarActivity,LV_OBJ_FLAG_CLICKABLE);lv_obj_add_event_cb(radarActivity,action,LV_EVENT_CLICKED,(void*)116);radarActivityCue=false;
     radarSummary=label(root,"",65,244,194,F12,theme.text);
     lv_obj_set_height(radarSummary,S(34));lv_obj_set_style_text_align(radarSummary,LV_TEXT_ALIGN_CENTER,0);
     lv_obj_set_style_bg_color(radarSummary,color(dragon::RadarLabelBackground),0);lv_obj_set_style_bg_opa(radarSummary,LV_OPA_COVER,0);
@@ -399,6 +449,11 @@ static void build(){
     auto* tools=button(root,"TOOLS",187,301,78,32,2);
     auto* quiet=button(root,detector.quiet?LV_SYMBOL_MUTE:LV_SYMBOL_VOLUME_MAX,270,257,38,34,97);
     for(auto* b:{targets,tools,quiet}){lv_obj_set_style_bg_color(b,color(theme.panel),0);lv_obj_set_style_bg_opa(b,LV_OPA_80,0);lv_obj_set_style_border_color(b,color(theme.ring),0);lv_obj_set_style_border_opa(b,LV_OPA_60,0);if(locksport()||radarTheme==31)lv_obj_set_style_text_color(lv_obj_get_child(b,0),color(theme.text),0);}
+    if(radarSleek()){
+      const uint32_t hair=radarHairline(),plate=radarPlate();
+      for(auto* o:{statusLabel,radarActivity}){lv_obj_set_style_bg_color(o,color(plate),0);lv_obj_set_style_bg_opa(o,LV_OPA_80,0);lv_obj_set_style_border_color(o,color(hair),0);lv_obj_set_style_border_opa(o,90,0);lv_obj_set_style_border_width(o,1,0);lv_obj_set_style_radius(o,S(10),0);lv_obj_set_style_pad_ver(o,1,0);}
+      for(auto* b:{targets,tools,quiet}){lv_obj_set_style_bg_color(b,color(plate),0);lv_obj_set_style_border_color(b,color(hair),0);lv_obj_set_style_border_opa(b,140,0);}
+    }
   }else if(page==Menu){
 #ifdef BOARD_WAVESHARE_185B
     menuWardriveAvailable=wardriveAvailable();
@@ -566,7 +621,7 @@ static void build(){
   }else if(page==Alerts){
     title("OBSERVATIONS","Pattern evidence, not proof of intent");body=scrollBody();uint32_t count=std::min<uint32_t>(alertTotal,MAX_ALERTS);
     if(!count)label(body,"No alerts observed.\nScan gaps and silent devices\ncan hide activity.",6,25,246);
-    for(uint32_t i=0;i<count;++i){auto& a=alerts[(alertTotal-1-i)%MAX_ALERTS];String s=String(a.at/1000)+"s  "+a.title+"\n"+(detector.privacy?"Details hidden by privacy mode":a.detail);auto* l=label(body,s.c_str(),4,i*110,244,F12);lv_obj_set_height(l,S(104));}
+    for(uint32_t i=0;i<count;++i){auto& a=alerts[(alertTotal-1-i)%MAX_ALERTS];String s=String(a.at/1000)+"s  "+a.title+(a.count>1?String("  x")+a.count+", last "+(millis()-a.last)/1000+"s ago":String())+"\n"+(detector.privacy?"Details hidden by privacy mode":a.detail);auto* l=label(body,s.c_str(),4,i*110,244,F12);lv_obj_set_height(l,S(104));}
   }else if(page==Channels){
     title("CHANNEL ACTIVITY","Frames / second of observed dwell time");body=scrollBody();for(int ch=1;ch<=11;++ch){char s[96];float rate=channelDwellMs[ch]?channelFrames[ch]*1000.0/channelDwellMs[ch]:0;snprintf(s,sizeof(s),"CH %02d     %.1f f/s     %lus",ch,rate,(unsigned long)(channelDwellMs[ch]/1000));row(body,s,channelLock==ch?"Priority channel; full sweeps continue":"Tap to prioritize this channel",ch-1,200+ch);}
     button(root,"Auto",215,307,52,31,200);
@@ -608,7 +663,7 @@ static void build(){
     row(body,"Radio health","Queue, memory and reception diagnostics",n++,99);
     row(body,"Recon notebook","Passive BLE / Wi-Fi details and USB export",n++,153);
     row(body,"Watch / ignore list","Manage saved and snoozed addresses",n++,64);
-    String quiet=detector.autoQuiet?String("Auto quiet: after ")+detector.autoQuiet:"Auto quiet: off";row(body,quiet.c_str(),"Re-alert at +7 dB; resets after 30 minutes",n++,72);
+    row(body,detector.autoQuiet==0?"Alert again: after restart":detector.autoQuiet==10?"Alert again: 60 min away":"Alert again: 15 min away","One alert per device visit; repeats are counted",n++,72);
     row(body,detector.quiet?"Quiet mode: ON":"Quiet mode: OFF","Hide normal popups; continue history",n++,73);
     row(body,detector.history?"Flash history: ON":"Flash history: OFF","512 unique records / USB CSV export",n++,74);
     row(body,detector.privacy?"Display privacy: ON":"Display privacy: OFF","Mask addresses, names and coordinates",n++,75);
@@ -639,7 +694,7 @@ static void build(){
   }else if(page==Stopwatch){
     dismissNotice();lv_obj_set_style_bg_color(root,color(locksport()?locksportBg():uiColors().bg),0);buildChronographFrame();
     if(locksport()){
-      if(radarTheme!=dragon::PersonalThemeId&&!covert()&&!dmac()&&!lpl()&&!lpu()&&!sparrows()&&!vectorPotential()&&!argyle()&&!lawLockTools()&&!moki()&&!delta44()){circleLogo(root,&radar_logo_toool,20);centered(label(root,"LOCKSPORT TIMER",48,74,264,F20,locksportAccent()));}
+      if(radarTheme!=dragon::PersonalThemeId&&!covert()&&!dmac()&&!lpl()&&!lpu()&&!sparrows()&&!vectorPotential()&&!argyle()&&!lawLockTools()&&!moki()&&!delta44()&&radarTheme!=dragon::VladTheme){circleLogo(root,&radar_logo_toool,20);centered(label(root,"LOCKSPORT TIMER",48,74,264,F20,locksportAccent()));}
       button(root,LV_SYMBOL_HOME,149,307,62,lawLockTools()?23:33,1);
     }else if(radarTheme!=dragon::PersonalThemeId&&radarTheme!=CanCommanderTheme)title("CHRONOGRAPH","Precision stopwatch");
     timerState=label(root,"",50,lawLockTools()?112:locksport()?106:98,260,F12,locksport()?locksportAccent():uiColors().accent);centered(timerState);
@@ -684,6 +739,8 @@ static void build(){
     row(body,"Device color legend","Unique family colors in every theme",n++,150);
     row(body,radarLabels?"Device labels: ON":"Device labels: OFF",radarLabels?"Priority tags + tapped dot / all dots visible":"All dots together / tap for evidence",n++,121);
     row(body,radarRecent?"Recent signals: 2 minutes":"Recent signals: OFF","Stale dots show last-seen age, not live RSSI",n++,124);
+    row(body,nearby.on?"BLE radios near: ON":"BLE radios near: OFF","Counts radio addresses, not people",n++,125);
+    {char level[24];snprintf(level,sizeof(level),"Near level: %d dBm",int(nearby.enter));row(body,level,"-60 closer / -80 wider; not a distance",n++,126);}
   }else if(page==Display){
     title("DISPLAY");body=scrollBody();String b=String("Brightness: ")+brightness+"%";row(body,b.c_str(),"25 / 50 / 75 / 100%",0,44);
     String dim=detector.dimSeconds?String("Dim after ")+detector.dimSeconds+" seconds":"Auto dim: NEVER";row(body,dim.c_str(),"Never / 15 / 30 / 60 / 120 / 300 s",1,80);
@@ -824,7 +881,7 @@ static void action(lv_event_t* e){
     case 82:{const uint16_t choices[]={0,30,60,120,300,600};size_t i=0;while(i<5&&choices[i]!=detector.offSeconds)++i;detector.offSeconds=choices[(i+1)%6];detectorSave();go(Display);page=Boot;break;}
     case 83:detector.wakeAlert=!detector.wakeAlert;detectorSave();go(Display);page=Boot;break;
     case 84:brightness=100;settings.putUChar("brightness",brightness);detector.dimSeconds=detector.offSeconds=0;detectorSave();outputBrightness=-1;go(Display);page=Boot;break;
-    case 89:dismissNotice();break;
+    case 89:if(noticeHasKey)noticeQueue.drop(noticeKey);dismissNotice();break;
     case 90:if(noticeHasKey){auto key=noticeKey;dismissNotice();huntDevice(key);go(Hunt);}break;
     case 91:if(noticeHasKey){if(!(deviceRules(noticeKey)&RuleSnooze))toggleRule(noticeKey,RuleSnooze);dismissNotice();}break;
     case 96:filter=0;devicePage=0;go(Devices);break;
@@ -845,6 +902,8 @@ static void action(lv_event_t* e){
     case 152:if(radarPrimary>=0&&contacts[radarPrimary].used){selectContact(radarPrimary);go(Details);}else if(trackedContact>=0)go(Hunt);break;
     case 121:radarLabels=!radarLabels;settings.putBool("radar-labels",radarLabels);go(RadarStyle);page=Boot;break;
     case 124:radarRecent=!radarRecent;settings.putBool("radar-recent",radarRecent);go(RadarStyle);page=Boot;break;
+    case 125:nearbySet(!nearby.on,nearby.enter);go(RadarStyle);page=Boot;break;
+    case 126:nearbySet(nearby.on,nearby.enter>-65?-70:nearby.enter>-75?-80:-60);go(RadarStyle);page=Boot;break; // -60, -70, -80
     case 110:if(historyPage>0)--historyPage;go(History);page=Boot;break;
     case 111:if(size_t((historyPage+1)*10)<historyCount)++historyPage;go(History);page=Boot;break;
 #ifdef BOARD_WATCHER
@@ -892,11 +951,21 @@ bool uiTouch(bool pressed,int,int){
 #if defined(BOARD_CROWPANEL_21) || defined(BOARD_WATCHER)
 lv_obj_t* uiRotaryScope(){return resetBox?resetBox:clockPrompt?clockPrompt:notice?notice:root;}
 #ifdef BOARD_WATCHER
-bool uiRotaryOpenMenu(){if(resetBox||clockPrompt||notice)return false;go(Menu);return true;}
+bool uiRotaryOpenMenu(){if(nodeKey("rotary"))return true;if(resetBox||clockPrompt||notice)return false;go(Menu);return true;}
 #endif
 bool uiRotaryWake(){bool wasOff=outputBrightness==0;lastInteraction=millis();return wasOff;}
+bool uiRotaryNode(bool click,bool back){
+  if(!nodeBusy())return false;
+  if(back)nodeKey("knob_hold",true);else if(click)nodeKey("knob_click");
+  return true;   // turning the knob does nothing while a node runs
+}
 #endif
-void uiShow(const String& name){if(name=="startup"){go(Startup);page=Boot;return;}if(name=="radar")recipeStop();
+void uiShow(const String& name){
+  if(name=="node"){if(nodeBusy())go(Node);else{openRadioTools=false;go(Recon);}return;}
+  // A running node keeps its screen. The boards whose key opens the menu
+  // (1.75, LILYGO, XIAO) ask it to stop; nothing else may move the page.
+  if(nodeBusy()){if(name=="menu")nodeKey("menu_key");return;}
+  if(name=="startup"){go(Startup);page=Boot;return;}if(name=="radar")recipeStop();
 #ifndef BOARD_RADAR_LITE
   if(name=="modes"||name=="tools"){openRadioTools=name=="tools";go(Recon);return;}
   if(name=="findmy-beeper"){bleLabBeeperPage();go(BleLab);return;}
@@ -948,6 +1017,12 @@ void uiBegin(){
   pageAt=millis();
 }
 void uiLoop(){
+  // The node screen asked to go: rebuild it for a changed kind, else Tools > Modes.
+  if(nodeLeft){nodeLeft=false;if(page==Node){nodeScreenClose();if(nodeBusy())page=Boot;else{openRadioTools=false;go(Recon);}}}
+  // A running node owns the display as well as the radios: nothing opens over
+  // its screen and nothing replaces it (this also wins over the startup splash).
+  if(nodeBusy()){dismissNotice();if(clockPrompt){lv_obj_del(clockPrompt);clockPrompt=nullptr;}pending=Node;}
+  else if(pending==Node){openRadioTools=false;pending=Recon;if(page==Recon)page=Boot;}
   if(wardriveUploadBusy()){
     dismissNotice();if(clockPrompt){lv_obj_del(clockPrompt);clockPrompt=nullptr;}
     if(page!=Recon&&pending!=Recon){reconPage("wardrive-upload");pending=Recon;}
@@ -969,8 +1044,9 @@ void uiLoop(){
   if(page==Menu&&pending==Menu&&!clockPrompt&&!notice&&!resetBox&&menuWardriveAvailable!=wardriveAvailable()&&gpsMenuInputReleased())build();
 #endif
   if(page!=pending)build();
-  if(!wardriveBusy()&&!wardriveUploadBusy()&&page!=BadUsb)clockSetupPrompt();
+  if(!wardriveBusy()&&!wardriveUploadBusy()&&!nodeBusy()&&page!=BadUsb)clockSetupPrompt();
   if(page==BadUsb)badusbViewLoop();
+  if(page==Node)nodeScreenLoop();
 #ifndef BOARD_RADAR_LITE
   if(page==BleLab)bleLabViewLoop();
   if(page==Recon)reconViewLoop();
@@ -979,7 +1055,10 @@ void uiLoop(){
 #ifdef BOARD_WAVESHARE_185B
     waveshare185b::uiRefreshIntervalMs(page==Stopwatch,page==Radar,dragon::toolkit::status.recording);
 #else
-    page==Stopwatch?50:100;
+    page==Stopwatch?50:page==Radar?radarStats.interval:100;
+#endif
+#ifdef BOARD_WAVESHARE_185B
+  if(page==Radar)radarStats.interval=updateInterval; // what `radar paint` reports
 #endif
   if(millis()-lastUpdate>updateInterval){lastUpdate=millis();if(micBadge){if(audioStatus().mode==AudioMode::Recording)lv_obj_clear_flag(micBadge,LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(micBadge,LV_OBJ_FLAG_HIDDEN);}
     if(page==Stopwatch)updateTimer();
@@ -989,25 +1068,44 @@ void uiLoop(){
       radarFrameAt=millis();
       updateRadarSummary();
       bool deauth=detector.enabled(Family::Deauth)&&trafficStatus.disconnectActive(millis()),spam=detector.enabled(Family::BleSpam)&&trafficStatus.bleActive(millis());
-      lv_label_set_text(radarActivity,deauth&&spam?"DEAUTH + BLE BURST  >":deauth?"DEAUTH ACTIVITY  >":spam?"BLE SPAM CANDIDATE  >":"");
-      if(deauth||spam)lv_obj_clear_flag(radarActivity,LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(radarActivity,LV_OBJ_FLAG_HIDDEN);
-      if(trackedContact>=0 && trackingLabel){auto& t=contacts[trackedContact];uint32_t age=millis()-t.seen;String line=age>10000?"SIGNAL LOST / HUNT":String("HUNT / ")+t.signal.direction();lv_label_set_text(trackingLabel,line.c_str());}
-      else if(trackingLabel){char primary[64];if(radarPrimary>=0){auto& c=contacts[radarPrimary];snprintf(primary,sizeof(primary),"%s / %d dBm",radarFamilyName(c.match.family),c.rssi);lv_obj_set_style_text_color(trackingLabel,color(familyColor(c.match.family)),0);}else{strlcpy(primary,reconMode()==dragon::ReconMode::Radar?"":dragon::reconModes[unsigned(reconMode())].name,sizeof(primary));lv_obj_set_style_text_color(trackingLabel,color(radarPalette(radarTheme).text),0);}lv_label_set_text(trackingLabel,primary);}
-      if(locksport()&&trackingLabel){if(trackedContact>=0)lv_obj_set_style_text_color(trackingLabel,color(familyColor(contacts[trackedContact].match.family)),0);lv_obj_set_style_bg_color(trackingLabel,color((radarPrimary>=0||trackedContact>=0)?dragon::RadarLabelBackground:locksportBg()),0);lv_obj_set_style_bg_opa(trackingLabel,LV_OPA_COVER,0);lv_obj_set_style_radius(trackingLabel,S(5),0);}
-      lv_obj_invalidate(radar);int count=0;for(auto& c:contacts)if(radarVisible(c,millis()))++count;char s[96];int n=snprintf(s,sizeof(s),"%s %s / %d %s",radioEnabled?(blePhase?"BLE":"WI-FI"):"PAUSED",captureEnabled?"PCAP":"RX",count,count==1?"target":"targets");
-      int battery=batteryPercent();if(battery>=0)snprintf(s+n,sizeof(s)-n,"  /  %s%d%%",batteryCharging()?LV_SYMBOL_CHARGE " ":"",battery);
+      // Warnings own the line. Otherwise it is the quiet near count: long form,
+      // compact when that is too wide, and nothing at all at zero.
+      char near[48]="";
+      if(!deauth&&!spam){auto fits=[&]{return lv_txt_get_width(near,strlen(near),lv_obj_get_style_text_font(radarActivity,0),lv_obj_get_style_text_letter_space(radarActivity,0),LV_TEXT_FLAG_NONE)<=lv_obj_get_content_width(radarActivity);};
+        if(dragon::nearbyText(near,sizeof(near),nearby,radarFrameAt)&&!fits())dragon::nearbyText(near,sizeof(near),nearby,radarFrameAt,true);
+        size_t n=strlen(near);if(n&&n+4<=sizeof(near)){strcpy(near+n,"  >");if(!fits())near[n]=0;}}
+      const bool cue=*near;if(cue!=radarActivityCue){radarActivityCue=cue;lv_obj_set_style_text_color(radarActivity,color(cue?radarCueText():0xffbc76),0);lv_obj_set_style_bg_color(radarActivity,color(cue?radarCuePlate():radarSleek()?radarPlate():uiColors().surface),0);} // the status row's colours
+      setText(radarActivity,deauth&&spam?"DEAUTH + BLE BURST  >":deauth?"DEAUTH ACTIVITY  >":spam?"BLE SPAM CANDIDATE  >":near);
+      setHidden(radarActivity,!(deauth||spam||cue));
+      if(trackedContact>=0 && trackingLabel){auto& t=contacts[trackedContact];uint32_t age=millis()-t.seen;String line=age>10000?"SIGNAL LOST / HUNT":String("HUNT / ")+t.signal.direction();setText(trackingLabel,line.c_str());}
+      else if(trackingLabel){char primary[64];if(radarPrimary>=0){auto& c=contacts[radarPrimary];snprintf(primary,sizeof(primary),"%s / %d dBm",radarFamilyName(c.match.family),c.rssi);setTextColor(trackingLabel,familyColor(c.match.family));}else{strlcpy(primary,reconMode()==dragon::ReconMode::Radar?"":dragon::reconModes[unsigned(reconMode())].name,sizeof(primary));setTextColor(trackingLabel,radarPalette(radarTheme).text);}setText(trackingLabel,primary);}
+      if(locksport()&&trackingLabel){if(trackedContact>=0)setTextColor(trackingLabel,familyColor(contacts[trackedContact].match.family));setBgColor(trackingLabel,(radarPrimary>=0||trackedContact>=0)?dragon::RadarLabelBackground:locksportBg());if(lv_obj_get_style_bg_opa(trackingLabel,0)!=LV_OPA_COVER){lv_obj_set_style_bg_opa(trackingLabel,LV_OPA_COVER,0);lv_obj_set_style_radius(trackingLabel,S(5),0);}}
+      // Live: heard within RadarLiveMs. Recent: every other plotted contact.
+      int live=0,recent=0;for(auto& c:contacts)if(radarVisible(c,radarFrameAt))++(uint32_t(radarFrameAt-c.seen)<dragon::RadarLiveMs?live:recent);char s[96];
+      // The row is one line: when the full text is wider than the label, "+N" stands for "N recent".
+      for(bool compact:{false,true}){int n=snprintf(s,sizeof(s),"%s %s / %d live",radioEnabled?(blePhase?"BLE":"WI-FI"):"PAUSED",captureEnabled?"PCAP":"RX",live);
+      if(recent)n+=snprintf(s+n,sizeof(s)-n,compact?" +%d":" %d recent",recent);
+      int battery=batteryPercent();if(battery>=0)snprintf(s+n,sizeof(s)-n,"%s%s%d%%",recent?" / ":"  /  ",batteryCharging()?LV_SYMBOL_CHARGE " ":"",battery);
 #ifdef BOARD_XIAO_ROUND
       else snprintf(s+n,sizeof(s)-n," / %d%%",brightness);
 #endif
-      lv_label_set_text(statusLabel,s);}
+      if(lv_txt_get_width(s,strlen(s),lv_obj_get_style_text_font(statusLabel,0),lv_obj_get_style_text_letter_space(statusLabel,0),LV_TEXT_FLAG_NONE)<=lv_obj_get_content_width(statusLabel))break;}
+      setText(statusLabel,s);
+      // Repaint only what changed, then draw it now so the frame shown is the
+      // frame just measured.
+      const uint32_t paintStart=micros();
+      const bool full=radarInvalidate(radar,radarFrameAt);
+      radarPaintPixels=0;radarRefreshNow();
+      radarRecordPaint(full,micros()-paintStart,radarPaintPixels);}
     if(page==Diagnostics&&diagnosticsLabel){
       char text[360];snprintf(text,sizeof(text),"Wi-Fi frames: %lu\nBLE adverts: %lu\nQueue drops: %lu / peak %u\nMax processing: %lu us\nMax queue age: %lu ms\nContact slots: %u\nEvictions: %lu\nCache hits/misses: %lu/%lu\nFree heap: %u KB\nFree PSRAM: %u KB\nBLE: %s\n\nCounters restart at boot.\nHigher queue age means delayed\nRSSI and scan results.",wifiFrames,bleFrames,queueDrops,radioQueueHigh,radioMaxBatchUs,radioMaxLagMs,unsigned(MAX_CONTACTS),contactEvictions,contactCacheHits,contactCacheMisses,ESP.getFreeHeap()/1024,ESP.getFreePsram()/1024,activeBle?"Active / requests names":"Passive / listen only");lv_label_set_text(diagnosticsLabel,text);
     }
     if(page==Activity&&activityLabel){
-      char text[600],wifiMeta[100],bleMeta[120];auto& t=trafficStatus;unsigned recent=recentDisconnects();
+      char text[900],wifiMeta[100],bleMeta[120];auto& t=trafficStatus;unsigned recent=recentDisconnects();
       if(t.disconnectAlerts){snprintf(wifiMeta,sizeof(wifiMeta),"Last: CH %u / %s\nReason: %s",t.channel,t.disconnectActive(millis())?"RECENT":"older burst",t.protectedFrame?"protected / unavailable":"");if(!t.protectedFrame)snprintf(wifiMeta+strlen(wifiMeta),sizeof(wifiMeta)-strlen(wifiMeta),"%u",t.reason);}else strcpy(wifiMeta,"No bursts observed.");
       if(t.bleAlerts)snprintf(bleMeta,sizeof(bleMeta),"%s / %s\n%u addresses / %u variants",dragon::bleBurstName(t.bleGroup),t.bleActive(millis())?"RECENT":"older burst",t.bleAddresses,t.bleVariants);else strcpy(bleMeta,"No bursts observed.");
-      snprintf(text,sizeof(text),"WI-FI DEAUTH / DISASSOC\n%lu frames / %lu burst alerts\n%u%s frames in last 3s\n%s\n\nBLE SPAM CANDIDATES\n%lu burst alerts\n%s\n\nThresholds: 6 disconnects / 3s;\n12 BLE addresses / 5s, or\n24 pairing variants / 5s.\nRetries/identical adverts filtered.\nScan gaps can hide activity.\nCrowding or normal disconnects\ncan resemble attacks.\nEvents retain the evidence.",t.disconnectFrames,t.disconnectAlerts,recent,recent==64?"+":"",wifiMeta,t.bleAlerts,bleMeta);
+      int used=snprintf(text,sizeof(text),"WI-FI DEAUTH / DISASSOC\n%lu frames / %lu burst alerts\n%u%s frames in last 3s\n%s\n\nBLE SPAM CANDIDATES\n%lu burst alerts\n%s\n\nThresholds: 6 disconnects / 3s;\n12 BLE addresses / 5s, or\n24 pairing variants / 5s.\nRetries/identical adverts filtered.\nScan gaps can hide activity.\nCrowding or normal disconnects\ncan resemble attacks.\nEvents retain the evidence.",t.disconnectFrames,t.disconnectAlerts,recent,recent==64?"+":"",wifiMeta,t.bleAlerts,bleMeta);
+      if(used>0&&size_t(used)<sizeof(text))snprintf(text+used,sizeof(text)-used,"\n\nBLE RADIOS NEAR\n%u%s near / %u steady  (%s)\nLevel %d dBm or stronger\n\nCounts radio addresses, not\npeople. One person may carry\nseveral radios or none. Phones\nchange address about every\n15 minutes. Wi-Fi is not counted.\nSteady: near for minutes (about\n5 in normal scanning), usually\nyour own devices. A hidden line\ndoes not mean nobody is near.\nNot a distance. No alert or log.",unsigned(nearby.near),nearby.capped()?"+":"",unsigned(nearby.steady),nearby.state(millis()),int(nearby.enter));
       lv_label_set_text(activityLabel,text);
     }
     if(page==Hunt&&trackedContact>=0&&huntValue){auto& c=contacts[trackedContact];uint32_t age=millis()-(c.signal.count?c.signal.last:c.seen);bool stale=age>=10000||!c.signal.count;
@@ -1023,10 +1121,10 @@ void uiLoop(){
 #if defined(BOARD_CROWPANEL_21) || defined(BOARD_WATCHER)
   rotaryUiLoop();
 #endif
-  lv_timer_handler();
+  ++radarPass;lv_timer_handler();
 }
 
-void uiKey(bool home){lastInteraction=millis();go(home?Radar:page==Menu?Badge:Menu);}
+void uiKey(bool home){if(nodeKey(home?"home_key":"menu_key"))return;lastInteraction=millis();go(home?Radar:page==Menu?Badge:Menu);}
 bool uiStopwatchKey(bool start,uint64_t at){
   if(page!=Stopwatch||pending!=Stopwatch)return false;lastInteraction=millis();
   if(resetBox)return true;
@@ -1044,6 +1142,7 @@ static bool uiSideKeyModalOpen(){return resetBox||clockPrompt||notice||uiSideKey
 #endif
 #ifdef BOARD_AMOLED_175C
 void uiAmoled175cSleep(unsigned seconds){
+  if(nodeKey("boot_hold",true))return; // the hold is an exit request; sleep would end the node unasked
   lastInteraction=millis();
   if(uiSideKeyModalOpen()||page!=pending)return;
   const char* title="SLEEP UNAVAILABLE";
@@ -1061,6 +1160,7 @@ void uiAmoled175cSleep(unsigned seconds){
   lv_obj_set_width(box,S(280));lv_obj_center(box);
 }
 void uiAmoled175cKey(bool primary){
+  if(nodeKey(primary?"pwr_key":"boot_key"))return;
   lastInteraction=millis();
   if(uiSideKeyModalOpen()||page!=pending)return;
   if(uiStopwatchKey(primary))return;
@@ -1096,6 +1196,7 @@ static bool ui143cClockPromptLater(){
 }
 #endif
 void ui185bHome(){
+  if(nodeKey("boot_hold",true))return; // BOOT held 0.7 s
 #ifdef BOARD_WAVESHARE_143C
   if(ui143cClockPromptLater())return;
 #endif
@@ -1105,6 +1206,7 @@ void ui185bHome(){
   if(page==Menu&&pending==Menu)page=Boot;
 }
 void ui185bCycle(){
+  if(nodeKey("cycle_key"))return;
 #ifdef BOARD_WAVESHARE_143C
   if(ui143cClockPromptLater())return;
 #endif
@@ -1142,6 +1244,8 @@ bool uiCommand(const String& cmd){
   if(cmd=="ui test watch-notification"){dragon::DeviceKey key{};uiNotify("Input test","Test watch-list notification",&key,true);Serial.println("UI_TEST_OK");return true;}
   if(cmd=="ui status"){Serial.printf("UI_STATUS page=%u actions=%lu last_action=%d notice=%u queued=%u\n",unsigned(page),inputActions,lastInputAction,notice!=nullptr,noticeQueue.count);return true;}
   if(cmd=="radar status"){Serial.printf("RADAR_SETTINGS theme=%u labels=%u recent=%u pages=1 plotted=%u primary=%d touches=%lu hits=%lu selected=%u\n",radarTheme,radarLabels,radarRecent,dotCount,radarPrimary,radarTouches,radarHits,radarHasSelection);return true;}
+  if(cmd=="radar paint"){radarPrintStats();return true;}
+  if(cmd=="radar paint reset"){radarStats=RadarPaintStats{};Serial.println("RADAR_PAINT_RESET");return true;}
   if(cmd=="radar dots"){for(int i=0;i<dotCount;++i)Serial.printf("RADAR_DOT %d x=%d y=%d color=%06lx selected=%u\n",i,dots[i].x,dots[i].y,contactColor(contacts[dots[i].index]),radarHasSelection&&dots[i].key==radarSelectedKey);Serial.println("RADAR_DOTS_END");return true;}
   if(cmd=="radar scope all"||cmd=="radar scope candidates"){candidatesOnly=cmd.endsWith("candidates");settings.putBool("candidates",candidatesOnly);radarPrepared=0;Serial.printf("RADAR_SCOPE %s\n",candidatesOnly?"candidates":"all");return true;}
   if(cmd=="radar labels on"||cmd=="radar labels off"){radarLabels=cmd.endsWith("on");settings.putBool("radar-labels",radarLabels);Serial.printf("RADAR_LABELS %u\n",radarLabels);return true;}

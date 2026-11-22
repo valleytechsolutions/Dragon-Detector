@@ -11,6 +11,7 @@
 #include "background_radio.h"
 #include "ble_lab.h"
 #include "recon.h"
+#include "node_mode.h"
 #include "board_pins.h"
 #include "flash_budget.h"
 #include <lvgl.h>
@@ -91,7 +92,7 @@ static void health(){
     unsigned(audioStatus().mode));
   Serial.printf("DISPLAY %dx%d\n",lv_disp_get_hor_res(nullptr),lv_disp_get_ver_res(nullptr));
   Serial.printf("RUNTIME reset=%d stack_free=%u capture_previous=%lu\n",esp_reset_reason(),unsigned(uxTaskGetStackHighWaterMark(nullptr)),previousCaptureStage);
-  Serial.printf("RADIO_STATS capacity=%u queue_high=%u batch_us=%lu lag_ms=%lu evictions=%lu cache_hits=%lu cache_misses=%lu active_ble=%u\n",unsigned(MAX_CONTACTS),radioQueueHigh,radioMaxBatchUs,radioMaxLagMs,contactEvictions,contactCacheHits,contactCacheMisses,activeBle);
+  Serial.printf("RADIO_STATS capacity=%u queue_high=%u batch_us=%lu lag_ms=%lu evictions=%lu cache_hits=%lu cache_misses=%lu active_ble=%u pool=%u handled=%lu late=%lu long_batches=%lu\n",unsigned(MAX_CONTACTS),radioQueueHigh,radioMaxBatchUs,radioMaxLagMs,contactEvictions,contactCacheHits,contactCacheMisses,activeBle,radioPoolSize(),radioHandled,radioLateHandled,radioLongBatches);
   if(batteryPercent()>=0)Serial.printf("BATTERY %d%% %s\n",batteryPercent(),batteryCharging()?"charging":"discharging");
 }
 static uint32_t loopLastUs[6]{},loopMaxUs[6]{};
@@ -107,6 +108,9 @@ static void command(const String& c){
     if(path.indexOf(".cfg")>=0){Serial.println("FILE_ERROR private configuration; edit on the SD card");return;}
   }
 #endif
+  // A wardriving node owns both radios until it is stopped. Only node commands, the
+  // clock, a restart and read-only queries answer; the wardrive commands do not.
+  if(nodeBusy()&&!nodeAllowsCommand(c)){Serial.println("NODE_BUSY stop the node first: node stop");return;}
   if(wardriveUploadCommand(c))return;
   if(wardriveUploadBusy()&&c!="status"&&c!="memory status"&&c!="ui status"&&c!="screen wardrive-upload"){
     Serial.println("UPLOAD_BUSY cancel or wait for the upload to finish");return;
@@ -115,15 +119,19 @@ static void command(const String& c){
   if(wardriveBusy()&&c!="status"&&c!="scan status"&&c!="memory status"&&c!="loop diagnostics"&&c!="screen wardrive"&&c!="ui status"&&c!="touch status"&&c!="amoled status"){
     Serial.println("WARDRIVE_BUSY stop wardriving and wait for SD save first");return;
   }
+  if(nodeCommand(c))return;
   if(personalThemeCommand(c))return;
 #ifdef BOARD_WAVESHARE_185B
   if(sdMaintenanceCommand(c))return;
 #endif
   if(c=="system restart"){
-    if(stopwatch.running||reconOwnsRadio()||bleLabOwnsRadio()||reconStorageBusy()){Serial.println("SYSTEM_ERROR stop timing and radio sessions first");return;}
+    // A running node resumes after the restart, so it does not block one.
+    if(stopwatch.running||(reconOwnsRadio()&&!nodeBusy())||bleLabOwnsRadio()||reconStorageBusy()){Serial.println("SYSTEM_ERROR stop timing and radio sessions first");return;}
     Serial.println("SYSTEM_RESTARTING");Serial.flush();delay(50);ESP.restart();return;
   }
-  if(c=="scan status"){Serial.printf("SCAN_STATUS enabled=%u ble_ms=%lu wifi_ms=%lu mode=%u lab=%u hunt=%d priority_channel=%u",radioEnabled,bleListenMs,wifiListenMs,unsigned(reconMode()),bleLabOwnsRadio()||reconOwnsRadio(),trackedContact,channelLock);for(unsigned i=1;i<=11;++i)Serial.printf(" ch%u=%lu",i,channelDwellMs[i]);Serial.printf(" standby=%u\n",radioStandby());return;}
+  if(c=="scan status"){Serial.printf("SCAN_STATUS enabled=%u ble_ms=%lu wifi_ms=%lu mode=%u lab=%u hunt=%d priority_channel=%u",radioEnabled,bleListenMs,wifiListenMs,unsigned(reconMode()),bleLabOwnsRadio()||reconOwnsRadio(),trackedContact,channelLock);for(unsigned i=1;i<=11;++i)Serial.printf(" ch%u=%lu",i,channelDwellMs[i]);Serial.printf(" standby=%u adv_frames=%lu adv_mismatch=%lu\n",radioStandby(),advertisedFrames,advertisedMismatch);return;}
+  if(c=="radar signal"){radarSignalStatus();return;}
+  if(c=="radar near"||c.startsWith("radar near ")){if(!nearbyCommand(c))Serial.println("NEAR_ERROR radar near [on|off|level -85..-55]");return;}
   if(c=="memory status"){auto* app=esp_ota_get_running_partition();size_t size=ESP.getSketchSize(),slot=app?app->size:0;Serial.printf("MEMORY flash=%u app=%u slot=%u app_free=%u reserve_percent=%u legacy_used=%u legacy_total=%u heap=%u psram=%u\n",ESP.getFlashChipSize(),unsigned(size),unsigned(slot),unsigned(slot>=size?slot-size:0),dragon::FlashReservePercent,LittleFS.usedBytes(),LittleFS.totalBytes(),ESP.getFreeHeap(),ESP.getFreePsram());return;}
 #ifdef BOARD_GUITION_185_BETA
   if(c=="display hardware"){extern void guitionDisplayDiagnostics();guitionDisplayDiagnostics();return;}
@@ -132,9 +140,9 @@ static void command(const String& c){
 #ifdef BOARD_RADAR_LITE
   // Only locally operable Lite pages and timing controls are added here. Radio
   // ownership, audio, badge upload and full touch menus remain unavailable.
-  const bool allowed=c=="badge info"||c=="status"||c=="contacts"||c=="selftest"||c=="screenshot"||c=="ui status"||c=="radar status"||c=="display status"||c=="axon status"||c=="traffic status"||c=="detector status";
+  const bool allowed=c=="badge info"||c=="status"||c=="contacts"||c=="selftest"||c=="screenshot"||c=="ui status"||c=="radar status"||c=="display status"||c=="axon status"||c=="traffic status"||c=="detector status"||c=="alerts status"||c=="visits status";
   const bool timing=c.startsWith("time ")||c=="clock status"||c=="clock hardware"||c.startsWith("clock offset ")||c=="orientation status"||c=="stopwatch status"||c=="stopwatch laps"||c=="stopwatch start"||c=="stopwatch pause"||c=="stopwatch reset"||c=="stopwatch lap"||c=="stopwatch finish";
-  const bool page=c=="screen radar"||c=="screen clock"||c=="screen stopwatch"||c=="screen signals"||c=="screen diagnostics"||c=="screen startup"||c=="screen badusb";
+  const bool page=c=="screen radar"||c=="screen clock"||c=="screen stopwatch"||c=="screen signals"||c=="screen diagnostics"||c=="screen startup"||c=="screen node"||c=="screen modes"||c=="screen badusb";
 #ifdef BOARD_M5DIAL
   const bool dial=c.startsWith("dial ")||c=="tone settings"||c=="tone stop"||c.startsWith("tone level ")||c.startsWith("tone config ")||c.startsWith("tone play ")||c.startsWith("radar theme ")||c=="clock diagnostics"||c=="touch status"||c=="rotary status"||c=="screen menu"||c=="screen tools"||c=="screen settings";
 #else
@@ -287,7 +295,7 @@ void setup(){
 #ifdef BOARD_CROWPANEL_21
   extern void crowInputStatus();crowInputStatus();
 #endif
-  radioBegin();bleLabBegin();reconBegin();wardriveBegin();wardriveUploadBegin();badusbBegin();Serial.println("DRAGON READY");health();
+  radioBegin();bleLabBegin();reconBegin();wardriveBegin();wardriveUploadBegin();nodeBegin();badusbBegin();Serial.println("DRAGON READY");health();
   if(badusbKeyboardMode())uiShow("badusb");
 }
 void loop(){
@@ -296,15 +304,19 @@ void loop(){
   // LC76G command/reply exchanges span short cooperative waits. Other I2C
   // slaves must remain quiet until the reply has been consumed. Radios and SD
   // still run during these waits; touch IRQs stay latched for the next UI pass.
-  if(!wardriveI2cBusy())boardLoop();wardriveLoop();wardriveUploadLoop();
+  if(!wardriveI2cBusy())boardLoop();wardriveLoop();wardriveUploadLoop();nodeLoop();
   // A wardrive owns the radios and SD writer. Suspend unrelated analysis,
   // history writes, alerts and badge traffic until finalization completes.
-  if(!wardriveBusy()&&!wardriveUploadBusy()){bleLabLoop();reconLoop();}measured(0);
+  const bool quiet=!wardriveBusy()&&!wardriveUploadBusy()&&!nodeBusy(); // a node does nothing but act as a node
+  if(quiet){bleLabLoop();reconLoop();}measured(0);
   radioLoop();measured(1);
-  if(!wardriveBusy()&&!wardriveUploadBusy()){storageLoop();detectorLoop();}measured(2);
-  if(!wardriveBusy()&&!wardriveUploadBusy())audioLoop();measured(3);
+  if(quiet){storageLoop();detectorLoop();}measured(2);
+  if(quiet)audioLoop();measured(3);
   if(!wardriveI2cBusy())uiLoop();measured(4);
-  if(!wardriveBusy()&&!wardriveUploadBusy())badgeLoop();measured(5);
+  // A radar frame is the longest step of the loop. Empty what arrived during
+  // it now instead of one whole pass later; the time is booked under "radio".
+  radioDrain();{uint32_t end=micros();loopLastUs[1]+=end-stamp;loopMaxUs[1]=std::max(loopMaxUs[1],loopLastUs[1]);stamp=end;}
+  if(quiet)badgeLoop();measured(5);
   if(!wardriveI2cBusy()){
   while(Serial.available()){char c=Serial.read();if(c=='\n'){serialLine.trim();if(serialOverflow)Serial.println("COMMAND_ERROR too long");else command(serialLine);serialLine="";serialOverflow=false;}else if(serialLine.length()<1200)serialLine+=c;else serialOverflow=true;}
   if(millis()-lastHealth>10000){lastHealth=millis();health();}

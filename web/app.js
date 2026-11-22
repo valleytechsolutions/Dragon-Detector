@@ -1,36 +1,36 @@
-import {firmwareAtLeast,knownFirmware} from './firmware-version.js?v=0.14.8-dagnazty';
-import {hasWebAudio,readAudioSettings,saveAudioSettings,previewAudioTone} from './audio-transfer.js?v=0.14.8-dagnazty';
-import {resourceSetup} from "./sd-resources.js?v=0.14.8-dagnazty";
-import {hasRepeatingBeeper,hasBleTools,observedAddress,iBeaconCommand,parseIBeacon} from './ble-tools.js?v=0.14.8-dagnazty';
-import {maintainComputerClock} from './clock-maintenance.js?v=0.14.8-dagnazty';
-import {startRadarBackground} from './radar-background.js?v=0.14.8-dagnazty';
-import {completeInstallSession,syncInstalledClock} from './install-clock.js?v=0.14.8-dagnazty';
-import {checkRelease,usbErrorText,installDiagnostics} from './install-checks.js?v=0.14.8-dagnazty';
-import {createInstallCounter} from './install-counter.js?v=0.14.8-dagnazty';
-import {hasFullLab,hasFullRecon,hasSessionTools} from './lab-capabilities.js?v=0.14.8-dagnazty';
-import {sessionName,downloadMission,recipePutCommand,sourceMacCommand} from './mission-tools.js?v=0.14.8-dagnazty';
-import {hasNetworkTools,networkProfileCommand,networkResultsCsv} from './network-tools.js?v=0.14.8-dagnazty';
-import {normalizeHex,probeRows,probeCsv} from './recon-analysis.js?v=0.14.8-dagnazty';
-import {hasReconTools,reconLines,exportCapture,exportReconFile,captureName,importPortalHtml} from './recon-transfer.js?v=0.14.8-dagnazty';
-import {decodeProfile,exportProfile,exportLog,importProfile,labLines,safeProfileName} from './ble-lab.js?v=0.14.8-dagnazty';
-import {localClockEpoch,setClock,readWearable,setOrientation} from './wearable-transfer.js?v=0.14.8-dagnazty';
-import {syncVerifiedClock,clockResultText} from './clock-verification.js?v=0.14.8-dagnazty';
-import {clockInstallDialogClass} from './clock-install-dialog.js?v=0.14.8-dagnazty';
+import {firmwareAtLeast,knownFirmware} from './firmware-version.js?v=0.14.8';
+import {hasWebAudio,readAudioSettings,saveAudioSettings,previewAudioTone} from './audio-transfer.js?v=0.14.8';
+import {resourceSetup} from "./sd-resources.js?v=0.14.8";
+import {hasRepeatingBeeper,hasBleTools,observedAddress,iBeaconCommand,parseIBeacon} from './ble-tools.js?v=0.14.8';
+import {maintainComputerClock} from './clock-maintenance.js?v=0.14.8';
+import {startRadarBackground} from './radar-background.js?v=0.14.8';
+import {completeInstallSession,syncInstalledClock} from './install-clock.js?v=0.14.8';
+import {checkRelease,usbErrorText,installDiagnostics} from './install-checks.js?v=0.14.8';
+import {createInstallCounter} from './install-counter.js?v=0.14.8';
+import {hasFullLab,hasFullRecon,hasSessionTools} from './lab-capabilities.js?v=0.14.8';
+import {sessionName,downloadMission,recipePutCommand,sourceMacCommand} from './mission-tools.js?v=0.14.8';
+import {hasNetworkTools,networkProfileCommand,networkResultsCsv} from './network-tools.js?v=0.14.8';
+import {normalizeHex,probeRows,probeCsv} from './recon-analysis.js?v=0.14.8';
+import {hasReconTools,reconLines,exportCapture,exportReconFile,captureName,importPortalHtml} from './recon-transfer.js?v=0.14.8';
+import {decodeProfile,exportProfile,exportLog,importProfile,labLines,safeProfileName} from './ble-lab.js?v=0.14.8';
+import {localClockEpoch,setClock,readWearable,setOrientation} from './wearable-transfer.js?v=0.14.8';
+import {syncVerifiedClock,clockResultText} from './clock-verification.js?v=0.14.8';
+import {clockInstallDialogClass} from './clock-install-dialog.js?v=0.14.8';
 import {deviceQuery} from './device-query.js';
-import {BadgeSerial} from './serial.js?v=0.14.8-dagnazty';
-import {encodeBadge} from './badge-codec.js?v=0.14.8-dagnazty';
-import {uploadBadge} from './badge-transfer.js?v=0.14.8-dagnazty';
+import {BadgeSerial} from './serial.js?v=0.14.8';
+import {encodeBadge} from './badge-codec.js?v=0.14.8';
+import {uploadBadge} from './badge-transfer.js?v=0.14.8';
 import {readHistory} from './detector-transfer.js';
-import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasBrandedThemes,hasCommunityThemes,hasRunnerThemes,hasCapsuleSparrowsThemes,hasCanCommanderTheme,hasGreenArtThemes,hasMuldersRevengeTheme,hasMitmTheme,hasLocksportCollection,hasDelta44Theme,hasDagNaztyDarkTheme,hasLplTheme,hasWearableTools,hasClockTools,hasWifiClock,hasRetainedClock} from './firmware-compat.js?v=0.14.8-dagnazty';
-import {readRadarSettings,saveRadarSettings} from './radar-transfer.js?v=0.14.8-dagnazty';
-import {boardProfiles,connectedProfile,supportsBadge} from './board-profiles.js?v=0.14.8-dagnazty';
-import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan,drawBadgeText} from './badge-editor.js?v=0.14.8-dagnazty';
-import {hasNotebook,readNotebook,customAdvertCommand} from './notebook.js?v=0.14.8-dagnazty';
-import {revealLocation} from './navigation.js?v=0.14.8-dagnazty';
-import {createThemeStudio} from './theme-studio.js?v=0.14.8-dagnazty';
-import {setupWorkspaceTabs} from './workspace-tabs.js?v=0.14.8-dagnazty';
-import {installPersonalTheme} from './theme-install.js?v=0.14.8-dagnazty';
-import {hasPersonalThemes} from './theme-transfer.js?v=0.14.8-dagnazty';
+import {parseBadgeInfo,hasDetectorTools,hasActivityTools,hasRadarTools,hasBrandedThemes,hasCommunityThemes,hasRunnerThemes,hasCapsuleSparrowsThemes,hasCanCommanderTheme,hasGreenArtThemes,hasMuldersRevengeTheme,hasMitmTheme,hasLocksportCollection,hasDelta44Theme,hasDagNaztyDarkTheme,hasLplTheme,hasWearableTools,hasClockTools,hasWifiClock,hasRetainedClock} from './firmware-compat.js?v=0.14.8';
+import {readRadarSettings,saveRadarSettings} from './radar-transfer.js?v=0.14.8';
+import {boardProfiles,connectedProfile,supportsBadge} from './board-profiles.js?v=0.14.8';
+import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan,drawBadgeText} from './badge-editor.js?v=0.14.8';
+import {hasNotebook,readNotebook,customAdvertCommand} from './notebook.js?v=0.14.8';
+import {revealLocation} from './navigation.js?v=0.14.8';
+import {createThemeStudio} from './theme-studio.js?v=0.14.8';
+import {setupWorkspaceTabs} from './workspace-tabs.js?v=0.14.8';
+import {installPersonalTheme} from './theme-install.js?v=0.14.8';
+import {hasPersonalThemes} from './theme-transfer.js?v=0.14.8';
 setupWorkspaceTabs();
 revealLocation();
 const $ = id => document.getElementById(id);
@@ -194,7 +194,7 @@ function setBadgeProfile(id){
 }
 function controls(){
   themeStudio.update();
-  for(const option of $('radar-theme').options){if(option.value==='44delta')option.disabled=!!serial&&!hasDelta44Theme(firmwareVersion);if(['dagnazty-dark','dagnazty-digital','dagnazty-dark-digital'].includes(option.value))option.disabled=!!serial&&!hasDagNaztyDarkTheme(firmwareVersion);if(['vectorpotential','argyle','lawlocktools','moki'].includes(option.value))option.disabled=!!serial&&!hasLocksportCollection(firmwareVersion);if(option.dataset.personal)option.disabled=!serial||!hasPersonalThemes(firmwareVersion);if(['ogg','xombi'].includes(option.value))option.disabled=!!serial&&!hasGreenArtThemes(firmwareVersion);if(option.value==='mitm')option.disabled=!!serial&&!hasMitmTheme(firmwareVersion);if(option.value==='muldersrevenge')option.disabled=!!serial&&!hasMuldersRevengeTheme(firmwareVersion);if(option.value==='can-commander')option.disabled=!!serial&&!hasCanCommanderTheme(firmwareVersion);}
+  for(const option of $('radar-theme').options){if(option.value==='lockpickingvlad')option.disabled=!!serial&&!firmwareAtLeast(firmwareVersion,'0.14.8');if(option.value==='44delta')option.disabled=!!serial&&!hasDelta44Theme(firmwareVersion);if(['dagnazty-dark','dagnazty-digital','dagnazty-dark-digital'].includes(option.value))option.disabled=!!serial&&!hasDagNaztyDarkTheme(firmwareVersion);if(['vectorpotential','argyle','lawlocktools','moki'].includes(option.value))option.disabled=!!serial&&!hasLocksportCollection(firmwareVersion);if(option.dataset.personal)option.disabled=!serial||!hasPersonalThemes(firmwareVersion);if(['ogg','xombi'].includes(option.value))option.disabled=!!serial&&!hasGreenArtThemes(firmwareVersion);if(option.value==='mitm')option.disabled=!!serial&&!hasMitmTheme(firmwareVersion);if(option.value==='muldersrevenge')option.disabled=!!serial&&!hasMuldersRevengeTheme(firmwareVersion);if(option.value==='can-commander')option.disabled=!!serial&&!hasCanCommanderTheme(firmwareVersion);}
   const labReady=!!serial&&hasFullLab(deviceProfile,firmwareVersion),reconReady=!!serial&&hasFullRecon(deviceProfile,firmwareVersion);
   document.querySelectorAll('#ble-lab button').forEach(b=>b.disabled=busy||!labReady);
   document.querySelectorAll('#radio-tools button').forEach(b=>b.disabled=busy||!reconReady);
@@ -311,7 +311,7 @@ $('connect').onclick=async()=>{
     $('device-label').textContent=`${match.size} × ${match.size} · ${boardProfiles[profile].lite?'LITE':'CONNECTED'}`;$('disconnect').hidden=false;
     if(boardProfiles[profile].lite){
       if(hasClockTools(profile,firmwareVersion)){await syncVerifiedClock(link,deviceProfile,firmwareVersion);await loadWearable(link);}
-      $('studio-status').textContent=$('detector-status').textContent=profile==='m5dial'?'Dial connected and hardware time verified. Firmware 0.13.27 adds Menu, separate Time/Date settings and dot actions. Turn to browse, press to select, hold to go back. See the Dial guide for controls and limits.':hasClockTools(profile,firmwareVersion)?'Lite connected and local time set. Hold BOOT to cycle radar, clock, timer, signals and status. Tap changes themes or starts/pauses the timer; double tap records a lap/open or resets a paused timer.':'Older Lite radar firmware connected. Update to 0.13.9 for clock, timer, signal and status pages.';
+      $('studio-status').textContent=$('detector-status').textContent=profile==='m5dial'?'Dial connected and hardware time verified. Firmware 0.13.27 adds Menu, separate Time/Date settings and dot actions. Turn to browse, press to select, hold to go back. See the Dial guide for controls and limits.':hasClockTools(profile,firmwareVersion)?'Lite connected and local time set. Hold BOOT to change pages. Tap changes themes or starts/pauses the timer; double tap records a lap/open or resets a paused timer.':'Older Lite radar firmware connected. Update to 0.13.9 for clock, timer, signal and status pages.';
       return;
     }
     $('studio-status').textContent=`${match.board} is ready. Choose and position your image.`;draw();

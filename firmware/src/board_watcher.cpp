@@ -5,6 +5,7 @@
 #include "rotary_input.h"
 #include "rotary_ui.h"
 #include "wardrive.h"
+#include "node_mode.h"
 #include <Wire.h>
 #include <SPI.h>
 #include <lvgl.h>
@@ -174,7 +175,7 @@ bool watcherPowerOff(){
  writeWord(2,previous);watcherAudioPower(true);loggingEnabled=wasLogging;return false;
 }
 bool watcherSleep(unsigned seconds){
- if(reconRecording()||reconStorageBusy()||wardriveBusy())return false;
+ if(reconRecording()||reconStorageBusy()||wardriveBusy()||nodeBusy())return false;
  extern bool watcherCloseStorage();
  if(!watcherCloseStorage())return false;
  audioStop();
@@ -187,6 +188,7 @@ bool watcherSleep(unsigned seconds){
  ledcWrite(8,0);sampleInputs();
  esp_sleep_enable_ext0_wakeup(GPIO_NUM_2,0);rtc_gpio_pullup_en(GPIO_NUM_2);rtc_gpio_pulldown_dis(GPIO_NUM_2);
  if(seconds)esp_sleep_enable_timer_wakeup(uint64_t(seconds)*1000000);
+ visitsPersist(); // devices still here after a short sleep do not alert again
  Serial.println("WATCHER_SLEEP");Serial.flush();esp_deep_sleep_start();return true;
 }
 void watcherAudioDiagnostics(){

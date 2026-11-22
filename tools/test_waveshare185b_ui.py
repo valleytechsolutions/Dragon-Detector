@@ -76,8 +76,15 @@ struct Timer {bool running=false;unsigned toggles=0,laps=0,finishes=0;uint64_t a
 unsigned resetRequests=0,updates=0;
 bool locksport(){return locksportTheme;}void resetStopwatch(){++resetRequests;}
 void updateTimer(){++updates;}bool uiStopwatchKey(bool start,uint64_t at=0);
+// A running BISCUIT NODE / JCMK Node: its screen counts the exit requests.
+bool nodeRunning=false,nodeShown=true;int outputBrightness=100;unsigned exitPresses=0;
+bool nodeBusy(){return nodeRunning;}bool nodeScreenShown(){return nodeShown;}
+enum class NodeExitInput:uint8_t{Screen,Hold};unsigned holdPresses=0,keyHints=0;
+bool nodeScreenExitPress(NodeExitInput how=NodeExitInput::Screen){++exitPresses;if(how==NodeExitInput::Hold)++holdPresses;return false;}
+void nodeScreenKeyHint(){++keyHints;}
+struct SerialMock {void println(const char*){}void flush(){}template<class... T>void printf(const char*,T...){}} Serial;
 '''
-for signature in ['static void go(', 'bool uiStopwatchKey(', 'static const char* ui185bResourceState(',
+for signature in ['static void go(', 'static bool nodeKey(', 'bool uiStopwatchKey(', 'static const char* ui185bResourceState(',
                   'static void build185bSystem(', 'static void show185bResources(', 'static bool uiSideKeyHasMessageBox(',
                   'static bool uiSideKeyModalOpen(',
                   'static bool ui185bModalOpen(', 'bool ui185bTimerVisible(',
@@ -128,6 +135,20 @@ int main(){
  visible(Recon,1);uploadBusy=true;ui185bHome();assert(pending==Recon&&uploadCancels==1&&reconRequest=="wardrive-upload"&&menuTab==0);
  uploadBusy=false;ui185bHome();assert(pending==Menu&&reconLeaves==1);
  visible(BadUsb);ui185bHome();assert(pending==Menu&&badusbLeaves==1);
+ // A running node keeps its screen: a BOOT click only shows how to leave, the
+ // BOOT hold asks it to stop (the node screen confirms the second), a dark panel
+ // only wakes, and nothing else (timer keys, programmatic navigation) leaves it.
+ nodeRunning=true;visible(Node);assert(!ui185bTimerVisible());
+ ui185bCycle();ui185bCycle();assert(exitPresses==0&&keyHints==2&&page==Node&&pending==Node&&lastInteraction==now);
+ ui185bHome();assert(exitPresses==1&&holdPresses==1&&pending==Node&&menuTab==0);
+ assert(!uiStopwatchKey(true,1)&&stopwatch.toggles==toggles);
+ outputBrightness=0;ui185bCycle();ui185bHome();assert(exitPresses==1&&keyHints==2&&pending==Node);outputBrightness=100;
+ page=Boot;ui185bCycle();assert(exitPresses==1&&keyHints==2&&pending==Node);page=Node;
+ nodeShown=false;ui185bHome();assert(exitPresses==1);nodeShown=true;
+ {const unsigned stops=recipeStops,leaves=reconLeaves;go(Radar);go(Menu);go(Recon);assert(pending==Node&&recipeStops==stops&&reconLeaves==leaves);}
+ nodeRunning=false;ui185bCycle();assert(exitPresses==1&&keyHints==2&&pending==Menu&&menuTab==0);
+ // Recon left earlier in a pass and wanted again is built afresh, not left half-gone.
+ visible(Recon);go(Badge);assert(reconLeaves==2&&page==Recon);go(Recon);assert(page==Boot&&pending==Recon&&reconLeaves==2);
  // Resource health stays visible in System without creating automatic popups.
  for(const char* state:{"ready","missing SD vendor labels","corrupt checksum","insufficient PSRAM"}){
    vendorState=state;bleState="ready";labels.clear();build185bSystem();
@@ -139,7 +160,7 @@ int main(){
  visible(Menu,2);show185bResources();assert(dialogsOpened==1);
  for(const char* text:{"IEEE names: ready","BLE names: missing SD BLE labels","vendors.ddr + ble-labels.ddb","/dragon/resources/","Restart","Core radar works without lookup names"})assert(dialogText.find(text)!=std::string::npos);
  ui185bCycle();assert(pending==Menu&&menuTab==2); // Explicit information dialog blocks BOOT until closed.
- puts("PASS production 1.85B page/tab cycle, touch resync, held home, timer start/pause and secondary actions, modals, pending transitions and safe save/cancel navigation");
+ puts("PASS production 1.85B page/tab cycle, touch resync, held home, timer start/pause and secondary actions, modals, pending transitions, safe save/cancel navigation and node screen exit keys");
  puts("PASS System resource ready/missing/invalid/unavailable status and explicit install-guide dialog without automatic popups");
 }
 '''

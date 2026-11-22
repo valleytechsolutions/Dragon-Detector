@@ -30,6 +30,7 @@ def build(board,skip):
     # Each standalone board ZIP also carries the embedded fonts' license.
     shutil.copyfile(ROOT/'docs/licenses/Montserrat-OFL.txt',out/'FONT-LICENSE.txt')
     shutil.copyfile(ROOT/'docs/licenses/Unscii-NOTICE.txt',out/'ASCII-FONT-NOTICE.txt')
+    shutil.copyfile(ROOT/'docs/licenses/ESP32DualBandWardriver-LICENSE.txt',out/'ESP32DualBandWardriver-LICENSE.txt')
     if board=='waveshare_143c':
         (out/'BOARD-STATUS.txt').write_text(
             'Waveshare ESP32-S3-Touch-AMOLED-1.43C / 1.43C-EN, 466 x 466, 8 MB flash, 8 MB PSRAM.\n'
@@ -157,6 +158,7 @@ def build(board,skip):
             if file.is_file() and file.suffix!='.zip':archive.write(file,file.name)
     with zipfile.ZipFile(bundle) as archive:
         assert archive.testzip() is None,'Corrupt board ZIP'
+        assert archive.read('ESP32DualBandWardriver-LICENSE.txt')==(ROOT/'docs/licenses/ESP32DualBandWardriver-LICENSE.txt').read_bytes(),'Missing or altered node protocol notice'
         if board=='guition_185_beta':
             for name in ('DISPLAY-SOURCE.md','DISPLAY-NOTICE','DISPLAY-LICENSE-APACHE-2.0.txt','DISPLAY-LICENSE-MIT.txt','DISPLAY-SHA256SUMS.txt','BOARD-STATUS.txt'):
                 assert archive.read(name)==(out/name).read_bytes(),f'Missing or altered beta notice: {name}'

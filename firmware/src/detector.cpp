@@ -15,6 +15,43 @@ HistoryRecord* historyRecords=nullptr;
 size_t historyCount=0;
 bool historyReady=false;
 static Preferences prefs;
+// Alert ledgers: outside Contact so eviction cannot reset a visit.
+static dragon::VisitLedger visits;
+static dragon::IncidentLedger incidents;
+#ifdef BOARD_RADAR_LITE
+static constexpr unsigned VISIT_LIMIT=256;
+#else
+static constexpr unsigned VISIT_LIMIT=512,VISIT_FALLBACK=128;
+#endif
+static uint16_t alertEpoch=0;
+uint16_t alertRevision(){return uint16_t(alertEpoch*31u+unsigned(reconMode()));}
+void visitTouch(const dragon::DeviceKey& key,uint32_t now){visits.touch(key,now);}
+void visitExpire(uint32_t now){visits.goneMs=dragon::visitGoneMs(detector.autoQuiet);visits.expire(now);incidents.expire(now);}
+void visitListen(bool wifi,bool ble,uint32_t now){visits.listen(0,wifi,now);visits.listen(1,ble,now);incidents.listen(0,wifi,now);incidents.listen(1,ble,now);}
+// Running visits survive deep sleep and software resets in RTC memory; the
+// system clock keeps counting through both. A power-on reset fails the check.
+static constexpr unsigned VISIT_KEEP=128;static constexpr uint32_t VISIT_KEEP_MAGIC=0x56495331;
+struct VisitKeep {uint32_t magic,count,crc;uint64_t savedUs;dragon::VisitRecord records[VISIT_KEEP];};
+RTC_NOINIT_ATTR static VisitKeep visitKeep;
+static uint64_t systemUs(){timeval tv;gettimeofday(&tv,nullptr);return uint64_t(tv.tv_sec)*1000000ull+tv.tv_usec;}
+static uint32_t visitKeepCrc(){return dragon::crc32((const uint8_t*)&visitKeep.savedUs,sizeof(visitKeep.savedUs)+visitKeep.count*sizeof(dragon::VisitRecord))^visitKeep.count;}
+void visitsPersist(){visitKeep.magic=0;visitKeep.count=visits.save(visitKeep.records,VISIT_KEEP,millis());visitKeep.savedUs=systemUs();visitKeep.crc=visitKeepCrc();visitKeep.magic=VISIT_KEEP_MAGIC;}
+static void visitsRestore(){
+  visits.goneMs=dragon::visitGoneMs(detector.autoQuiet);const uint64_t now=systemUs();
+  if(visitKeep.magic==VISIT_KEEP_MAGIC&&visitKeep.count<=VISIT_KEEP&&visitKeep.crc==visitKeepCrc()&&now>=visitKeep.savedUs&&now-visitKeep.savedUs<3600000000ull)
+    visits.restore(visitKeep.records,visitKeep.count,uint32_t((now-visitKeep.savedUs)/1000),millis());
+  visitKeep.magic=0;
+}
+static void visitsBegin(){
+#ifdef BOARD_RADAR_LITE
+  static dragon::Visit table[VISIT_LIMIT];visits.begin(table,VISIT_LIMIT);
+#else
+  // Internal RAM only if PSRAM fails, so the fallback costs nothing otherwise.
+  auto* table=(dragon::Visit*)ps_calloc(VISIT_LIMIT,sizeof(dragon::Visit));unsigned n=VISIT_LIMIT;
+  if(!table){table=(dragon::Visit*)heap_caps_calloc(VISIT_FALLBACK,sizeof(dragon::Visit),MALLOC_CAP_INTERNAL|MALLOC_CAP_8BIT);n=VISIT_FALLBACK;}
+  visits.begin(table,table?n:0);
+#endif
+}
 struct Rule {dragon::DeviceKey key;uint8_t flags=0;};
 static Rule rules[RULE_LIMIT];
 static uint32_t bootId=0,sequence=0;
@@ -41,9 +78,10 @@ bool toggleRule(const dragon::DeviceKey& key,DeviceRule flag){
   Rule before=*slot;slot->key=key;slot->flags^=flag;
   Rule saved[RULE_LIMIT];memcpy(saved,rules,sizeof(saved));for(auto& r:saved)r.flags&=RuleIgnore|RuleWatch;
   if(prefs.putBytes("rules",saved,sizeof(saved))!=sizeof(saved)){*slot=before;return false;}
-  return true;
+  ++alertEpoch;return true;
 }
 void detectorSave(){
+  ++alertEpoch; // present devices get one fresh decision; the ledgers keep repeats silent
   prefs.putBool("adult-mode",detector.enabled(Family::Adult));
 #ifndef BOARD_RADAR_LITE
   prefs.putUInt("schema",1);prefs.putBytes("settings",&detector,sizeof(detector));
@@ -70,7 +108,8 @@ static int historySlot(const dragon::DeviceKey& key,uint8_t family){
   historyRecords[oldest]={};dirty[oldest]=false;persistedAt[oldest]=0;return int(oldest);
 }
 void detectorBegin(){
-  prefs.begin("dd-detect",false);
+  prefs.begin("dd-detect",false);visitsBegin();
+  nearby.on=prefs.getBool("near",true);{int v=prefs.getChar("near-dbm",-70);nearby.enter=v<-85||v>-55?-70:v;}
 #ifdef BOARD_RADAR_LITE
   // Fixed passive radar. Never import old full-UI filters, ignore rules or
   // display timers. No persistent history allocation on Lite; only explicit settings are saved.
@@ -81,7 +120,7 @@ void detectorBegin(){
   alertSound=alertVibration=false;
 #endif
   Serial.println("LITE detectors=all axon_priority=1 passive=1 history=off");
-  return;
+  visitsRestore();return;
 #else
   bootId=esp_random();
   if(prefs.getUInt("schema",0)==1 && prefs.getBytesLength("settings")==sizeof(detector))prefs.getBytes("settings",&detector,sizeof(detector));
@@ -97,6 +136,11 @@ void detectorBegin(){
   axonPriority=prefs.getBool("axon-priority",true);
   if(unsigned(detector.minimum)<1||unsigned(detector.minimum)>3)detector.minimum=Confidence::Medium;
   if(detector.autoQuiet!=0&&detector.autoQuiet!=5&&detector.autoQuiet!=10)detector.autoQuiet=5;
+  // The byte used to be a re-alert budget (0 meant no limit, the noisiest).
+  // It now means how long a device must be away before it alerts again; old
+  // choices do not carry over, so every saved value starts at 15 minutes.
+  if(!prefs.getBool("visit-v1",false)){detector.autoQuiet=5;prefs.putBytes("settings",&detector,sizeof(detector));prefs.putUInt("schema",1);prefs.putBool("visit-v1",true);}
+  visitsRestore();
   if(detector.smoothingMs<600||detector.smoothingMs>4000)detector.smoothingMs=1800;
   if(detector.dimSeconds>600)detector.dimSeconds=0;
   if(detector.offSeconds>600)detector.offSeconds=0;
@@ -170,21 +214,34 @@ bool historyExport(){
   }
   free(snapshot);Serial.println("HISTORY_END");return true;
 }
-bool emitDetection(Contact& c,Family family,Confidence confidence,const char* evidence,bool force){
-  if(family==Family::Adult)return false; // Quiet radar candidates: no popups, sound or event log.
-  if(!detector.enabled(family))return false;
+void historyRefresh(Contact& c,Family family,Confidence confidence,const char* evidence){
   // Bound the 512-record history search under high packet rates; first family
   // changes are immediate, continuing RSSI/encounter updates at most once/sec.
   if(c.historyFamily!=family || uint32_t(millis()-c.historyAt)>=1000){historyObserve(c,family,confidence,evidence);c.historyAt=millis();c.historyFamily=family;}
-  uint8_t flags=deviceRules(contactKey(c));bool watch=flags&RuleWatch;
+}
+bool emitDetection(Contact& c,Family family,Confidence confidence,const char* evidence,const dragon::Incident* incident){
+  if(family==Family::Adult)return false; // Quiet radar candidates: no popups, sound or event log.
+  if(!detector.enabled(family))return false;
+  historyRefresh(c,family,confidence,evidence);
+  // An incident is not the device: it never takes the watch presentation
+  // (LOCKED ON, sticky, past quiet mode) even when its participant is watched.
+  uint8_t flags=deviceRules(contactKey(c));bool watch=!incident&&(flags&RuleWatch);
   if(!reconAccepts(family,c.ble)&&!watch)return false;
   if(flags&(RuleIgnore|RuleSnooze))return false;
   // Trackers remain visible and logged, but only an explicit watch rule alerts.
   if(dragon::trackerFamily(family)&&!watch)return false;
   if(!watch && !dragon::alertConfidenceAllowed({family,confidence,evidence},detector.minimum,axonPriority))return false;
-  if(!force && !c.gate.allow(millis(),c.rssi,detector.autoQuiet,watch))return false;
+  const char* title=watch?"WATCH LIST HIT":dragon::familyName(family);const uint32_t now=millis();
+  visits.goneMs=dragon::visitGoneMs(detector.autoQuiet);
+  // One notification per device per visit (watched devices too). An incident
+  // notifies once per quiet period (never shorter than a visit) and once per
+  // kind per participant visit. A repeat only counts on the Alerts row.
+  dragon::Incident in{};uint32_t tag=0;if(incident){in=*incident;in.quietMs=dragon::incidentQuietMs(in.quietMs,detector.autoQuiet);tag=dragon::incidentTag(in);}
+  auto verdict=incident?incidents.claim(in,now):visits.claim(contactKey(c),uint8_t(family),now);
+  if(incident){const auto own=visits.claimIncident(contactKey(c),uint8_t(in.kind),now);if(own!=dragon::Verdict::Notify)verdict=own;}
+  if(verdict==dragon::Verdict::Repeat){alertRepeat(title,incident?nullptr:c.mac,tag);return false;}
   auto key=contactKey(c);char detail[128];snprintf(detail,sizeof(detail),"%s%s%d dBm / %s",c.name,*c.name?" / ":"",c.rssi,evidence);
-  addAlert(watch?"WATCH LIST HIT":dragon::familyName(family),detail,c.mac);
+  addAlert(title,detail,c.mac,false,tag); // the ledgers decided: always its own row
   audioAlert(family);
   if(family==Family::Axon)++axonAlertCount;
   // Keep the bubble readable; complete signature evidence stays in history,
@@ -193,7 +250,39 @@ bool emitDetection(Contact& c,Family family,Confidence confidence,const char* ev
   if(!detector.quiet||watch)uiNotify(watch?"LOCKED ON":dragon::familyName(family),detail,&key,watch);
   return true;
 }
+// Read-only, aggregate diagnostics. No addresses are printed.
+bool alertCommand(const String& c){
+  const uint32_t now=millis();
+  if(c=="alerts status"){const uint32_t rows=std::min<uint32_t>(alertTotal,MAX_ALERTS);
+    Serial.printf("ALERTS total=%lu rows=%lu repeats=%lu notified_devices=%lu notified_incidents=%lu\n",(unsigned long)alertTotal,(unsigned long)rows,(unsigned long)alertRepeats,(unsigned long)visits.notices,(unsigned long)incidents.notices);
+    for(uint32_t i=0;i<rows;++i){auto& a=alerts[(alertTotal-1-i)%MAX_ALERTS];
+      Serial.printf("ALERT_ROW %lu age_s=%lu count=%u last_s=%lu title=%s\n",(unsigned long)i,(unsigned long)((now-a.at)/1000),unsigned(a.count),(unsigned long)((now-(a.last?a.last:a.at))/1000),a.title);}
+    Serial.println("ALERTS_END");return true;}
+  if(c=="visits status"){visits.goneMs=dragon::visitGoneMs(detector.autoQuiet);
+    Serial.printf("VISITS capacity=%u used=%u present=%u gone_ms=%lu notified=%lu repeats=%lu live_evictions=%lu restored=%lu listening_wifi=%u listening_ble=%u\n",visits.size,visits.used(),visits.live(now),(unsigned long)visits.goneMs,(unsigned long)visits.notices,(unsigned long)visits.repeats,(unsigned long)visits.evictions,(unsigned long)visits.restored,visits.listening(0),visits.listening(1));
+    Serial.printf("INCIDENTS capacity=%u used=%u notified=%lu repeats=%lu evictions=%lu\n",dragon::IncidentLedger::Size,incidents.used(),(unsigned long)incidents.notices,(unsigned long)incidents.repeats,(unsigned long)incidents.evictions);
+    for(auto& e:incidents.entries)if(e.used)Serial.printf("INCIDENT kind=%s id=%lu started_s=%lu last_s=%lu quiet_s=%lu repeats=%u\n",dragon::incidentName(e.kind),(unsigned long)e.id,(unsigned long)((now-e.firstAt)/1000),(unsigned long)((now-e.lastTrigger)/1000),(unsigned long)(e.quietMs/1000),unsigned(e.repeats));
+    Serial.println("VISITS_END");return true;}
+  return false;
+}
+// The near count has its own keys: DetectorSettings is a size-checked blob.
+void nearbySet(bool on,int level){
+  level=std::max(-85,std::min(-55,level));nearby.on=on;nearby.enter=level;
+  prefs.putBool("near",on);prefs.putChar("near-dbm",level);nearby.reset(millis());
+}
+// Aggregate only: no address is printed.
+bool nearbyCommand(const String& c){
+  int level;char tail;
+  if(c=="radar near"){const uint32_t now=millis();
+    Serial.printf("NEAR on=%u state=%s level_dbm=%d exit_dbm=%d near=%u steady=%u pending=%u capped=%u new_addresses=%lu gone=%lu handovers=%lu returns=%lu dropped=%lu listen_ms=%lu slots=24 radio=BLE unit=addresses\n",nearby.on,nearby.state(now),nearby.enter,nearby.exitDbm(),nearby.near,nearby.steady,nearby.pending,nearby.capped(),(unsigned long)nearby.fresh,(unsigned long)nearby.gone,(unsigned long)nearby.handovers,(unsigned long)nearby.returns,(unsigned long)nearby.dropped,(unsigned long)nearby.clock);
+  }else if(c=="radar near on"||c=="radar near off"){nearbySet(c.endsWith("on"),nearby.enter);Serial.printf("NEAR_OK on=%u\n",nearby.on);}
+  else if(sscanf(c.c_str(),"radar near level %d %c",&level,&tail)==1&&level>=-85&&level<=-55){nearbySet(nearby.on,level);Serial.printf("NEAR_OK level_dbm=%d\n",nearby.enter);}
+  else if(c.startsWith("radar near level"))Serial.println("NEAR_ERROR level -85..-55");
+  else return false;
+  return true;
+}
 bool detectorCommand(const String& cmd){
+  if(alertCommand(cmd))return true;
   if(cmd=="detector adult on"||cmd=="detector adult off"){setAdultMode(cmd.endsWith("on"));Serial.printf("ADULT_MODE %u\n",detector.enabled(Family::Adult));return true;}
   if(cmd=="detector quiet on"||cmd=="detector quiet off"){detector.quiet=cmd.endsWith("on");detectorSave();audioStop();Serial.printf("DETECTOR_QUIET %u\n",detector.quiet);return true;}
   if(cmd=="axon status"){axonStatus();return true;}

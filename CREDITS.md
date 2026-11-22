@@ -83,7 +83,9 @@ Selectable focused modes are independently implemented from the documented workf
 
 The feature audit pins **Marauder** at `d3ceb28afeda1196ca27c13adeaa69ada52383f3`, **ChimeraBLE** at `2330423dae8f8fa163617172310784889d8972a7`, **SquachWatch** at `1485b0122aa527f8309c3f4e6ba8dc1614be5bb1` and **Unified Blue** at `6e5e2829540925ff1ab5fa6d0d365378818ed56e`. Public identifier/protocol facts and documented workflows inform original MIT parsers, interfaces and state machines; GPL application code is not linked or redistributed. New SquachWatch facts are individually recorded in the coverage ledger. Vendor facts use the previously obtained 2026-10-13 IEEE-derived registry snapshot.
 
-Marauder's MIT public tracker-sound UUID/command references informed the explicit AirTag/Find My/DULT write requests. Its portal, probe-SSID and CSI workflows informed feature scope; our DNS/HTTP service, bounded logs, raw-key selection, CSI amplitude-shape estimator, calibration and queue are original code. CSI driver integration follows [Espressif's pinned ESP-IDF 5.1.4 Wi-Fi documentation](https://docs.espressif.com/projects/esp-idf/en/v5.1.4/esp32s3/api-guides/wifi.html#wi-fi-channel-state-information). The score is not Marauder's fused phase/amplitude algorithm.
+Marauder's MIT public tracker-sound UUID/command references informed the explicit AirTag/Find My/DULT write requests. Its portal and probe-SSID workflows informed feature scope; our DNS/HTTP service, bounded logs, raw-key selection and the CSI queue are original code. CSI driver integration follows [Espressif's pinned ESP-IDF 5.1.4 Wi-Fi documentation](https://docs.espressif.com/projects/esp-idf/en/v5.1.4/esp32s3/api-guides/wifi.html#wi-fi-channel-state-information).
+
+**Room motion** ports the window features, median/MAD calibration, median-of-four fusion, score smoothing and reliability figure of Marauder's `CsiMotionModel` and seven of its host tests from [ESP32 Marauder develop `79cc6bc`](https://github.com/justcallmekoko/ESP32Marauder/tree/79cc6bc) (`esp32_marauder/CsiMotionModel.*`, `test/test_csi_motion_model`), MIT, Copyright (c) 2020 Just Call Me Koko; the [MIT notice](docs/licenses/MARAUDER-LICENSE.txt) is unchanged, repeated in full in `firmware/include/csi_motion.h` and referenced from `tests/csi_motion_test.h`. The tone mask, Hampel spike rejection, higher motion limit, calibration floor, STILL/MOTION/HOLD hysteresis, margin, interval log, detector-moved heuristic, traffic diagnosis, monitor integration and the other tests are original Dragon Detector code. Marauder's `CsiMotionMonitor` display and multi-target code was read but not ported.
 
 ChimeraBLE inspired expanded GATT read/write, subscriptions, security controls, advertisement interpretation, HID layout inspection and replay workflows. No ChimeraBLE source/database is copied. Bluetooth SIG assigned numbers, the public HID item format and the existing NimBLE APIs underpin the independent implementation. Attribution is not a claim of equivalent security bypasses, hardware support or endorsement.
 
@@ -98,6 +100,8 @@ Recon-session records use factual RCN1/PRB1/REL1 layouts from the already credit
 ## Radar theme artwork · 0.13.1
 
 The project owner supplied the unchanged source PNGs for [Valleytech Custom Solutions](media/theme-logos/valleytech.png), [Biscuit Shop](media/theme-logos/biscuit-shop.png), and [JustCallMeKoko / Marauder](media/theme-logos/jcmk.png). Artwork and brand rights remain with their respective owners; the software MIT license does not grant rights to these marks or imply endorsement. These are optional Dragon Detector appearance themes, not official firmware ports or affiliations.
+
+The same supplied Biscuit Shop and JCMK files also appear in the middle of the BISCUIT NODE and JCMK Node screens. `tools/encode_node_logo.py` resizes each to the native panel sizes and stores it as white artwork on black; the JCMK mark is cropped to its drawn area. Nothing is redrawn, and the generated file records each source hash. Their appearance on the node screens does not imply affiliation with or endorsement by either brand.
 
 `tools/encode_radar_logo.py` encodes native 240/360/466-pixel panel assets from the supplied originals, preserving aspect ratio and alpha. The transparent Valleytech mark uses silver radar ink and gold watch ink, with no background plate; Biscuit's white artwork retains its transparency; JCMK retains its supplied black background. The original three themes retain the BWM1 logo. Palettes, layout and drawing code are original Dragon Detector work. Lite keeps its existing fixed green radar and does not include the new logo arrays.
 
@@ -335,6 +339,43 @@ recording and upload implementation are original
 code; no Piglet code or assets are included. Piglet's LICENSE at that revision is
 CC BY-NC-SA 4.0. Its ESP32-C5 radio capabilities differ from this ESP32-S3 board.
 
+## BISCUIT NODE and JCMK Node
+
+The JCMK Node protocol follows **ESP32DualBandWardriver** by
+**[Just Call Me Koko](https://github.com/justcallmekoko)**, MIT, Copyright (c)
+2025 Just Call Me Koko: the ENOW message layout and numbering, the channel table,
+the timing, the external-node capability text that keeps this 2.4 GHz-only node
+out of the core's channel split, and the derivation of both ESP-NOW keys from
+the text key, the empty key included. The current code was checked against
+revision `b9745dbc15211f99320ae34e63cb174222cf19fa`. [Its MIT
+notice is retained](docs/licenses/ESP32DualBandWardriver-LICENSE.txt). The link
+engine in `firmware/include/node_link.h`, the radio hand-over, the session and
+USB commands, the node screen and the simulated-core tests are original
+Dragon Detector code written from those protocol facts.
+
+The BISCUIT NODE dialect (the Biscuit Manager's unencrypted Extended mode) and
+the recognition of a Piglet acting as a JCMK-style core were learned by reading
+the published source of **Piglet** by Hamspiced (see
+[above](#piglet-wardriving-workflow-reference)): `PigletNode/PigletNode.ino` and
+`TDongleC5_Piglet/TDongleC5_Piglet.ino` at revision
+`e2bf83faccea5e40a46a4826beae77b227c2bbe9`. Only protocol facts were taken, among
+them the message types 5, 7, 10, 11 and 15, the `encrypt=` mode field, the
+`channels=...;dwell=` format and how its list is read, the full 212-byte frame,
+the 500 ms (plus 0 to 200 ms) listening window, the `PIGLET1` marker, and how a
+Piglet core treats its nodes (no ESP-NOW encryption, every record logged as
+Wi-Fi, an even channel split with no opt-out). They were reimplemented
+independently, and no Piglet code or text is included; Piglet is published under
+CC BY-NC-SA 4.0. No Biscuit code was used. The dialect has been tried with a
+real Biscuit in Extended mode on a Waveshare 1.75C (see the node guide's
+hardware checklist); message type 8, which the Biscuit sends when a wardrive is
+stopped in its app, was learned from that field test, not from Piglet. Biscuit
+Secure mode is not supported. The node
+screens show the owner-supplied Biscuit Shop and JCMK logos
+credited above under Radar theme artwork · 0.13.1. These modes are
+independent implementations, not official firmware of the Biscuit,
+JustCallMeKoko or Piglet projects, and imply no endorsement.
+[Node guide](docs/NODE-MODES.md).
+
 ## 44Delta · 0.13.41
 
 The project owner supplied the 44 DELTA cyan skull/wordmark banner and the black
@@ -366,3 +407,7 @@ in the board package. The display uses the already-credited CO5300 driver, and
 the ES8311 codec driver retains its [upstream notice](lib/es8311/UPSTREAM.md)
 and [license](lib/es8311/LICENSE). The board integration, touch handling,
 button navigation and battery estimate are original MIT code.
+
+## LockpickingVlad
+
+The eagle and padlock portrait was supplied for the LockpickingVlad theme. The gold radar sweep and clock hands use the McTickler and short-hook profiles credited above under Covert Instruments and McNally.
