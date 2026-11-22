@@ -123,6 +123,11 @@ bool wardriveUploadBusy(){return sim::upload;}
 
 #include "../firmware/src/node_mode.cpp"
 
+// BadUSB (badusb.cpp): keyboard mode is decided at boot; a script types only in it.
+namespace sim {bool keyboardMode=false,scriptRunning=false;}
+bool badusbKeyboardMode(){return sim::keyboardMode;}
+BadUsbStatus badusbStatus(){BadUsbStatus s{};s.keyboardMode=sim::keyboardMode;s.running=sim::scriptRunning;s.connected=sim::keyboardMode;s.name=s.message=s.medium="";return s;}
+
 // The radio side (radio.cpp).
 namespace sim {
 struct Radio {bool owned=false,keys=false;int fail=0,begins=0;dragon::node::Config config;uint8_t pmk[16]{},lmk[16]{};dragon::node::Status status;} radio;
@@ -354,6 +359,28 @@ static void testResume(){
   run("node stop");reboot(ESP_RST_SW);assert(sim::log.empty()&&!nodeBusy());
 }
 
+static void testBadUsb(){
+  wipe();sim::labStops=sim::reconStops=0;
+  // A BadUSB script typing on the host: no node starts and nothing else is stopped.
+  sim::scriptRunning=true;assert(run("node biscuit")=="NODE_ERROR Stop the BadUSB script first\n");
+  assert(!nodeBusy()&&savedMode()==0&&sim::labStops==0&&sim::reconStops==0&&sim::radio.begins==0);sim::scriptRunning=false;
+  // USB keyboard mode (BadUSB's one-shot restart): refused too, for either kind.
+  sim::keyboardMode=true;
+  for(const char* start:{"node biscuit","node jcmk"}){assert(run(start)=="NODE_ERROR Leave USB keyboard mode first\n");assert(!nodeBusy()&&savedMode()==0&&sim::radio.begins==0);}
+  assert(!nodeStart(NodeKind::Jcmk)&&!strcmp(nodeError(),"Leave USB keyboard mode first"));
+  // A remembered node (a failed resume keeps it) is not resumed by the restart into
+  // keyboard mode, and is not forgotten either: the next normal boot resumes it.
+  sim::keyboardMode=false;run("node jcmk");assert(nodeBusy());
+  sim::keyboardMode=true;reboot(ESP_RST_SW);
+  assert(!nodeBusy()&&sim::radio.begins==0&&sim::ui=="radar"&&savedMode()==2&&sim::log=="NODE_RESUME_SKIPPED jcmk: USB keyboard mode\n");
+  // EXIT restarts as USB serial; a power cycle or the reset button does the same.
+  sim::keyboardMode=false;reboot(ESP_RST_SW);assert(nodeKind()==NodeKind::Jcmk&&sim::ui=="node"&&has(sim::log,"NODE_RESUMED jcmk"));
+  sim::keyboardMode=true;reboot(ESP_RST_POWERON);assert(!nodeBusy());sim::keyboardMode=false;reboot(ESP_RST_POWERON);assert(nodeKind()==NodeKind::Jcmk);
+  // Skipped keyboard boots do not count as quick restarts of a resumed node.
+  for(int i=0;i<4;++i){sim::keyboardMode=true;reboot(ESP_RST_SW);assert(!nodeBusy());sim::keyboardMode=false;reboot(ESP_RST_SW);assert(nodeBusy());sim::now+=60000;nodeLoop();}
+  run("node stop");sim::keyboardMode=true;reboot(ESP_RST_SW);assert(sim::log.empty()&&!nodeBusy());sim::keyboardMode=false;
+}
+
 int main(){
   testSha();
   testAllowList();
@@ -363,6 +390,7 @@ int main(){
   testFailedSwitch();
   testStartRules();
   testResume();
+  testBadUsb();
   // The key is never printed.
   for(const char* secret:{"s3cr3t-Key","abc  ","old_"})assert(!has(sim::transcript,secret));
   assert(!has(sim::transcript,"Tools > Modes"));

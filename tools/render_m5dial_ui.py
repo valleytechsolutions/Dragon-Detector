@@ -34,6 +34,7 @@ class String: public std::string {
 template<class T,class A,class B> T constrain(T n,A low,B high){return std::clamp(n,T(low),T(high));}
 inline uint32_t tick=0; // one clock for the UI and the node screen
 inline uint32_t millis(){return tick;}
+inline size_t strlcpy(char* out,const char* in,size_t cap){size_t n=std::char_traits<char>::length(in);if(cap){size_t k=std::min(n,cap-1);std::copy(in,in+k,out);out[k]=0;}return n;}
 inline void* ps_malloc(size_t){return nullptr;} // no PSRAM on the Dial (getFreePsram 0): the radar effects take their no-table path
 struct SerialStub{template<class... T>void printf(T...){} template<class T>void println(T){}};
 static SerialStub Serial;
@@ -123,6 +124,25 @@ const char* nodeError(){return stopwatch.running?"Stop the stopwatch first":"";}
 const dragon::node::Status& nodeStatus(){return nodeLink;}
 bool nodeBleReports(){return nodeRunningKind==NodeKind::Jcmk;}
 bool nodeKeyed(){return false;}
+// BadUSB double: the Dial has native USB HID and lists Tools > BadUSB after Modes;
+// Waveshare Lite (a CH343 UART bridge) has none. test_badusb.py covers the runtime.
+#include "badusb.h"
+#ifdef BOARD_M5DIAL
+bool badusbSupported(){return true;}
+#else
+bool badusbSupported(){return false;}
+#endif
+static bool badusbChosen=false;
+unsigned badusbCount(){return badusbSupported()?1:0;}
+const char* badusbName(unsigned i){return i==0&&badusbSupported()?"demo.txt":"";}
+void badusbRefresh(){}
+bool badusbSelect(unsigned i){badusbChosen=i==0&&badusbSupported();return badusbChosen;}
+bool badusbRun(){return false;}  // serial mode only asks for the keyboard restart
+void badusbStop(){}
+bool badusbKeyboardMode(){return false;}
+void badusbExitKeyboard(){}
+const char* badusbPreview(){return badusbChosen?"STRING hello":"";}
+BadUsbStatus badusbStatus(){return {false,false,badusbChosen,0,badusbChosen?"demo.txt":"","Ready",badusbSupported()?"Internal /badusb":"unavailable",false};}
 ''')
 ui = (root/'firmware/src/ui_lite.cpp').read_text().replace('#include "app.h"', '#include "test_app.h"')
 harness = r'''

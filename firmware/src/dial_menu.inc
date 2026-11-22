@@ -53,7 +53,8 @@ static void dialMenuRefresh(){
   const char* title=dialBadUsbMenu(dialMenu)?(dialMenu==DialMenu::BadUsbScripts?"SCRIPTS":dialMenu==DialMenu::BadUsbPreview?"PREVIEW":"BADUSB"):dialMenu==DialMenu::Main?"MENU":dialMenu==DialMenu::Tools?"TOOLS":dialMenu==DialMenu::Settings?"SETTINGS":dialMenu==DialMenu::Themes?"THEMES":dialMenu==DialMenu::Time?"SET TIME":dialMenu==DialMenu::Date?"SET DATE":dialMenu==DialMenu::Modes?"MODES":"BRIGHTNESS";
   lv_label_set_text(dialMenuTitle,title);lv_obj_set_style_text_color(dialMenuTitle,color(p.ink),0);
   snprintf(value,sizeof(value),dialEditing?"Turn to adjust / press done":"%d / %d",dialChoice+1,dialMenuCount());if(!dialBadUsbMenu(dialMenu))lv_label_set_text(dialMenuNote,value);lv_obj_set_style_text_color(dialMenuNote,color(p.muted),0);
-  auto noteMode=dialBadUsbMenu(dialMenu)?LV_LABEL_LONG_SCROLL_CIRCULAR:LV_LABEL_LONG_DOT;if(lv_label_get_long_mode(dialMenuNote)!=noteMode)lv_label_set_long_mode(dialMenuNote,noteMode);
+  // BadUSB status and a refused node start under Modes scroll; other notes are short.
+  auto noteMode=dialBadUsbMenu(dialMenu)||dialMenu==DialMenu::Modes?LV_LABEL_LONG_SCROLL_CIRCULAR:LV_LABEL_LONG_DOT;if(lv_label_get_long_mode(dialMenuNote)!=noteMode)lv_label_set_long_mode(dialMenuNote,noteMode);
   if(dialBadUsbMenu(dialMenu)){auto state=badusbStatus();if(state.running)snprintf(value,sizeof(value),"RUNNING / line %u",state.line);else snprintf(value,sizeof(value),"%s / %s",!state.keyboardMode?"USB serial":state.connected?"Keyboard ready":"Keyboard waiting",state.message);if(strcmp(lv_label_get_text(dialMenuNote),value))lv_label_set_text(dialMenuNote,value);}
   lv_label_set_text(dialMenuHint,"HOLD TO GO BACK");lv_obj_set_style_text_color(dialMenuHint,color(p.muted),0);
   dialFirstRow=std::max(0,std::min(dialChoice-2,dialMenuCount()-5));

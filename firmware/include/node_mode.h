@@ -18,7 +18,8 @@ bool nodeBusy();
 NodeKind nodeKind();
 // Starts (or switches to) a node. On failure returns false and leaves a short,
 // screen-ready reason in nodeError(). The choice is remembered across restarts;
-// a failed switch leaves no node running and none remembered.
+// a failed switch leaves no node running and none remembered. Refused in BadUSB keyboard
+// mode and while a BadUSB script runs.
 bool nodeStart(NodeKind kind);
 // Ends the node, gives the radios back to the radar and forgets the choice.
 void nodeStop();
@@ -30,7 +31,8 @@ bool nodeKeyed();        // the running JCMK Node uses ESP-NOW encryption
 bool nodeBleReports();   // the running JCMK Node also reports Bluetooth devices
 
 // setup(): resumes a node that was running when the device lost power or
-// restarted, unless it crashed or restarted twice within a minute of resuming.
+// restarted, unless it crashed or restarted twice within a minute of resuming. A restart
+// into BadUSB keyboard mode does not resume it; the next normal boot does.
 void nodeBegin();
 // loop(): a resumed node that has run a minute stops counting as a quick restart.
 void nodeLoop();

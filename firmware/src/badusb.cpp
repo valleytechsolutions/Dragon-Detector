@@ -10,6 +10,7 @@
 #include "recon.h"
 #include "wardrive.h"
 #include "wardrive_upload.h"
+#include "node_mode.h"
 #include <LittleFS.h>
 #include <USB.h>
 #include <USBHIDKeyboard.h>
@@ -35,7 +36,9 @@ uint32_t uploadAt=0;
 bool selected=false,onCard=false,storageReady=false,releasePending=false;
 std::atomic<bool> linkLost{false};
 void say(const char* text){strlcpy(message,text,sizeof(message));}
-bool busy(){return wardriveBusy()||wardriveUploadBusy()||reconStorageBusy();}
+// A running node owns the radios and the device: no selection, keyboard restart or typing.
+bool busy(){return nodeBusy()||wardriveBusy()||wardriveUploadBusy()||reconStorageBusy();}
+const char* busyReason(){return nodeBusy()?"Stop the node first":"Stop the active session first";}
 bool memory(){if(!script)script=static_cast<char*>(malloc(dragon::badusb::MaxScriptBytes+1));if(!script)say("Script memory unavailable");return script;}
 fs::FS* filesystem(){
 #if BOARD_HAS_SD
@@ -188,7 +191,7 @@ bool badusbCommand(const String& c){
   if(c=="badusb status"||c=="badusb"){auto s=badusbStatus();Serial.printf("BADUSB_STATUS supported=1 mode=%s connected=%u running=%u selected=%u line=%u file=%s medium=%s message=%s\n",s.keyboardMode?"keyboard":"serial",s.connected,s.running,s.selected,s.line,s.name,s.medium,s.message);return true;}
   if(c=="badusb stop"){badusbStop();reply(true);return true;}
   if(c=="badusb cancel"){if(runner.running()){say("Stop the script first");reply(false);return true;}cancelUpload();say("Upload cancelled");reply(true);return true;}
-  if(runner.running()||busy()){say("Stop the active session first");reply(false);return true;}
+  if(runner.running()||busy()){say(runner.running()?"Stop the active session first":busyReason());reply(false);return true;}
   if(c=="badusb list"){badusbRefresh();for(unsigned i=0;i<fileCount;++i)Serial.printf("BADUSB_FILE %s\n",names[i]);Serial.println("BADUSB_END");return true;}
   if(c.startsWith("badusb select ")){String name=c.substring(14);for(unsigned i=0;i<fileCount;++i)if(name==names[i]){reply(badusbSelect(i));return true;}say("Script not found; refresh the list");reply(false);return true;}
   // USB may prepare files and inspect status, but starts are local UI actions.

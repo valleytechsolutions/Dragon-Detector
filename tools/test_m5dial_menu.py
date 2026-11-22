@@ -65,6 +65,23 @@ static bool liteNodeBegin(NodeKind kind){if(nodeRefusal)return false;startedNode
 static const char* liteNodeError(){return nodeRefusal;}
 struct Prefs {unsigned getUChar(const char*,unsigned n){return savedBrightness;}void putUChar(const char*,unsigned n){savedBrightness=n;}};
 static Prefs litePrefs;
+// Tools > BadUSB (badusb.cpp). The production runtime is exercised by test_badusb.py.
+static uint32_t millis(){return 0;}
+static size_t strlcpy(char* out,const char* in,size_t cap){size_t n=strlen(in);if(cap){size_t k=std::min(n,cap-1);memcpy(out,in,k);out[k]=0;}return n;}
+struct BadUsbStatus {bool connected,running,selected;unsigned line;const char* name;const char* message;const char* medium;bool keyboardMode;};
+static bool usbSupported=true,usbKeyboard=false,usbRunning=false,usbSelected=false;
+static unsigned usbRuns=0,usbStops=0,usbExits=0;
+static bool badusbSupported(){return usbSupported;}
+static unsigned badusbCount(){return 2;}
+static const char* badusbName(unsigned i){return i==0?"demo.txt":i==1?"hello.txt":"";}
+static void badusbRefresh(){}
+static bool badusbSelect(unsigned i){if(usbRunning||i>=2)return false;usbSelected=true;return true;}
+static bool badusbRun(){++usbRuns;if(!usbKeyboard)return false;usbRunning=true;return true;} // serial mode only asks for the keyboard restart
+static void badusbStop(){if(usbRunning)++usbStops;usbRunning=false;}
+static bool badusbKeyboardMode(){return usbKeyboard;}
+static void badusbExitKeyboard(){++usbExits;usbRunning=false;}
+static const char* badusbPreview(){return "STRING hello";}
+static BadUsbStatus badusbStatus(){return {usbKeyboard,usbRunning,usbSelected,0,usbSelected?"demo.txt":"","Ready","Internal /badusb",usbKeyboard};}
 static lv_obj_t* root;
 static lv_obj_t* notice=nullptr;
 static uint32_t noticeAt=0;
@@ -78,7 +95,7 @@ int main(int argc,char** argv){
  dialMenuRotate(1);dialMenuSelect();assert(!dialMenuVisible()&&litePage==LitePage::Clock&&radarTheme==theme);
  dialMenuOpen(DialMenu::Main);dialChoice=2;dialMenuSelect();assert(dialMenu==DialMenu::Tools);render(argv[1],"02-tools");dialChoice=0;dialMenuSelect();assert(litePage==LitePage::Timer&&!dialMenuVisible());
  auto rowText=[](int row){return std::string(lv_label_get_text(dialMenuLabels[row]));};
- dialMenuOpen(DialMenu::Tools);assert(dialMenuCount()==5);for(int i=0;i<3;++i)dialMenuRotate(1);assert(dialChoice==3&&rowText(2)=="Device status"&&rowText(3)=="Modes"&&rowText(4)=="Back");render(argv[1],"02a-tools-modes");
+ dialMenuOpen(DialMenu::Tools);assert(dialMenuCount()==6);for(int i=0;i<3;++i)dialMenuRotate(1);assert(dialChoice==3&&rowText(1)=="Device status"&&rowText(2)=="Modes"&&rowText(3)=="BadUSB"&&rowText(4)=="Back");render(argv[1],"02a-tools-modes");
  dialMenuSelect();assert(dialMenu==DialMenu::Modes&&dialMenuCount()==3&&dialChoice==0&&std::string(lv_label_get_text(dialMenuTitle))=="MODES");
  assert(rowText(0)=="BISCUIT NODE"&&rowText(1)=="JCMK Node"&&rowText(2)=="Back"&&lv_obj_has_flag(dialMenuRows[3],LV_OBJ_FLAG_HIDDEN));render(argv[1],"02b-modes");
  nodeRefusal="Wi-Fi could not switch to node mode";dialMenuSelect();assert(dialMenu==DialMenu::Modes&&startedNode==NodeKind::None&&!strcmp(lv_label_get_text(dialMenuNote),nodeRefusal));
@@ -86,7 +103,18 @@ int main(int argc,char** argv){
  dialMenuSelect();assert(startedNode==NodeKind::Biscuit&&!dialMenuVisible());
  dialMenuOpen(DialMenu::Modes);dialMenuRotate(1);dialMenuSelect();assert(startedNode==NodeKind::Jcmk&&!dialMenuVisible());
  dialMenuOpen(DialMenu::Modes);dialMenuRotate(-1);assert(dialChoice==2);dialMenuSelect();assert(dialMenu==DialMenu::Tools&&dialChoice==0);dialMenuBack();assert(dialMenu==DialMenu::Main);
- dialMenuOpen(DialMenu::Modes);dialMenuBack();assert(dialMenu==DialMenu::Tools);dialChoice=4;dialMenuSelect();assert(dialMenu==DialMenu::Main);
+ dialMenuOpen(DialMenu::Modes);dialMenuBack();assert(dialMenu==DialMenu::Tools);dialChoice=5;dialMenuSelect();assert(dialMenu==DialMenu::Main);
+ // Tools > BadUSB follows Modes. In USB serial mode RUN only asks for the keyboard restart.
+ dialMenuOpen(DialMenu::Tools);dialChoice=4;dialMenuSelect();assert(dialMenu==DialMenu::BadUsb&&usbSelected&&std::string(lv_label_get_text(dialMenuTitle))=="BADUSB");render(argv[1],"02d-badusb");
+ dialChoice=2;dialMenuSelect();assert(usbRuns==1&&!usbRunning);dialMenuBack();assert(dialMenu==DialMenu::Tools);
+ // A script running in keyboard mode stops when the menu leaves BadUSB, before Modes is reached.
+ usbKeyboard=true;dialMenuOpen(DialMenu::BadUsb);dialChoice=2;dialMenuSelect();assert(usbRunning&&usbRuns==2);
+ dialMenuOpen(DialMenu::Tools);assert(!usbRunning&&usbStops==1);dialChoice=3;dialMenuSelect();assert(dialMenu==DialMenu::Modes&&usbRuns==2);
+ // In keyboard mode Back from BadUSB is EXIT, a restart as USB serial; it never runs a script.
+ dialMenuOpen(DialMenu::BadUsb);dialChoice=4;dialMenuSelect();assert(usbExits==1&&usbRuns==2&&!usbRunning);usbKeyboard=false;
+ // Profiles without native USB HID (Waveshare Lite, Watcher) list Modes, then Back.
+ usbSupported=false;dialMenuOpen(DialMenu::Tools);assert(dialMenuCount()==5);dialChoice=4;dialMenuRefresh();assert(rowText(3)=="Modes"&&rowText(4)=="Back");
+ dialChoice=3;dialMenuSelect();assert(dialMenu==DialMenu::Modes);dialMenuBack();dialChoice=4;dialMenuSelect();assert(dialMenu==DialMenu::Main);usbSupported=true;
  dialMenuOpen(DialMenu::Settings);render(argv[1],"03-settings");dialMenuSelect();assert(dialMenu==DialMenu::Time);render(argv[1],"04-time");dialChoice=1;dialMenuSelect();dialMenuRotate(1);assert(dialEditDate.minute==46);dialMenuSelect();dialChoice=3;dialMenuSelect();assert(savedEpoch==dragon::dateEpoch({2026,10,23,15,46,12})+240*60);
  dialMenuOpen(DialMenu::Date);dialEditDate={2028,1,31,1,1,1};dialChoice=1;dialMenuSelect();dialMenuRotate(1);assert(dialEditDate.month==2&&dialEditDate.day==29);dialMenuSelect();render(argv[1],"05-date");dialChoice=3;dialMenuSelect();assert(savedEpoch==dragon::dateEpoch({2028,2,29,15,45,12})+240*60);
  dialMenuOpen(DialMenu::Date);dialChoice=3;rtcWrite=false;dialMenuSelect();assert(dialMenu==DialMenu::Date&&strstr(lv_label_get_text(dialMenuNote),"failed"));rtcWrite=true;
@@ -95,7 +123,7 @@ int main(int argc,char** argv){
  radarTheme=23;dialMenuOpen(DialMenu::Settings);render(argv[1],"07-light-settings");dialChoice=3;dialMenuSelect();assert(audioLevel()==dragon::AudioLevel::Silent);dialMenuSelect();assert(audioLevel()==dragon::AudioLevel::Medium);dialMenuSelect();assert(audioLevel()==dragon::AudioLevel::High);
  lv_obj_update_layout(root);for(auto* row:dialMenuRows){lv_area_t a;lv_obj_get_coords(row,&a);for(int x:{a.x1,a.x2})for(int y:{a.y1,a.y2})assert((x-120)*(x-120)+(y-120)*(y-120)<=120*120);}
  dialMenuBack();assert(dialMenu==DialMenu::Main);dialMenuBack();assert(!dialMenuVisible());
- puts("PASS Dial menu routes, Tools > Modes node starts and refusals, explicit theme selection, time/date saves, RTC failures, leap dates, brightness save/cancel and round-screen bounds");
+ puts("PASS Dial menu routes, Tools > Modes node starts and refusals, Tools > BadUSB beside Modes, explicit theme selection, time/date saves, RTC failures, leap dates, brightness save/cancel and round-screen bounds");
 }
 '''.replace('NAMES', names).replace('COUNT', count).replace('ACTIVE', active).replace('NODES', nodes).replace('MENU_SOURCE', (root/'firmware/src/dial_menu.inc').as_posix())
 cpp = work/'menus.cpp'

@@ -40,6 +40,13 @@ On full touch profiles, open **Utilities → BadUSB**. On Dial, use
 3. Press **EXIT** (Dial: **Exit keyboard**) to restart back to USB serial. Any
    reset or power cycle also returns to USB serial.
 
+BadUSB and the wardriving node modes never share the device. While **BISCUIT NODE**
+or **JCMK Node** runs, BadUSB refuses to select a script, enter keyboard mode or
+run (`Stop the node first`); stop the node first. In keyboard mode, and while a
+script runs, the node modes refuse to start, and the restart into keyboard mode
+does not resume a node that was remembered; it resumes after you leave keyboard
+mode. See [BISCUIT NODE and JCMK Node](NODE-MODES.md).
+
 Use **Stop** or leave the BadUSB page to stop a running script. Every key or chord is released
 after sending; disconnect, suspend, send failures and the ten-minute limit also
 stop execution. Reconnecting never resumes a stopped script.
@@ -117,7 +124,8 @@ that is in keyboard mode, press EXIT or power-cycle it first.
 For integrations, serial commands are `badusb status` (reports `mode=serial`),
 `badusb list`, `badusb select NAME.txt`, `badusb keyboard` (restart into keyboard
 mode with the current selection; it never starts typing), `badusb stop`, and
-`badusb cancel`. Uploads use
+`badusb cancel`. While a node runs, every command except `badusb status`,
+`badusb stop` and `badusb cancel` answers `BADUSB_ERROR Stop the node first`. Uploads use
 `badusb upload NAME.txt BYTES`, sequential `badusb chunk OFFSET HEX` messages
 (at most 256 decoded bytes each), then `badusb save`. Each successful chunk
 acknowledges the new byte offset. Idle uploads expire after 30 seconds. There is

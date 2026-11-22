@@ -9,6 +9,7 @@
 #include "ble_lab.h"
 #include "wardrive.h"
 #include "wardrive_upload.h"
+#include "badusb.h"
 #include <Preferences.h>
 #include <esp_system.h>
 #include <esp_heap_caps.h>
@@ -101,6 +102,10 @@ bool startSession(NodeKind kind){
   load();*error=0;
   if(kind==NodeKind::None){nodeStop();return true;}
   if(radioNodeOwned()&&running==kind)return true;
+  // BadUSB keyboard mode is a one-shot session without USB serial, and a script types
+  // only while nothing else runs. Neither shares the device with a node.
+  if(badusbKeyboardMode()){say("Leave USB keyboard mode first");return false;}
+  if(badusbStatus().running){say("Stop the BadUSB script first");return false;}
   const bool switching=radioNodeOwned();
   if(!switching){
     // Sessions that must finish on their own terms are refused, never cut off.
@@ -154,6 +159,9 @@ void nodeBegin(){
   const NodeKind kind=remembered();
   const uint32_t quick=quickRestarts();setQuickRestarts(0);
   if(kind==NodeKind::None)return;
+  // The restart into BadUSB keyboard mode never resumes a node. The choice is kept, so
+  // the node resumes after EXIT, the reset button or a power cycle.
+  if(badusbKeyboardMode()){Serial.printf("NODE_RESUME_SKIPPED %s: USB keyboard mode\n",kindText(kind));return;}
   // A node must not trap the device in a restart loop: not after a crash or a watchdog
   // reset, and not when it restarts again soon after each resume, whatever the reason
   // (often a supply that sags when the node transmits). One quick restart, such as an

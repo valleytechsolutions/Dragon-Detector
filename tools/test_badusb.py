@@ -51,7 +51,8 @@ struct SerialPort {
   void flush(){}
   template<class... Args> void printf(const char* format,Args... args){char line[512];snprintf(line,sizeof(line),format,args...);output+=line;}
 } Serial;
-bool driveBusy=false,uploadBusy=false,storageBusy=false;
+bool driveBusy=false,uploadBusy=false,storageBusy=false,nodeRunning=false;
+bool nodeBusy(){return nodeRunning;} // BISCUIT NODE / JCMK Node session (node_mode.cpp)
 bool wardriveBusy(){return driveBusy;}
 bool wardriveUploadBusy(){return uploadBusy;}
 bool reconStorageBusy(){return storageBusy;}
@@ -155,7 +156,7 @@ inline const char* keyboardScript(){return mockScript.c_str();}
 }
 ''')
 for header in ['Arduino.h', 'app.h', 'recon.h', 'wardrive.h', 'wardrive_upload.h',
-               'LittleFS.h', 'USB.h', 'USBHIDKeyboard.h']:
+               'node_mode.h', 'LittleFS.h', 'USB.h', 'USBHIDKeyboard.h']:
     (WORK / header).write_text('#pragma once\n#include "runtime.h"\n')
 
 tests = r'''
@@ -168,7 +169,7 @@ static void stage(const char* name,const std::string& text){assert(ok(std::strin
 static void reset(bool card=true){
   runner.stop();runner=dragon::badusb::Runner{};cancelUpload();selected=false;selectedName[0]=0;scriptLength=0;releasePending=false;linkLost=false;
   onCard=storageReady=false;fileCount=1;memset(names,0,sizeof(names));
-  now=0;driveBusy=uploadBusy=storageBusy=false;LittleFS={};CardFS={};sdReady=card;
+  now=0;driveBusy=uploadBusy=storageBusy=nodeRunning=false;LittleFS={};CardFS={};sdReady=card;
   connected=true;sends=disconnectOnSend=failOnSend=keyboardBegins=0;sentReports.clear();Serial.output.clear();USB.callback=nullptr;USB.begins=0;
   dragon::badusb::mockKeyboard=true;dragon::badusb::mockScript.clear();
   badusbBegin();assert(keyboardBegins==1&&USB.begins==1&&sends==0&&!runner.running());
@@ -211,7 +212,7 @@ static void lifecycle(){
   connected=false;assert(!badusbRun());connected=true;assert(badusbRun());badusbLoop();badusbLoop();assert(runner.running()&&sends==0); // REM then DELAY.
   USB.fire(ARDUINO_USB_SUSPEND_EVENT);badusbLoop();assert(!runner.running()&&sends==0);now+=5000;badusbLoop();assert(sends==0); // No resume after wake.
   assert(badusbRun());badusbStop();now+=5000;badusbLoop();assert(!runner.running()&&sends==0);
-  for(unsigned reason=0;reason<3;++reason){assert(badusbRun());if(reason==0)driveBusy=true;if(reason==1)uploadBusy=true;if(reason==2)storageBusy=true;badusbLoop();assert(!runner.running());driveBusy=uploadBusy=storageBusy=false;}
+  for(unsigned reason=0;reason<4;++reason){assert(badusbRun());if(reason==0)driveBusy=true;if(reason==1)uploadBusy=true;if(reason==2)storageBusy=true;if(reason==3)nodeRunning=true;badusbLoop();assert(!runner.running());driveBusy=uploadBusy=storageBusy=nodeRunning=false;}
   reset();stage("keys.txt","STRING ab");assert(ok("badusb save")&&ok("badusb select keys.txt"));assert(badusbRun());
   assert(rejected("badusb upload later.txt 6"));assert(rejected("badusb select demo.txt"));assert(!badusbSelect(0));
   disconnectOnSend=1;badusbLoop();assert(!runner.running()&&releasePending&&sentReports.size()==1);assert(sentReports.back().keys[0]==4);
@@ -232,16 +233,25 @@ static void modes(){
   r=restart([]{command("badusb keyboard");});assert(r.keyboard&&r.script=="demo.txt"&&sends==0);
   assert(ok("badusb upload pending.txt 6"));assert(rejected("badusb keyboard")&&uploadLength);assert(ok("badusb cancel"));
   badusbExitKeyboard();assert(!runner.running()); // No-op outside keyboard mode.
+  // A running node owns the device: no keyboard restart, no new selection and no Run.
+  // Status, stop and cancel still answer; nothing restarts or types.
+  assert(ok("badusb select demo.txt"));nodeRunning=true;assert(command("badusb status").find("BADUSB_STATUS supported=1 mode=serial")!=std::string::npos);
+  assert(rejected("badusb keyboard")&&badusbStatus().message==std::string("Stop the node first"));
+  assert(rejected("badusb select demo.txt")&&rejected("badusb list")&&rejected("badusb upload node.txt 6")&&!uploadLength);
+  assert(!badusbRun()&&!badusbSelect(0)&&ok("badusb stop")&&ok("badusb cancel"));badusbLoop();assert(sends==0&&!runner.running());
+  nodeRunning=false;r=restart([]{command("badusb keyboard");});assert(r.keyboard&&r.script=="demo.txt"&&sends==0);
   // Keyboard boot: the selection is restored, but the script waits for Run.
   reset();dragon::badusb::mockScript="demo.txt";keyboardBegins=USB.begins=0;sentReports.clear();sends=0;selected=false;badusbBegin();
   assert(keyboardBegins==1&&USB.begins==1&&badusbStatus().keyboardMode&&badusbStatus().selected&&!strcmp(badusbStatus().name,"demo.txt"));
   for(int i=0;i<500;++i){badusbLoop();now+=10;}assert(sends==0&&!runner.running());
   assert(command("badusb status").find("mode=keyboard connected=1")!=std::string::npos);assert(rejected("badusb keyboard"));
+  // Defence in depth (nodeStart refuses in keyboard mode): a node seen mid-script ends it with every key released.
+  assert(badusbRun()&&runner.running());badusbLoop();nodeRunning=true;badusbLoop();assert(!runner.running()&&!releasePending);nodeRunning=false;
   assert(badusbRun()&&runner.running());r=restart([]{badusbExitKeyboard();});assert(!r.keyboard&&!runner.running()&&!releasePending);
   // A missing carried selection leaves keyboard mode idle.
   reset();dragon::badusb::mockScript="gone.txt";selected=false;badusbBegin();assert(!badusbStatus().selected&&sends==0);
 }
-int main(){uploads();storageFailures();lifecycle();modes();free(script);script=nullptr;puts("PASS BadUSB real runtime: strict upload, file selection, failed saves, no auto-run, delay cancellation, stop, disconnect, release retry and one-shot keyboard mode");}
+int main(){uploads();storageFailures();lifecycle();modes();free(script);script=nullptr;puts("PASS BadUSB real runtime: strict upload, file selection, failed saves, no auto-run, delay cancellation, stop, disconnect, release retry and one-shot keyboard mode, kept apart from a running node");}
 '''
 (WORK / 'test.cpp').write_text(tests)
 flags = ['-O1', '-g', '-fsanitize=address,undefined', '-fno-omit-frame-pointer'] if args.sanitize else ['-O2']

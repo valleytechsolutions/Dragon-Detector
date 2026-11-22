@@ -134,6 +134,8 @@ So that a fault cannot trap the device in a restart loop, the node is not resume
 - **A crash or a watchdog reset.** USB prints `NODE_RESUME_SKIPPED <mode> reset=<n>: the device crashed or a watchdog fired; choose it again from Modes`.
 - **Two quick restarts in a row**, each within a minute of resuming. This is often a battery or USB supply that sags when the node transmits. USB prints `NODE_RESUME_SKIPPED <mode> reset=<n>: it restarted twice within a minute of resuming; check the battery or USB supply, then choose it again from Modes`. A single quick restart still resumes. So a node that has already run for a minute rides out two restarts close together, such as brownouts while a car engine starts, and a third is skipped. If the node was itself resumed less than a minute earlier, for example when the device powered up with the ignition, only the first such restart resumes. Once a resumed node has run for a minute, the count starts again from zero. The count is kept in memory that survives a restart or a brownout but not a complete loss of power, so a supply that cuts out completely each time is not caught.
 
+A restart into BadUSB keyboard mode does not resume a remembered node either. USB prints `NODE_RESUME_SKIPPED <mode>: USB keyboard mode` (unseen, because keyboard mode has no serial port) and the choice is kept, so the node resumes after EXIT, the reset button or a power cycle returns the device to its normal USB serial start.
+
 Start the node again by hand from Modes (on Waveshare Lite, the MODES page). If a resumed node cannot start, USB prints `NODE_ERROR resume <mode>: <reason>` and the choice is kept, so the next boot tries again.
 
 Leaving with EXIT and CONFIRM, or with `node stop`, forgets the node; the next boot starts as usual.
@@ -280,10 +282,14 @@ Other problems:
 | Stop the stopwatch first | Pause or reset the stopwatch, then start the node. |
 | Saving the capture; try again in a moment | A capture file is still being saved. Start the node again in a moment. |
 | BLE Lab is closing; try again | BLE Lab was stopped but has not yet let go of the radio. Start the node again. |
+| Stop the BadUSB script first | A BadUSB script is typing. Press Stop on the BadUSB page, then start the node. |
+| Leave USB keyboard mode first | The device is in BadUSB keyboard mode, which has no USB serial port and runs no node. Press EXIT on the BadUSB page (it restarts as USB serial), then start the node. |
 | Not enough memory | Restart the device and start the node before anything else. |
 | Radio did not start, Wi-Fi events unavailable, Wi-Fi could not switch to node mode | Restart the device and try again. If it repeats, keep the output of `node status` and `memory status`. |
 
 While a GPS wardrive or a wardrive upload is running, Modes cannot be opened and USB node commands answer `WARDRIVE_BUSY` or `UPLOAD_BUSY`, so the node never gets as far as a refusal of its own.
+
+In the other direction, BadUSB refuses to select a script, restart into keyboard mode or run while a node runs: `badusb select`, `badusb list`, `badusb keyboard` and `badusb upload` answer `BADUSB_ERROR Stop the node first`. `badusb status`, `badusb stop` and `badusb cancel` still answer. See [BadUSB keyboard scripts](BADUSB.md).
 
 ## Hardware checklist
 
