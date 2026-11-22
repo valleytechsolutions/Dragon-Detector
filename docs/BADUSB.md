@@ -47,6 +47,11 @@ script runs, the node modes refuse to start, and the restart into keyboard mode
 does not resume a node that was remembered; it resumes after you leave keyboard
 mode. See [BISCUIT NODE and JCMK Node](NODE-MODES.md).
 
+KEYBOARD (Dial: **Keyboard mode**) and `badusb keyboard` also refuse while the
+stopwatch or locksport timer runs, or while a radio tool or BLE Lab holds the
+radio (`Stop timing and radio sessions first`), because the restart would end
+them. `system restart` refuses in the same cases.
+
 Use **Stop** or leave the BadUSB page to stop a running script. Every key or chord is released
 after sending; disconnect, suspend, send failures and the ten-minute limit also
 stop execution. Reconnecting never resumes a stopped script.

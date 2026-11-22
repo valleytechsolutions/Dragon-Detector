@@ -3,7 +3,15 @@
 Results apply to the version and hardware named in each section. Earlier
 release records are not acceptance results for the current firmware.
 
-## 0.14.8 · current release checks
+## 0.14.9 · combined node, BadUSB and theme release
+
+Automated and compile checks only; see the [0.14.9 notes](RELEASE-0.14.9.md#validation).
+No 0.14.9 build has run on hardware. Still to confirm: BadUSB typing from
+keyboard mode on each native-USB board, BISCUIT NODE and JCMK Node on the
+combined build (including their refusals in keyboard mode), and the DagNazty
+and LockpickingVlad faces on panels other than the 1.85B.
+
+## 0.14.8 · node release checks
 
 Checked on November 17, 2026:
 

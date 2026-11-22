@@ -40,6 +40,7 @@ Vendor ownership facts were independently checked against the **[Wireshark IEEE-
 | SensorLib / XPowersLib | Lewis He 0.3.1 / 0.2.6 | [SensorLib MIT](docs/licenses/SensorLib-MIT.txt), [XPowersLib MIT](docs/licenses/XPowersLib-MIT.txt) |
 | M5Unified / M5GFX | Pinned Git commits in `platformio.ini` | [M5Unified MIT](docs/licenses/M5Unified-LICENSE.txt), upstream M5GFX MIT and embedded LovyanGFX/component notices |
 | TFT_eSPI | Bodmer, 2.5.44 / commit `16e37595040eac69cd628e4bffb56fc30cad6299`, XIAO only | [Upstream MIT/Adafruit notices](docs/licenses/TFT_eSPI-LICENSE.txt); source and embedded notices retained by the pinned dependency |
+| TinyUSB (Elecrow CrowPanel 2.1 only) | hathach/tinyusb `8b1e40c3e` inside espressif/esp32-arduino-lib-builder `components/arduino_tinyusb` `769c168`, fetched with checked SHA-256 by `hardware/elecrow-rotary-21/usb.cmake` for BadUSB keyboard mode | [TinyUSB MIT](https://github.com/hathach/tinyusb/blob/8b1e40c3e/LICENSE), lib-builder component [Apache-2.0](https://github.com/espressif/esp32-arduino-lib-builder/blob/769c168/LICENSE.md) |
 | ESP Web Tools | ESPHome contributors, 10.4.0 | [Apache-2.0](https://github.com/esphome/esp-web-tools/blob/10.4.0/LICENSE); externally loaded distribution retains upstream notices |
 | Barlow Condensed / DM Sans | Google Fonts | [Barlow OFL](https://github.com/google/fonts/blob/main/ofl/barlowcondensed/OFL.txt), [DM Sans OFL](https://github.com/google/fonts/blob/main/ofl/dmsans/OFL.txt); remotely hosted, not bundled |
 
@@ -156,9 +157,13 @@ The tiny animated cat is an original code-drawn Nyan Cat homage. Nyan Cat is ass
 
 The owner supplied the unchanged [Seeed Studio PNG](media/theme-logos/seeed-studio.png) and [AVIF reference](media/theme-logos/seeed-studio-source.avif). The circular lime/deep-teal PNG is used on the radar and watch, with native display-size indexed assets. The leaf-circuit ornament, analog hands and GUI palette are original project work. The Seeed Studio mark remains its owner’s artwork; this optional theme does not imply affiliation or endorsement.
 
+## BadUSB keyboard scripts and DagNazty watches · 0.14.9
+
+Contributed by [dagnazty](https://github.com/dagnazty): the BadUSB script runner and its DuckyScript-subset parser (`firmware/include/badusb_script.h`), the one-shot USB keyboard mode (`firmware/src/badusb_mode.cpp`), the BadUSB screens and Dial menus, `tools/badusb_upload.py`, `tools/render_dagnazty_dark_art.py`, the DagNazty Dark theme, the DagNazty Digital and Dark Digital watches and the redesigned DagNazty analog dial, with their tests and documentation. Contributed under the project's MIT license.
+
 ## DagNazty artwork · 0.13.6
 
-The owner supplied the unchanged [DagNazty skull artwork](media/theme-logos/dagnazty.jpg), originally `38539274.jpg`. Its light background is matched by the white-room palette; the original mark is circularly clipped on the radar/watch. The talon outlines, fang accents and analog hands are original native drawing code. DagNazty Dark (0.14.8) uses two derived images made by `tools/render_dagnazty_dark_art.py`: `dagnazty-dark.png` recolors the same artwork (bone skull, red sockets, blood-red hood and halo) for a black field, and `dagnazty-cutout.png` keeps the original colors with a transparent background for the larger watch skull. The supplied file is not modified. The supplied artwork remains its owner’s work and is not covered by the project’s software license; inclusion does not imply endorsement.
+The owner supplied the unchanged [DagNazty skull artwork](media/theme-logos/dagnazty.jpg), originally `38539274.jpg`. Its light background is matched by the white-room palette; the original mark is circularly clipped on the radar/watch. The talon outlines, fang accents and analog hands are original native drawing code. DagNazty Dark (0.14.9) uses two derived images made by `tools/render_dagnazty_dark_art.py`: `dagnazty-dark.png` recolors the same artwork (bone skull, red sockets, blood-red hood and halo) for a black field, and `dagnazty-cutout.png` keeps the original colors with a transparent background for the larger watch skull. The supplied file is not modified. The supplied artwork remains its owner’s work and is not covered by the project’s software license; inclusion does not imply endorsement.
 
 ## 0ct0’s Pig and ASCII lettering · 0.13.6
 
@@ -410,4 +415,4 @@ button navigation and battery estimate are original MIT code.
 
 ## LockpickingVlad
 
-The eagle and padlock portrait was supplied for the LockpickingVlad theme. The gold radar sweep and clock hands use the McTickler and short-hook profiles credited above under Covert Instruments and McNally.
+Theme 49 and watch 52 from 0.14.9. The eagle and padlock portrait was supplied for the LockpickingVlad theme and is kept unchanged as `media/theme-logos/lockpickingvlad-source.jpg`; it remains its owner's work, is not covered by the project's software license, and its inclusion does not imply endorsement. The gold radar sweep and clock hands use the McTickler and short-hook profiles credited above under Covert Instruments and McNally.

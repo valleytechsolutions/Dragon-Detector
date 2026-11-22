@@ -52,7 +52,7 @@ All five also accept one optional [personal logo theme](CUSTOM-THEME.md) from th
 | Recon missions / desktop tool | Named sessions with independently encoded RCN1/PRB1/REL1 files and checked ZIP download; no GPS fix. External desktop integration is not yet tested |
 | Join / saved network profiles / IP ping scan | Connected network: eight explicit profiles, DHCP/IP/gateway/DNS, gateway ping, at most 254 local-subnet addresses, CSV; optional saved-Wi-Fi clock recovery; ordinary reconnection remains explicit |
 | Save/load AP lists, arbitrary source-MAC configuration, command scripts | Historical AP CSV save/load/export, volatile source-MAC configuration and reviewed bounded recipes. Archives cannot be loaded as fresh target observations |
-| USB BadUSB / DuckyScript | Not implemented in this USB-CDC stopwatch build |
+| USB BadUSB / DuckyScript | One-shot USB keyboard mode on native-USB boards (not Waveshare Lite or Watcher), started and run on the device; DuckyScript subset, US layout. [BadUSB](BADUSB.md) |
 | GPS wardriving / WiGLE / NMEA | 1.75-G beta only: LC76G, exclusive passive Wi-Fi/BLE, checked fixes, SD WiGLE CSV. Physical validation pending; Remote ID coordinates remain separate data |
 | 5/6 GHz, Bluetooth Classic, external NRF24 | Not provided by the ESP32-S3 radio / current board profile |
 
@@ -88,7 +88,7 @@ Waveshare AMOLED, M5Stack StopWatch, Spotpear and XIAO Round share the passive R
 
 The [budget report](FLASH-BUDGET.md) separates app slots, OTA allocation and user storage. The unsupported/unimplemented rows above remain explicit work or hardware limits.
 
-The [0.13 guide](RECON-013.md) documents session, recipe, archive, HID and bridge limits. USB BadUSB/DuckyScript and Chimera JSON protocol compatibility remain unimplemented; unsupported radio bands and external GPS require different hardware.
+The [0.13 guide](RECON-013.md) documents session, recipe, archive, HID and bridge limits. BadUSB keyboard scripts are described in [BadUSB](BADUSB.md). Chimera JSON protocol compatibility remains unimplemented; unsupported radio bands and external GPS require different hardware.
 
 ### Clock and Lite expansion · 0.13.9
 

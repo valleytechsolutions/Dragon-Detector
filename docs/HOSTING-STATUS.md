@@ -6,7 +6,7 @@ Updated November 17, 2026.
 
 **[Open Dragon Detector](https://valleytech-dragon-detector.pages.dev/)**
 
-This independently hosted copy includes 0.14.8 firmware for all thirteen board profiles, including the Waveshare ESP32-S3-Touch-AMOLED-1.43C (physical validation in progress), the Waveshare ESP32-S3-Touch-AMOLED-1.75C and the Waveshare ESP32-S3-Touch-LCD-1.85B. It also offers USB date/time setup, device tools and the optional personal-theme creator. Guides, SD resource packs and screenshots are served here too. The firmware on an already-installed device is unaffected by a website outage.
+This independently hosted copy includes 0.14.9 firmware for all thirteen board profiles, including the Waveshare ESP32-S3-Touch-AMOLED-1.43C (physical validation in progress), the Waveshare ESP32-S3-Touch-AMOLED-1.75C and the Waveshare ESP32-S3-Touch-LCD-1.85B. It also offers USB date/time setup, device tools and the optional personal-theme creator. Guides, SD resource packs and screenshots are served here too. The firmware on an already-installed device is unaffected by a website outage.
 
 A separate [Guition / Surenoo JC3636W518 Beta 1](GUITION-SURENOO-BETA.md) installer uses a newer manufacturer panel sequence. It is physically unverified and does not replace or modify the thirteen released firmware packages, including the original Spotpear profile.
 
@@ -24,7 +24,7 @@ Cloudflare remains the primary installer, so there is one public firmware source
 
 The Custom theme tab is optional. Its personal-theme slot stays hidden on the device unless a design is explicitly installed.
 
-[Full installation guide](FLASHING.md) · [Clock setup](CLOCK-SETUP.md) · [Custom theme guide](CUSTOM-THEME.md) · [Release notes](RELEASE-0.14.8.md)
+[Full installation guide](FLASHING.md) · [Clock setup](CLOCK-SETUP.md) · [Custom theme guide](CUSTOM-THEME.md) · [Release notes](RELEASE-0.14.9.md)
 
 ## GitHub and Gitea
 

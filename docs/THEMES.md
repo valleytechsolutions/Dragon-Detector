@@ -1,6 +1,6 @@
 # Radar themes
 
-The theme library offers 44 built-in themes plus an optional personal design
+The theme library offers 48 built-in themes plus an optional personal design
 across all thirteen hardware profiles. [44Delta](44DELTA.md) uses cyan on black, a centered padlock radar and an analog-only
 clock with silver lockpick hands. The earlier VectorPotential, Argyle, Law Lock
 Tools and Moki themes remain available.
@@ -9,7 +9,7 @@ The saved theme also controls menus, settings, dialogs, utility screens, BLE Lab
 
 On the device, open **Tools → System → Settings → Theme & radar labels** and choose a built-in theme. The selection saves immediately. Tap **Home** to return to the radar. For a personal design, preview the clock, radar and counter in the web flasher, then enable **Install this personal theme** to use it on a supported board. [Open Theme Creator](https://valleytech-dragon-detector.pages.dev/#theme-studio)
 
-Older firmware keeps its original three choices until updated. Waveshare Lite cycles all 44 built-in themes with BOOT and saves the selection. Hold BOOT to cycle radar, compact clock, timer, signals and diagnostics; see [Lite controls](WAVESHARE-LITE.md). Its LPL radar includes the central emblem and rotating scales.
+Older firmware keeps its original three choices until updated. Waveshare Lite cycles all 48 built-in themes with BOOT and saves the selection. Hold BOOT to cycle radar, compact clock, timer, signals and diagnostics; see [Lite controls](WAVESHARE-LITE.md). Its LPL radar includes the central emblem and rotating scales.
 
 | Valleytech | Biscuit Shop | Marauder |
 |---|---|---|
@@ -20,7 +20,7 @@ These are CRC-verified 466×466 logical display captures from the Waveshare, not
 
 Green radar (default), Dragon Ball and Black / gold / red keep their BWM1 logo. Existing active theme selections keep their saved IDs. Retired slot 40 falls back to Green on updated firmware. Family-colored labels use the same [26 device-family colors](RADAR-COLORS.md) and leader lines. Since 0.13.22, each retained device gets a distinct shade within its family color range on every theme. Radio status, target count, battery indicator, RSSI placement, scan scheduling and badge images are unaffected by a theme change.
 
-USB names: `radar theme dragon`, `green`, `gold`, `valleytech`, `biscuit`, `marauder`, `toool`, `church`, `toool-dark`, `covert`, `awok`, `baph0mau5`, `wdgwars`, `ghoststrats`, `n3rdsec`, `halehound`, `waveshare`, `m5stack`, `lab5`, `sasquach`, `nyan`, `dmac`, `seeed`, `dagnazty`, `octo-pig`, `deflock`, `lpl`, `ghostbusters`, `lpu`, `hackazillarex`, `m33k-t3ch`, `capsule-corp`, `sparrows`, `dzaz`, `custom`, `can-commander`, `ogg`, `xombi`, `muldersrevenge`, `mitm`, `vectorpotential`, `argyle`, `lawlocktools`, `moki`, `44delta`, `dagnazty-dark`, `dagnazty-digital`, or `dagnazty-dark-digital` (prefix each with `radar theme`). `radar status` reports saved indices 0–48, with retired slot 40 skipped. VectorPotential, Argyle, Law Lock Tools, Moki and 44Delta keep IDs 41–45, and the DagNazty additions are IDs 46–48; custom is available only after installing a design. Unknown themes are rejected without changing the current selection.
+USB names: `radar theme dragon`, `green`, `gold`, `valleytech`, `biscuit`, `marauder`, `toool`, `church`, `toool-dark`, `covert`, `awok`, `baph0mau5`, `wdgwars`, `ghoststrats`, `n3rdsec`, `halehound`, `waveshare`, `m5stack`, `lab5`, `sasquach`, `nyan`, `dmac`, `seeed`, `dagnazty`, `octo-pig`, `deflock`, `lpl`, `ghostbusters`, `lpu`, `hackazillarex`, `m33k-t3ch`, `capsule-corp`, `sparrows`, `dzaz`, `custom`, `can-commander`, `ogg`, `xombi`, `muldersrevenge`, `mitm`, `vectorpotential`, `argyle`, `lawlocktools`, `moki`, `44delta`, `dagnazty-dark`, `dagnazty-digital`, `dagnazty-dark-digital`, or `lockpickingvlad` (prefix each with `radar theme`). `radar status` reports saved indices 0–49, with retired slot 40 skipped. VectorPotential, Argyle, Law Lock Tools, Moki and 44Delta keep IDs 41–45, the DagNazty additions are IDs 46–48 and LockpickingVlad is ID 49; custom is available only after installing a design. Unknown themes are rejected without changing the current selection.
 
 ## TOOOL · 0.13.6
 
@@ -96,7 +96,7 @@ Black, hot pink and violet theme the complete GUI. Both original supplied logos 
 
 ## Maker and character themes · 0.13.6
 
-All nine themes below carry their colors through menus, settings, dialogs and utilities. Selecting one selects its unique watch. The universal Dragon Ball/BWM startup is shared by all boards.
+The themes below carry their colors through menus, settings, dialogs and utilities. Selecting one selects its unique watch. The universal Dragon Ball/BWM startup is shared by all boards.
 
 | Theme / USB name | Theme / watch ID | Design |
 |---|---|---|
@@ -108,14 +108,13 @@ All nine themes below carry their colors through menus, settings, dialogs and ut
 | DMAC / `dmac` | 21 / 24 | Teal, pink, charcoal and silver. Two acrylic McTickler profiles with copper inlays and pearl rivets tell the time; Utilities becomes Locksport Counter. |
 | Seeed Studio / `seeed` | 22 / 25 | Supplied circular logo, deep teal and lime, leaf-circuit traces and a unique Arabic analog watch. |
 | DagNazty / `dagnazty` | 23 / 26 | White field, black accents and the original skull. The fang dial has a large skull, a ring of fang hour markers (paired at the quarters), a crimson seconds trail around the bezel, drips off the rim and a fang-weighted seconds hand. |
-| DagNazty Dark / `dagnazty-dark` | 46 / 49 | Black field and blood-red interface. Uses the same fang dial in bone and blood red, with the skull recolored: bone skull, glowing red sockets, blood hood and a crimson halo. Firmware 0.14.8+. |
-
-| DagNazty Digital / `dagnazty-digital` | 47 / 50 | DagNazty colors with the digital fang clock (light). Firmware 0.14.8+. |
-| DagNazty Dark Digital / `dagnazty-dark-digital` | 48 / 51 | DagNazty Dark colors with the digital fang clock (dark). Firmware 0.14.8+. |
-
-The two digital themes open the digital watches; any theme can also swipe to them on the clock, or use `clock face 50` (light) and `clock face 51` (dark). Sixty rim fangs fill with blood red as the minute passes. The large 12-hour digits have a blood-red drop shadow and sit under the skull, followed by a dripping fang divider, seconds with AM/PM, and the weekday and date. Firmware 0.14.8+.
+| DagNazty Dark / `dagnazty-dark` | 46 / 49 | Black field and blood-red interface. Uses the same fang dial in bone and blood red, with the skull recolored: bone skull, glowing red sockets, blood hood and a crimson halo. Firmware 0.14.9+. |
+| DagNazty Digital / `dagnazty-digital` | 47 / 50 | DagNazty colors with the digital fang clock (light). Firmware 0.14.9+. |
+| DagNazty Dark Digital / `dagnazty-dark-digital` | 48 / 51 | DagNazty Dark colors with the digital fang clock (dark). Firmware 0.14.9+. |
 | 0ct0’s Pig / `octo-pig` | 24 / 27 | Pink ASCII octopus, live speech-bubble time and interactive wandering pig. |
 | DeFlock / `deflock` | 25 / 28 | Navy and steel blue, camera-raven artwork, viewfinder radar and large 24-hour clock. |
+
+The two digital themes open the digital watches; any theme can also swipe to them on the clock, or use `clock face 50` (light) and `clock face 51` (dark). Sixty rim fangs fill with blood red as the minute passes. The large 12-hour digits have a blood-red drop shadow and sit under the skull, followed by a dripping fang divider, seconds with AM/PM, and the weekday and date. Firmware 0.14.9+.
 
 DMAC’s Locksport Counter retains the current attempt’s elapsed time and latest 50 splits. OPEN records the final split and stops; RESET asks before clearing. It does not store a lifetime lock total. The other five keep the ordinary stopwatch.
 
@@ -186,6 +185,10 @@ Theme 25 (`radar theme deflock`) selects watch 28. The original supplied camera-
 | Watch | Radar |
 |---|---|
 | ![DeFlock watch](../web/assets/watch-deflock-0136.png) | ![DeFlock radar](../web/assets/radar-deflock-0136.png) |
+
+## LockpickingVlad · 0.14.9
+
+The supplied eagle and padlock portrait sits in a black and gold bezel. The radar sweep is a gold McTickler pick, the watch uses lockpick hands, and Utilities → Stopwatch becomes the **Locksport Timer**, as on the other locksport themes. Select **LockpickingVlad** or send `radar theme lockpickingvlad`. It is theme 49 and watch 52 on firmware 0.14.9 and later. [Artwork credit](../CREDITS.md#lockpickingvlad)
 
 ## Covert Instruments × LockPickingLawyer · 0.13.8
 

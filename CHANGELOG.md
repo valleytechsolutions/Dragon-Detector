@@ -1,5 +1,15 @@
 # Changes
 
+## 0.14.9
+
+- Combines the 0.14.8 node release with Dag's BadUSB and DagNazty work, which also used the number 0.14.8 on GitHub. [Release notes](docs/RELEASE-0.14.9.md).
+- **BadUSB keyboard scripts** (by Dag) on native-USB S3 profiles: a one-shot USB keyboard mode entered from Utilities → BadUSB (Dial: Menu → Tools → BadUSB). Normal boots keep USB serial and flashing. Scripts run only on a second, deliberate RUN press in keyboard mode; EXIT, reset or power cycle returns to USB serial. DuckyScript subset, US layout, upload and selection over USB (`tools/badusb_upload.py`). Not on Waveshare Lite or Watcher (USB-to-serial bridges). [BadUSB](docs/BADUSB.md).
+- BadUSB and the node modes never share the device: BadUSB refuses while BISCUIT NODE or JCMK Node runs (`Stop the node first`), the node modes refuse in keyboard mode and while a script types, and the restart into keyboard mode does not resume a remembered node (it resumes after leaving keyboard mode).
+- **DagNazty Dark** (theme 46, watch 49), **DagNazty Digital** (47, watch 50) and **DagNazty Dark Digital** (48, watch 51), and a redesigned DagNazty analog dial, by Dag.
+- **LockpickingVlad** (theme 49, watch 52): eagle and padlock portrait, gold McTickler sweep, lockpick hands and the locksport timer. Its local test build used 46 and 49; those IDs stay with the published DagNazty themes.
+- The Dial's Tools menu lists Modes and then BadUSB; a refused node start under Modes scrolls its full reason again.
+- The streamlined web flasher and Badge Studio artwork repair; old detector-tool bookmarks open the installer. The DagNazty compatibility check starts at 0.14.9.
+
 ## 0.14.8
 
 - **BISCUIT NODE and JCMK Node** on every board profile (full boards under Tools → Modes, the first two entries; M5Stack Dial under Menu → Tools → Modes; Waveshare Lite on its MODES page; USB `node biscuit` / `node jcmk`). The Dragon Detector becomes a scan-only wardriving node: it finds the core by itself on channel 6 and sends each Wi-Fi network (and, for a JCMK core, each Bluetooth LE device) over ESP-NOW. The core adds time and GPS and keeps the log. While a node runs, everything else is paused. The node screen is black and white with the core's logo, the Wi-Fi network count, BLE/SENT/channel counts and EXIT. See [BISCUIT NODE and JCMK Node](docs/NODE-MODES.md).

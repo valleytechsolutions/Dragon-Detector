@@ -338,5 +338,19 @@
     "sha256": "51ee77e700f96bc268518e5261738f77e3704a9cebb63fbe1167c51a314a43bd",
     "source_bytes_match": true,
     "derivation": "Native indexed portraits retain the original eagle and padlock composition. The edges fade into the circular bezel."
+  },
+  {
+    "file": "media/theme-logos/dagnazty-dark.png",
+    "supplied_name": "38539274.jpg",
+    "sha256": "f7d266adf0670ae381df07afbac159ae01711a901c797af23b4b4c7cca95de80",
+    "source_bytes_match": false,
+    "derivation": "tools/render_dagnazty_dark_art.py recolors media/theme-logos/dagnazty.jpg for a black field (bone skull, red sockets, blood-red hood and halo)."
+  },
+  {
+    "file": "media/theme-logos/dagnazty-cutout.png",
+    "supplied_name": "38539274.jpg",
+    "sha256": "76be36d136ad8c3c156ee951e5669f27f369b0eb34cc3de5644835c5048c1f85",
+    "source_bytes_match": false,
+    "derivation": "tools/render_dagnazty_dark_art.py keeps the original colors of media/theme-logos/dagnazty.jpg on a transparent field."
   }
 ]

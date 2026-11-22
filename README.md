@@ -15,7 +15,9 @@ GitHub source access is restored. The Cloudflare address above remains the prima
 installer; the [original GitHub Pages link](https://valleytechsolutions.github.io/Dragon-Detector/)
 forwards there. [Hosting status](docs/HOSTING-STATUS.md).
 
-[**Install firmware**](https://valleytech-dragon-detector.pages.dev/#install) · [Latest release](docs/RELEASE-0.14.8.md) · [User guides](docs/GUI.md) · [Clock setup](docs/CLOCK-SETUP.md)
+[**Install firmware**](https://valleytech-dragon-detector.pages.dev/#install) · [Latest release](docs/RELEASE-0.14.9.md) · [User guides](docs/GUI.md) · [Clock setup](docs/CLOCK-SETUP.md)
+
+**0.14.9 · Node modes with BadUSB, DagNazty and LockpickingVlad:** The wardriving node modes now ship together with Dag's BadUSB keyboard scripts on native-USB boards, the DagNazty Dark and digital watches and the new LockpickingVlad theme. A node and BadUSB keyboard mode never run at the same time. [BadUSB](docs/BADUSB.md) · [Release notes](docs/RELEASE-0.14.9.md).
 
 **0.14.8 · Wardriving node modes and a sleeker radar, on every board:** Tools → Modes now starts with **BISCUIT NODE** and **JCMK Node**, which turn the detector into a scan-only Wi-Fi node for a Biscuit or a JustCallMeKoko wardriving core. BISCUIT NODE waits for the Biscuit wardrive to start and scans until it ends; quick button presses never leave a node. On the full boards the radar gets a gold and cyan Valleytech look, redraws less per frame and loses fewer readings. [Node modes](docs/NODE-MODES.md) · [Release notes](docs/RELEASE-0.14.8.md).
 

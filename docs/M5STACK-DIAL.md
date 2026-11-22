@@ -22,7 +22,7 @@ No SD pack or external assets are required. The Dial has no onboard SD slot. Bui
 
 Turn the ring to cycle **Radar → Clock → Stopwatch → Signals → Status**; reverse to go back. Tap the visible **MENU** button on any page, or press the front button on Radar, Clock or Status, to open the menu. Turn the ring to highlight an option, then press to select it. Menu rows also respond to touch.
 
-The main menu contains **Radar, Clock, Tools, Themes, Settings and Close**. Tools opens the stopwatch/locksport timer, signal details, device status or Modes. Settings has separate **Time** and **Date** editors, brightness and **Sound level**. From 0.14.2, select Sound level to cycle Silent → Medium → High → Silent. Themes change only when selected in the Themes menu. Hold the front button about 0.8 seconds to go back in a menu; outside menus, holding stops hunting and returns to Radar.
+The main menu contains **Radar, Clock, Tools, Themes, Settings and Close**. Tools opens the stopwatch/locksport timer, signal details, device status, Modes or [BadUSB](BADUSB.md). Settings has separate **Time** and **Date** editors, brightness and **Sound level**. From 0.14.2, select Sound level to cycle Silent → Medium → High → Silent. Themes change only when selected in the Themes menu. Hold the front button about 0.8 seconds to go back in a menu; outside menus, holding stops hunting and returns to Radar.
 
 | Screen | Front button | Touch |
 | --- | --- | --- |
