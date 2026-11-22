@@ -67,7 +67,9 @@ struct Prefs {unsigned getUChar(const char*,unsigned n){return savedBrightness;}
 static Prefs litePrefs;
 // Tools > BadUSB (badusb.cpp). The production runtime is exercised by test_badusb.py.
 static uint32_t millis(){return 0;}
-static size_t strlcpy(char* out,const char* in,size_t cap){size_t n=strlen(in);if(cap){size_t k=std::min(n,cap-1);memcpy(out,in,k);out[k]=0;}return n;}
+// macOS and glibc 2.38+ declare strlcpy; a renamed mock avoids clashing with either.
+static size_t testStrlcpy(char* out,const char* in,size_t cap){size_t n=strlen(in);if(cap){size_t k=std::min(n,cap-1);memcpy(out,in,k);out[k]=0;}return n;}
+#define strlcpy testStrlcpy
 struct BadUsbStatus {bool connected,running,selected;unsigned line;const char* name;const char* message;const char* medium;bool keyboardMode;};
 static bool usbSupported=true,usbKeyboard=false,usbRunning=false,usbSelected=false;
 static unsigned usbRuns=0,usbStops=0,usbExits=0;
