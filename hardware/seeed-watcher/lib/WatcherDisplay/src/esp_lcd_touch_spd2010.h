@@ -25,6 +25,15 @@ extern "C" {
 esp_err_t esp_lcd_touch_new_i2c_spd2010(const esp_lcd_panel_io_handle_t io, const esp_lcd_touch_config_t *config, esp_lcd_touch_handle_t *tp);
 
 /**
+ * @brief Poll once and distinguish a new point/release report from an idle poll.
+ *
+ * On ESP_OK, report_received is true only when new contact state is available
+ * through esp_lcd_touch_get_coordinates(). False means retain prior contact.
+ * On error, no coordinates are available; the board owns fault recovery.
+ */
+esp_err_t esp_lcd_touch_spd2010_read_sample(esp_lcd_touch_handle_t tp, bool *report_received);
+
+/**
  * @brief I2C address of the SPD2010 controller
  *
  */

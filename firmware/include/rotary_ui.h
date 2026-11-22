@@ -12,5 +12,6 @@ bool uiRotaryNode(bool click,bool back);
 bool uiRotaryOpenMenu();
 void rotaryUiTouch(bool down);
 void rotaryUiReset();
+void rotaryUiDiagnostics();
 #endif
 #endif

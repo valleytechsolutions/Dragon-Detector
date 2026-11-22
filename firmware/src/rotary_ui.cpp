@@ -9,7 +9,11 @@ lv_group_t* group=nullptr;
 lv_obj_t* members[160]{};
 unsigned memberCount=0;
 #ifdef BOARD_WATCHER
-dragon::RotaryNavigation navigation(350,140);
+// One current navigation intent, never a queue of turns to replay after a
+// slow frame. Ordinary individual detents still each move focus once.
+int pendingMove=0;
+uint32_t moveAt=0;
+uint32_t appliedMoves=0,appliedClicks=0,coalescedMoves=0,expiredMoves=0,touchCancelled=0;
 #else
 dragon::RotaryNavigation navigation;
 #endif
@@ -22,7 +26,7 @@ uint32_t touchAt=0;
 uint32_t activeKey=LV_KEY_ENTER;
 bool touchOwnsInput(){return touchActive||(touchSeen&&uint32_t(millis()-touchAt)<150);}
 void cancelEncoder(){
-  navigation.clear();pendingClicks=0;releasing=false;
+  pendingMove=0;pendingClicks=0;releasing=false;
   if(encoderInput)lv_indev_reset(encoderInput,nullptr);
 }
 #endif
@@ -55,8 +59,12 @@ void readEncoder(lv_indev_drv_t*,lv_indev_data_t* data){
   if(releasing){
     releasing=false;data->key=activeKey;data->state=LV_INDEV_STATE_REL;
   }else{
-    if(pendingClicks){pendingClicks=0;activeKey=LV_KEY_ENTER;}
-    else {data->key=activeKey;data->state=LV_INDEV_STATE_REL;return;}
+    if(pendingClicks){pendingClicks=0;pendingMove=0;activeKey=LV_KEY_ENTER;++appliedClicks;}
+    else if(pendingMove){
+      int move=pendingMove;pendingMove=0;
+      if(uint32_t(millis()-moveAt)>350){++expiredMoves;data->state=LV_INDEV_STATE_REL;return;}
+      activeKey=move>0?LV_KEY_NEXT:LV_KEY_PREV;++appliedMoves;
+    }else {data->key=activeKey;data->state=LV_INDEV_STATE_REL;return;}
     data->key=activeKey;data->state=LV_INDEV_STATE_PR;releasing=true;
   }
   data->continue_reading=releasing; // a selection cannot remain held across slow redraws
@@ -84,7 +92,7 @@ void rotaryUiBegin(){
 void rotaryUiInput(int steps,bool click,bool back){
   if(!group||(!steps&&!click&&!back))return;
 #ifdef BOARD_WATCHER
-  if(touchOwnsInput()){cancelEncoder();return;}
+  if(touchOwnsInput()){++touchCancelled;cancelEncoder();return;}
 #endif
   if(uiRotaryWake()){
 #ifdef BOARD_WATCHER
@@ -98,29 +106,34 @@ void rotaryUiInput(int steps,bool click,bool back){
   // leave: the knob is no screen tap there, so nothing reaches LVGL.
   if(uiRotaryNode(click,back)){
 #ifdef BOARD_WATCHER
-    cancelEncoder();
+    cancelEncoder();  // the Watcher keeps one pending move instead of a navigation queue
+#else
+    navigation.clear();
 #endif
-    navigation.clear();pendingClicks=0;releasing=false;lv_group_set_editing(group,false);
+    pendingClicks=0;releasing=false;lv_group_set_editing(group,false);
     return;
   }
   if(back){
 #ifdef BOARD_WATCHER
     cancelEncoder();
 #endif
-    navigation.clear();pendingClicks=0;releasing=false;lv_group_set_editing(group,false);
+#ifndef BOARD_WATCHER
+    navigation.clear();
+#endif
+    pendingClicks=0;releasing=false;lv_group_set_editing(group,false);
 #ifdef BOARD_WATCHER
     if(uiRotaryOpenMenu())return;
 #endif
     uiKey(true);return;
   }
 #ifdef BOARD_WATCHER
-  if(click){pendingClicks=1;}
+  if(click){pendingMove=0;pendingClicks=1;}
   else if(!pendingClicks&&!releasing){
-    lv_group_set_editing(group,false);
-    // Apply this frame's actual detents together, with no delayed navigation backlog.
-    int count=constrain(steps,-8,8);
-    while(count>0){lv_group_focus_next(group);--count;}
-    while(count<0){lv_group_focus_prev(group);++count;}
+    if(steps){
+      unsigned magnitude=steps>0?unsigned(steps):unsigned(-steps);
+      coalescedMoves+=magnitude-1+(pendingMove!=0);
+      pendingMove=steps>0?1:-1;moveAt=millis();
+    }
   }
 #else
   if(click){navigation.clear();pendingClicks=1;}
@@ -131,11 +144,20 @@ void rotaryUiInput(int steps,bool click,bool back){
 void rotaryUiTouch(bool down){
   if(down||touchActive){touchAt=millis();touchSeen=true;}
   touchActive=down;
-  if(down)cancelEncoder();
+  if(down){
+    if(pendingMove||pendingClicks||releasing)++touchCancelled;
+    cancelEncoder();
+    // Touch keeps its normal focus anchor, without the wheel's focus outline.
+    if(group)if(auto* focused=lv_group_get_focused(group))lv_obj_clear_state(focused,LV_STATE_FOCUS_KEY);
+  }
 }
 void rotaryUiReset(){
   cancelEncoder();memberCount=0;
   if(group){lv_group_remove_all_objs(group);lv_group_set_editing(group,false);}
+}
+void rotaryUiDiagnostics(){
+  Serial.printf("ROTARY_UI moves=%lu selects=%lu coalesced=%lu expired=%lu touch_cancelled=%lu pending=%d touching=%u\n",
+    appliedMoves,appliedClicks,coalescedMoves,expiredMoves,touchCancelled,pendingMove,touchOwnsInput());
 }
 #endif
 void rotaryUiLoop(){
@@ -147,9 +169,10 @@ void rotaryUiLoop(){
   bool changed=count!=memberCount||lv_group_get_obj_count(group)!=count;
   for(unsigned i=0;i<count&&!changed;++i)changed=found[i]!=members[i];
   if(!changed)return;
-  navigation.clear();
 #ifdef BOARD_WATCHER
   cancelEncoder();
+#else
+  navigation.clear();
 #endif
   auto* focused=lv_group_get_focused(group);bool keep=false;
   for(unsigned i=0;i<count;++i)if(found[i]==focused)keep=true;
@@ -158,9 +181,15 @@ void rotaryUiLoop(){
   for(unsigned i=0;i<count;++i){
     auto* obj=members[i]=found[i];
     lv_obj_add_flag(obj,LV_OBJ_FLAG_SCROLL_ON_FOCUS);
-    lv_obj_set_style_outline_color(obj,lv_color_hex(uiColors().accent),LV_STATE_FOCUSED);
-    lv_obj_set_style_outline_width(obj,3,LV_STATE_FOCUSED);
-    lv_obj_set_style_outline_pad(obj,2,LV_STATE_FOCUSED);
+    const auto focusStyle=
+#ifdef BOARD_WATCHER
+      LV_STATE_FOCUS_KEY;
+#else
+      LV_STATE_FOCUSED;
+#endif
+    lv_obj_set_style_outline_color(obj,lv_color_hex(uiColors().accent),focusStyle);
+    lv_obj_set_style_outline_width(obj,3,focusStyle);
+    lv_obj_set_style_outline_pad(obj,2,focusStyle);
     lv_group_add_obj(group,obj);
   }
   if(keep)lv_group_focus_obj(focused);
