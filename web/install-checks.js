@@ -45,7 +45,7 @@ export function usbErrorText(error){
   switch(error?.name){
     case 'NotFoundError': return 'No USB port selected. Nothing was installed. If the list is empty, check the data cable, ESP32 drivers and BOOT/RESET instructions below.';
     case 'SecurityError': case 'NotAllowedError': return 'USB access was blocked. Open the direct flasher in a desktop browser, allow serial access, and try again.';
-    case 'NetworkError': case 'InvalidStateError': return 'Could not open the USB port. Close other flashers, Detector tools and serial monitors, reconnect the board, then select its port again.';
+    case 'NetworkError': case 'InvalidStateError': return 'Could not open the USB port. Close other flashers, Badge Studio and serial monitors, reconnect the board, then select its port again.';
     default: return `Unable to start the installer: ${error?.message||'USB connection failed'}. Check the connection help below.`;
   }
 }

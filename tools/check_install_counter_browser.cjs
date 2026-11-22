@@ -28,7 +28,7 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
     await page.reload();await page.waitForFunction(()=>document.querySelector('#install-count').textContent==='0');assert.equal(posts,0);assert.equal(reads,2);
     await page.waitForFunction(()=>customElements.get('dragon-clock-install-dialog'));
     assert.equal(await page.locator('[data-install-counter] span').textContent(),'INSTALLS');
-    const boards=await page.locator('[data-board]').evaluateAll(items=>items.map(e=>e.dataset.board));assert.equal(boards.length,11);
+    const boards=await page.locator('[data-board]').evaluateAll(items=>items.map(e=>e.dataset.board));assert.deepEqual(boards.slice().sort(),Object.keys((await import('../web/board-profiles.js')).boardProfiles).sort());
     for(const board of boards){
       await page.locator(`[data-board="${board}"]`).click();
       await page.waitForFunction(()=>!document.getElementById('download').hidden||!document.getElementById('retry-release').hidden);
@@ -37,7 +37,7 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
     await page.locator('[data-board="stopwatch"]').click();await page.waitForFunction(()=>!document.getElementById('download').hidden);
     await page.locator('#hardware-confirm').check();await page.locator('#auto-clock').uncheck();
     await page.evaluate(()=>Object.defineProperty(navigator,'serial',{configurable:true,value:{requestPort:async()=>{throw new DOMException('Cancelled','NotFoundError');}}}));
-    await page.locator('#install-button').click();await page.waitForFunction(()=>document.getElementById('clock-setup-status').textContent.includes('Nothing was installed'));assert.equal(posts,0);
+    await page.locator('#install-button').click();await page.waitForFunction(()=>document.getElementById('install-clock-status').textContent.includes('Nothing was installed'));assert.equal(posts,0);
     await page.evaluate(()=>Object.defineProperty(navigator,'serial',{configurable:true,value:{requestPort:async()=>({readable:{},writable:{},async open(){},async close(){this.readable=null;this.writable=null;},getInfo(){return {};}})}}));
     for(const state of ['writing','error','finished','finished']){
       await page.locator('#install-button').click();await page.waitForFunction(()=>document.querySelector('dragon-clock-install-dialog')?._manifest);
@@ -52,6 +52,6 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
     await page.setViewportSize({width:390,height:844});
     const dimensions=await page.evaluate(()=>[document.documentElement.scrollWidth,innerWidth]);assert.ok(dimensions[0]<=dimensions[1]+1);
     await page.locator('header').screenshot({path:'.work/install-counter-header-mobile-test.png'});
-    console.log('PASS 11 board selectors, read-only reloads, cancelled/failed writes excluded, completed/repeated flashes counted once, desktop/mobile layout; all USB and counter writes mocked');
+    console.log(`PASS ${boards.length} board selectors, read-only reloads, cancelled/failed writes excluded, completed/repeated flashes counted once, desktop/mobile layout; all USB and counter writes mocked`);
   }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

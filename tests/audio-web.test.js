@@ -100,9 +100,7 @@ test('audio capabilities keep no-speaker and compact web profiles unavailable',(
   assert.equal(hasWebAudio('waveshare_185b','0.14.0'),false);assert.equal(hasWebAudio('stopwatch','0.3.9'),false);assert.equal(hasWebAudio('stopwatch','0.15.0'),false);
 });
 
-test('sound UI offers exactly High, Medium and Silent without a separate master switch',()=>{
+test('flasher omits the device audio controls',()=>{
   const html=readFileSync(new URL('../web/index.html',import.meta.url),'utf8');
-  const options=html.match(/<select[^>]*id="sound-level"[^>]*>([\s\S]*?)<\/select>/)[1];
-  assert.deepEqual([...options.matchAll(/value="([^"]+)"[^>]*>([^<]+)<\/option>/g)].map(m=>m.slice(1)),[['high','High'],['medium','Medium'],['silent','Silent']]);
-  assert.doesNotMatch(html,/id="sound-(?:volume|enabled|volume-label)"/);
+  assert.doesNotMatch(html,/id="(?:sound|sound-level|tone-preview)"/);
 });

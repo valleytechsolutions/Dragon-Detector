@@ -5,19 +5,42 @@ export function startRadarBackground(canvas,button){
   let paused=false,frame=0,last=0,phase=0,w=0,h=0;
   try{paused=localStorage.getItem('radar-motion')==='paused';}catch{}
   const contacts=[[.28,.62],[.52,2.2],[.76,3.8],[.43,5.25],[.87,1.3],[.65,4.7]];
+  const field=document.createElement('canvas'), sweep=document.createElement('canvas');
+  let radius=0;
+  function cacheDial(){
+    const r=radius,side=Math.ceil(2*r+8);
+    field.width=field.height=sweep.width=sweep.height=side;
+    const dial=field.getContext('2d'),beam=sweep.getContext('2d');
+    dial.translate(side/2,side/2);beam.translate(side/2,side/2);
+    const face=dial.createRadialGradient(0,-r*.12,0,0,0,r);
+    face.addColorStop(0,'#142029');face.addColorStop(.9,'#080a0b');face.addColorStop(1,'#181713');
+    dial.fillStyle=face;dial.beginPath();dial.arc(0,0,r,0,Math.PI*2);dial.fill();
+    for(const [fraction,color,width] of [[1,'#d6b46e',2],[.975,'#6d5b38',1],[.9,'#a78750',1],[.6,'#484039',1],[.3,'#484039',1]]){
+      dial.strokeStyle=color;dial.lineWidth=width;dial.beginPath();dial.arc(0,0,r*fraction,0,Math.PI*2);dial.stroke();
+    }
+    for(let i=0;i<60;i++){
+      const a=i*Math.PI/30,major=i%5===0,inner=major?.914:.935;
+      dial.strokeStyle=major?'#f2dfad':'#6d5b38';dial.lineWidth=major?2:1;dial.beginPath();
+      dial.moveTo(Math.cos(a)*r*inner,Math.sin(a)*r*inner);dial.lineTo(Math.cos(a)*r*.957,Math.sin(a)*r*.957);dial.stroke();
+    }
+    for(let i=0;i<32;i++){
+      beam.fillStyle='rgba(69,211,255,'+(.32*(1-i/32)**2)+')';beam.beginPath();beam.moveTo(0,0);
+      beam.arc(0,0,r*.895,-(i+1)*.022,-i*.022);beam.closePath();beam.fill();
+    }
+    beam.shadowColor='#65ecff';beam.shadowBlur=10;beam.strokeStyle='#9ff4ff';beam.lineWidth=2.5;
+    beam.beginPath();beam.moveTo(0,0);beam.lineTo(r*.895,0);beam.stroke();
+  }
   function paint(){
     ctx.clearRect(0,0,w,h);
-    const x=w*.77,y=h*.48,r=Math.max(300,Math.min(650,Math.max(w,h)*.61));
-    ctx.save();ctx.translate(x,y);
-    ctx.strokeStyle='#83cda8';ctx.lineWidth=1;
-    for(let n=1;n<=5;n++){ctx.globalAlpha=.15;ctx.beginPath();ctx.arc(0,0,r*n/5,0,Math.PI*2);ctx.stroke();}
-    ctx.globalAlpha=.11;
-    for(let i=-4;i<=4;i++){const a=r*i/5,b=Math.sqrt(r*r-a*a);ctx.beginPath();ctx.moveTo(a,-b);ctx.lineTo(a,b);ctx.moveTo(-b,a);ctx.lineTo(b,a);ctx.stroke();}
-    for(let i=0;i<120;i++){const a=i*Math.PI/60,len=i%10===0?12:4;ctx.globalAlpha=i%10===0?.5:.18;ctx.beginPath();ctx.moveTo(Math.cos(a)*(r-len),Math.sin(a)*(r-len));ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r);ctx.stroke();}
-    for(let i=0;i<45;i++){ctx.globalAlpha=(45-i)/45*.055;ctx.fillStyle='#70edb0';ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,r,phase-i*.016-.018,phase-i*.016);ctx.closePath();ctx.fill();}
-    ctx.globalAlpha=.6;ctx.strokeStyle='#c3f66d';ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(Math.cos(phase)*r,Math.sin(phase)*r);ctx.stroke();
-    for(const [distance,bearing] of contacts){const age=(phase-bearing+Math.PI*4)%(Math.PI*2);ctx.globalAlpha=.09+.7*Math.exp(-age*1.3);ctx.fillStyle='#d1ff9e';ctx.beginPath();ctx.arc(Math.cos(bearing)*distance*r,Math.sin(bearing)*distance*r,3,0,Math.PI*2);ctx.fill();}
-    ctx.globalAlpha=.3;ctx.fillStyle='#b2d9bd';ctx.font='10px monospace';ctx.fillText('360° / SIGNAL FIELD',-70,-r-18);ctx.restore();
+    const x=w*.82,y=h*.44,r=radius;
+    ctx.save();ctx.translate(x,y);ctx.drawImage(field,-field.width/2,-field.height/2);
+    ctx.save();ctx.rotate(phase);ctx.drawImage(sweep,-sweep.width/2,-sweep.height/2);ctx.restore();
+    for(const [distance,bearing] of contacts){
+      const age=(phase-bearing+Math.PI*4)%(Math.PI*2);
+      ctx.globalAlpha=.25+.75*Math.exp(-age*1.5);ctx.fillStyle='#bff6ff';
+      ctx.beginPath();ctx.arc(Math.cos(bearing)*distance*r,Math.sin(bearing)*distance*r,3,0,Math.PI*2);ctx.fill();
+    }
+    ctx.restore();
   }
   function tick(time){
     frame=requestAnimationFrame(tick);
@@ -31,7 +54,7 @@ export function startRadarBackground(canvas,button){
     button.disabled=motion.matches;button.setAttribute('aria-pressed',String(!stopped));
     paint();if(!stopped&&!document.hidden)frame=requestAnimationFrame(tick);
   }
-  function resize(){w=innerWidth;h=innerHeight;const dpr=Math.min(devicePixelRatio||1,1.5);canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);paint();}
+  function resize(){w=innerWidth;h=innerHeight;const dpr=Math.min(devicePixelRatio||1,1.5);canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);radius=Math.max(205,Math.min(560,Math.max(w,h)*.43));cacheDial();paint();}
   button.addEventListener('click',()=>{paused=!paused;try{localStorage.setItem('radar-motion',paused?'paused':'running');}catch{}update();});
   addEventListener('resize',resize);document.addEventListener('visibilitychange',update);motion.addEventListener('change',update);
   resize();update();

@@ -63,7 +63,7 @@ Normal cards disappear after ten seconds; watch cards remain until dismissed. Ca
 
 Tools → **History** shows up to 512 unique address/radio/family records, newest first. Records contain evidence, peak/last signal and encounter count. More than one family can be retained for the same address. History is enabled by default and uses internal flash on all three boards, with record CRC and bounded journals. Updates are queued to limit write traffic; abrupt power loss can lose recent pending updates. Old journal records eventually rotate out. **Clear** asks before removing stored records; active scanning can create new ones afterward.
 
-Open [Detector tools](https://valleytech-dragon-detector.pages.dev/#detector) in desktop Chrome/Edge. Connect a running 0.4.x or newer board to synchronize time and download a CSV. Close other serial monitors first. Without a clock sync since boot, records explicitly use boot-relative time. Clock sync affects new observations; it does not invent dates for older records.
+Connect your board by USB and close any serial monitor using its port. In desktop Chrome or Edge, select your hardware in the flasher, open **Clock sync**, and choose **Sync device clock**. New observations use the synchronized time. Earlier records keep their original timestamps, including times measured from boot. [Open Clock sync](https://valleytech-dragon-detector.pages.dev/#clock-sync-panel)
 
 Display privacy masks names/addresses and hides evidence/coordinates on screen. It does not alter stored or exported data. CSV includes the full records. Export briefly pauses reception. No account or cloud upload is involved.
 
@@ -71,7 +71,7 @@ Spotpear and XIAO additionally support optional SD event CSV and bounded 16 MB P
 
 ## Display and navigation
 
-**Settings → Display & timeouts** provides brightness, dim-after, dim level, screen-off-after and wake-on-alert. Both timers default to **Never**. **Restore always-on defaults** sets 100% brightness and disables both timers. The web detector tools can save the same settings. Reception continues when a scanning screen dims or turns off. Clock, timer, lap history and time/date settings pause scanning even while the display remains on; leaving those pages resumes it. Touch wakes a dark display; the waking touch is consumed so it does not accidentally press a hidden button.
+**Settings → Display & timeouts** provides brightness, dim-after, dim level, screen-off-after and wake-on-alert. Both timers default to **Never**. **Restore always-on defaults** sets 100% brightness and disables both timers. Reception continues when a scanning screen dims or turns off. Clock, timer, lap history and time/date settings pause scanning even while the display remains on; leaving those pages resumes it. Touch wakes a dark display; the waking touch is consumed so it does not accidentally press a hidden button.
 
 Tap **Tools** to open the menu and **Home** to return to radar. There is no swipe-to-open gesture; lists still scroll normally. Waveshare BOOT toggles radar/tools. StopWatch yellow returns to radar; blue opens tools and, from tools, opens badge.
 
