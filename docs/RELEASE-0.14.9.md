@@ -111,11 +111,12 @@ Run on the combined source on November 22, 2026, on Windows with PlatformIO
 6.2.0 and Zig 0.14.1 for the native tests:
 
 - **JavaScript:** 184 tests passed.
-- **Native host suites:** 33 passed, including the node session (`node_mode_test`,
+- **Native host suites:** 38 passed, including the node session (`node_mode_test`,
   with the new BadUSB refusal, skipped-resume and memory-release cases), the
   simulated Biscuit, JCMK and Piglet links in `core_test`, the BadUSB runtime
   (`test_badusb`, with the node and restart-guard cases), the Dial menus with
-  Modes and BadUSB, theme IDs and retirement, and `test_vlad_art`.
+  Modes and BadUSB, theme IDs and retirement, `test_vlad_art`, and the 1.85B
+  touch-queue, flush and Watcher touch, wheel and input-lifecycle tests.
   `test_core`, `test_sd_labels` and `test_badusb` also passed under
   `--sanitize`; on this toolchain that means UndefinedBehaviorSanitizer, not
   AddressSanitizer.
