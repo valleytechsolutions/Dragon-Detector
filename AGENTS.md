@@ -120,6 +120,15 @@ node tools/check_web_manifests.mjs
 Tuya T5-E1 beta. They are not built here, but they must stay in every upload,
 because the flasher's board list links to them.
 
+The Waveshare P4 Knob (`waveshare_p4_knob`) is not built here either. Its
+published 0.14.8 package is carried over unchanged until its source is added:
+run `& $py tools/fetch_p4_knob_carryover.py` before `build_static_site.py`. It
+copies `web/firmware/waveshare_p4_knob/` from the live site and checks every
+file against the pinned `SHA256SUMS.txt`. Its board code (`p4-install.js` and
+the P4 parts of the other scripts and `index.html`), `guides/WAVESHARE-P4-KNOB.html`
+and `resources/p4-knob-sd-starter-0.14.8.zip` are committed. When comparing
+with the live site, the P4 package must be byte for byte unchanged.
+
 Before uploading, compare `.build/site` with the live site: every file the
 release did not mean to change must be byte for byte the same, apart from
 CRLF/LF line endings in text files. Expect changes only in `index.html`, the

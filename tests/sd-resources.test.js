@@ -1,9 +1,10 @@
 import test from 'node:test';
+import {builtProfiles} from './built-boards.js';
 import assert from 'node:assert/strict';
 import {boardProfiles} from '../web/board-profiles.js';
 import {resourceSetup,resourcePack,labelResourcePack,hasSd,hasGpsAndSd} from '../web/sd-resources.js';
 test('all exact board profiles gate SD resources and GPS independently',()=>{
- for(const board of [...Object.keys(boardProfiles),'t5_e1','unknown']){
+ for(const board of [...Object.keys(builtProfiles),'t5_e1','unknown']){
   assert.equal(hasGpsAndSd(board),['waveshare_185b','watcher','waveshare_175_gps'].includes(board));
   assert.equal(resourceSetup(board,{version:'0.13.26'}),null);
   if(board==='waveshare_185b')continue;

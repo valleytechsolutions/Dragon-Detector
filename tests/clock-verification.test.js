@@ -1,11 +1,12 @@
 import test from 'node:test';
+import {builtProfiles} from './built-boards.js';
 import assert from 'node:assert/strict';
 import {verifyClock,clockResultText} from '../web/clock-verification.js';
 import {clockInstallDialogClass} from '../web/clock-install-dialog.js';
 import {boardProfiles,validateManifest} from '../web/board-profiles.js';
 
 test('verified-clock manifests require safe erase prompting and skip unused Improv',()=>{
-  for(const [board,p] of Object.entries(boardProfiles))for(const mode of ['factory','update']){
+  for(const [board,p] of Object.entries(builtProfiles))for(const mode of ['factory','update']){
     const parts=[['bootloader.bin',0],['partitions.bin',0x8000],['boot_app0.bin',0xe000],['firmware.bin',0x10000]];
     if(mode==='factory')parts.push(['littlefs.bin',p.filesystemOffset]);
     if(mode==='factory'&&p.reconOffset)parts.push(['reconfs.bin',p.reconOffset]);

@@ -6,6 +6,7 @@ import {createInstallCounter} from './install-counter.js?v=0.14.9';
 import {syncVerifiedClock,clockResultText} from './clock-verification.js?v=0.14.9';
 import {clockInstallDialogClass} from './clock-install-dialog.js?v=0.14.9';
 import {deviceQuery} from './device-query.js';
+import {readP4UpdateSlot} from './p4-install.js?v=0.14.9';
 import {BadgeSerial} from './serial.js?v=0.14.9';
 import {encodeBadge} from './badge-codec.js?v=0.14.9';
 import {uploadBadge} from './badge-transfer.js?v=0.14.9';
@@ -55,7 +56,14 @@ async function chooseBoard(next) {
   document.querySelectorAll('[data-board]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.board===board)));
   $('selected-board').textContent = models[board];
   $('board-storage').textContent = boardProfiles[board].storage;
-  $('board-features').textContent = boardProfiles[board].features;
+  const details = $('board-features');
+  details.textContent = boardProfiles[board].features;
+  if (boardProfiles[board].guide) {
+    const guide = document.createElement('a');
+    guide.href = boardProfiles[board].guide;
+    guide.textContent = 'P4 beta capabilities and controls';
+    details.append(' ', guide);
+  }
   $('board-watcher-setup').hidden=board!=='watcher';
   $('board-143c-setup').hidden=board!=='waveshare_143c';
   $('board-185b-setup').hidden=board!=='waveshare_185b';
@@ -78,8 +86,12 @@ async function chooseBoard(next) {
     $('installer').setAttribute('manifest', manifest); releaseReady = true;releaseVersion=data.version;
     const pack=resourceSetup(board,data);
     $('board-resource-setup').hidden=!pack;
-    if(pack){$('resource-title').textContent=pack.title;$('resource-instructions').textContent=pack.instructions;$('resource-download').href=pack.path;}
+    if(pack){$('resource-title').textContent=pack.title;$('resource-instructions').textContent=pack.instructions;$('resource-download').href=pack.path;$('resource-download').textContent=board==='waveshare_p4_knob'?'Download P4 microSD starter ZIP':'Download SD resource pack v1';}
     $('board-status').textContent = `${data.version}${board==='waveshare_143c'?' · Initial port — physical validation pending':board==='guition_185_beta'?' · DISPLAY BETA 1 — physical compatibility unverified':board==='watcher'?' · BETA — SD capture/resources and RTC tested; touch and rotary confirmed':board==='waveshare_185b'?' · BETA — display/touch, SD captures and RTC restart verified; external GPS field testing pending':data.sdResources?' · SD RESOURCE BETA — hardware validation pending':board==='m5dial'?' · Dial v1.1 verified':board==='elecrow_21'?' · EXPERIMENTAL — initial hardware checks passed':board==='lilygo_175'?' · BETA — working baseline reported; new RTC/SD checks await hardware testing':boardProfiles[board].experimental?' · BETA — new SD/GPS features await field testing':''} · ${mode==='factory'?'Fresh installation replaces saved history, badges and BLE profiles.':board==='waveshare_143c'?'Update requires this exact 8 MB AMOLED 1.43C profile, version 0.14.7 or newer. Use Fresh installation for factory firmware or any other profile.':board==='waveshare_185b'?'Update requires this exact LCD 1.85B profile, version 0.14.1 or newer. Use Fresh installation for the factory demo or another firmware.':board==='waveshare'?'32 MB update preserves badge, history, settings and BLE profiles.':['waveshare_175','waveshare_175_gps'].includes(board)?'Update requires the exact selected non-C profile (1.75: 0.13.19+; 1.75-G GPS: 0.13.21+). Use Fresh installation for the factory demo or another firmware.':board==='elecrow_21'?'Update requires this exact Elecrow 2.1 rotary profile, version 0.13.20 or newer. Use Fresh installation for the factory demo or another firmware.':board==='lilygo_175'?'Update matches the provided 0.13.20 LILYGO 1.75 layout and this profile’s 0.13.25+ builds. Other firmware or another LILYGO size requires Fresh installation with its correct profile.':board==='watcher'?'Update requires this exact Watcher 0.13.29+ partition layout. Choose Fresh installation for Seeed factory firmware.':board==='m5dial'?'Update requires this Dial profile’s 0.13.26 or newer partition layout. Use Fresh installation for the factory demo or any other firmware.':board==='waveshare_lite'?'Update requires this exact Lite profile’s 0.9.4+ layout. For an older third-party port, choose Fresh installation unless its partitions have been verified.':board==='xiao_round'?'Update preserves files; requires this XIAO + Round Display profile’s 0.9.2 or newer 8 MB layout.':'Update preserves history, badges and settings; requires this board’s existing 0.3.x–0.13.x layout.'}`;
+    if(board==='waveshare_p4_knob'){
+      const installation=mode==='factory'?'Fresh installation erases internal flash. Verify that your board is the ESP32-P4 revision 3.x model and back up saved files first.':'Update verifies the active slot on an existing P4 Dragon Detector install and preserves files and settings.';
+      $('board-status').textContent=data.version+' · Hardware beta. Wi-Fi, Bluetooth LE and alternating reception were tested on one board. Field testing is in progress. '+installation;
+    }
     $('download').href = `firmware/${board}/SHA256SUMS.txt`; $('download').textContent='Firmware file checksums'; $('download').hidden=false;
     $('install-message').textContent='Confirm your board, then connect its USB port.';
   } catch(error) {
@@ -134,11 +146,18 @@ $('install-button').onclick=async()=>{
   installLock(true);
   let port;
   try{
-    port=await navigator.serial.requestPort();await port.open({baudRate:115200,bufferSize:8192});
+    port=await navigator.serial.requestPort();
+    let manifestPath=$('installer').getAttribute('manifest');
+    if(selected==='waveshare_p4_knob'&&$('install-mode').value==='update'){
+      const appSlot=await readP4UpdateSlot(port);
+      await checkRelease(selected,'update',{appSlot});
+      if(appSlot===1)manifestPath='firmware/waveshare_p4_knob/update-app1.json';
+    }
+    await port.open({baudRate:115200,bufferSize:8192});
     const dialog=document.createElement('dragon-clock-install-dialog');
     dialog.onFirmwareInstalled=()=>{void installCounter.recordInstall();};
     dialog.installMode=$('install-mode').value;dialog.autoClock=autoClock;dialog.autoTheme=!!customTheme;
-    dialog.port=port;dialog.manifestPath=$('installer').getAttribute('manifest');
+    dialog.port=port;dialog.manifestPath=manifestPath;
     dialog.addEventListener('closed',async()=>{
       const succeeded=dialog.installSucceeded;
       $('install-clock-status').textContent=succeeded&&autoClock?'Step 2 of 2: setting date, time and timezone; verifying the clock…':'Closing installer USB connection…';
@@ -160,7 +179,7 @@ $('install-button').onclick=async()=>{
           }catch(error){$('install-clock-status').textContent=clockStatus+' Personal theme setup failed: '+error.message+' Open Theme creator to retry.';}
         }
       }catch(error){
-        $('install-clock-status').textContent='Firmware installed. Clock verification failed: '+error.message+' Reconnect the running board and use Sync device clock below.';
+        $('install-clock-status').textContent='Firmware installed. Clock verification failed: '+error.message+(selected==='waveshare_p4_knob'?' Reconnect the running P4 knob on its native USB port (reverse the USB-C plug at the board if needed), then use Sync device clock below.':' Reconnect the running board and use Sync device clock below.');
       }
       finally{installLock(false);$('install-button').focus();}
     },{once:true});

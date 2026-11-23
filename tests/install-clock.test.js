@@ -1,4 +1,5 @@
 import test from 'node:test';
+import {builtProfiles} from './built-boards.js';
 import assert from 'node:assert/strict';
 import {syncInstalledClock,finishInstallSession,completeInstallSession} from '../web/install-clock.js';
 import {boardProfiles} from '../web/board-profiles.js';
@@ -40,7 +41,7 @@ test('successful flash with locked USB cannot start a competing clock connection
   assert.deepEqual(r.writes,[]);
 });
 test('post-install clock verifies each full board, current offset and RTC state',async()=>{
-  for(const board of Object.keys(boardProfiles).filter(k=>!boardProfiles[k].lite)){
+  for(const board of Object.keys(builtProfiles).filter(k=>!boardProfiles[k].lite)){
     for(const offset of [-720,-240,0,330,345,840]){
       const rtc=['waveshare_185b','watcher','lilygo_175','stopwatch','xiao_round','waveshare_175','waveshare_175_gps'].includes(board)?1:0;
       const r=rig(board,{offset,rtc,version:board==='waveshare_143c'?'0.14.7':board==='guition_185_beta'?'0.14.2':board==='waveshare_185b'?'0.14.1':board==='watcher'?'0.13.29':board==='elecrow_21'?'0.13.20':'0.13.7'});const result=await syncInstalledClock({},board,r.options);

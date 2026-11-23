@@ -1,6 +1,7 @@
 import {firmwareAtLeast,knownFirmware} from './firmware-version.js?v=0.14.9';
 import {resourceSetup} from "./sd-resources.js?v=0.14.9";
 export const boardProfiles=Object.freeze({
+  waveshare_p4_knob:{name:'Waveshare ESP32-P4 Knob AMOLED 1.75X · Hardware beta',firmwareName:'Waveshare ESP32-P4-Knob-Touch-AMOLED-1.75',size:466,display:'466 × 466 AMOLED · touch and rotary dial',chipFamily:'ESP32-P4',experimental:true,releaseChannel:'beta',betaIteration:1,hardwareValidation:'passive-wifi-ble-on-hardware',filesystemOffset:0xc10000,minVersion:'0.14.8',storage:'ESP32-P4 revision 3.x · 32 MB flash · 32 MB PSRAM · microSD · hardware RTC',guide:'guides/WAVESHARE-P4-KNOB.html',features:'Choose Wi-Fi, Bluetooth LE or alternating passive radar scans. Detection candidates and named contacts now feed the radar and Hunt. Inspect received BLE advertisements and get one alert per device visit. Includes clock faces, locksport timers, voice recording and MP3 playback from microSD. Fresh installation initializes internal storage. Update preserves saved files. For Update, Badge Studio and clock sync, use the native USB connection. If only the serial bridge appears, reverse the USB-C plug at the board.'},
   waveshare_143c:{name:'Waveshare ESP32-S3-Touch-AMOLED-1.43C · Beta',firmwareName:'Waveshare ESP32-S3-Touch-AMOLED-1.43C',size:466,display:'Round AMOLED · touch · BOOT navigation · speaker connector',filesystemOffset:0x410000,minVersion:'0.14.7',experimental:true,storage:'8 MB flash · 8 MB PSRAM · 3.94 MiB shared user storage. No SD slot or SD controls. Save captures internally and download over USB. No hardware RTC or GPS.',features:'Full radar, built-in themes plus an optional personal design, badge, clocks, locksport timers, radio tools and BLE Lab. Touch plus one-button navigation: a short BOOT press steps Radar, Main menu, Utilities, Badge and Clock; hold it for the main menu; on timers press to start or pause and double-press for Lap/Finish or Reset. PWR is the hardware power key. Sound needs a speaker on the speaker connector. Battery level is estimated from cell voltage. USB or saved-Wi-Fi clock setup after a full power-off. Only for the 1.43C / 1.43C-EN; the 16 MB 1.43 / 1.43-B uses different wiring. Hardware checks are listed in the board guide.'},
   guition_185_beta:{name:'Guition / Surenoo JC3636W518 · Beta 1',firmwareName:'Guition / Surenoo JC3636W518 Beta 1',size:360,display:'Round LCD · touch · physically unverified Beta 1',filesystemOffset:0xc10000,minVersion:'0.14.2',experimental:true,releaseChannel:'beta',betaIteration:1,storage:'16 MB flash · PSRAM required · 3.94 MiB shared user storage · optional FAT32 microSD and vendor pack. Separate beta package; physical validation is pending.',features:'Beta 1 for the exact JC3636W518 sold by Guition / Surenoo. Manufacturer display initialization with a conservative 20 MHz QSPI clock. Full software interface, badge, themes, clocks, radio tools and BLE Lab; screen, touch, audio and SD are not physically verified. Software clock, no external RTC or GPS/wardrive. The existing Spotpear profile remains a separate choice.'},
   waveshare_185b:{name:'Waveshare ESP32-S3-Touch-LCD-1.85B',firmwareName:'Waveshare ESP32-S3-Touch-LCD-1.85B',size:360,display:'Round LCD · touch · PCF85063 RTC · speaker · microSD',filesystemOffset:0x810000,minVersion:'0.14.1',experimental:true,storage:'16 MB flash · 8 MB PSRAM · 7.94 MiB internal files · FAT32 microSD preferred for supported profiles, events, surveys and captures. SD resource pack required for manufacturer and BLE lookup names. Firmware and core radar detections still run without the card.',features:'Full radar, themes, badge, clocks, locksport timers, radio tools and BLE Lab. BOOT is programmable; PWR handles hardware power. External UART GPS is off by default. Wardrive appears only when enabled and valid NMEA is received. J8 is SH1.0 with 3.3 V supply and logic, not a standard Grove port. Check the wiring guide before connecting. Hardware and field validation are documented in the board guide.'},
@@ -20,10 +21,15 @@ export function supportsBadge(board){return !!boardProfiles[board]&&!boardProfil
 export function connectedProfile(info){
   return Object.entries(boardProfiles).find(([,p])=>(p.firmwareName===info?.board||p.legacyNames?.includes(info?.board))&&p.size===info?.size)?.[0]||null;
 }
-export function validateManifest(data,board,mode){
+export function validateManifest(data,board,mode,appSlot=0){
   const profile=boardProfiles[board];
   if(!profile||!['factory','update'].includes(mode))throw new Error('Choose a supported board and installation type.');
-  const expected=[['bootloader.bin',0],['partitions.bin',0x8000],['boot_app0.bin',0xe000],['firmware.bin',0x10000]];
+  const p4=board==='waveshare_p4_knob';
+  if(appSlot!==0&&!(p4&&mode==='update'&&appSlot===1))throw new Error('Invalid application slot.');
+  if(p4&&!firmwareAtLeast(data?.version,profile.minVersion))throw new Error('The P4 knob requires its matching 0.14.8 or newer firmware manifest.');
+  const expected=p4&&mode==='update'
+    ? [['firmware.bin',appSlot===1?0x610000:0x10000]]
+    : [['bootloader.bin',p4?0x2000:0],['partitions.bin',0x8000],['boot_app0.bin',0xe000],['firmware.bin',0x10000]];
   if(mode==='factory')expected.push(['littlefs.bin',profile.filesystemOffset]);
   if(mode==='factory'&&board==='waveshare'&&firmwareAtLeast(data?.version,'0.9.8'))expected.push(['reconfs.bin',profile.reconOffset]);
   if(board==='waveshare_175'&&!firmwareAtLeast(data?.version,'0.13.19'))throw new Error('This non-C AMOLED manifest requires firmware 0.13.19 or newer.');
@@ -36,13 +42,13 @@ export function validateManifest(data,board,mode){
   if(board==='waveshare_143c'&&!firmwareAtLeast(data?.version,'0.14.7'))throw new Error('Waveshare AMOLED 1.43C manifest requires firmware 0.14.7 or newer.');
   if(board==='waveshare_185b'&&!firmwareAtLeast(data?.version,'0.14.1'))throw new Error('Waveshare LCD 1.85B manifest requires firmware 0.14.1 or newer.');
   if(profile.releaseChannel==='beta'){
-    if(!firmwareAtLeast(data?.version,profile.minVersion)||data?.release_channel!=='beta'||data?.beta_iteration!==profile.betaIteration||data?.hardware_validation!=='physically-unverified')throw new Error('Guition Beta 1 manifest must match its version, beta channel and unverified hardware status.');
+    if(!firmwareAtLeast(data?.version,profile.minVersion)||data?.release_channel!=='beta'||data?.beta_iteration!==profile.betaIteration||data?.hardware_validation!==(profile.hardwareValidation||'physically-unverified'))throw new Error('Beta manifest must match the selected hardware, firmware version and verification status.');
   }else if(data?.release_channel==='beta'||data?.beta_iteration!==undefined)throw new Error('A beta manifest cannot be used for this separate board profile.');
   const build=data?.builds?.[0];
   const verifiedClock=firmwareAtLeast(data?.version,'0.13.10');
   if(board==='waveshare_lite'&&!firmwareAtLeast(data?.version,'0.9.4'))throw new Error('Waveshare Lite requires a 0.9.4 or newer matching manifest.');
   if(board==='xiao_round'&&!firmwareAtLeast(data?.version,'0.9.2'))throw new Error('XIAO Round Display requires a 0.9.2 or newer matching manifest.');
-  if(data?.name!==`Dragon Detector — ${profile.firmwareName} (${mode})`||!knownFirmware(data.version)||data.new_install_prompt_erase!==(verifiedClock||mode==='factory')||(verifiedClock&&data.new_install_improv_wait_time!==0)||data.builds?.length!==1||build?.chipFamily!=='ESP32-S3'||build.parts?.length!==expected.length||expected.some(([path,offset],i)=>build.parts[i]?.path!==path||build.parts[i]?.offset!==offset))throw new Error('Firmware manifest does not match this exact board and installation type.');
+  if(data?.name!==`Dragon Detector — ${profile.firmwareName} (${mode})`||!knownFirmware(data.version)||data.new_install_prompt_erase!==(p4?mode==='factory':verifiedClock||mode==='factory')||(verifiedClock&&data.new_install_improv_wait_time!==0)||data.builds?.length!==1||build?.chipFamily!==(profile.chipFamily||'ESP32-S3')||build.parts?.length!==expected.length||expected.some(([path,offset],i)=>build.parts[i]?.path!==path||build.parts[i]?.offset!==offset))throw new Error('Firmware manifest does not match this exact board and installation type.');
   resourceSetup(board,data);
   return data;
 }

@@ -1,0 +1,43 @@
+{
+  "name": "Dragon Detector — Waveshare ESP32-P4-Knob-Touch-AMOLED-1.75 (factory)",
+  "version": "0.14.8",
+  "new_install_prompt_erase": true,
+  "new_install_improv_wait_time": 0,
+  "builds": [
+    {
+      "chipFamily": "ESP32-P4",
+      "parts": [
+        {
+          "path": "bootloader.bin",
+          "offset": 8192
+        },
+        {
+          "path": "partitions.bin",
+          "offset": 32768
+        },
+        {
+          "path": "boot_app0.bin",
+          "offset": 57344
+        },
+        {
+          "path": "firmware.bin",
+          "offset": 65536
+        },
+        {
+          "path": "littlefs.bin",
+          "offset": 12648448
+        }
+      ]
+    }
+  ],
+  "sdResources": {
+    "schema": 1,
+    "required": false,
+    "path": "resources/p4-knob-sd-starter-0.14.8.zip",
+    "placement": "/dragon/resources/vendors.ddr"
+  },
+  "release_channel": "beta",
+  "beta_iteration": 1,
+  "hardware_validation": "passive-wifi-ble-on-hardware",
+  "application_sha256": "b92948c7d3ed2ee415089ee9d64d8fddcb85e47e2e92c6a4c63cd8f2ef2873e0"
+}

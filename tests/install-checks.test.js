@@ -1,4 +1,5 @@
 import test from 'node:test';
+import {builtProfiles} from './built-boards.js';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {checkRelease,usbErrorText,installDiagnostics} from '../web/install-checks.js';
@@ -32,7 +33,7 @@ test('SD-required manifests check their pack before USB; optional packs do not p
 });
 
 test('all board profiles and both modes check every required file before allowing USB',async()=>{
-  for(const board of Object.keys(boardProfiles))for(const mode of ['factory','update']){
+  for(const board of Object.keys(builtProfiles))for(const mode of ['factory','update']){
     const r=rig(board,mode);const data=await checkRelease(board,mode,r);
     assert.equal(data.version,r.manifest.version);
     const expected=r.manifest.builds[0].parts.map(p=>[`firmware/${board}/${p.path}`,'HEAD']);

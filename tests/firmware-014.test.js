@@ -1,4 +1,5 @@
 import test from 'node:test';
+import {builtProfiles} from './built-boards.js';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {knownFirmware,firmwareAtLeast} from '../web/firmware-version.js';
@@ -20,7 +21,7 @@ manifests.guition_185_beta=JSON.parse(readFileSync(new URL('./fixtures/guition-b
 manifests.waveshare_143c=fixture('waveshare-143c-0.14.7-manifests.json');
 
 test('0.14 keeps every exact board handshake and installation contract',()=>{
- for(const [board,p] of Object.entries(boardProfiles)){
+ for(const [board,p] of Object.entries(builtProfiles)){
   const version=board==='waveshare_143c'?'0.14.7':board==='guition_185_beta'?'0.14.2':board==='waveshare_185b'?'0.14.1':'0.14.0';
   assert.equal(connectedProfile(compat.parseBadgeInfo(`BADGE_INFO ${version} ${p.size} ${p.lite?'LITE':'READY'} ${p.firmwareName}`)),board);
   for(const mode of ['factory','update']){
@@ -37,7 +38,7 @@ test('0.14 enables existing studio features, including repeat beeper with patch 
  const featureNames=['hasDetectorTools','hasActivityTools','hasRadarTools','hasWearableTools','hasRetainedClock','hasHardwareClockCheck','hasBrandedThemes','hasCommunityThemes','hasLplTheme','hasRunnerThemes','hasGreenArtThemes','hasCanCommanderTheme','hasCapsuleSparrowsThemes','hasMuldersRevengeTheme','hasMitmTheme','hasDelta44Theme','hasLocksportCollection'];
  const gates=[...featureNames.map(k=>compat[k]),hasNetworkTools,hasNotebook,hasReconTools,hasPersonalThemes];
  for(const gate of gates){assert.equal(gate('0.14.0'),true);for(const v of ['0.15.0','1.0.0','0.14.00','0.14.0-beta'])assert.equal(gate(v),false);}
- for(const [board,p] of Object.entries(boardProfiles))for(const gate of [hasFullLab,hasFullRecon,hasSessionTools])assert.equal(gate(board,board==='waveshare_143c'?'0.14.7':board==='guition_185_beta'?'0.14.2':board==='waveshare_185b'?'0.14.1':'0.14.0'),!p.lite);
+ for(const [board,p] of Object.entries(builtProfiles))for(const gate of [hasFullLab,hasFullRecon,hasSessionTools])assert.equal(gate(board,board==='waveshare_143c'?'0.14.7':board==='guition_185_beta'?'0.14.2':board==='waveshare_185b'?'0.14.1':'0.14.0'),!p.lite);
  assert.ok(hasBleTools('stopwatch','0.14.0'));assert.ok(hasRepeatingBeeper('stopwatch','0.14.0'));
  assert.ok(!hasRepeatingBeeper('stopwatch','0.13.21'));assert.ok(!hasBleTools('m5dial','0.14.0'));
 });

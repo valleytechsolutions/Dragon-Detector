@@ -144,7 +144,9 @@ def build(output):
         info = json.loads((folder / 'factory.json').read_text())
         downloads.append('<h2>' + html.escape(info['name'].removesuffix(' (factory)')) + '</h2>')
         downloads.append('<p>Version ' + html.escape(info['version']) + '</p>')
-        metadata = json.loads((folder / 'build-info.json').read_text(encoding='utf-8'))
+        # Carried-over packages (the P4 Knob 0.14.8) were published without build-info.json.
+        info_file = folder / 'build-info.json'
+        metadata = json.loads(info_file.read_text(encoding='utf-8')) if info_file.is_file() else {}
         if metadata.get('board') == 'm5dial':
             downloads.append('<p><strong>Dial v1.1 — display, controls, radar actions and RTC restart verified. Original K130 not physically tested.</strong> <a href="M5STACK-DIAL.html">Dial installation, controls and RTC</a>.</p>')
         elif metadata.get('board') == 'waveshare_185b':

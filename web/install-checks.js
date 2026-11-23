@@ -2,7 +2,7 @@ import {validateManifest} from './board-profiles.js?v=0.14.9';
 
 // Check availability before asking for USB access. The installer downloads the
 // binaries itself before erasing; these HEAD requests do not verify their hash.
-export async function checkRelease(board,mode,{fetchImpl=fetch,signal,timeoutMs=15000}={}){
+export async function checkRelease(board,mode,{fetchImpl=fetch,signal,timeoutMs=15000,appSlot=0}={}){
   const controller=new AbortController();
   const cancel=()=>controller.abort();
   if(signal?.aborted)cancel();
@@ -11,9 +11,9 @@ export async function checkRelease(board,mode,{fetchImpl=fetch,signal,timeoutMs=
   const options={cache:'no-cache',signal:controller.signal};
   try{
     const base=`firmware/${board}/`;
-    const response=await fetchImpl(`${base}${mode}.json`,options);
+    const response=await fetchImpl(`${base}${mode}${appSlot===1?'-app1':''}.json`,options);
     if(!response.ok)throw new Error(`Firmware list unavailable (HTTP ${response.status}). Retry the release check.`);
-    const manifest=validateManifest(await response.json(),board,mode);
+    const manifest=validateManifest(await response.json(),board,mode,appSlot);
     if(manifest.sdResources?.required){
       const pack=await fetchImpl(manifest.sdResources.path,{...options,method:'HEAD'});
       if(!pack.ok||/text\/html/i.test(pack.headers.get('content-type')||'')||pack.headers.get('content-length')==='0')
@@ -27,7 +27,11 @@ export async function checkRelease(board,mode,{fetchImpl=fetch,signal,timeoutMs=
       const length=file.headers.get('content-length'),size=length===null?null:Number(length);
       if((size!==null&&(!Number.isSafeInteger(size)||size<=0))||/text\/html/i.test(file.headers.get('content-type')||''))
         throw new Error(`${part.path} did not return a valid firmware file. Retry or report this release.`);
-      const capacity=(['watcher','waveshare'].includes(board)?32:['waveshare_143c','m5dial','xiao_round'].includes(board)?8:16)*1024*1024;
+      const capacity=(['watcher','waveshare','waveshare_p4_knob'].includes(board)?32:['waveshare_143c','m5dial','xiao_round'].includes(board)?8:16)*1024*1024;
+      if(board==='waveshare_p4_knob'&&size!==null){
+        const limits={'bootloader.bin':0x6000,'partitions.bin':0x1000,'boot_app0.bin':0x2000,'firmware.bin':0x600000,'littlefs.bin':0x11f0000};
+        if(size>limits[part.path]||(part.path==='littlefs.bin'&&size!==limits[part.path]))throw new Error('P4 firmware file does not fit its partition.');
+      }
       if(size!==null&&part.offset+size>capacity)throw new Error(`${part.path} exceeds this board's flash capacity.`);
     }));
     return manifest;

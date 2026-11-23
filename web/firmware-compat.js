@@ -5,6 +5,7 @@ export function parseBadgeInfo(line){
   if(match&&match[2]==='412'&&(match[4]!=='Seeed SenseCAP Watcher'||!firmwareAtLeast(match[1],'0.13.29')))return null;
   if(match&&match[2]==='480'&&(match[4]!=='Elecrow CrowPanel 2.1 Rotary'||!firmwareAtLeast(match[1],'0.13.20')))return null;
   if(match&&match[2]==='240'&&!firmwareAtLeast(match[1],'0.9.2'))return null;
+  if(match&&match[4]==='Waveshare ESP32-P4-Knob-Touch-AMOLED-1.75'&&(match[2]!=='466'||match[3]!=='READY'||!firmwareAtLeast(match[1],'0.14.8')))return null;
   if(match&&match[4]==='Waveshare ESP32-S3-Touch-AMOLED-1.43C'&&(match[2]!=='466'||match[3]!=='READY'||!firmwareAtLeast(match[1],'0.14.7')))return null;
   if(match&&match[4]==='Waveshare ESP32-S3-Touch-LCD-1.85B'&&(match[2]!=='360'||!firmwareAtLeast(match[1],'0.14.1')))return null;
   if(match&&match[4]==='Guition / Surenoo JC3636W518 Beta 1'&&(match[2]!=='360'||match[3]!=='READY'||!firmwareAtLeast(match[1],'0.14.2')))return null;
@@ -27,7 +28,7 @@ export function hasWearableTools(version){return firmwareAtLeast(version,'0.9.0'
 export function hasRetainedClock(version){return firmwareAtLeast(version,'0.13.9');}
 export function hasHardwareClockCheck(version){return firmwareAtLeast(version,'0.13.10');}
 export function hasClockTools(board,version){return board==='waveshare_lite'?hasRetainedClock(version):hasWearableTools(version);}
-export function hasWifiClock(board,version){return ['waveshare_143c','guition_185_beta','waveshare_185b','watcher','lilygo_175','waveshare','waveshare_175','waveshare_175_gps','stopwatch','spotpear','xiao_round','elecrow_21'].includes(board)&&(board==='waveshare_143c'?firmwareAtLeast(version,'0.14.7'):board==='guition_185_beta'?firmwareAtLeast(version,'0.14.2'):board==='waveshare_185b'?firmwareAtLeast(version,'0.14.1'):hasRetainedClock(version));}
+export function hasWifiClock(board,version){return ['waveshare_p4_knob','waveshare_143c','guition_185_beta','waveshare_185b','watcher','lilygo_175','waveshare','waveshare_175','waveshare_175_gps','stopwatch','spotpear','xiao_round','elecrow_21'].includes(board)&&(board==='waveshare_143c'?firmwareAtLeast(version,'0.14.7'):board==='guition_185_beta'?firmwareAtLeast(version,'0.14.2'):board==='waveshare_185b'?firmwareAtLeast(version,'0.14.1'):hasRetainedClock(version));}
 
 // Branded radar assets and indices 3..5 first shipped in 0.13.1.
 export function hasBrandedThemes(version){return firmwareAtLeast(version,'0.13.1');}
