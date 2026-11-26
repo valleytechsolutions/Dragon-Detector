@@ -1,4 +1,4 @@
-"""Package verified firmware and local HTML guides for a static HTTPS host."""
+"""Package the tagged GitHub release, beta firmware and guides for the web flasher."""
 from pathlib import Path
 import argparse
 import hashlib
@@ -8,14 +8,19 @@ import posixpath
 import re
 import shutil
 from html.parser import HTMLParser
+from tempfile import TemporaryDirectory
 from urllib.parse import unquote, urlsplit
 
 import markdown
+
+from fetch_github_release import stage_release
 
 ROOT = Path(__file__).resolve().parents[1]
 REPO = 'https://github.com/valleytechsolutions/Dragon-Detector'
 MAX_FILE_BYTES = 25 * 1024 * 1024
 VERSION = re.search(r'#define DRAGON_VERSION "([0-9.]+)"', (ROOT / 'firmware/include/dragon_version.h').read_text()).group(1)
+DEFAULT_BETA_FIRMWARE = ROOT / 'web/firmware'
+BETA_BOARDS = ('guition_185_beta', 'waveshare_p4_knob')
 
 
 def validate_links(output):
@@ -39,37 +44,65 @@ def validate_links(output):
         parser.feed(source.read_text(encoding='utf-8'))
 
 
-def build(output):
+def build(output, beta_firmware_dir=DEFAULT_BETA_FIRMWARE):
     output = output.resolve()
-    if output.exists() and any(output.iterdir()):
+    if output.exists() and (not output.is_dir() or any(output.iterdir())):
         raise ValueError('Choose an empty output directory.')
     if output == ROOT or ROOT in output.parents and output.relative_to(ROOT).parts[0] not in ('.build', '.work'):
         raise ValueError('Use an output directory outside source folders, such as .build/site.')
-    output.mkdir(parents=True, exist_ok=True)
-    for source in (ROOT / 'web').rglob('*'):
+    for board in BETA_BOARDS:
+        if not (beta_firmware_dir / board / 'SHA256SUMS.txt').is_file():
+            raise ValueError(f'Missing beta package: {beta_firmware_dir / board}')
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with TemporaryDirectory(dir=output.parent, prefix='.site-') as work:
+        work = Path(work)
+        release_firmware = work / 'release'
+        stage_release(VERSION, release_firmware)
+        site = work / 'site'
+        assemble(site, release_firmware, beta_firmware_dir)
+        if output.exists():
+            output.rmdir()
+        site.rename(output)
+    print(f'Prepared the verified v{VERSION} web flasher in {output}')
+
+
+def copy_site_files(source_root, destination_root, *, skip_firmware=False):
+    for source in source_root.rglob('*'):
         if not source.is_file() or source.is_symlink():
             continue
         if source.name == 'factory-0x0.bin' and source.parent.name not in ('stopwatch','lilygo_175','m5dial'):
             continue
-        relative = source.relative_to(ROOT / 'web')
-        if any(part.startswith('.') for part in relative.parts):
+        relative = source.relative_to(source_root)
+        if (skip_firmware and relative.parts[0] == 'firmware') or any(part.startswith('.') for part in relative.parts):
             continue
-        target = output / relative
+        target = destination_root / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, target)
 
+
+def assemble(output, release_firmware, beta_firmware_dir):
+    firmware = output / 'firmware'
+    copy_site_files(ROOT / 'web', output, skip_firmware=True)
+    copy_site_files(release_firmware, firmware)
+    for board in BETA_BOARDS:
+        copy_site_files(beta_firmware_dir / board, firmware / board)
+
     # USB installation uses split images. Keep combined C152/LILYGO images too.
-    for folder in (output / 'firmware').iterdir():
+    for folder in firmware.iterdir():
+        sums_file = folder / 'SHA256SUMS.txt'
         records = {}
-        for line in (folder / 'SHA256SUMS.txt').read_text().splitlines():
+        removed_combined_image = False
+        for line in sums_file.read_text().splitlines():
             digest, name = line.split()
             if name == 'factory-0x0.bin' and not (folder / name).exists():
+                removed_combined_image = True
                 continue
             payload = (folder / name).read_bytes()
             if hashlib.sha256(payload).hexdigest() != digest:
                 raise ValueError(f'Firmware checksum mismatch: {folder.name}/{name}')
             records[name] = digest
-        (folder / 'SHA256SUMS.txt').write_text(''.join(f'{digest}  {name}\n' for name, digest in records.items()))
+        if removed_combined_image:
+            sums_file.write_text(''.join(f'{digest}  {name}\n' for name, digest in records.items()), encoding='utf-8', newline='\n')
         for mode in ('factory', 'update'):
             manifest = json.loads((folder / f'{mode}.json').read_text())
             for part in manifest['builds'][0]['parts']:
@@ -140,7 +173,7 @@ def build(output):
     index = output / 'index.html'
     index.write_text(rewrite_links(index.read_text(encoding='utf-8'), ROOT / 'web/index.html', Path('index.html')), encoding='utf-8')
     downloads = ['<h1>Firmware downloads</h1><p>Versions are listed separately for each board; beta and stable packages may differ. Use the web flasher for automatic installation and clock verification. Compare downloaded files with the SHA-256 list for the same board.</p>']
-    for folder in sorted((output / 'firmware').iterdir()):
+    for folder in sorted(firmware.iterdir()):
         info = json.loads((folder / 'factory.json').read_text())
         downloads.append('<h2>' + html.escape(info['name'].removesuffix(' (factory)')) + '</h2>')
         downloads.append('<p>Version ' + html.escape(info['version']) + '</p>')
@@ -173,10 +206,12 @@ def build(output):
     if too_large:
         raise ValueError(f'Files exceed static host limit: {too_large}')
     validate_links(output)
-    print(f'Prepared {len(guides)} guides and verified firmware packages in {output}')
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
-    build(parser.parse_args().output)
+    parser.add_argument('--beta-firmware-dir', type=Path, default=DEFAULT_BETA_FIRMWARE,
+                        help='directory containing the separate Guition and Waveshare P4 packages (default: web/firmware)')
+    args = parser.parse_args()
+    build(args.output, args.beta_firmware_dir)

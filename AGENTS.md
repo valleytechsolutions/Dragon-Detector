@@ -52,9 +52,10 @@ The owner set this showcase preference on October 20, 2026:
 
 ## Release a web flasher update
 
-The site is built from this repository plus the firmware packages built here.
-The web flasher does not take files from GitHub Actions. Run every step from the repository
-root. On the owner's Windows PC, use PlatformIO's Python:
+The site is built from this repository and the stable firmware ZIPs published
+in GitHub Releases for `DRAGON_VERSION`. Cloudflare serves the verified
+manifests and binaries extracted from those ZIPs. Run every step from the
+repository root. On the owner's Windows PC, use PlatformIO's Python:
 
 ```powershell
 $py = "$env:USERPROFILE\.platformio\penv\Scripts\python.exe"
@@ -95,25 +96,28 @@ silently. `tools/validate_release.py` (step 4) also refuses a release whose
 `docs/RELEASE-<version>.md` is missing or not linked, or whose script cache
 tokens do not all match the version.
 
-### 3. Build every board package
+### 3. Check the board packages
 
-```powershell
-& $py tools/build_release.py                              # the 13 stable boards
-& $py tools/build_release.py --board guition_185_beta     # the separate Guition beta
-```
+Wait for the GitHub release `v<version>` with all 13 stable board ZIPs and
+its `SHA256SUMS.txt`. The site builder uses that exact tag and verifies each
+ZIP and its split binaries before assembling the site. Local PlatformIO
+packages can be used for build checks. The published ZIPs supply the stable
+firmware staged for Cloudflare.
 
-Each board lands in `web/firmware/<board>/` with its manifests, split images,
-ZIP, `SHA256SUMS.txt`, `build-info.json` and `memory-budget.json`. The packager
-refuses an image that contains a private workstation path or one that does not
-fit its partition. A failure on any board stops the release.
+The Guition beta is a separate workflow artifact. To update it, prepare its
+package with `& $py tools/build_release.py --board guition_185_beta` or use
+the corresponding workflow artifact. For a stable-only update, carry over
+the live Guition package. The site builder reads beta packages from
+`web/firmware/` by default. Use `--beta-firmware-dir <directory>` to supply
+them from a separate staging directory.
 
 ### 4. Build and check the site
 
 ```powershell
 & $py -m pip install Markdown==3.10.2      # once
-& $py tools/validate_release.py
-node tools/check_web_manifests.mjs
 & $py tools/build_static_site.py --output .build/site    # .build/site must be empty or absent
+& $py tools/validate_release.py --firmware-dir .build/site/firmware
+node tools/check_web_manifests.mjs --firmware-dir .build/site/firmware
 ```
 
 `web/betas/t5-e1/` and `web/guides/T5-E1-AMOLED-175.html` are the separate

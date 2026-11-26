@@ -1,9 +1,15 @@
 """Validate current Markdown links and all generated flasher files before publication."""
 from pathlib import Path
+import argparse
 import hashlib,json,re,zipfile
+from fetch_github_release import STABLE_BOARDS
 from flash_budget import RESERVE_PERCENT
 from urllib.parse import unquote
 ROOT=Path(__file__).resolve().parents[1]
+parser=argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--firmware-dir',type=Path,default=ROOT/'web/firmware',
+                    help='directory containing the firmware packages (default: web/firmware)')
+firmware=parser.parse_args().firmware_dir
 VERSION=re.search(r'#define DRAGON_VERSION "([0-9.]+)"',(ROOT/'firmware/include/dragon_version.h').read_text()).group(1)
 for md in [ROOT/'README.md',ROOT/'CREDITS.md',*ROOT.glob('docs/*.md')]:
     for target in re.findall(r'!?\[[^\]]*\]\(([^\s)]+)',md.read_text(encoding='utf-8')):
@@ -16,11 +22,11 @@ for page in ('README.md','docs/HOSTING-STATUS.md'):
 for page in [ROOT/'web/index.html',*sorted(ROOT.glob('web/*.js'))]:
     for token in re.findall(r'\.js\?v=([^"\'&#\s)]+)',page.read_text(encoding='utf-8')):
         assert token==VERSION,f'web/{page.name}: script cache token ?v={token}, expected ?v={VERSION}'
-boards=['waveshare_143c','waveshare_185b','watcher','m5dial','spotpear','waveshare','stopwatch','xiao_round','waveshare_lite','waveshare_175','waveshare_175_gps','elecrow_21','lilygo_175']
+boards=list(STABLE_BOARDS)
 # The separately requested beta is not part of the default stable build set.
-if (ROOT/'web/firmware/guition_185_beta').exists():boards.append('guition_185_beta')
+if (firmware/'guition_185_beta').exists():boards.append('guition_185_beta')
 for board in boards:
-    folder=ROOT/'web/firmware'/board
+    folder=firmware/board
     records={name:sha for sha,name in (line.split() for line in (folder/'SHA256SUMS.txt').read_text().splitlines())}
     budget=json.loads((folder/'memory-budget.json').read_text(encoding='utf-8'))
     info=json.loads((folder/'build-info.json').read_text(encoding='utf-8'))
