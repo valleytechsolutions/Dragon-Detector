@@ -1,5 +1,11 @@
 # Changes
 
+## Unreleased — Marauder develop review
+
+- Reviewed ESP32 Marauder `develop` through `95efbb2` (v1.21.0). Open Wi-Fi beacons now include the extended rate element, random beacons reuse 30 consistent SSID/BSSID identities for 10 seconds, and a full Wi-Fi transmit queue gets bounded retries without ending the session.
+- SD-capable boards add `get framed /path` with base64 chunks, offsets, length and CRC32. The existing raw `get /path` command remains available. Dragon Detector already had selected AP/client workflows, targeted EAPOL capture and portal cleanup; the Marauder C5 display startup change targets different hardware.
+- This is a Dragon Detector integration on the 0.14.9 firmware line. Radio behavior and the new serial transfer still need physical-device acceptance.
+
 ## 0.14.9
 
 - Combines the 0.14.8 node release with Dag's BadUSB and DagNazty work, which also used the number 0.14.8 on GitHub. [Release notes](docs/RELEASE-0.14.9.md).

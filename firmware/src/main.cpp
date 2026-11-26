@@ -18,6 +18,9 @@
 #include <esp_timer.h>
 #include <esp_ota_ops.h>
 #include <LittleFS.h>
+#if BOARD_HAS_SD
+#include <mbedtls/base64.h>
+#endif
 static String serialLine;
 #ifndef BOARD_RADAR_LITE
 SET_LOOP_TASK_STACK_SIZE(12288);
@@ -229,6 +232,24 @@ static void command(const String& c){
     xSemaphoreTake(sdMutex,portMAX_DELAY);file.close();ok=ok&&written==size_t(total);if(ok)ok=CardFS.rename(path+".part",path);if(!ok)CardFS.remove(path+".part");xSemaphoreGive(sdMutex);
     char result[100];int n=snprintf(result,sizeof(result),ok?"PUT_OK\n":"PUT_ERROR incomplete transfer received=%u expected=%u\n",unsigned(written),unsigned(total));serialBytes((const uint8_t*)result,n);
   }
+  else if(c.startsWith("get framed ") && sdReady){
+    const String path=c.substring(11);
+    if(!path.startsWith("/")||path.indexOf("..")>=0||path.length()>96||reconStorageBusy()||wardriveBusy()||nodeBusy()){Serial.println("DD_FILE_ERROR busy or invalid path");return;}
+    xSemaphoreTake(sdMutex,portMAX_DELAY);File file=CardFS.open(path);xSemaphoreGive(sdMutex);
+    if(!file||file.isDirectory()){file.close();Serial.println("DD_FILE_ERROR not found");return;}
+    RadioTransfer transfer;const size_t expected=file.size();Serial.printf("DD_FILE_BEGIN %u base64\n",unsigned(expected));
+    uint8_t raw[192],encoded[257];size_t offset=0;uint32_t crc=0xffffffffu;bool ok=true;
+    while(offset<expected){xSemaphoreTake(sdMutex,portMAX_DELAY);size_t n=file.read(raw,std::min(sizeof(raw),expected-offset));xSemaphoreGive(sdMutex);
+      if(!n){ok=false;break;}size_t length=0;
+      if(mbedtls_base64_encode(encoded,sizeof(encoded),&length,raw,n)){ok=false;break;}
+      char header[40];int headerLength=snprintf(header,sizeof(header),"DD_FILE_DATA %u ",unsigned(offset));
+      ok=headerLength>0&&serialBytes((const uint8_t*)header,headerLength)&&serialBytes(encoded,length)&&serialBytes((const uint8_t*)"\n",1);
+      if(!ok)break;crc=dragon::crc32(raw,n,crc);offset+=n;
+    }
+    xSemaphoreTake(sdMutex,portMAX_DELAY);file.close();xSemaphoreGive(sdMutex);
+    if(ok&&offset==expected)Serial.printf("DD_FILE_END %u %08lx\n",unsigned(offset),static_cast<unsigned long>(crc^0xffffffffu));
+    else Serial.printf("DD_FILE_ERROR incomplete %u of %u\n",unsigned(offset),unsigned(expected));
+  }
   else if(c.startsWith("get ") && sdReady){
     xSemaphoreTake(sdMutex,portMAX_DELAY);File file=CardFS.open(c.substring(4));xSemaphoreGive(sdMutex);
     if(!file||file.isDirectory()){Serial.println("GET_ERROR");return;}RadioTransfer transfer;size_t remaining=file.size();Serial.printf("FILE_BYTES %u\n",unsigned(remaining));uint8_t data[1024];
@@ -244,7 +265,7 @@ static void command(const String& c){
   else if(c=="screenshot")screenshot();
   else Serial.println("Commands: status, contacts, selftest, resume, screen radar, screenshot"
 #if BOARD_HAS_SD
-    ", ls /, get /path, capture on|off"
+    ", ls /, get /path, get framed /path, capture on|off"
 #elif !defined(BOARD_RADAR_LITE)
     ", screen files, screen captures, tool status, lab status"
 #endif

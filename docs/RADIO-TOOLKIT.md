@@ -69,6 +69,8 @@ Files live in `/captures` on the existing upper 16 MB recon volume. GATT profile
 
 `recon capture wifi|ble|stop|save|discard`, `recon files`, `recon get FILENAME`, `recon remove FILENAME`. Use returned filenames. Export emits a bounded `RECON_FILE` header, ordered hex chunks and a CRC-checked `RECON_END`. It pauses reception during the transfer and restores the prior state afterwards.
 
+On SD-capable boards, `get framed /path/to/file` downloads any SD file as 192-byte base64 chunks. The `DD_FILE_BEGIN` line gives the expected byte count, `DD_FILE_DATA` lines carry each byte offset and encoded chunk, and `DD_FILE_END` gives the byte count and CRC32. A host should reject an incomplete transfer or mismatched CRC. The existing `get /path` raw download remains available.
+
 ## Credits and validation
 
 Mode/workflow inspiration: [Colonel Panic's Unified Blue](https://github.com/colonelpanichacks/oui-spy-unified-blue). Packet-builder origins: Valleytech HackerPhone, independently implemented from [JustCallMeKoko's MIT Marauder](https://github.com/justcallmekoko/ESP32Marauder) protocol references. This release keeps MIT source licensing and the upstream notices; it does not copy Unified Blue/ChimeraBLE GPL code. [Full credits](../CREDITS.md) · [Measured validation](VALIDATION.md).

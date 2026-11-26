@@ -5,10 +5,13 @@
 namespace dragon::tx {
 inline size_t makeBeacon(uint8_t* out,size_t cap,const uint8_t mac[6],uint8_t channel,const char* ssid){
  if(!out||!mac||!ssid||channel<1||channel>11)return 0;
- size_t n=strlen(ssid);if(!n||n>32||cap<51+n)return 0;
- memset(out,0,51+n);out[0]=0x80;memset(out+4,255,6);memcpy(out+10,mac,6);memcpy(out+16,mac,6);
+ size_t n=strlen(ssid);if(!n||n>32||cap<57+n)return 0;
+ memset(out,0,57+n);out[0]=0x80;memset(out+4,255,6);memcpy(out+10,mac,6);memcpy(out+16,mac,6);
  out[32]=100;out[34]=1;out[37]=n;memcpy(out+38,ssid,n);
- const uint8_t rates[]={1,8,0x82,0x84,0x8b,0x96,12,18,24,36,3,1,channel};memcpy(out+38+n,rates,sizeof(rates));return 51+n;
+ // Marauder develop 1.21 emits a valid 2.4 GHz basic-rate set, channel IE,
+ // and extended rates so common clients can parse the complete open beacon.
+ const uint8_t rates[]={1,8,0x82,0x84,0x8b,0x96,12,18,24,36,3,1,channel,50,4,0x30,0x48,0x60,0x6c};
+ memcpy(out+38+n,rates,sizeof(rates));return 57+n;
 }
 inline bool validLegacyAdvert(const uint8_t* p,size_t n){if(!p||!n||n>31)return false;size_t i=0;while(i<n){unsigned z=p[i++];if(!z)return i==n;if(z>n-i)return false;i+=z;}return true;}
 inline bool beaconValid(const uint8_t* p,size_t n){if(!p||n<36||n>1024||(p[0]!=0x80&&p[0]!=0x50)||(p[1]&0x40))return false;for(size_t i=36;i<n;){if(n-i<2||p[i+1]>n-i-2)return false;i+=2+p[i+1];}return true;}
