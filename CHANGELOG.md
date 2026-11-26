@@ -1,5 +1,10 @@
 # Changes
 
+## 0.14.12
+
+- Waveshare LCD 1.85B: make HOME wider and enlarge its touch area on regular pages and the locksport timer. The owner confirmed HOME is easy to tap and the layout stays clean on a flashed preview. Other boards keep their existing layout.
+- Stable boards on the already-updated companion flasher follow the official release catalog; its board description no longer pins the 2.06 port to a particular patch version.
+
 ## 0.14.11
 
 - Waveshare LCD 1.85B: raise and enlarge the radar's TARGETS and TOOLS buttons while keeping the summary and tracking labels clear. The owner confirmed both controls respond reliably and the layout looks clean on the flashed device.

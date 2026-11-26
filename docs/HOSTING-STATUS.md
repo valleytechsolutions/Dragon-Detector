@@ -1,6 +1,6 @@
 # Installation and hosting status
 
-Updated November 26, 2026. Current firmware release: **0.14.11**.
+Updated November 26, 2026. Current firmware release: **0.14.12**.
 
 ## Official release flasher
 
@@ -48,7 +48,7 @@ The installer checks physical flash capacity before writing. A capacity match
 does not identify the display or wiring: boards with equal flash sizes still
 need the correct selection.
 
-[Installation and recovery](FLASHING.md) · [Clock setup](CLOCK-SETUP.md) · [Custom theme guide](CUSTOM-THEME.md) · [Release notes](RELEASE-0.14.11.md)
+[Installation and recovery](FLASHING.md) · [Clock setup](CLOCK-SETUP.md) · [Custom theme guide](CUSTOM-THEME.md) · [Release notes](RELEASE-0.14.12.md)
 
 ## Release updates
 

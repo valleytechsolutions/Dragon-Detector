@@ -1,4 +1,4 @@
-import {NodeBusyMessage,nodeBusy} from './serial.js?v=0.14.11';
+import {NodeBusyMessage,nodeBusy} from './serial.js?v=0.14.12';
 // Collect streamed CSV as it arrives; do not depend on a small serial line queue.
 export async function readHistory(link, timeout=30000) {
   let unsubscribe, timer;

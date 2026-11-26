@@ -20,7 +20,9 @@ forwards installation links to this release flasher and keeps editor and guide
 links working. P4 and separate beta installers remain on the
 [companion site](https://valleytech-dragon-detector.pages.dev/#install). [Hosting details](docs/HOSTING-STATUS.md).
 
-[**Install firmware**](https://valleytechsolutions.github.io/Dragon-Detector-Flasher/) · [Latest release](docs/RELEASE-0.14.11.md) · [User guides](docs/GUI.md) · [Clock setup](docs/CLOCK-SETUP.md)
+[**Install firmware**](https://valleytechsolutions.github.io/Dragon-Detector-Flasher/) · [Latest release](docs/RELEASE-0.14.12.md) · [User guides](docs/GUI.md) · [Clock setup](docs/CLOCK-SETUP.md)
+
+**0.14.12 · Waveshare 1.85B HOME touch:** HOME is wider and easier to hit on regular pages and the locksport timer. The owner checked it on the device. All stable board packages retain the 0.14.11 release features. [Release notes](docs/RELEASE-0.14.12.md).
 
 **0.14.11 · Waveshare 1.85B radar touch:** TARGETS and TOOLS have larger, higher touch areas. Both controls were checked on the device. The firmware for every other supported board is rebuilt from the same source, with the 0.14.10 scanned-network selector and radio updates. [Release notes](docs/RELEASE-0.14.11.md).
 

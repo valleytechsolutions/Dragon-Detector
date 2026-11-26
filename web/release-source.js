@@ -1,4 +1,4 @@
-import {knownFirmware} from './firmware-version.js?v=0.14.11';
+import {knownFirmware} from './firmware-version.js?v=0.14.12';
 
 const official='https://valleytechsolutions.github.io/Dragon-Detector-Flasher/';
 

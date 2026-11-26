@@ -240,7 +240,11 @@ void uiNotify(const char* text,const char* detail,const dragon::DeviceKey* key,b
 static void title(const char* text,const char* subtitle=nullptr){
   auto* t=label(root,text,55,39,250,F20);lv_obj_set_style_text_align(t,LV_TEXT_ALIGN_CENTER,0);
   if(subtitle){auto* s=label(root,subtitle,55,67,250,F12,uiColors().muted);lv_obj_set_style_text_align(s,LV_TEXT_ALIGN_CENTER,0);}
+#ifdef BOARD_WAVESHARE_185B
+  auto* home=button(root,LV_SYMBOL_HOME,130,305,100,35,1);lv_obj_set_ext_click_area(home,S(10));
+#else
   button(root,LV_SYMBOL_HOME,149,307,62,lawLockTools()?23:33,1);
+#endif
 }
 static void legible(lv_obj_t* o){lv_obj_set_style_bg_color(o,color(uiColors().surface),0);lv_obj_set_style_bg_opa(o,LV_OPA_80,0);lv_obj_set_style_radius(o,7,0);}
 // Each LVGL setter invalidates its object even when nothing changes, and on
@@ -744,7 +748,11 @@ static void build(){
 #else
     if(locksport()){
       if(radarTheme!=dragon::PersonalThemeId&&!covert()&&!dmac()&&!lpl()&&!lpu()&&!sparrows()&&!vectorPotential()&&!argyle()&&!lawLockTools()&&!moki()&&!delta44()&&radarTheme!=dragon::VladTheme){circleLogo(root,&radar_logo_toool,20);centered(label(root,"LOCKSPORT TIMER",48,74,264,F20,locksportAccent()));}
+#ifdef BOARD_WAVESHARE_185B
+      auto* home=button(root,LV_SYMBOL_HOME,130,305,100,35,1);lv_obj_set_ext_click_area(home,S(10));
+#else
       button(root,LV_SYMBOL_HOME,149,307,62,lawLockTools()?23:33,1);
+#endif
     }else if(radarTheme!=dragon::PersonalThemeId&&radarTheme!=CanCommanderTheme)title("CHRONOGRAPH","Precision stopwatch");
 #endif
     timerState=label(root,"",50,lawLockTools()?112:locksport()?106:98,260,F12,locksport()?locksportAccent():uiColors().accent);centered(timerState);

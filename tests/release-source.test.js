@@ -5,7 +5,7 @@ import {checkRelease} from '../web/install-checks.js';
 import {readFileSync} from 'node:fs';
 
 const official='https://valleytechsolutions.github.io/Dragon-Detector-Flasher/';
-const board='waveshare_185b',version='0.14.11';
+const board='waveshare_185b',version='0.14.12';
 const path=`firmware/v${version}/${board}`;
 
 test('stable boards follow the matching official release catalog',async()=>{
