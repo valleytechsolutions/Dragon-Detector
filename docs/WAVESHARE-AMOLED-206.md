@@ -13,6 +13,8 @@ full rectangle, with no circular display mask. Portrait and landscape layouts
 use the rotated display bounds. Theme colors are retained; analog and digital
 clock faces use a rectangular composition instead of the round-board dials.
 Badge Studio produces native 410 × 502 images for this profile.
+Theme Studio remains for the existing round profiles; editing and installing
+personal themes for rectangular displays is deferred.
 
 The full 0.14.9 application includes radar detection, themes, personal badge,
 clocks, stopwatch and locksport timing, radio tools, BLE Lab and node modes.

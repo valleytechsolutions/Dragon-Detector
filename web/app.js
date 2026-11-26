@@ -142,6 +142,7 @@ $('install-button').onclick=async()=>{
   try{
     customTheme=themeStudio.installation();
     if(customTheme&&board==='m5dial')throw new Error('Dial supports built-in themes only. Turn off “Install this personal theme” to continue.');
+    if(customTheme&&board==='waveshare_206')throw new Error('Theme Studio support for rectangular displays is deferred. Turn off “Install this personal theme” to continue.');
   }catch(error){location.hash='theme-studio';$('theme-status').textContent=error.message;return;}
   const selected=board,autoClock=$('auto-clock').checked;
   installLock(true);

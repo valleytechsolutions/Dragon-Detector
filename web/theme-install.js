@@ -6,6 +6,7 @@ import {hasPersonalThemes,uploadTheme} from './theme-transfer.js';
 import {decodeTheme} from './theme-codec.js';
 
 export async function installPersonalTheme(port,board,bytes,onProgress=()=>{}, {makeLink=p=>new BadgeSerial(p)}={}){
+  if(board==='waveshare_206')throw new Error('Theme Studio support for rectangular displays is deferred.');
   decodeTheme(bytes);
   const link=makeLink(port);
   try{

@@ -81,6 +81,11 @@ async function run() {
     const rectanglePng=await fs.readFile(await (await rectangleDownload).path());
     assert.deepEqual([rectanglePng.readUInt32BE(16),rectanglePng.readUInt32BE(20)],[410,502]);
     await page.locator('.studio').screenshot({path:'.work/waveshare206-badge-studio.png'});
+    await page.click('#theme-tab');
+    assert.equal(await page.locator('#theme-read').isDisabled(),true);
+    assert.equal(await page.locator('#theme-upload').isDisabled(),true);
+    assert.match(await page.locator('#theme-upload').textContent(),/rectangular displays/);
+    await page.click('#firmware-tab');
     await page.click('#disconnect');
     console.log('PASS 410 x 502 preview, PNG and exact rectangular badge bytes over simulated USB');
     await page.evaluate(()=>testDevice.storage='NO_STORAGE');await page.click('#connect');

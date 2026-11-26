@@ -59,9 +59,10 @@ test('upload acknowledges every short USB chunk and checks persisted checksum',a
 });
 test('readback is complete, checksum-checked and portable',async()=>{assert.deepEqual(await readTheme(rig().link),bytes);await assert.rejects(readTheme(rig({badCrc:true}).link),/checksum/);});
 test('post-flash theme install verifies all board identities and closes USB',async()=>{
-  for(const board of Object.keys(boardProfiles).filter(id=>id!=='m5dial')){const r=rig({board,version:boardProfiles[board].minVersion||'0.13.17'});await installPersonalTheme({},board,bytes,()=>{},{makeLink:()=>r.link});assert.deepEqual(r.writes.slice(0,2),['OPEN','badge info']);assert.equal(r.writes.at(-1),'CLOSE');}
+  for(const board of Object.keys(boardProfiles).filter(id=>!['m5dial','waveshare_206'].includes(id))){const r=rig({board,version:boardProfiles[board].minVersion||'0.13.17'});await installPersonalTheme({},board,bytes,()=>{},{makeLink:()=>r.link});assert.deepEqual(r.writes.slice(0,2),['OPEN','badge info']);assert.equal(r.writes.at(-1),'CLOSE');}
   for(const options of [{board:'spotpear'},{version:'0.13.16'}]){const r=rig(options);await assert.rejects(installPersonalTheme({},'waveshare',bytes,()=>{},{makeLink:()=>r.link}),/does not match/);assert.deepEqual(r.writes,['OPEN','badge info','CLOSE']);}
 
   const dial=rig({board:'m5dial',version:'0.13.26'});await assert.rejects(installPersonalTheme({},'m5dial',bytes,()=>{},{makeLink:()=>dial.link}),/does not match/);assert.deepEqual(dial.writes,['OPEN','badge info','CLOSE']);
+  const rectangle=rig({board:'waveshare_206',version:'0.14.9'});await assert.rejects(installPersonalTheme({},'waveshare_206',bytes,()=>{},{makeLink:()=>rectangle.link}),/rectangular displays is deferred/);assert.deepEqual(rectangle.writes,[]);
   assert.equal(hasPersonalThemes('0.13.16'),false);assert.equal(hasPersonalThemes('0.13.17'),true);assert.equal(hasPersonalThemes('garbage'),false);
 });
