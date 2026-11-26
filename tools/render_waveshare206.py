@@ -52,7 +52,8 @@ static lv_color_t color(uint32_t c){return lv_color_hex(c);}
 ''' + helpers + palettes + watch_palettes + r'''
 bool personalThemeReady(){return true;}
 const dragon::UiPalette& themeUiColors(unsigned i){return dragon::UiPalettes[i];}
-const lv_img_dsc_t* personalThemeLogo(bool){return nullptr;}
+static lv_img_dsc_t personalLogo;
+const lv_img_dsc_t* personalThemeLogo(bool){return &personalLogo;}
 #include "rectangular_draw.inc"
 #include "rectangular_watch.inc"
 static int width=410,height=502;
@@ -78,6 +79,8 @@ static void draw(lv_event_t* e){auto* ctx=lv_event_get_draw_ctx(e);
 }
 int main(int argc,char** argv){
  lv_init();const bool logosReady=prepareThemeLogos();assert(logosReady);width=std::atoi(argv[2]);height=std::atoi(argv[3]);pixels.resize(width*height*3);
+ static std::vector<uint8_t> logoPixels(123*123*3);for(int y=0;y<123;++y)for(int x=0;x<123;++x){auto c=lv_color_hex((x/12+y/12)%2?0x68e2c1:0x72aaff);auto* p=&logoPixels[(y*123+x)*3];memcpy(p,&c,2);p[2]=(x>8&&x<114&&y>8&&y<114)?255:0;}
+ personalLogo.header.cf=LV_IMG_CF_TRUE_COLOR_ALPHA;personalLogo.header.w=personalLogo.header.h=123;personalLogo.data=logoPixels.data();personalLogo.data_size=logoPixels.size();
  static std::vector<lv_color_t> buffer(width*height);lv_disp_draw_buf_t buf;lv_disp_draw_buf_init(&buf,buffer.data(),nullptr,buffer.size());
  lv_disp_drv_t driver;lv_disp_drv_init(&driver);driver.hor_res=width;driver.ver_res=height;driver.draw_buf=&buf;driver.flush_cb=flush;auto* display=lv_disp_drv_register(&driver);
  auto* obj=lv_obj_create(lv_scr_act());lv_obj_remove_style_all(obj);lv_obj_set_size(obj,width,height);lv_obj_clear_flag(obj,LV_OBJ_FLAG_SCROLLABLE);lv_obj_add_event_cb(obj,draw,LV_EVENT_DRAW_MAIN,nullptr);
@@ -89,6 +92,19 @@ int main(int argc,char** argv){
    char path[512];snprintf(path,sizeof(path),"%s/%dx%d-%s-%02u.ppm",argv[1],width,height,mode?"clock":"radar",theme);FILE* out=fopen(path,"wb");assert(out);fprintf(out,"P6\n%d %d\n255\n",width,height);fwrite(pixels.data(),1,pixels.size(),out);fclose(out);
   }
  }
+ clockPage=true;watchFace=dragon::PersonalWatchId;
+ for(int option=0;option<5;++option){std::vector<unsigned char> previous;
+  const int count=option==0?3:option==1?4:option==2?3:option==3?4:2;
+  for(int value=0;value<count;++value){custom={};
+   if(option==0)custom.layout=value;if(option==1)custom.hands=value;
+   if(option==2)custom.font=value;if(option==3)custom.markers=value;
+   if(option==4)custom.flags=value?0:7;
+   lv_obj_invalidate(obj);lv_refr_now(display);assert(previous.empty()||previous!=pixels);previous=pixels;
+   char path[512];snprintf(path,sizeof(path),"%s/%dx%d-personal-%d-%d.ppm",argv[1],width,height,option,value);FILE* out=fopen(path,"wb");assert(out);fprintf(out,"P6\n%d %d\n255\n",width,height);fwrite(pixels.data(),1,pixels.size(),out);fclose(out);
+  }
+ }
+ clockPage=false;radarTheme=dragon::PersonalThemeId;std::vector<unsigned char> previous;
+ for(unsigned sweep=0;sweep<3;++sweep){custom.sweep=sweep;lv_obj_invalidate(obj);lv_refr_now(display);assert(previous.empty()||previous!=pixels);previous=pixels;}
  puts("PASS native rectangular clocks and radar fields; full and 32-row tiles agree within one RGB565 level");
 }
 '''
