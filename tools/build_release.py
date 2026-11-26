@@ -33,12 +33,12 @@ def build(board,skip):
     shutil.copyfile(ROOT/'docs/licenses/ESP32DualBandWardriver-LICENSE.txt',out/'ESP32DualBandWardriver-LICENSE.txt')
     if board=='waveshare_206':
         (out/'BOARD-STATUS.txt').write_text(
-            'Dragon Detector 0.14.9 for Waveshare ESP32-S3-Touch-AMOLED-2.06.\n'
+            f'Dragon Detector {VERSION} for Waveshare ESP32-S3-Touch-AMOLED-2.06.\n'
             'Initial port. Physical validation pending. 410 x 502 AMOLED, FT3168 touch, 32 MB flash, 8 MB PSRAM.\n'
             'Full application with native rectangular radar, clocks, menus and badges, ES8311 sound, PCF85063 RTC, AXP2101 battery and microSD.\n'
             'Theme Studio support for rectangular displays is deferred.\n'
             'Fresh installation is required when replacing the factory demo. Updates require this exact board profile.\n'
-            'No integrated GPS. Microphone recording and IMU applications are outside Dragon Detector 0.14.9 features.\n'
+            f'No integrated GPS. Microphone recording and IMU applications are outside Dragon Detector {VERSION} features.\n'
             'https://valleytech-dragon-detector.pages.dev/guides/WAVESHARE-AMOLED-206.html\n',encoding='utf-8')
         shutil.copyfile(ROOT/'third_party/waveshare-206/NOTICE.md',out/'BOARD-NOTICE.md')
         shutil.copyfile(ROOT/'third_party/waveshare-206/LICENSE',out/'BOARD-LICENSE.txt')

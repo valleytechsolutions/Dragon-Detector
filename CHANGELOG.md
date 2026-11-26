@@ -1,11 +1,11 @@
 # Changes
 
-## Unreleased — Marauder develop review
+## 0.14.10
 
 - Wi-Fi attacks now put the live scanned-network selector at the top of the menu. Tapping an AP returns to the Wi-Fi test choices, and the chosen network stays visible and selected across those menus. No test starts on selection; fresh AP/client checks still apply when a test starts.
 - Reviewed ESP32 Marauder `develop` through `95efbb2` (v1.21.0). Open Wi-Fi beacons now include the extended rate element, random beacons reuse 30 consistent SSID/BSSID identities for 10 seconds, and a full Wi-Fi transmit queue gets bounded retries without ending the session.
 - SD-capable boards add `get framed /path` with base64 chunks, offsets, length and CRC32. The existing raw `get /path` command remains available. Dragon Detector already had selected AP/client workflows, targeted EAPOL capture and portal cleanup; the Marauder C5 display startup change targets different hardware.
-- This is a Dragon Detector integration on the 0.14.9 firmware line. Radio behavior and the new serial transfer still need physical-device acceptance.
+- Waveshare 1.85B handles taps arriving during a page update before painting the next frame. The owner confirmed responsive touch and scanned-network selection on the updated device. The radio behavior and framed serial transfer still need separate physical checks.
 
 ## 0.14.9
 

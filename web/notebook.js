@@ -1,5 +1,5 @@
-import {firmwareAtLeast,knownFirmware} from './firmware-version.js?v=0.14.9';
-import {NodeBusyMessage,nodeBusy} from './serial.js?v=0.14.9';
+import {firmwareAtLeast,knownFirmware} from './firmware-version.js?v=0.14.10';
+import {NodeBusyMessage,nodeBusy} from './serial.js?v=0.14.10';
 export const hasNotebook=version=>firmwareAtLeast(version,'0.12.0');
 export function customAdvertCommand(text){
  const hex=String(text).replace(/[ :\-]/g,'');

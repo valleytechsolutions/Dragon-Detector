@@ -1,4 +1,4 @@
-import {fitCircleZoom} from './badge-codec.js?v=0.14.9';
+import {fitCircleZoom} from './badge-codec.js?v=0.14.10';
 export function rotatedSize(width,height,turns=0){return Math.abs(turns)%2?[height,width]:[width,height];}
 export function badgeTransform(width,height,size,{zoom=1,x=0,y=0,turns=0,mirror=false,canvasHeight=size}={}){
   const [w,h]=rotatedSize(width,height,turns),scale=Math.max(size/w,canvasHeight/h)*zoom;

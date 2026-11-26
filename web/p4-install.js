@@ -1,7 +1,7 @@
-import {BadgeSerial} from './serial.js?v=0.14.9';
+import {BadgeSerial} from './serial.js?v=0.14.10';
 import {deviceQuery} from './device-query.js';
-import {parseBadgeInfo} from './firmware-compat.js?v=0.14.9';
-import {connectedProfile} from './board-profiles.js?v=0.14.9';
+import {parseBadgeInfo} from './firmware-compat.js?v=0.14.10';
+import {connectedProfile} from './board-profiles.js?v=0.14.10';
 
 export function p4UpdateSlot(line){
   const match=/^P4_LAYOUT layout=1 revision=(\d+) running=(\d+) boot=(\d+)$/.exec(line);

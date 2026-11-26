@@ -1177,6 +1177,10 @@ void uiLoop(){
 #if defined(BOARD_CROWPANEL_21) || defined(BOARD_WATCHER)
   rotaryUiLoop();
 #endif
+#ifdef BOARD_WAVESHARE_185B
+  // A tap arriving during the page update should not wait through its paint.
+  if(page==pending&&waveshare185bServicePointer()&&page!=pending)build();
+#endif
   ++radarPass;lv_timer_handler();
 }
 
