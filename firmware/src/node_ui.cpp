@@ -263,6 +263,15 @@ void nodeScreenOpen(lv_obj_t* parent,const NodeScreenOptions& opened){
   lv_obj_set_style_border_width(w.ring,px(3)>1?px(3):2,0);lv_obj_set_style_border_color(w.ring,lv_color_hex(Track),0);
 #ifdef BOARD_WAVESHARE_206
   lv_obj_set_size(w.ring,size-px(12),height-px(12));lv_obj_set_style_radius(w.ring,px(12),0);lv_obj_center(w.ring);
+  for(int y:{height*26/100,height*83/100}){
+    auto* rule=lv_obj_create(w.screen);
+    lv_obj_remove_style_all(rule);
+    lv_obj_set_pos(rule,px(24),y);
+    lv_obj_set_size(rule,size-2*px(24),1);
+    lv_obj_clear_flag(rule,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_style_bg_color(rule,lv_color_hex(Track),0);
+    lv_obj_set_style_bg_opa(rule,LV_OPA_COVER,0);
+  }
 #endif
   markerRadius=ring/2;markerWidth=px(5)>2?px(5):3;markerAt=-1;scannedChannel=0;
   w.marker=lv_obj_create(w.screen);
@@ -290,6 +299,17 @@ void nodeScreenOpen(lv_obj_t* parent,const NodeScreenOptions& opened){
   w.countLabel=text(w.content,SmallFont,Muted,Row.label,300);
   lv_obj_set_style_text_letter_space(w.countLabel,px(2),0);lv_label_set_text(w.countLabel,"WI-FI NETWORKS");
   w.stats=text(w.content,StatusFont,Muted,Row.stats,330);
+#ifdef BOARD_WAVESHARE_206
+  if(size>height){
+    const int right=size/4-px(12);
+    const int column=size/2-2*px(20);
+    lv_obj_align(w.logo,LV_ALIGN_LEFT_MID,px(34),-px(2));
+    for(auto* label:{w.count,w.countLabel,w.stats})lv_obj_set_width(label,column);
+    lv_obj_align(w.count,LV_ALIGN_TOP_MID,right,height*38/100);
+    lv_obj_align(w.countLabel,LV_ALIGN_TOP_MID,right,height*54/100);
+    lv_obj_align(w.stats,LV_ALIGN_TOP_MID,right,height*64/100);
+  }
+#endif
 
   // EXIT (or the hint) sits on the drifting layer too; LVGL still hit-tests and
   // focuses a child of the non-clickable content.

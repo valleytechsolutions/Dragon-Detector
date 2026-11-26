@@ -54,7 +54,9 @@ bool personalThemeReady(){return true;}
 const dragon::UiPalette& themeUiColors(unsigned i){return dragon::UiPalettes[i];}
 static lv_img_dsc_t personalLogo;
 const lv_img_dsc_t* personalThemeLogo(bool){return &personalLogo;}
+#include "pick_hands.inc"
 #include "rectangular_draw.inc"
+extern lv_img_dsc_t watch_logo_mcnally;
 #include "rectangular_watch.inc"
 static int width=410,height=502;
 static bool clockPage=false;
