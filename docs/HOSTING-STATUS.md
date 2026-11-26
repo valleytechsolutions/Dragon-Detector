@@ -1,42 +1,63 @@
 # Installation and hosting status
 
-Updated November 17, 2026.
+Updated November 25, 2026.
 
-## Working web flasher
+## Official release flasher
 
-**[Open Dragon Detector](https://valleytech-dragon-detector.pages.dev/)**
+**[Open Dragon Detector](https://valleytechsolutions.github.io/Dragon-Detector-Flasher/)**
 
-This independently hosted copy includes 0.14.9 firmware for all thirteen board profiles, including the Waveshare ESP32-S3-Touch-AMOLED-1.43C (physical validation in progress), the Waveshare ESP32-S3-Touch-AMOLED-1.75C and the Waveshare ESP32-S3-Touch-LCD-1.85B. It also offers USB date/time setup, device tools and the optional personal-theme creator. Guides, SD resource packs and screenshots are served here too. The firmware on an already-installed device is unaffected by a website outage.
+The installer uses the latest published firmware packages from
+[this repository's GitHub Releases](https://github.com/valleytechsolutions/Dragon-Detector/releases).
+It offers the released hardware profiles, USB installation and verified local
+date, time and timezone setup. Firmware is copied from the release packages
+without rebuilding or changing it.
 
-A separate [Guition / Surenoo JC3636W518 Beta 1](GUITION-SURENOO-BETA.md) installer uses a newer manufacturer panel sequence. It is physically unverified and does not replace or modify the thirteen released firmware packages, including the original Spotpear profile.
+The [website flasher](https://valleytechsolutions.tech/pages/dragon-detector)
+embeds this same installer, so its board list and release files match. The
+[original GitHub Pages address](https://valleytechsolutions.github.io/Dragon-Detector/)
+forwards installation links to the release flasher.
 
-Public GitHub repository access is restored. The [repository](https://github.com/valleytechsolutions/Dragon-Detector)
-links directly to this working flasher. The original
-[GitHub Pages address](https://valleytechsolutions.github.io/Dragon-Detector/)
-forwards visitors here, preserving tab links, query parameters and guide paths.
-Cloudflare remains the primary installer, so there is one public firmware source.
+## Badge Studio, themes and separate hardware
+
+[Badge Studio](https://valleytech-dragon-detector.pages.dev/#studio) and
+[Theme Creator](https://valleytech-dragon-detector.pages.dev/#theme-studio) remain available
+on the companion site. Install firmware first, finish clock setup, close the
+installer connection, then connect the editor to upload your design.
+The release flasher does not automatically upload badge or theme artwork.
+Customization support depends on the board.
+
+The P4 Knob, [Guition / Surenoo beta](GUITION-SURENOO-BETA.md) and Tuya T5-E1
+keep their separate installers or downloads on the
+[companion site](https://valleytech-dragon-detector.pages.dev/#install). They are not
+substituted with another board's GitHub release package. Existing guides, hardware
+purchase links, SD resources and screenshots remain there. Old editor bookmarks
+and guide paths continue to forward to that site.
 
 ## Installation
 
-1. Open the flasher in desktop Chrome or Edge and connect a USB data cable.
-2. Choose your exact board. Select **Update matching Dragon Detector** for a compatible installation; **Fresh install** replaces saved files and settings.
-3. Keep USB connected until firmware installation and date/time verification finish.
+1. Open the release flasher in desktop Chrome or Edge and connect a USB data cable.
+2. Choose the exact printed board model. Use **Update Dragon Detector · preserve saved data** for a compatible installation, or **Fresh installation · erase saved data** when replacing unrelated firmware or correcting a wrong board image.
+3. Confirm the model, connect and install. Keep USB connected through clock verification.
 
-The Custom theme tab is optional. Its personal-theme slot stays hidden on the device unless a design is explicitly installed.
+The installer checks physical flash capacity before writing. A capacity match
+does not identify the display or wiring: boards with equal flash sizes still
+need the correct selection.
 
-[Full installation guide](FLASHING.md) · [Clock setup](CLOCK-SETUP.md) · [Custom theme guide](CUSTOM-THEME.md) · [Release notes](RELEASE-0.14.9.md)
+[Installation and recovery](FLASHING.md) · [Clock setup](CLOCK-SETUP.md) · [Custom theme guide](CUSTOM-THEME.md) · [Release notes](RELEASE-0.14.9.md)
 
-## GitHub and Gitea
+## Release updates
 
-GitHub now contains the source changes made while access was unavailable. The
-Gitea repository remains a separate copy; its commits and releases can differ.
-The GitHub Pages workflow publishes only the forwarding page. Firmware CI builds
-remain validation artifacts until explicitly released to the primary flasher.
-The 0.14.2 release adds the three sound levels, the physically checked 1.85B
-speaker adjustment and stable-ID theme retirement. Publication requires all
-thirteen profile builds and checked packages; other boards retain their documented
-physical-validation limits. A Git push alone does not deploy
-firmware to the web flasher.
+The [release flasher workflow](https://github.com/valleytechsolutions/Dragon-Detector-Flasher/actions)
+checks GitHub Releases every 30 minutes and can also be run manually. GitHub may
+delay scheduled jobs. Packaging verifies each release ZIP, board identity,
+version, flash layout and binary checksum. The browser verifies the selected
+files again before allowing installation. A failed site build leaves the
+previous deployment available.
+
+A source commit alone is not a new firmware release. The main firmware repository
+continues to own the release ZIPs. The separate flasher repository hosts the
+installer; the original repository's Pages workflow publishes its forwarding page.
+Gitea is a separate mirror and is not the release flasher's firmware source.
 
 ## M5Burner
 

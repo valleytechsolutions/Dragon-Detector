@@ -2,13 +2,13 @@
 
 # Flash Dragon Detector
 
-**[Open the web flasher](https://valleytech-dragon-detector.pages.dev/)** in desktop Chrome or Edge. HTTPS or localhost is required for Web Serial. Use a USB data cable and close serial monitors first.
+**[Open the web flasher](https://valleytechsolutions.github.io/Dragon-Detector-Flasher/)** in desktop Chrome or Edge. HTTPS or localhost is required for Web Serial. Use a USB data cable and close serial monitors first.
 
 1. Check the exact printed model against the table below. Waveshare **1.43C**, **1.75C**, **1.75**, **1.75-G** and non-touch **LCD-1.28** have separate profiles. The touch LCD-1.28 is not supported by the non-touch Lite build.
 2. Select that board. The ESP32-S3 chip check does not distinguish these boards.
-3. Choose **Update matching Dragon Detector** if the exact board already has a compatible Dragon Detector layout (table below). The page applies the selected erase policy. Choose **Fresh install** for a new board or migration from unrelated firmware; this replaces saved files. Back up existing firmware, files and settings first.
+3. Choose **Update Dragon Detector · preserve saved data** if the exact board already has a compatible Dragon Detector layout (table below). The page applies the selected erase policy. Choose **Fresh installation · erase saved data** for a new board or migration from unrelated firmware; this replaces saved files. Back up existing firmware, files and settings first.
 4. Confirm the board/type checkbox, Connect & install, choose its serial port, and wait for verification. Reset if it stays in the bootloader.
-5. Keep USB connected until automatic clock setup and verification finish, then connect from Badge Studio.
+5. Keep USB connected until automatic clock setup and verification finish. Close the installer connection before opening [Badge Studio](https://valleytech-dragon-detector.pages.dev/#studio) or [Theme Creator](https://valleytech-dragon-detector.pages.dev/#theme-studio) to upload artwork. These are separate steps; the release installer does not automatically upload your design.
 
 | Exact board | Existing Dragon Detector layout accepted for Update |
 |---|---|
@@ -26,7 +26,7 @@
 
 The update manifest writes bootloader at `0x0`, partition table at `0x8000`, OTA selection data at `0xE000`, and application at `0x10000`; it skips NVS (`0x9000`) and user filesystems. Leave erase unchecked. Firmware cannot preserve settings if you explicitly erase them.
 
-After installation, open Tools → Utilities on a full board. **Waveshare AMOLED needs no SD card:** Saved files opens internal-flash captures, and Settings → Capture studio starts a recording. Download captures from the web page's Radio tools → Capture library. Badge Studio uploads directly to internal flash. [Screens and controls](GUI.md).
+After installation, open Tools → Utilities on a full board. **Waveshare AMOLED needs no SD card:** Saved files opens internal-flash captures, and Settings → Capture studio starts a recording. Badge Studio uploads directly to internal flash. [Screens and controls](GUI.md).
 
 **Waveshare AMOLED 1.75C / 0.9.8:** the build now uses its full 32 MB flash. The original lower 16 MB partition addresses and sizes stay unchanged. Update also skips the new recon filesystem at `0x1000000`; existing badges, settings and saved BLE profiles are preserved. When upgrading older 16 MB firmware, use BLE Lab → Initialize new BLE storage after making a complete backup. This initializes only the upper 16 MB, once. Fresh install writes blank badge and recon filesystems. [BLE Lab and migration details](BLE-LAB.md).
 
@@ -50,7 +50,7 @@ Replace the port and board folder with the exact device. This is a factory write
 
 ### ESP32 drivers and an empty port list
 
-Use a USB data cable, a direct computer USB port, and desktop Chrome or Edge. If serial access is blocked inside an embedded page, [open the direct flasher](https://valleytech-dragon-detector.pages.dev/#install). Close Arduino, PlatformIO, other flashers and serial monitors before connecting.
+Use a USB data cable, a direct computer USB port, and desktop Chrome or Edge. If serial access is blocked inside an embedded page, [open the direct flasher](https://valleytechsolutions.github.io/Dragon-Detector-Flasher/). Close Arduino, PlatformIO, other flashers and serial monitors before connecting.
 
 Install the driver matching the USB bridge shown in Device Manager or the board documentation, then reconnect:
 
@@ -62,13 +62,13 @@ Native ESP32-S3 USB normally uses the operating system's built-in driver. See th
 
 ### Interrupted or cancelled installation
 
-Cancelling the installer skips clock and personal-theme setup. A completed firmware write followed by failed clock setup is reported separately: reconnect the running board and select **Finish clock setup**. It does not require erasing or reinstalling.
+Cancelling the installer skips automatic clock setup. If firmware installation finishes but clock setup fails, start the device normally and use **Connect and sync clock**. This does not require another installation.
 
-If a firmware file cannot be reached, the board chooser keeps installation disabled and offers **Retry release check**. The installer downloads all required binaries before erasing. If writing itself was interrupted, re-enter download mode and retry the same board and installation type. Use **Copy troubleshooting details** and include the printed board model and the error inside the installer when reporting a failure.
+The release flasher validates the selected files against their SHA-256 checksums before allowing installation. If validation fails, reload the page and select the exact board again. If writing was interrupted, re-enter download mode and retry the same board and installation type. Include the printed board model and the exact installer error when reporting a failure.
 
 ### Entering download mode
 
-**M5Stack StopWatch:** connect USB, hold the power button for about two seconds until its green LED lights, then release to enter download mode. Leave all buttons alone during flashing and verification. After flashing, a short power-button press restarts it. If the screen stays blank, close the serial connection, unplug USB, double-press power to turn it off, wait five seconds, then press power once. Reconnect USB after the logo appears and choose **Finish clock setup** or **Connect & sync local time**. This full power cycle recovered a C152 that remained in download mode after a verified 0.13.20 factory installation. [Official power-button controls](https://docs.m5stack.com/en/core/StopWatch).
+**M5Stack StopWatch:** connect USB, hold the power button for about two seconds until its green LED lights, then release to enter download mode. Leave all buttons alone during flashing and verification. After flashing, a short power-button press restarts it. If the screen stays blank, close the serial connection, unplug USB, double-press power to turn it off, wait five seconds, then press power once. Reconnect USB after the logo appears and choose **Connect and sync clock**. This full power cycle recovered a C152 that remained in download mode after a verified 0.13.20 factory installation. [Official power-button controls](https://docs.m5stack.com/en/core/StopWatch).
 
 **Waveshare AMOLED 1.43C:** this board has no RESET button. With it switched off, hold BOOT and press PWR, or hold BOOT while plugging in USB, then release BOOT and select the bootloader port. The screen stays dark in download mode.
 
@@ -76,12 +76,12 @@ If a firmware file cannot be reached, the board chooser keeps installation disab
 
 ## Hosting
 
-The current public flasher is hosted on Cloudflare Pages. The repository also includes GitHub Actions packaging; if using GitHub Pages, set its source to **GitHub Actions** and publish source and all thirteen build artifacts from the same successful run. Failed builds must not be substituted with older binaries. The public website contains release binaries; device dumps and local scan data are excluded.
+The [official release flasher](https://valleytechsolutions.github.io/Dragon-Detector-Flasher/) runs on GitHub Pages and is embedded in the [website](https://valleytechsolutions.tech/pages/dragon-detector). Its build downloads published GitHub release packages, validates their checksums and board layouts, then serves verified copies of the original binaries. The browser checks the selected files again before enabling installation.
 
-The web page validates the exact board name, ESP32-S3 family, image filenames, partition offsets and factory/update erase policy, then checks file availability and declared sizes before enabling installation. Some hosts omit sizes on HEAD responses; release packaging still verifies every full binary and its offsets. The availability check is not a checksum verification; published SHA-256 files are available for manual verification. This does not automatically identify connected display wiring; select the printed model carefully.
+The installer checks physical flash capacity before writing. This does not identify connected display wiring; select the printed model carefully. Matching flash capacity alone is not proof of a matching board.
 
-ESP Web Tools 10.4.0 is hosted locally under `web/vendor/`, including its bundled imports and license, so installation does not depend on a separate script CDN. `python tools/vendor_esp_web_tools.py` reproduces these files from the npm package after checking its registry integrity. `UPSTREAM.json` records the source and file hashes. The adapter's success/cancel behavior is covered by the JavaScript tests.
+Badge Studio, Theme Creator, guides and separate P4/beta installers remain on the [companion site](https://valleytech-dragon-detector.pages.dev/). ESP Web Tools 10.4.0 and its license are hosted with the release flasher.
 
 ## Automatic local time (0.13.7)
 
-Leave **Automatically set and verify my local date, time & timezone** enabled. In 0.13.10+, the installer closes automatically after flashing, then copies the computer's current time and UTC offset to that exact detected board. Keep USB connected until verification finishes. Detected hardware RTCs are read directly and checked for ticking; missing expected RTCs or invalid readback fail explicitly. If USB changes ports, choose **Finish clock setup** and select the running board. A failed clock sync does not mean flashing failed. Lite supports USB clock setup in 0.13.9+. Without a working external RTC, full shutdown requires USB sync or configured saved-Wi-Fi recovery (full boards). The Waveshare **1.75C** is in that category on tested hardware; do not confuse it with the non-C model. [Clock setup and retention guide](CLOCK-SETUP.md).
+Leave **Automatically set and verify my local date, time & timezone** enabled. In 0.13.10+, the installer closes automatically after flashing, then copies the computer's current time and UTC offset to that exact detected board. Keep USB connected until verification finishes. Detected hardware RTCs are read directly and checked for ticking; missing expected RTCs or invalid readback fail explicitly. If USB changes ports, choose **Connect and sync clock** and select the running board. A failed clock sync does not mean flashing failed. Lite supports USB clock setup in 0.13.9+. Without a working external RTC, full shutdown requires USB sync or configured saved-Wi-Fi recovery (full boards). The Waveshare **1.75C** is in that category on tested hardware; do not confuse it with the non-C model. [Clock setup and retention guide](CLOCK-SETUP.md).

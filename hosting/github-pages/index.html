@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Open the Dragon Detector Web Flasher</title>
-  <link rel="canonical" href="https://valleytech-dragon-detector.pages.dev/">
-  <noscript><meta http-equiv="refresh" content="0;url=https://valleytech-dragon-detector.pages.dev/#install"></noscript>
+  <link rel="canonical" href="https://valleytechsolutions.github.io/Dragon-Detector-Flasher/">
+  <noscript><meta http-equiv="refresh" content="0;url=https://valleytechsolutions.github.io/Dragon-Detector-Flasher/"></noscript>
   <style>
     :root { color-scheme: dark; font-family: system-ui, sans-serif; }
     body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #0c1413; color: #eff9f4; }
@@ -18,20 +18,28 @@
 <body>
   <main>
     <h1>Dragon Detector</h1>
-    <p>Opening the web flasher. Install firmware, choose your hardware and access device tools.</p>
-    <p><a class="button" id="flasher" href="https://valleytech-dragon-detector.pages.dev/#install">Open Web Flasher →</a></p>
+    <p>Opening the official release flasher. Choose your hardware, install firmware and set the clock.</p>
+    <p><a class="button" id="flasher" href="https://valleytechsolutions.github.io/Dragon-Detector-Flasher/">Open Web Flasher →</a></p>
     <p>Use desktop Chrome or Edge with a USB data cable.</p>
+    <p><a href="https://valleytech-dragon-detector.pages.dev/#studio">Badge Studio</a> · <a href="https://valleytech-dragon-detector.pages.dev/#theme-studio">Theme Creator</a> · <a href="https://valleytech-dragon-detector.pages.dev/#install">P4 and separate beta installers</a></p>
     <p><a href="https://github.com/valleytechsolutions/Dragon-Detector">Source code and documentation</a></p>
   </main>
   <script>
-    const destination = new URL('https://valleytech-dragon-detector.pages.dev/');
     const prefix = '/Dragon-Detector';
     const path = location.pathname;
-    if (path.startsWith(prefix + '/') && path !== prefix + '/index.html') {
+    const root = path === prefix || path === prefix + '/' || path === prefix + '/index.html';
+    const params = new URLSearchParams(location.search);
+    const separate = ['waveshare_p4_knob', 'guition_185_beta', 't5-e1'].includes(params.get('board'));
+    const install = ['', '#install', '#clock-sync-panel'].includes(location.hash);
+    const release = root && install && !separate;
+    const destination = new URL(release
+      ? 'https://valleytechsolutions.github.io/Dragon-Detector-Flasher/'
+      : 'https://valleytech-dragon-detector.pages.dev/');
+    if (!root && path.startsWith(prefix + '/')) {
       destination.pathname = path.slice(prefix.length);
     }
     destination.search = location.search;
-    destination.hash = location.hash || (destination.pathname === '/' ? '#install' : '');
+    destination.hash = release ? '' : location.hash || (root ? '#install' : '');
     document.getElementById('flasher').href = destination.href;
     location.replace(destination.href);
   </script>

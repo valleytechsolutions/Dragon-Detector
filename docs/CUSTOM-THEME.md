@@ -1,14 +1,14 @@
 # Your own clock, radar and counter
 
-Firmware 0.13.17 supports one personal theme on all five boards. The [Custom theme tab](https://valleytech-dragon-detector.pages.dev/#theme-studio) holds the entire editor. A normal installation does not show a personal theme on the device until you explicitly install a design.
+Firmware 0.13.17 introduced one personal theme on supported board profiles. The [Custom theme tab](https://valleytech-dragon-detector.pages.dev/#theme-studio) holds the entire editor. A normal installation does not show a personal theme on the device until you explicitly install a design.
 
 ## Create and install
 
 1. Open **Custom theme** in desktop Chrome or Edge. Choose a PNG, JPEG or WebP logo. Transparent PNGs work well; the background tool can remove white or black connected to the image edges while keeping enclosed details.
 2. Drag the logo or use the position and zoom controls. Choose a name, background, text and two accent colors.
 3. Select an analog, hybrid or digital clock, hands, digital numerals, hour markers, logo size, date and seconds options. Choose a radar sweep and whether the counter uses **Locksport Timer** controls. Switch the preview between Clock, Radar and Counter.
-4. Check **Install this personal theme**. Follow **Install / update firmware**, select the exact board and install. Keep USB connected through time synchronization and theme verification.
-5. If the board already runs 0.13.17 or newer, connect it in the Custom theme tab and choose **Install custom theme** instead. This replaces the one personal slot after confirmation.
+4. If firmware needs installing, use the [official release flasher](https://valleytechsolutions.github.io/Dragon-Detector-Flasher/) first. Finish clock setup and close its USB connection before connecting the editor. Export your design before closing or refreshing the editor.
+5. On a supported board running 0.13.17 or newer, check **Install this personal theme**, connect it in the Theme Creator and choose **Install custom theme**. This replaces the one personal slot after confirmation. The GitHub release installer does not automatically upload the design.
 
 The logo appears at the top of the clock, radar and counter. Menus and dialogs use the chosen palette on full boards. Lite uses the same design with its BOOT controls. Clock and counter modes retain the scanning pause introduced in 0.13.16. Radar preview contacts are simulated; the device continues showing real detection results.
 

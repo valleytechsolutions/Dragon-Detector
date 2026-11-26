@@ -1,13 +1,15 @@
 # Date and time setup
 
-Use desktop Chrome or Edge on the [web flasher](https://valleytech-dragon-detector.pages.dev/). Check that your computer's date, time and timezone are correct before installing.
+Use desktop Chrome or Edge on the [web flasher](https://valleytechsolutions.github.io/Dragon-Detector-Flasher/). Check that your computer's date, time and timezone are correct before installing.
 
 1. Select the exact board. Choose **Update** to preserve existing settings and user files.
 2. Leave automatic local-time setup checked, connect the matching USB device, and install.
 3. Keep USB connected. The installer closes automatically after successful flashing and starts clock setup on that same granted port. Wait for the date/time verification result before unplugging.
-4. If USB re-enumerates, click **Finish clock setup**, select that running device, and wait for verification. Failed setup is explicitly reported and can be retried without reflashing.
+4. If USB re-enumerates, click **Connect and sync clock**, select that running device, and wait for verification. Failed setup is explicitly reported and can be retried without reflashing.
 
-Connecting **Detector tools** also sets and verifies the computer's current time and timezone. **Sync my local time** repeats this at any time. With **Keep my clock synchronized while connected** checked, the flasher checks once a minute while the USB connection is idle, corrects drift or unset time, and updates the offset after travel or daylight-saving changes. Keep the page open and computer awake; a sleeping browser may delay checks. Uncheck this option to keep a custom manual time. Saving a manual time in the web page pauses automatic checks. Without a connected computer, UTC offsets are fixed; resync after travel or a daylight-saving change. Firmware uses UTC internally and the saved offset for the displayed date/time.
+To set the clock without reinstalling firmware, select your model and use **Connect and sync clock**. The release flasher checks the running device identity, sets the computer's local date, time and UTC offset, then verifies the result. Hardware RTCs are read back and checked for ticking when supported.
+
+Firmware uses UTC internally and a saved offset for the displayed date/time. Resync after travel or a daylight-saving change. A sleeping browser cannot be relied on to keep a device synchronized continuously.
 
 ## Set time and date on the device
 

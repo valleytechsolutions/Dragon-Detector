@@ -4,18 +4,23 @@
 
 Wi-Fi and Bluetooth detection, signal tracking, and logo watch faces for ESP32-S3 displays.
 
-[![Open Web Flasher](https://img.shields.io/badge/OPEN_WEB_FLASHER-Install_Dragon_Detector-167c4b?style=for-the-badge)](https://valleytech-dragon-detector.pages.dev/#install)
+[![Open Web Flasher](https://img.shields.io/badge/OPEN_WEB_FLASHER-Install_Dragon_Detector-167c4b?style=for-the-badge)](https://valleytechsolutions.github.io/Dragon-Detector-Flasher/)
 
-**[Open the web flasher →](https://valleytech-dragon-detector.pages.dev/#install)**
+**[Open the web flasher →](https://valleytechsolutions.github.io/Dragon-Detector-Flasher/)**
 Use desktop Chrome or Edge, connect your board with a USB data cable, and choose
-the exact hardware model. The flasher provides firmware, guides and device tools
-without downloading or building this repository.
+the exact hardware model. This installer uses the published firmware packages from
+[this repository's GitHub Releases](https://github.com/valleytechsolutions/Dragon-Detector/releases)
+and verifies their checksums. It also sets and verifies the device clock over USB.
 
-GitHub source access is restored. The Cloudflare address above remains the primary
-installer; the [original GitHub Pages link](https://valleytechsolutions.github.io/Dragon-Detector/)
-forwards there. [Hosting status](docs/HOSTING-STATUS.md).
+[Website flasher](https://valleytechsolutions.tech/pages/dragon-detector) · [Badge Studio](https://valleytech-dragon-detector.pages.dev/#studio) · [Theme Creator](https://valleytech-dragon-detector.pages.dev/#theme-studio)
 
-[**Install firmware**](https://valleytech-dragon-detector.pages.dev/#install) · [Latest release](docs/RELEASE-0.14.9.md) · [User guides](docs/GUI.md) · [Clock setup](docs/CLOCK-SETUP.md)
+The website embeds the same release installer. Badge and personal-theme uploads
+are separate steps after installation. The [original GitHub Pages address](https://valleytechsolutions.github.io/Dragon-Detector/)
+forwards installation links to this release flasher and keeps editor and guide
+links working. P4 and separate beta installers remain on the
+[companion site](https://valleytech-dragon-detector.pages.dev/#install). [Hosting details](docs/HOSTING-STATUS.md).
+
+[**Install firmware**](https://valleytechsolutions.github.io/Dragon-Detector-Flasher/) · [Latest release](docs/RELEASE-0.14.9.md) · [User guides](docs/GUI.md) · [Clock setup](docs/CLOCK-SETUP.md)
 
 **0.14.9 · Node modes with BadUSB, DagNazty and LockpickingVlad:** The wardriving node modes now ship together with Dag's BadUSB keyboard scripts on native-USB boards, the DagNazty Dark and digital watches and the new LockpickingVlad theme. A node and BadUSB keyboard mode never run at the same time. [BadUSB](docs/BADUSB.md) · [Release notes](docs/RELEASE-0.14.9.md).
 
@@ -71,11 +76,11 @@ Build your own clock, radar and counter in the [Custom theme tab](https://valley
 
 ## Install
 
-1. Open the [web flasher](https://valleytech-dragon-detector.pages.dev/#install) in desktop Chrome or Edge and connect your board with a USB data cable.
-2. Select the exact board. Use **Update matching Dragon Detector** for a compatible installation, or **Fresh install** for a new board. Fresh install replaces saved files and settings.
+1. Open the [web flasher](https://valleytechsolutions.github.io/Dragon-Detector-Flasher/) in desktop Chrome or Edge and connect your board with a USB data cable.
+2. Select the exact board. Use **Update Dragon Detector · preserve saved data** for a compatible installation, or **Fresh installation · erase saved data** for a new board. Fresh install replaces saved files and settings.
 3. Choose **Connect & install** and keep USB connected until installation and automatic date/time verification finish.
 
-[Installation and recovery](docs/FLASHING.md) · [M5Burner package](docs/M5BURNER.md) · [Firmware downloads and checksums](https://valleytech-dragon-detector.pages.dev/#install)
+[Installation and recovery](docs/FLASHING.md) · [M5Burner package](docs/M5BURNER.md) · [Firmware downloads and checksums](https://github.com/valleytechsolutions/Dragon-Detector/releases)
 
 ## Supported hardware
 
@@ -140,7 +145,7 @@ Detection matches observable radio signatures; it does not establish intent, own
 
 ## Development
 
-[Build instructions](docs/BUILDING.md) · [Security](SECURITY.md) · [Release notes](https://git.churchofmalware.org/Valleytech/Dragon-Detector/releases)
+[Build instructions](docs/BUILDING.md) · [Security](SECURITY.md) · [Release notes](https://github.com/valleytechsolutions/Dragon-Detector/releases)
 
 | Directory | Contents |
 |---|---|
