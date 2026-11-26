@@ -59,7 +59,7 @@ jobs:
       - run: python tools/test_theme_retirement.py --cxx g++
       - run: python tools/test_vlad_art.py
       - run: python tools/test_audio_levels.py --cxx g++
-      - run: pip install pillow ziglang==0.17.1
+      - run: pip install pillow ziglang==0.14.1
       - run: python tools/render_node_screen.py
       - run: python tools/render_waveshare206.py
   build:

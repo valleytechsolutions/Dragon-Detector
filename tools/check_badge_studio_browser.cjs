@@ -26,7 +26,7 @@ async function run() {
                 return;
               }
               const cmd=new TextDecoder().decode(data).trim();device.commands.push(cmd);
-              if(cmd==='badge info')reply('BADGE_INFO 0.14.8 '+device.size+' '+device.storage+' '+device.board);
+              if(cmd==='badge info')reply('BADGE_INFO 0.14.9 '+device.size+' '+device.storage+' '+device.board);
               else if(cmd.startsWith('badge upload ')){expected=Number(cmd.split(' ')[2]);received=0;payload=new Uint8Array(expected);reply('BADGE_READY');}
               else if(cmd.startsWith('time '))reply('TIME_OK');
               else if(cmd.startsWith('clock offset ')){device.offset=Number(cmd.split(' ')[2]);reply('CLOCK_OK');}
@@ -51,6 +51,7 @@ async function run() {
       await page.selectOption('#badge-board',id);
       await Promise.all([page.waitForResponse(r=>r.url().endsWith('/assets/dragon-detector.png')&&r.ok()),page.click('#stock-bwm')]);
       assert.equal(await page.locator('#preview').evaluate(c=>c.width),boardProfiles[id].size);
+      assert.equal(await page.locator('#preview').evaluate(c=>c.height),boardProfiles[id].height||boardProfiles[id].size);
     }
     console.log('PASS stock artwork on all '+profiles.length+' badge profiles');
     await page.locator('#image').setInputFiles('web/assets/dragon-detector-icon.png');
@@ -70,6 +71,18 @@ async function run() {
     await page.waitForFunction(()=>document.querySelector('#studio-status').textContent.includes('Saved and displayed'));
     assert.deepEqual(new Uint8Array(await page.evaluate(()=>Array.from(testDevice.badge))),encodeBadge(pixels,480));
     await page.click('#disconnect');
+    await page.evaluate(board=>Object.assign(testDevice,{board,size:410}),boardProfiles.waveshare_206.firmwareName);
+    await page.click('#connect');await page.waitForFunction(()=>!document.querySelector('#upload').disabled);
+    assert.deepEqual(await page.locator('#preview').evaluate(c=>[c.width,c.height,c.style.borderRadius]),[410,502,'12px']);
+    const rectangle=await page.locator('#preview').evaluate(c=>Array.from(c.getContext('2d').getImageData(0,0,410,502).data));
+    await page.click('#upload');await page.waitForFunction(()=>document.querySelector('#studio-status').textContent.includes('Saved and displayed'));
+    assert.deepEqual(new Uint8Array(await page.evaluate(()=>Array.from(testDevice.badge))),encodeBadge(rectangle,410,502));
+    const rectangleDownload=page.waitForEvent('download');await page.click('#download-badge');
+    const rectanglePng=await fs.readFile(await (await rectangleDownload).path());
+    assert.deepEqual([rectanglePng.readUInt32BE(16),rectanglePng.readUInt32BE(20)],[410,502]);
+    await page.locator('.studio').screenshot({path:'.work/waveshare206-badge-studio.png'});
+    await page.click('#disconnect');
+    console.log('PASS 410 x 502 preview, PNG and exact rectangular badge bytes over simulated USB');
     await page.evaluate(()=>testDevice.storage='NO_STORAGE');await page.click('#connect');
     await page.waitForFunction(()=>document.querySelector('#studio-status').textContent.includes('mount its badge storage'));
     assert.equal(await page.locator('#download-badge').isEnabled(),true);
