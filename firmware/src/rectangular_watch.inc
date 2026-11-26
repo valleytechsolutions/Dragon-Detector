@@ -38,7 +38,7 @@ static void rectangularWatch(lv_draw_ctx_t* ctx,WatchPalette p,const dragon::Cal
     if(valid&&seconds)line(ctx,28,cy+70,28+(w-56)*d.second/59,cy+70,p.accent,3);
     if(watchFace==10){ // Church of Malware retains its binary time readout.
       const unsigned values[]={unsigned(d.hour),unsigned(d.minute),unsigned(d.second)};
-      for(int row=0;row<3;++row)for(int bit=0;bit<6;++bit){int x=cx-78+bit*28,y=cy-132+row*20;panelBox(ctx,x,y,17,12,valid&&(values[row]&(1u<<(5-bit)))?p.ink:p.bg,p.muted,1);}
+      for(int row=0;row<3;++row)for(int bit=0;bit<6;++bit){int x=cx-78+bit*28,y=66+row*18;panelBox(ctx,x,y,17,12,valid&&(values[row]&(1u<<(5-bit)))?p.ink:p.bg,p.muted,1);}
     }
   }
   if(valid)snprintf(text,sizeof(text),"%04d-%02d-%02d",d.year,d.month,d.day);else strcpy(text,"TIME NOT SET");

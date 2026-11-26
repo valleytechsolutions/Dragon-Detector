@@ -195,6 +195,9 @@ static bool nodeKey(const char* source,bool hold=false){
 static void action(lv_event_t* e);
 static lv_obj_t* button(lv_obj_t* parent,const char* text,int x,int y,int w,int h,int id){
   auto* b=lv_btn_create(parent);lv_obj_set_pos(b,S(x),pageY(parent,y));lv_obj_set_size(b,S(w),S(h));lv_obj_set_style_pad_all(b,S(8),0);lv_obj_set_style_bg_color(b,color(uiColors().surface),0);lv_obj_set_style_radius(b,uiAscii()?0:S(13),0);lv_obj_set_style_border_width(b,1,0);lv_obj_set_style_border_color(b,color(uiColors().border),0);lv_obj_set_style_shadow_width(b,0,0);
+#ifdef BOARD_WAVESHARE_206
+  if(parent==root)lv_obj_set_height(b,std::min(S(h),h*lv_disp_get_ver_res(nullptr)/360));
+#endif
   lv_obj_add_event_cb(b,action,LV_EVENT_CLICKED,(void*)(intptr_t)id);auto* t=label(b,text,0,0,w-16);lv_obj_set_style_text_align(t,LV_TEXT_ALIGN_CENTER,0);lv_obj_center(t);return b;
 }
 static void dismissNotice(){if(notice){lv_obj_del(notice);notice=nullptr;}}
