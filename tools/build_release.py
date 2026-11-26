@@ -35,7 +35,8 @@ def build(board,skip):
         (out/'BOARD-STATUS.txt').write_text(
             'Dragon Detector 0.14.9 for Waveshare ESP32-S3-Touch-AMOLED-2.06.\n'
             'Initial port. Physical validation pending. 410 x 502 AMOLED, FT3168 touch, 32 MB flash, 8 MB PSRAM.\n'
-            'Full application, native rectangular menus, circular radar and clocks, ES8311 sound, PCF85063 RTC, AXP2101 battery and microSD.\n'
+            'Full application with native rectangular radar, clocks, menus and badges, ES8311 sound, PCF85063 RTC, AXP2101 battery and microSD.\n'
+            'Theme Studio support for rectangular displays is deferred.\n'
             'Fresh installation is required when replacing the factory demo. Updates require this exact board profile.\n'
             'No integrated GPS. Microphone recording and IMU applications are outside Dragon Detector 0.14.9 features.\n'
             'https://valleytech-dragon-detector.pages.dev/guides/WAVESHARE-AMOLED-206.html\n',encoding='utf-8')
