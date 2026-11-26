@@ -22,7 +22,7 @@ links working. P4 and separate beta installers remain on the
 
 [**Install firmware**](https://valleytechsolutions.github.io/Dragon-Detector-Flasher/) · [Latest release](docs/RELEASE-0.14.10.md) · [User guides](docs/GUI.md) · [Clock setup](docs/CLOCK-SETUP.md)
 
-**0.14.10 · Scanned-network selection and Marauder updates:** Choose a live scanned AP from the Wi-Fi attacks menu before opening a test. Open Wi-Fi beacons, random beacon identity handling and busy transmit queues follow reviewed ESP32 Marauder develop behavior. SD-capable boards add framed serial file transfer; 1.85B touch response is improved. [Release notes](docs/RELEASE-0.14.10.md).
+**0.14.10 · Scanned-network selection and Marauder updates:** On full-interface boards, choose a live scanned AP from the Wi-Fi attacks menu before opening a test. Open Wi-Fi beacons, random beacon identity handling and busy transmit queues follow reviewed ESP32 Marauder develop behavior. SD-capable boards add framed serial file transfer; 1.85B touch response is improved. [Release notes](docs/RELEASE-0.14.10.md).
 
 **0.14.8 · Wardriving node modes and a sleeker radar, on every board:** Tools → Modes now starts with **BISCUIT NODE** and **JCMK Node**, which turn the detector into a scan-only Wi-Fi node for a Biscuit or a JustCallMeKoko wardriving core. BISCUIT NODE waits for the Biscuit wardrive to start and scans until it ends; quick button presses never leave a node. On the full boards the radar gets a gold and cyan Valleytech look, redraws less per frame and loses fewer readings. [Node modes](docs/NODE-MODES.md) · [Release notes](docs/RELEASE-0.14.8.md).
 

@@ -8,11 +8,15 @@ Detector to preserve its settings and files.
 
 ## Choose a scanned Wi-Fi network
 
-Open **Attacks → Wi-Fi attacks → Select scanned network**. The list uses the
-access points Dragon Detector is already scanning. Choose an AP to return to
+On full-interface boards, open **Attacks → Wi-Fi attacks → Select scanned
+network**. The list uses the access points Dragon Detector is already scanning.
+Choose an AP to return to
 the Wi-Fi test menu; its name stays visible above the actions. Selecting an AP
 does not transmit or start a test. Actions still check that the AP and any
 required client are current when the action starts.
+
+The compact M5Stack Dial and Waveshare Lite retain their existing smaller
+menus; their 0.14.10 packages include the changes their hardware supports.
 
 ## Radio and serial changes
 
