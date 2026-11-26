@@ -45,7 +45,9 @@ extern lv_img_dsc_t watch_logo_lpl;
 extern lv_img_dsc_t radar_logo_awok,watch_logo_awok,radar_logo_baph,watch_logo_baph,radar_logo_wdgwars,watch_logo_wdgwars,radar_logo_n3rdsec,watch_logo_n3rdsec,radar_logo_halehound,watch_logo_halehound,watch_logo_halehound_splash,radar_logo_waveshare,watch_logo_waveshare,radar_logo_m5stack,watch_logo_m5stack,radar_logo_lab5,watch_logo_lab5,radar_logo_sasquach,watch_logo_sasquach,radar_logo_nyan,watch_logo_nyan,radar_logo_dmac,watch_logo_dmac,radar_logo_seeed,watch_logo_seeed,radar_logo_dagnazty,watch_dial_dagnazty,watch_dial_dagnazty_dark,watch_skull_dagnazty,watch_skull_dagnazty_dark,radar_logo_dagnazty_dark,radar_logo_deflock,watch_logo_deflock;
 // The layout is authored for the 360 px round panel. S() maps it onto the
 // board's panel; label/button/row helpers apply it, so callers pass 360 px units.
-#if SCREEN_RES<=240
+#if defined(BOARD_WAVESHARE_206)
+#define S(v) ((v)*lv_disp_get_hor_res(nullptr)/360)
+#elif SCREEN_RES<=240
 // Keep one-pixel strokes and tiny history samples visible after downscaling.
 #define S(v) (((v)*SCREEN_RES+((v)>=0?180:-180))/360)
 #else
@@ -149,8 +151,16 @@ struct FileRow {String path;bool dir;uint32_t size;};static FileRow files[96];st
 #endif
 struct Dot {int x,y,index;dragon::DeviceKey key;int labelSlot=-1;};static Dot dots[MAX_CONTACTS];static int dotCount=0;
 static lv_color_t color(uint32_t c){return lv_color_hex(c);}
+// Root menu rows use the native height; child rows retain their text spacing.
+static int pageY(lv_obj_t* parent,int y){
+#ifdef BOARD_WAVESHARE_206
+  if(parent==root&&page!=Radar&&page!=Clock&&page!=Boot&&page!=Startup)
+    return y*lv_disp_get_ver_res(nullptr)/360;
+#endif
+  return S(y);
+}
 static lv_obj_t* label(lv_obj_t* parent,const char* text,int x,int y,int w=0,const lv_font_t* font=F14,uint32_t c=uiColors().ink){
-  auto* o=lv_label_create(parent);lv_label_set_text(o,text);lv_obj_set_pos(o,S(x),S(y));if(w)lv_obj_set_width(o,S(w));lv_obj_set_style_text_font(o,uiFont(font),0);lv_obj_set_style_text_color(o,color(c),0);return o;
+  auto* o=lv_label_create(parent);lv_label_set_text(o,text);lv_obj_set_pos(o,S(x),pageY(parent,y));if(w)lv_obj_set_width(o,S(w));lv_obj_set_style_text_font(o,uiFont(font),0);lv_obj_set_style_text_color(o,color(c),0);return o;
 }
 static void go(Page p){
 // A wardriving node keeps its screen up; a key asks it to stop instead (nodeKey).
@@ -184,7 +194,7 @@ static bool nodeKey(const char* source,bool hold=false){
 }
 static void action(lv_event_t* e);
 static lv_obj_t* button(lv_obj_t* parent,const char* text,int x,int y,int w,int h,int id){
-  auto* b=lv_btn_create(parent);lv_obj_set_pos(b,S(x),S(y));lv_obj_set_size(b,S(w),S(h));lv_obj_set_style_pad_all(b,S(8),0);lv_obj_set_style_bg_color(b,color(uiColors().surface),0);lv_obj_set_style_radius(b,uiAscii()?0:S(13),0);lv_obj_set_style_border_width(b,1,0);lv_obj_set_style_border_color(b,color(uiColors().border),0);lv_obj_set_style_shadow_width(b,0,0);
+  auto* b=lv_btn_create(parent);lv_obj_set_pos(b,S(x),pageY(parent,y));lv_obj_set_size(b,S(w),S(h));lv_obj_set_style_pad_all(b,S(8),0);lv_obj_set_style_bg_color(b,color(uiColors().surface),0);lv_obj_set_style_radius(b,uiAscii()?0:S(13),0);lv_obj_set_style_border_width(b,1,0);lv_obj_set_style_border_color(b,color(uiColors().border),0);lv_obj_set_style_shadow_width(b,0,0);
   lv_obj_add_event_cb(b,action,LV_EVENT_CLICKED,(void*)(intptr_t)id);auto* t=label(b,text,0,0,w-16);lv_obj_set_style_text_align(t,LV_TEXT_ALIGN_CENTER,0);lv_obj_center(t);return b;
 }
 static void dismissNotice(){if(notice){lv_obj_del(notice);notice=nullptr;}}
@@ -237,10 +247,17 @@ static void setTextColor(lv_obj_t* o,uint32_t c){const lv_color_t v=color(c);if(
 static void setBgColor(lv_obj_t* o,uint32_t c){const lv_color_t v=color(c);if(lv_obj_get_style_bg_color(o,0).full!=v.full)lv_obj_set_style_bg_color(o,v,0);}
 static void setHidden(lv_obj_t* o,bool hidden){if(lv_obj_has_flag(o,LV_OBJ_FLAG_HIDDEN)==hidden)return;if(hidden)lv_obj_add_flag(o,LV_OBJ_FLAG_HIDDEN);else lv_obj_clear_flag(o,LV_OBJ_FLAG_HIDDEN);}
 static lv_obj_t* scrollBody(int y=91,int h=211){
-  auto* o=lv_obj_create(root);lv_obj_set_pos(o,S(44),S(y));lv_obj_set_size(o,S(272),S(h));lv_obj_set_style_bg_opa(o,LV_OPA_TRANSP,0);lv_obj_set_style_border_width(o,0,0);lv_obj_set_style_pad_all(o,0,0);lv_obj_set_scroll_dir(o,LV_DIR_VER);return o;
+  auto* o=lv_obj_create(root);lv_obj_set_pos(o,S(44),pageY(root,y));lv_obj_set_size(o,S(272),pageY(root,y+h)-pageY(root,y));lv_obj_set_style_bg_opa(o,LV_OPA_TRANSP,0);lv_obj_set_style_border_width(o,0,0);lv_obj_set_style_pad_all(o,0,0);lv_obj_set_scroll_dir(o,LV_DIR_VER);
+#ifdef BOARD_WAVESHARE_206
+  lv_obj_set_x(o,18);lv_obj_set_width(o,lv_disp_get_hor_res(nullptr)-36);
+#endif
+  return o;
 }
 static void row(lv_obj_t* parent,const char* top,const char* bottom,int index,int id,uint32_t c=uiColors().ink){
   auto* b=button(parent,"",1,index*59,256,54,id);auto* heading=label(b,top,0,0,231,F14,c);auto* detail=label(b,bottom,0,22,231,F12,uiColors().muted);
+#ifdef BOARD_WAVESHARE_206
+  lv_obj_set_width(b,lv_obj_get_width(parent)-4);lv_obj_set_width(heading,lv_obj_get_width(b)-24);lv_obj_set_width(detail,lv_obj_get_width(b)-24);
+#endif
   if(uiColors().light&&c!=uiColors().ink){lv_obj_set_style_bg_color(heading,color(dragon::RadarLabelBackground),0);lv_obj_set_style_bg_opa(heading,LV_OPA_COVER,0);}
   lv_label_set_long_mode(heading,LV_LABEL_LONG_DOT);lv_obj_set_height(heading,S(19));lv_label_set_long_mode(detail,LV_LABEL_LONG_DOT);lv_obj_set_height(detail,S(17));
 }
@@ -352,7 +369,7 @@ static void radarTap(lv_event_t* event){
   for(int i=0;i<dotCount;++i){auto& dot=dots[i];if(!contacts[dot.index].used||!(contactKey(contacts[dot.index])==dot.key))continue;
     if(dragon::radarHit(dot.x,dot.y,p.x,p.y,S(24),nearest))idx=dot.index;
   }
-  if(idx<0)for(int i=0;i<dotCount;++i)if(dots[i].labelSlot>=0&&contacts[dots[i].index].used&&contactKey(contacts[dots[i].index])==dots[i].key){auto box=dragon::radarLabelSlot(dots[i].labelSlot);if(p.x>=S(box.x)&&p.x<=S(box.x+box.w)&&p.y>=S(box.y)&&p.y<=S(box.y+box.h)){idx=dots[i].index;break;}}
+  if(idx<0)for(int i=0;i<dotCount;++i)if(dots[i].labelSlot>=0&&contacts[dots[i].index].used&&contactKey(contacts[dots[i].index])==dots[i].key){auto box=radarLabelBox(dots[i].labelSlot);if(p.x>=box.x&&p.x<=box.x+box.w&&p.y>=box.y&&p.y<=box.y+box.h){idx=dots[i].index;break;}}
   if(idx>=0){
     ++radarHits;radarSelectedKey=contactKey(contacts[idx]);radarHasSelection=true;radarSelectedAt=millis();radarPress.begin(radarSelectedKey);
   }else{radarGesture.clear();radarHasSelection=false;}
@@ -414,7 +431,9 @@ static void build(){
   nodeScreenClose();lv_obj_clean(root);lv_obj_set_style_bg_color(root,color(uiColors().bg),0);
 #ifdef RADAR_BACKDROP
   radarForgetMarks();
+#ifndef BOARD_WAVESHARE_206
   if(page==Radar)prepareRadarBackdrop();
+#endif
 #endif
   #ifndef BOARD_RADAR_LITE
   if(page==BleLab){bleLabView(root);return;}
@@ -436,8 +455,10 @@ static void build(){
   }else if(page==Radar){
     radar=lv_obj_create(root);lv_obj_remove_style_all(radar);lv_obj_set_pos(radar,0,0);lv_obj_set_size(radar,SCREEN_RES,SCREEN_RES);lv_obj_clear_flag(radar,LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN);lv_obj_add_flag(radar,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_PRESS_LOCK);
     lv_obj_add_event_cb(radar,radarDraw,LV_EVENT_DRAW_MAIN,nullptr);lv_obj_add_event_cb(radar,radarTap,LV_EVENT_PRESSED,nullptr);lv_obj_add_event_cb(radar,radarTap,LV_EVENT_CLICKED,nullptr);lv_obj_add_event_cb(radar,radarTap,LV_EVENT_PRESS_LOST,nullptr);
+#ifndef BOARD_WAVESHARE_206
     if(radarTheme==8||radarTheme==14||dmac()||radarTheme==22||radarTheme==23||radarTheme==DagNaztyDigitalTheme)circleLogo(root,radarLogo(radarTheme),17);
     else if(radarTheme!=dragon::VladTheme&&!lawLockTools()&&!moki()&&!delta44()&&!argyle()&&!vectorPotential()&&radarTheme!=13&&radarTheme!=24&&radarTheme!=32&&radarTheme!=CanCommanderTheme&&radarTheme!=MuldersRevengeTheme&&!greenArtTheme(radarTheme)){auto* logo=lv_img_create(root);lv_img_set_src(logo,radarLogo(radarTheme));lv_obj_align(logo,LV_ALIGN_TOP_MID,0,S(17));lv_obj_clear_flag(logo,LV_OBJ_FLAG_CLICKABLE);if(radarTheme==10||radarTheme==3){lv_obj_set_style_img_recolor(logo,color(radarTheme==3?0xd6b46e:0xffffff),0);lv_obj_set_style_img_recolor_opa(logo,LV_OPA_COVER,0);}}
+#endif
     const auto& theme=radarPalette(radarTheme);
     statusLabel=label(root,"LISTENING",56,radarTheme==dragon::VladTheme?30:66,248,F12,theme.text);lv_obj_set_style_text_align(statusLabel,LV_TEXT_ALIGN_CENTER,0);legible(statusLabel);lv_obj_set_style_bg_color(statusLabel,color(theme.panel),0);lv_obj_set_style_bg_opa(statusLabel,LV_OPA_60,0);
     radarActivity=label(root,"",75,radarTheme==dragon::VladTheme?48:84,210,F12,0xffbc76);lv_obj_set_style_text_align(radarActivity,LV_TEXT_ALIGN_CENTER,0);legible(radarActivity);lv_obj_add_flag(radarActivity,LV_OBJ_FLAG_CLICKABLE);lv_obj_add_event_cb(radarActivity,action,LV_EVENT_CLICKED,(void*)116);radarActivityCue=false;
@@ -451,6 +472,19 @@ static void build(){
     auto* targets=button(root,"TARGETS",90,301,90,32,96);
     auto* tools=button(root,"TOOLS",187,301,78,32,2);
     auto* quiet=button(root,detector.quiet?LV_SYMBOL_MUTE:LV_SYMBOL_VOLUME_MAX,270,257,38,34,97);
+#ifdef BOARD_WAVESHARE_206
+    const int width=lv_disp_get_hor_res(nullptr),height=lv_disp_get_ver_res(nullptr);
+    lv_obj_set_size(radar,width,height);
+    auto* heading=label(root,radarThemeNames[radarTheme],0,0,0,F20,theme.text);
+    lv_obj_set_pos(heading,18,16);lv_obj_set_width(heading,width-88);lv_label_set_long_mode(heading,LV_LABEL_LONG_DOT);lv_obj_set_height(heading,F20->line_height);
+    lv_obj_set_pos(statusLabel,18,50);lv_obj_set_width(statusLabel,width-36);
+    lv_obj_set_pos(radarActivity,18,73);lv_obj_set_width(radarActivity,width-36);
+    lv_obj_set_pos(quiet,width-62,12);lv_obj_set_size(quiet,44,36);
+    lv_obj_set_pos(trackingLabel,18,height-96);lv_obj_set_width(trackingLabel,width-36);
+    lv_obj_set_pos(radarSummary,18,height-142);lv_obj_set_size(radarSummary,width-36,42);
+    lv_obj_set_pos(targets,18,height-56);lv_obj_set_size(targets,(width-48)/2,42);
+    lv_obj_set_pos(tools,width/2+6,height-56);lv_obj_set_size(tools,(width-48)/2,42);
+#endif
     for(auto* b:{targets,tools,quiet}){lv_obj_set_style_bg_color(b,color(theme.panel),0);lv_obj_set_style_bg_opa(b,LV_OPA_80,0);lv_obj_set_style_border_color(b,color(theme.ring),0);lv_obj_set_style_border_opa(b,LV_OPA_60,0);if(locksport()||radarTheme==31)lv_obj_set_style_text_color(lv_obj_get_child(b,0),color(theme.text),0);}
     if(radarSleek()){
       const uint32_t hair=radarHairline(),plate=radarPlate();
@@ -696,10 +730,14 @@ static void build(){
     row(body,detector.enabled(Family::Adult)?"Adult Mode (18+): ON":"Adult Mode (18+): OFF","Opt-in passive BLE candidates / live only",n++,184);
   }else if(page==Stopwatch){
     dismissNotice();lv_obj_set_style_bg_color(root,color(locksport()?locksportBg():uiColors().bg),0);buildChronographFrame();
+#ifdef BOARD_WAVESHARE_206
+    title(locksport()?"LOCKSPORT TIMER":"CHRONOGRAPH","Precision stopwatch");
+#else
     if(locksport()){
       if(radarTheme!=dragon::PersonalThemeId&&!covert()&&!dmac()&&!lpl()&&!lpu()&&!sparrows()&&!vectorPotential()&&!argyle()&&!lawLockTools()&&!moki()&&!delta44()&&radarTheme!=dragon::VladTheme){circleLogo(root,&radar_logo_toool,20);centered(label(root,"LOCKSPORT TIMER",48,74,264,F20,locksportAccent()));}
       button(root,LV_SYMBOL_HOME,149,307,62,lawLockTools()?23:33,1);
     }else if(radarTheme!=dragon::PersonalThemeId&&radarTheme!=CanCommanderTheme)title("CHRONOGRAPH","Precision stopwatch");
+#endif
     timerState=label(root,"",50,lawLockTools()?112:locksport()?106:98,260,F12,locksport()?locksportAccent():uiColors().accent);centered(timerState);
     timerValue=label(root,"00:00.00",33,locksport()?136:130,294,FTIMER,locksport()?locksportInk():uiColors().ink);centered(timerValue);
     timerLap=label(root,"",50,184,260,F14,uiColors().muted);centered(timerLap);
@@ -1002,6 +1040,13 @@ void uiShow(const String& name){
   if(name=="activity"){go(Activity);return;}
   if(name=="badge")go(Badge);else if(name=="radar")go(Radar);else if(name=="menu")go(Menu);else if(name=="wifi"){filter=1;go(Devices);}else if(name=="ble"){filter=2;go(Devices);}else if(name=="audio")go(Audio);else if(name=="alerts")go(Alerts);else if(name=="channels")go(Channels);else if(name=="about")go(About);else if(name=="settings")go(Settings);else if(name=="hunt")go(Hunt);else if(name=="detectors")go(Detectors);else if(name=="history")go(History);else if(name=="display")go(Display);else if(name=="health")go(Diagnostics);else if(name=="targets"){filter=0;devicePage=0;go(Devices);}
 }
+#ifdef BOARD_WAVESHARE_206
+void uiRefreshLayout(){
+  if(clockPrompt){lv_obj_del(clockPrompt);clockPrompt=nullptr;}
+  if(resetBox){lv_obj_del(resetBox);resetBox=nullptr;}
+  dismissNotice();if(page!=Boot)pending=page;page=Boot;
+}
+#endif
 void uiPersonalThemeChanged(){selectRadarTheme(dragon::PersonalThemeId);go(Clock);page=Boot;}
 void uiPersonalThemeRemoved(){if(radarTheme==dragon::PersonalThemeId)selectRadarTheme(1);if(watchFace==dragon::PersonalWatchId){watchFace=0;settings.putUChar("watch-face",watchFace);}go(Radar);page=Boot;}
 void uiBegin(){
@@ -1035,6 +1080,7 @@ void uiLoop(){
     if(clockPrompt){lv_obj_del(clockPrompt);clockPrompt=nullptr;}
     if(page!=Recon&&pending!=Recon){reconPage("wardrive");pending=Recon;}
   }
+
   if(page==BadUsb&&badusbStatus().running)lastInteraction=millis();
 #ifdef BOARD_WAVESHARE_185B
   // Process the tap on the visible page before updating or painting that page.

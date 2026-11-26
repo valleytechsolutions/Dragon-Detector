@@ -4,6 +4,7 @@
 #include "node_mode.h"
 #include <Arduino.h>
 #include <math.h>
+#include <algorithm>
 
 extern const lv_img_dsc_t node_logo_biscuit;
 extern const lv_img_dsc_t node_logo_jcmk;
@@ -18,7 +19,7 @@ const lv_font_t* const NameFont=&lv_font_montserrat_14;
 const lv_font_t* const StatusFont=&lv_font_montserrat_10;
 const lv_font_t* const CountFont=&lv_font_montserrat_22;
 const lv_font_t* const SmallFont=&lv_font_montserrat_10;
-#elif defined(BOARD_WATCHER) || defined(BOARD_LILYGO_175) || defined(BOARD_WAVESHARE_143C) || defined(BOARD_AMOLED_175C) || defined(BOARD_AMOLED_175) || defined(BOARD_STOPWATCH) || defined(BOARD_CROWPANEL_21)
+#elif defined(BOARD_WATCHER) || defined(BOARD_LILYGO_175) || defined(BOARD_WAVESHARE_143C) || defined(BOARD_AMOLED_175C) || (defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_206)) || defined(BOARD_STOPWATCH) || defined(BOARD_CROWPANEL_21)
 const lv_font_t* const NameFont=&lv_font_montserrat_26;
 const lv_font_t* const StatusFont=&lv_font_montserrat_16;
 const lv_font_t* const CountFont=&lv_font_montserrat_48;
@@ -67,10 +68,14 @@ uint32_t lastColor=0;
 int16_t markerAt=-1;         // marker centre, degrees clockwise from the top; -1 before the first
 uint8_t scannedChannel=0;    // last channel scanned while linked; 0 before the first
 
+int nativeWidth=0,nativeHeight=0;
 int px(int units){return int(units*scale+(units>=0?.5f:-.5f));}
 // Width the round glass leaves for a row spanning top..top+height, inside the
 // ring with a small gap and room for the burn-in drift.
 lv_coord_t room(int top,int height){
+#ifdef BOARD_WAVESHARE_206
+  return nativeWidth-px(32);
+#endif
   const float r=panel/2.f,inner=r-px(16);
   const float above=r-top,below=top+height-r;
   const float d=above>below?above:below;
@@ -84,7 +89,12 @@ lv_obj_t* text(lv_obj_t* parent,const lv_font_t* font,uint32_t color,int y,int w
   lv_obj_set_style_text_align(l,LV_TEXT_ALIGN_CENTER,0);
   const lv_coord_t line=lv_font_get_line_height(font),fit=room(px(y),line);
   lv_label_set_long_mode(l,LV_LABEL_LONG_DOT);lv_obj_set_size(l,px(width)<fit?px(width):fit,line);
-  lv_obj_align(l,LV_ALIGN_TOP_MID,0,px(y));lv_label_set_text(l,"");
+#ifdef BOARD_WAVESHARE_206
+  lv_obj_align(l,LV_ALIGN_TOP_MID,0,y*nativeHeight/466);
+#else
+  lv_obj_align(l,LV_ALIGN_TOP_MID,0,px(y));
+#endif
+  lv_label_set_text(l,"");
   return l;
 }
 // True when value fits the label on one line.
@@ -124,8 +134,11 @@ void arm(bool on){
 void pressed(lv_event_t*){Serial.println("NODE_EXIT_PRESS source=screen");nodeScreenExitPress();}
 // The marker's arc, drawn around the panel centre inside its own small box.
 void drawMarker(lv_event_t* e){
+#ifdef BOARD_WAVESHARE_206
+  {lv_area_t a;lv_obj_get_coords(lv_event_get_target(e),&a);lv_draw_rect_dsc_t d;lv_draw_rect_dsc_init(&d);d.bg_color=lv_color_hex(lastColor);d.radius=2;lv_draw_rect(lv_event_get_draw_ctx(e),&d,&a);return;}
+#endif
   lv_area_t s;lv_obj_get_coords(lv_obj_get_parent(lv_event_get_target(e)),&s);
-  const lv_point_t centre{lv_coord_t(s.x1+panel/2),lv_coord_t(s.y1+panel/2)};
+  const lv_point_t centre{lv_coord_t((s.x1+s.x2+1)/2),lv_coord_t((s.y1+s.y2+1)/2)};
   lv_draw_arc_dsc_t d;lv_draw_arc_dsc_init(&d);d.color=lv_color_hex(lastColor);d.width=markerWidth;d.rounded=1;
   // lv_draw_arc counts from 3 o'clock; markerAt counts from 12.
   lv_draw_arc(lv_event_get_draw_ctx(e),&d,&centre,markerRadius,uint16_t((markerAt+270+360-MarkerSpan/2)%360),uint16_t((markerAt+270+MarkerSpan/2)%360));
@@ -135,10 +148,13 @@ void placeMarker(int16_t middle){
   middle=int16_t((middle%360+360)%360);
   if(middle==markerAt)return;
   markerAt=middle;
+#ifdef BOARD_WAVESHARE_206
+  lv_obj_set_pos(w.marker,px(18)+middle*(nativeWidth-px(76))/359,nativeHeight-px(17));lv_obj_set_size(w.marker,px(40),px(4));return;
+#endif
   const float centre=panel/2-.5f,line=markerRadius-markerWidth/2.f,pad=markerWidth/2.f+2;
   float x1=1e9f,y1=1e9f,x2=-1e9f,y2=-1e9f;
   for(int a=-MarkerSpan/2;a<=MarkerSpan/2;a+=2){
-    const float r=(middle+a)*.0174532925f,x=centre+line*sinf(r),y=centre-line*cosf(r);
+    const float r=(middle+a)*.0174532925f,x=centre+line*sinf(r)+(nativeWidth-panel)/2.f,y=centre-line*cosf(r)+(nativeHeight-panel)/2.f;
     x1=fminf(x1,x);x2=fmaxf(x2,x);y1=fminf(y1,y);y2=fmaxf(y2,y);
   }
   const lv_coord_t left=lv_coord_t(floorf(x1-pad)),top=lv_coord_t(floorf(y1-pad));
@@ -225,26 +241,36 @@ void nodeScreenOpen(lv_obj_t* parent,const NodeScreenOptions& opened){
   nodeScreenClose();
   options=opened;shownKind=nodeKind();leaving=false;armed=false;hinting=false;
   const lv_coord_t size=lv_obj_get_width(parent)?lv_obj_get_width(parent):lv_disp_get_hor_res(nullptr);
+#ifdef BOARD_WAVESHARE_206
+  const lv_coord_t height=lv_disp_get_ver_res(nullptr);
+  panel=std::min(size,height);scale=float(panel)/466.f;
+#else
+  const lv_coord_t height=size;
   panel=size;scale=float(size)/466.f;
+#endif
+  nativeWidth=size;nativeHeight=height;
   w.screen=lv_obj_create(parent);
-  lv_obj_remove_style_all(w.screen);lv_obj_set_size(w.screen,size,size);lv_obj_set_pos(w.screen,0,0);
+  lv_obj_remove_style_all(w.screen);lv_obj_set_size(w.screen,size,height);lv_obj_set_pos(w.screen,0,0);
   lv_obj_set_style_bg_color(w.screen,lv_color_hex(Black),0);lv_obj_set_style_bg_opa(w.screen,LV_OPA_COVER,0);
   lv_obj_clear_flag(w.screen,LV_OBJ_FLAG_SCROLLABLE);
 
   // Rim: a dark track centred on the glass, and the marker on it.
-  const lv_coord_t ring=size-2*px(5);
+  const lv_coord_t ring=panel-2*px(5);
   w.ring=lv_obj_create(w.screen);
   lv_obj_remove_style_all(w.ring);lv_obj_set_size(w.ring,ring,ring);lv_obj_center(w.ring);
   lv_obj_clear_flag(w.ring,LV_OBJ_FLAG_CLICKABLE);lv_obj_clear_flag(w.ring,LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_set_style_radius(w.ring,LV_RADIUS_CIRCLE,0);
   lv_obj_set_style_border_width(w.ring,px(3)>1?px(3):2,0);lv_obj_set_style_border_color(w.ring,lv_color_hex(Track),0);
+#ifdef BOARD_WAVESHARE_206
+  lv_obj_set_size(w.ring,size-px(12),height-px(12));lv_obj_set_style_radius(w.ring,px(12),0);lv_obj_center(w.ring);
+#endif
   markerRadius=ring/2;markerWidth=px(5)>2?px(5):3;markerAt=-1;scannedChannel=0;
   w.marker=lv_obj_create(w.screen);
   lv_obj_remove_style_all(w.marker);lv_obj_clear_flag(w.marker,LV_OBJ_FLAG_CLICKABLE);lv_obj_clear_flag(w.marker,LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_add_event_cb(w.marker,drawMarker,LV_EVENT_DRAW_MAIN,nullptr);
 
   w.content=lv_obj_create(w.screen);
-  lv_obj_remove_style_all(w.content);lv_obj_set_size(w.content,size,size);lv_obj_set_pos(w.content,0,0);
+  lv_obj_remove_style_all(w.content);lv_obj_set_size(w.content,size,height);lv_obj_set_pos(w.content,0,0);
   lv_obj_clear_flag(w.content,LV_OBJ_FLAG_SCROLLABLE);lv_obj_clear_flag(w.content,LV_OBJ_FLAG_CLICKABLE);
 
   w.name=text(w.content,NameFont,White,Row.name,330);
@@ -254,7 +280,11 @@ void nodeScreenOpen(lv_obj_t* parent,const NodeScreenOptions& opened){
   w.logo=lv_img_create(w.content);
   lv_img_set_src(w.logo,shownKind==NodeKind::Biscuit?&node_logo_biscuit:&node_logo_jcmk);
   lv_obj_set_style_img_recolor(w.logo,lv_color_hex(White),0);lv_obj_set_style_img_recolor_opa(w.logo,LV_OPA_COVER,0);
+  #ifdef BOARD_WAVESHARE_206
+  lv_obj_align(w.logo,LV_ALIGN_CENTER,0,(Row.logo-233)*height/466);
+#else
   lv_obj_align(w.logo,LV_ALIGN_CENTER,0,px(Row.logo-233));
+#endif
 
   w.count=text(w.content,CountFont,White,Row.count,300);
   w.countLabel=text(w.content,SmallFont,Muted,Row.label,300);
@@ -265,7 +295,12 @@ void nodeScreenOpen(lv_obj_t* parent,const NodeScreenOptions& opened){
   // focuses a child of the non-clickable content.
   if(options.exitButton){
     w.button=lv_btn_create(w.content);
-    lv_obj_set_size(w.button,px(132),px(38));lv_obj_align(w.button,LV_ALIGN_TOP_MID,0,px(Row.button));
+    lv_obj_set_size(w.button,px(132),px(38));
+#ifdef BOARD_WAVESHARE_206
+    lv_obj_align(w.button,LV_ALIGN_TOP_MID,0,Row.button*height/466);
+#else
+    lv_obj_align(w.button,LV_ALIGN_TOP_MID,0,px(Row.button));
+#endif
     lv_obj_set_style_radius(w.button,LV_RADIUS_CIRCLE,0);lv_obj_set_style_shadow_width(w.button,0,0);
     lv_obj_set_style_bg_opa(w.button,LV_OPA_COVER,0);lv_obj_set_style_border_width(w.button,1,0);paintButton(false);
     lv_obj_set_style_outline_color(w.button,lv_color_hex(White),LV_STATE_FOCUS_KEY);lv_obj_set_style_outline_width(w.button,2,LV_STATE_FOCUS_KEY);

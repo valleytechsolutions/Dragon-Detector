@@ -285,8 +285,14 @@ static void watchCovert(lv_draw_ctx_t* ctx,const dragon::Calendar& d,bool valid)
 #include "lpl_watch.inc"
 #include "containment_watch.inc"
 #include "cyber_runner_watch.inc"
+#ifdef BOARD_WAVESHARE_206
+#include "rectangular_watch.inc"
+#endif
 static void watchDraw(lv_event_t* e){
   auto* ctx=lv_event_get_draw_ctx(e);const auto& p=watches[watchFace];dragon::Calendar d;clockLocal(d);bool valid=wallTime()!=0;char text[64];
+#ifdef BOARD_WAVESHARE_206
+  rectangularWatch(ctx,p,d,valid);return;
+#endif
   if(watchFace==0){
     // Reuse the startup asset: the emblem remains unobscured by hands or text.
     watchLogo(ctx,boot_dragon_logo,28);
@@ -367,6 +373,13 @@ static void buildWatch(){
   watchDial=lv_obj_create(root);lv_obj_remove_style_all(watchDial);lv_obj_set_size(watchDial,SCREEN_RES,SCREEN_RES);lv_obj_clear_flag(watchDial,LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_GESTURE_BUBBLE);
   lv_obj_add_event_cb(watchDial,watchDraw,LV_EVENT_DRAW_MAIN,nullptr);lv_obj_add_event_cb(watchDial,watchGesture,LV_EVENT_GESTURE,nullptr);
   if(watchFace==27){pigFrameAt=millis();pigNextAt=millis();lv_obj_add_event_cb(watchDial,pigTap,LV_EVENT_CLICKED,nullptr);}
+#ifdef BOARD_WAVESHARE_206
+  const int width=lv_disp_get_hor_res(nullptr),height=lv_disp_get_ver_res(nullptr);
+  lv_obj_set_size(watchDial,width,height);
+  const char* names[]={"SETTINGS","TOOLS"};const int actions[]={160,2};
+  for(int i=0;i<2;++i){auto* b=button(watchDial,names[i],0,0,100,30,actions[i]);lv_obj_set_pos(b,18+i*(width/2-6),height-48);lv_obj_set_size(b,(width-48)/2,36);lv_obj_set_style_bg_color(b,color(p.bg),0);lv_obj_set_style_border_color(b,color(p.muted),0);lv_obj_set_style_text_color(lv_obj_get_child(b,0),color(p.ink),0);}
+  return;
+#endif
   // DagNazty dials keep the wide button pair above their six o'clock fangs.
   const bool dagDial=watchFace==26||watchFace==DagNaztyDarkWatch||watchFace==DagDigitalWatch||watchFace==DagDarkDigitalWatch;
   bool compact=!dagDial&&(watchFace==0||watchFace==10||watchFace==12||watchFace==27||watchFace==28||watchFace>=29);int y=dagDial?279:watchFace==0?316:watchFace==27?315:(watchFace==12||watchFace==28||watchFace>=29)?326:watchFace==10?317:279,h=!dagDial&&(watchFace==0||watchFace==12||watchFace==28||watchFace>=29)?21:27;
@@ -407,6 +420,12 @@ static void updateTimerOrbit(uint64_t elapsed){
   }
 }
 static void buildChronographFrame(){
+#ifdef BOARD_WAVESHARE_206
+  auto* panel=lv_obj_create(root);lv_obj_remove_style_all(panel);lv_obj_set_size(panel,lv_disp_get_hor_res(nullptr),lv_disp_get_ver_res(nullptr));lv_obj_clear_flag(panel,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_add_event_cb(panel,[](lv_event_t* e){const int w=lv_disp_get_hor_res(nullptr),h=lv_disp_get_ver_res(nullptr);panelBox(lv_event_get_draw_ctx(e),12,12,w-24,h-24,uiColors().bg,uiColors().border,10);},LV_EVENT_DRAW_MAIN,nullptr);
+  return;
+#endif
+
   auto* frame=lv_obj_create(root);lv_obj_remove_style_all(frame);lv_obj_set_size(frame,SCREEN_RES,SCREEN_RES);lv_obj_clear_flag(frame,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_add_event_cb(frame,[](lv_event_t* e){auto* ctx=lv_event_get_draw_ctx(e);watchRing(ctx,174,uiColors().border);watchRing(ctx,168,uiColors().raised);watchLine(ctx,126,177,234,177,uiColors().accent);
     if(radarTheme==dragon::PersonalThemeId&&page==Stopwatch){watchLogo(ctx,*personalThemeLogo(),20);watchText(ctx,locksport()?"LOCKSPORT TIMER":"CHRONOGRAPH",48,74,264,F20,uiColors().accent);}

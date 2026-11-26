@@ -149,7 +149,7 @@ assert tone.count('defined(BOARD_WAVESHARE_143C)') == 4
 # check uses the lower floor, so a second join in one session is not refused.
 network = text('firmware/src/network_tools.cpp')
 assert 'defined(BOARD_WAVESHARE_143C)' in condition_before('firmware/src/network_tools.cpp', 'constexpr unsigned minimumHeap=18000;')
-assert network.count('BOARD_WAVESHARE_143C') == 2 and '&& !defined(BOARD_WAVESHARE_143C)\n esp_err_t err=esp_netif_init();' in network
+assert network.count('BOARD_WAVESHARE_143C') == 2 and '&& !defined(BOARD_WAVESHARE_143C) && !defined(BOARD_WAVESHARE_206)\n esp_err_t err=esp_netif_init();' in network
 # 3.94 MiB of shared storage takes the 1 MiB capture and 256 KiB session
 # classes; no RTC is promised; the rotation buffer stays DMA-capable.
 for path in ('firmware/src/recon.cpp', 'firmware/src/missions.cpp', 'firmware/src/wearable.cpp', 'firmware/src/ble_lab.cpp'):

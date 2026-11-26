@@ -27,7 +27,7 @@ export async function checkRelease(board,mode,{fetchImpl=fetch,signal,timeoutMs=
       const length=file.headers.get('content-length'),size=length===null?null:Number(length);
       if((size!==null&&(!Number.isSafeInteger(size)||size<=0))||/text\/html/i.test(file.headers.get('content-type')||''))
         throw new Error(`${part.path} did not return a valid firmware file. Retry or report this release.`);
-      const capacity=(['watcher','waveshare','waveshare_p4_knob'].includes(board)?32:['waveshare_143c','m5dial','xiao_round'].includes(board)?8:16)*1024*1024;
+      const capacity=(['waveshare_206','watcher','waveshare','waveshare_p4_knob'].includes(board)?32:['waveshare_143c','m5dial','xiao_round'].includes(board)?8:16)*1024*1024;
       if(board==='waveshare_p4_knob'&&size!==null){
         const limits={'bootloader.bin':0x6000,'partitions.bin':0x1000,'boot_app0.bin':0x2000,'firmware.bin':0x600000,'littlefs.bin':0x11f0000};
         if(size>limits[part.path]||(part.path==='littlefs.bin'&&size!==limits[part.path]))throw new Error('P4 firmware file does not fit its partition.');

@@ -163,3 +163,5 @@ CI tests the firmware core and browser modules, builds all thirteen ESP32 profil
 Original application, web, and tooling code: [MIT](LICENSE), Your Pal Kal / Valleytech Custom Solutions. Dependencies, reference research, and supplied artwork retain their own rights and notices. [Attributions](CREDITS.md)
 
 Dragon Detector is an independent project. Brand and character artwork does not imply affiliation or endorsement.
+
+The Waveshare ESP32-S3-Touch-AMOLED-2.06 has an initial 0.14.9 port with physical validation pending. See the [hardware guide](docs/WAVESHARE-AMOLED-206.md).

@@ -80,7 +80,7 @@ for board in boards:
             assert part['offset']>=end,'Overlapping segments'
             payload=file.read_bytes();assert hashlib.sha256(payload).hexdigest()==records[file.name]
             end=part['offset']+len(payload)
-            assert end<=(0x2000000 if board in ('watcher','waveshare') else 0x800000 if board in ('waveshare_143c','m5dial','xiao_round') else 0x1000000),'Image exceeds physical flash'
+            assert end<=(0x2000000 if board in ('waveshare_206','watcher','waveshare') else 0x800000 if board in ('waveshare_143c','m5dial','xiao_round') else 0x1000000),'Image exceeds physical flash'
         offsets=[p['offset'] for p in parts]
         assert 0x9000 not in offsets,'NVS must not be explicitly written'
         assert len(parts)==((6 if board=='waveshare' else 5) if mode=='factory' else 4)

@@ -13,7 +13,7 @@ function rig(board='waveshare',{rtc=1,offset=345,valid=1,identity,drift=0,openFa
     async wait(match){
       const reply=this.command==='badge info'?`BADGE_INFO ${version} ${boardProfiles[board].size} ${boardProfiles[board].lite?(version==='0.13.7'?'RADAR_ONLY':'LITE'):'READY'} ${identity||boardProfiles[board].firmwareName}`:
         this.command.startsWith('time ')?'TIME_OK':this.command.startsWith('clock offset ')?'CLOCK_OK':
-        this.command==='clock hardware'?`CLOCK_HARDWARE detected=${['waveshare_185b','watcher'].includes(board)?1:0} valid=${['waveshare_185b','watcher'].includes(board)?1:0} epoch=${['waveshare_185b','watcher'].includes(board)?epoch+hardwareReads++:0}`:
+        this.command==='clock hardware'?`CLOCK_HARDWARE detected=${['waveshare_206','waveshare_185b','watcher'].includes(board)?1:0} valid=${['waveshare_206','waveshare_185b','watcher'].includes(board)?1:0} epoch=${['waveshare_206','waveshare_185b','watcher'].includes(board)?epoch+hardwareReads++:0}`:
         this.command==='clock status'?`CLOCK_STATUS rtc=${rtc} valid=${valid} epoch=${epoch+drift} offset=${offset}`:'ORIENTATION_STATUS manual=1 degrees=0';
       assert.ok(match(reply),reply);return reply;
     }
@@ -43,10 +43,10 @@ test('successful flash with locked USB cannot start a competing clock connection
 test('post-install clock verifies each full board, current offset and RTC state',async()=>{
   for(const board of Object.keys(builtProfiles).filter(k=>!boardProfiles[k].lite)){
     for(const offset of [-720,-240,0,330,345,840]){
-      const rtc=['waveshare_185b','watcher','lilygo_175','stopwatch','xiao_round','waveshare_175','waveshare_175_gps'].includes(board)?1:0;
-      const r=rig(board,{offset,rtc,version:board==='waveshare_143c'?'0.14.7':board==='guition_185_beta'?'0.14.2':board==='waveshare_185b'?'0.14.1':board==='watcher'?'0.13.29':board==='elecrow_21'?'0.13.20':'0.13.7'});const result=await syncInstalledClock({},board,r.options);
+      const rtc=['waveshare_206','waveshare_185b','watcher','lilygo_175','stopwatch','xiao_round','waveshare_175','waveshare_175_gps'].includes(board)?1:0;
+      const r=rig(board,{offset,rtc,version:board==='waveshare_206'?'0.14.9':board==='waveshare_143c'?'0.14.7':board==='guition_185_beta'?'0.14.2':board==='waveshare_185b'?'0.14.1':board==='watcher'?'0.13.29':board==='elecrow_21'?'0.13.20':'0.13.7'});const result=await syncInstalledClock({},board,r.options);
       assert.equal(result.board,board);assert.equal(result.rtc,!!rtc);assert.equal(result.offset,offset);
-      assert.deepEqual(r.writes,['badge info',`time ${r.epoch}`,`clock offset ${offset}`,'clock status','orientation status',...(['waveshare_185b','watcher'].includes(board)?['clock hardware','clock hardware']:['waveshare_143c','guition_185_beta','elecrow_21'].includes(board)?['clock hardware']:[])]);
+      assert.deepEqual(r.writes,['badge info',`time ${r.epoch}`,`clock offset ${offset}`,'clock status','orientation status',...(['waveshare_206','waveshare_185b','watcher'].includes(board)?['clock hardware','clock hardware']:['waveshare_143c','guition_185_beta','elecrow_21'].includes(board)?['clock hardware']:[])]);
       assert.deepEqual(r.events,['open','close']);
     }
   }

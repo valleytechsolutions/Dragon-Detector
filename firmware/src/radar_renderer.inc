@@ -30,6 +30,9 @@ static void line(lv_draw_ctx_t* ctx,int x1,int y1,int x2,int y2,uint32_t c,int w
 static void disc(lv_draw_ctx_t* ctx,int x,int y,int r,uint32_t c,int opa=255){
   lv_draw_rect_dsc_t d;lv_draw_rect_dsc_init(&d);d.radius=LV_RADIUS_CIRCLE;d.bg_color=color(c);d.bg_opa=opa;lv_area_t a{(lv_coord_t)(x-r),(lv_coord_t)(y-r),(lv_coord_t)(x+r),(lv_coord_t)(y+r)};lv_draw_rect(ctx,&d,&a);
 }
+#ifdef BOARD_WAVESHARE_206
+#include "rectangular_layout.h"
+#endif
 #include "radar_fx.inc"
 #ifndef BOARD_RADAR_LITE
 #define RADAR_BACKDROP 1
@@ -64,8 +67,15 @@ static const char* radarFamilyName(Family f){
 #endif
   switch(f){case Family::Axon:return "Axon / TASER";case Family::Meta:return "Camera glasses";case Family::Tracker:return "Find My / DULT";case Family::GoogleTag:return "Find Hub";case Family::Skimmer:return "Serial module";case Family::Camera:return "Camera vendor";case Family::Alpr:return "ALPR vendor";case Family::Drone:return "Drone RID";case Family::Deauth:return "Deauth burst";case Family::BleSpam:return "BLE burst";case Family::EvilTwin:return "SSID conflict";default:return dragon::familyName(f);}
 }
+static dragon::RadarLabelBox radarLabelBox(unsigned slot){
+#ifdef BOARD_WAVESHARE_206
+  const auto b=dragon::rectangularRadarLabel(slot,lv_disp_get_hor_res(nullptr),lv_disp_get_ver_res(nullptr));return {b.x,b.y,b.w,b.h};
+#else
+  const auto b=dragon::radarLabelSlot(slot,RadarRenderLite);return {S(b.x),S(b.y),S(b.w),S(b.h)};
+#endif
+}
 static void callout(lv_draw_ctx_t* ctx,const Dot& dot,unsigned slot,const char* text,uint32_t c){
-  auto b=dragon::radarLabelSlot(slot,RadarRenderLite);int x=S(b.x),y=S(b.y),w=S(b.w),h=S(b.h);
+  auto b=radarLabelBox(slot);int x=b.x,y=b.y,w=b.w,h=b.h;
   int edgeX=constrain(dot.x,x,x+w),edgeY=constrain(dot.y,y,y+h);
 #ifdef BOARD_M5DIAL
   line(ctx,dot.x,dot.y,edgeX,edgeY,c,1,190);
@@ -94,7 +104,7 @@ static void callout(lv_draw_ctx_t* ctx,const Dot& dot,unsigned slot,const char* 
 }
 // Box a callout repaints: its plate, its leader and the dot redrawn over it.
 static dragon::RadarRect calloutBounds(const Dot& dot,unsigned slot){
-  auto b=dragon::radarLabelSlot(slot,RadarRenderLite);const int x=S(b.x),y=S(b.y),w=S(b.w),h=S(b.h),pad=S(4)+2;
+  auto b=radarLabelBox(slot);const int x=b.x,y=b.y,w=b.w,h=b.h,pad=S(4)+2;
   auto box=dragon::radarRect(x-2,y-2,x+w+2,y+h+2);
   const int ex=constrain(dot.x,x,x+w),ey=constrain(dot.y,y,y+h);
   box=dragon::rectUnion(box,dragon::radarRect(std::min(dot.x,ex)-pad,std::min(dot.y,ey)-pad,std::max(dot.x,ex)+pad,std::max(dot.y,ey)+pad));
@@ -268,6 +278,10 @@ static void radarSweep(lv_draw_ctx_t* ctx){
   (void)theme;
 }
 
+#ifdef BOARD_WAVESHARE_206
+#include "rectangular_draw.inc"
+#endif
+
 // ---- frame model ---------------------------------------------------------------
 // Time since a contact event. A repaint between frames paints with the last
 // frame's time while the radio keeps updating contacts, so an event can be
@@ -301,7 +315,11 @@ static void radarFrame(uint32_t now){
   dotCount=0;
   for(unsigned k=0;k<unsigned(radarCount);++k){int i=radarOrder[k];auto& c=contacts[i];if(!radarVisible(c,now))continue;
     float target=c.signal.count?dragon::radarRadius(c.signal.smooth):158.f;if(!c.plotRadius)c.plotRadius=target;else if(!(radarHasSelection&&contactKey(c)==radarSelectedKey))c.plotRadius+=(target-c.plotRadius)*.35f;
+    #ifdef BOARD_WAVESHARE_206
+    const auto plot=dragon::rectangularRadarPoint(c.plotRadius,c.radarX,c.radarY,lv_disp_get_hor_res(nullptr),lv_disp_get_ver_res(nullptr));dots[dotCount++]={plot.x,plot.y,i,contactKey(c)};
+#else
     auto plot=dragon::radarPlotPoint(c.plotRadius,c.radarX,c.radarY);dots[dotCount++]={S(plot.x),S(plot.y),i,contactKey(c)};
+#endif
   }
   // Dots are never paginated. Descriptions prioritize ALPR/cameras, then other
   // device families. Find My and iBeacons consume leader space only when tapped.
@@ -313,7 +331,16 @@ static void radarFrame(uint32_t now){
   dragon::RadarPoint points[RadarRenderLabelLimit];uint8_t preferred[RadarRenderLabelLimit];
   static dragon::DeviceKey labelKeys[RadarRenderLabelLimit];static uint8_t slots[RadarRenderLabelLimit];static unsigned priorCount=0;
   for(unsigned j=0;j<labelCount;++j){auto& dot=dots[labels[j]];points[j]={dot.x*360/SCREEN_RES,dot.y*360/SCREEN_RES};preferred[j]=255;for(unsigned k=0;k<priorCount;++k)if(labelKeys[k]==dot.key)preferred[j]=slots[k];}
-  dragon::placeRadarLabels(points,labelCount,slots,preferred,RadarRenderLite);priorCount=labelCount;
+  #ifdef BOARD_WAVESHARE_206
+  unsigned used=0;
+  for(unsigned j=0;j<labelCount;++j){int best=-1;long cost=LONG_MAX;const auto& dot=dots[labels[j]];
+    for(unsigned k=0;k<RadarRenderLabelLimit;++k)if(!(used&(1u<<k))){auto b=radarLabelBox(k);int dx=dot.x-constrain(dot.x,b.x,b.x+b.w),dy=dot.y-constrain(dot.y,b.y,b.y+b.h);long next=dx*dx+dy*dy-(preferred[j]==k?800:0);if(next<cost){cost=next;best=k;}}
+    slots[j]=best;used|=1u<<best;
+  }
+#else
+  dragon::placeRadarLabels(points,labelCount,slots,preferred,RadarRenderLite);
+#endif
+  priorCount=labelCount;
 #ifndef BOARD_RADAR_LITE
   if(!radarLabelPlan)radarLabelPlan=(RadarLabelPlan*)heap_caps_calloc(RadarRenderLabelLimit,sizeof(RadarLabelPlan),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);
   if(!radarLabelPlan)labelCount=0; // dots still draw; only the callouts are skipped
@@ -433,6 +460,9 @@ static void radarDraw(lv_event_t* e){
   if(!radarFrameRefresh){const auto* c=ctx->clip_area;radarOffFrame.add(dragon::radarRect(c->x1,c->y1,c->x2,c->y2),SCREEN_RES);}
 #endif
   if(radarFrameBuilt!=now)radarFrame(now); // first paint after a page build
+#ifdef BOARD_WAVESHARE_206
+  rectangularRadarField(ctx,now);
+#else
 #ifdef RADAR_BACKDROP
   if(!radarFieldAnimated(radarTheme)&&radarBackdropValid()){lv_draw_img_dsc_t d;lv_draw_img_dsc_init(&d);lv_area_t a{0,0,SCREEN_RES-1,SCREEN_RES-1};lv_draw_img(ctx,&d,&a,&radarBackdrop);}
   else
@@ -440,6 +470,7 @@ static void radarDraw(lv_event_t* e){
   radarField(ctx,now);
   // Sweep and pulse are animation, not measurements of bearing or RF activity.
   radarSweep(ctx);
+#endif
   // Paint low-priority dots first so a coincident tracker cannot cover Axon.
   for(int i=dotCount-1;i>=0;--i){if(!radarDotCurrent(dots[i]))continue;const auto look=radarDotLook(dots[i],now);
 #ifndef BOARD_RADAR_LITE
@@ -462,7 +493,9 @@ static void radarDraw(lv_event_t* e){
 #ifndef BOARD_RADAR_LITE
   if(radarCenterBreathes()&&!radarTouchesClip(ctx,radarCenterBounds()))return;
 #endif
+#ifndef BOARD_WAVESHARE_206
   radarCenter(ctx,theme,now);
+#endif
 }
 
 #ifndef BOARD_RADAR_LITE
@@ -497,6 +530,9 @@ static bool radarPartialTheme(){return radarSweepKind(radarTheme)!=RadarSweep::C
 // Returns true when the whole radar was invalidated.
 static bool radarInvalidate(lv_obj_t* radar,uint32_t now){
   radarFrame(now);
+#ifdef BOARD_WAVESHARE_206
+  lv_obj_invalidate(radar);return true;
+#endif
   if(auto* disp=lv_disp_get_default())if(!disp->driver->monitor_cb)disp->driver->monitor_cb=[](lv_disp_drv_t*,uint32_t,uint32_t px){radarPaintPixels+=px;};
   if(!radarMarks){radarMarks=(RadarMark*)heap_caps_calloc(MAX_CONTACTS+RadarRenderLabelLimit,sizeof(RadarMark),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);radarLabelMarks=radarMarks?radarMarks+MAX_CONTACTS:nullptr;}
   dragon::RadarDirty<14> dirty;bool full=!radarMarks||!radarMarksValid||!radarPartialTheme()||radarOffFrame.full;

@@ -13,15 +13,19 @@ static uint8_t* pixels=nullptr;
 static lv_img_dsc_t image;
 static lv_obj_t* picture=nullptr;
 static Preferences prefs;
-static bool validHeader(const uint8_t* h){return !memcmp(h,"DDB1",4) && (h[4]|h[5]<<8)==SCREEN_RES && (h[6]|h[7]<<8)==SCREEN_RES;}
+static bool validHeader(const uint8_t* h){return !memcmp(h,"DDB1",4) && (h[4]|h[5]<<8)==SCREEN_RES && (h[6]|h[7]<<8)==SCREEN_HEIGHT;}
 static bool load(){
   File f;if(ready && LittleFS.exists("/badges/active.rgb565"))f=LittleFS.open("/badges/active.rgb565");uint8_t h[8];
-  size_t size=SCREEN_RES*SCREEN_RES*2;
+  size_t size=SCREEN_WIDTH*SCREEN_HEIGHT*2;
   bool saved=f && f.size()==size+8 && f.read(h,8)==8 && validHeader(h);
   uint8_t* next=(uint8_t*)ps_malloc(size);
-  bool ok=next && (saved?f.read(next,size)==size:badgeStockPixels(next,size));f.close();if(!ok){free(next);return false;}
+  bool ok=false;
+  if(next){
+    if(saved)ok=f.read(next,size)==size;
+    else {memset(next,0,size);const size_t stockBytes=SCREEN_RES*SCREEN_RES*2;ok=badgeStockPixels(next+(SCREEN_HEIGHT-SCREEN_RES)/2*SCREEN_WIDTH*2,stockBytes);}
+  }f.close();if(!ok){free(next);return false;}
   lv_img_cache_invalidate_src(&image);if(pixels)free(pixels);pixels=next;image={};
-  image.header.cf=LV_IMG_CF_TRUE_COLOR;image.header.w=SCREEN_RES;image.header.h=SCREEN_RES;image.data_size=size;image.data=pixels;
+  image.header.cf=LV_IMG_CF_TRUE_COLOR;image.header.w=SCREEN_RES;image.header.h=SCREEN_HEIGHT;image.data_size=size;image.data=pixels;
   if(picture)lv_img_set_src(picture,&image);return true;
 }
 void badgeInit(){
@@ -37,7 +41,11 @@ void badgeInit(){
 }
 void badgeUnload(){picture=nullptr;lv_img_cache_invalidate_src(&image);if(pixels){free(pixels);pixels=nullptr;}}
 void badgeView(void* parent){
-  picture=lv_img_create((lv_obj_t*)parent);lv_img_set_src(picture,&vts_logo);load();lv_obj_center(picture);
+  picture=lv_img_create((lv_obj_t*)parent);lv_img_set_src(picture,&vts_logo);load();
+#ifdef BOARD_WAVESHARE_206
+  const int scale=std::min(lv_disp_get_hor_res(nullptr)*256/SCREEN_WIDTH,lv_disp_get_ver_res(nullptr)*256/SCREEN_HEIGHT);lv_img_set_zoom(picture,scale);
+#endif
+  lv_obj_center(picture);
   lv_obj_add_flag(picture,LV_OBJ_FLAG_CLICKABLE);
   lv_obj_add_event_cb(picture,[](lv_event_t*){uiShow("menu");},LV_EVENT_LONG_PRESSED,nullptr);
 }
@@ -52,7 +60,7 @@ bool badgeCommand(const String& c){
   if(c=="badge boot on" || c=="badge boot off"){prefs.putBool("boot",c.endsWith("on"));Serial.println("BADGE_OK");return true;}
   if(!c.startsWith("badge upload "))return false;
   unsigned long length=0,checksum=0;char extra;
-  if(sscanf(c.c_str(),"badge upload %lu %lx %c",&length,&checksum,&extra)!=2 || length!=8+SCREEN_RES*SCREEN_RES*2 || !ready || !dragon::storageFits(LittleFS.totalBytes(),LittleFS.usedBytes(),length+16384)){Serial.println("BADGE_ERROR size or storage reserve");return true;}
+  if(sscanf(c.c_str(),"badge upload %lu %lx %c",&length,&checksum,&extra)!=2 || length!=8+SCREEN_WIDTH*SCREEN_HEIGHT*2 || !ready || !dragon::storageFits(LittleFS.totalBytes(),LittleFS.usedBytes(),length+16384)){Serial.println("BADGE_ERROR size or storage reserve");return true;}
   if(LittleFS.exists("/badges/upload.part"))LittleFS.remove("/badges/upload.part");File f=LittleFS.open("/badges/upload.part",FILE_WRITE);
   if(!f){Serial.println("BADGE_ERROR open");return true;}
   RadioTransfer transfer;Serial.println("BADGE_READY");

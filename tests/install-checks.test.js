@@ -12,6 +12,7 @@ published.watcher=JSON.parse(readFileSync(new URL('./fixtures/watcher-0.13.29-ma
 
 published.waveshare_185b=JSON.parse(readFileSync(new URL('./fixtures/waveshare-185b-0.14.1-manifests.json',import.meta.url)));
 published.guition_185_beta=JSON.parse(readFileSync(new URL('./fixtures/guition-beta1-0.14.2-manifests.json',import.meta.url)));
+published.waveshare_206=JSON.parse(readFileSync(new URL('./fixtures/waveshare-206-0.14.9-manifests.json',import.meta.url)));
 published.waveshare_143c=JSON.parse(readFileSync(new URL('./fixtures/waveshare-143c-0.14.7-manifests.json',import.meta.url)));
 
 function rig(board='waveshare',mode='factory',badFile){

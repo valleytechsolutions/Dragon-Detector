@@ -170,7 +170,7 @@ static void command(const String& c){
 #ifdef BOARD_XIAO_ROUND
   else if(c=="touch status"){extern void xiaoTouchStatus();xiaoTouchStatus();}
 #endif
-#if defined(BOARD_AMOLED_175) || defined(BOARD_AMOLED_175C)
+#if defined(BOARD_AMOLED_175) || defined(BOARD_AMOLED_175C) || defined(BOARD_WAVESHARE_206)
   else if(c=="touch status"||c=="amoled status"){extern void amoledHardwareStatus();amoledHardwareStatus();}
 #endif
 #ifdef BOARD_AMOLED_175C

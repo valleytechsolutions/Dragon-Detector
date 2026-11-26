@@ -65,6 +65,7 @@ async function chooseBoard(next) {
     details.append(' ', guide);
   }
   $('board-watcher-setup').hidden=board!=='watcher';
+  $('board-206-setup').hidden=board!=='waveshare_206';
   $('board-143c-setup').hidden=board!=='waveshare_143c';
   $('board-185b-setup').hidden=board!=='waveshare_185b';
   $('board-guition-beta-setup').hidden=board!=='guition_185_beta';
@@ -87,7 +88,7 @@ async function chooseBoard(next) {
     const pack=resourceSetup(board,data);
     $('board-resource-setup').hidden=!pack;
     if(pack){$('resource-title').textContent=pack.title;$('resource-instructions').textContent=pack.instructions;$('resource-download').href=pack.path;$('resource-download').textContent=board==='waveshare_p4_knob'?'Download P4 microSD starter ZIP':'Download SD resource pack v1';}
-    $('board-status').textContent = `${data.version}${board==='waveshare_143c'?' · Initial port — physical validation pending':board==='guition_185_beta'?' · DISPLAY BETA 1 — physical compatibility unverified':board==='watcher'?' · BETA — SD capture/resources and RTC tested; touch and rotary confirmed':board==='waveshare_185b'?' · BETA — display/touch, SD captures and RTC restart verified; external GPS field testing pending':data.sdResources?' · SD RESOURCE BETA — hardware validation pending':board==='m5dial'?' · Dial v1.1 verified':board==='elecrow_21'?' · EXPERIMENTAL — initial hardware checks passed':board==='lilygo_175'?' · BETA — working baseline reported; new RTC/SD checks await hardware testing':boardProfiles[board].experimental?' · BETA — new SD/GPS features await field testing':''} · ${mode==='factory'?'Fresh installation replaces saved history, badges and BLE profiles.':board==='waveshare_143c'?'Update requires this exact 8 MB AMOLED 1.43C profile, version 0.14.7 or newer. Use Fresh installation for factory firmware or any other profile.':board==='waveshare_185b'?'Update requires this exact LCD 1.85B profile, version 0.14.1 or newer. Use Fresh installation for the factory demo or another firmware.':board==='waveshare'?'32 MB update preserves badge, history, settings and BLE profiles.':['waveshare_175','waveshare_175_gps'].includes(board)?'Update requires the exact selected non-C profile (1.75: 0.13.19+; 1.75-G GPS: 0.13.21+). Use Fresh installation for the factory demo or another firmware.':board==='elecrow_21'?'Update requires this exact Elecrow 2.1 rotary profile, version 0.13.20 or newer. Use Fresh installation for the factory demo or another firmware.':board==='lilygo_175'?'Update matches the provided 0.13.20 LILYGO 1.75 layout and this profile’s 0.13.25+ builds. Other firmware or another LILYGO size requires Fresh installation with its correct profile.':board==='watcher'?'Update requires this exact Watcher 0.13.29+ partition layout. Choose Fresh installation for Seeed factory firmware.':board==='m5dial'?'Update requires this Dial profile’s 0.13.26 or newer partition layout. Use Fresh installation for the factory demo or any other firmware.':board==='waveshare_lite'?'Update requires this exact Lite profile’s 0.9.4+ layout. For an older third-party port, choose Fresh installation unless its partitions have been verified.':board==='xiao_round'?'Update preserves files; requires this XIAO + Round Display profile’s 0.9.2 or newer 8 MB layout.':'Update preserves history, badges and settings; requires this board’s existing 0.3.x–0.13.x layout.'}`;
+    $('board-status').textContent = `${data.version}${board==='waveshare_143c'?' · Initial port — physical validation pending':board==='waveshare_206'?' · Initial port — physical validation pending':board==='guition_185_beta'?' · DISPLAY BETA 1 — physical compatibility unverified':board==='watcher'?' · BETA — SD capture/resources and RTC tested; touch and rotary confirmed':board==='waveshare_185b'?' · BETA — display/touch, SD captures and RTC restart verified; external GPS field testing pending':data.sdResources?' · SD RESOURCE BETA — hardware validation pending':board==='m5dial'?' · Dial v1.1 verified':board==='elecrow_21'?' · EXPERIMENTAL — initial hardware checks passed':board==='lilygo_175'?' · BETA — working baseline reported; new RTC/SD checks await hardware testing':boardProfiles[board].experimental?' · BETA — new SD/GPS features await field testing':''} · ${mode==='factory'?'Fresh installation replaces saved history, badges and BLE profiles.':board==='waveshare_206'?'Update requires this exact AMOLED 2.06 profile at 0.14.9. Choose Fresh installation for factory firmware.':board==='waveshare_143c'?'Update requires this exact 8 MB AMOLED 1.43C profile, version 0.14.7 or newer. Use Fresh installation for factory firmware or any other profile.':board==='waveshare_185b'?'Update requires this exact LCD 1.85B profile, version 0.14.1 or newer. Use Fresh installation for the factory demo or another firmware.':board==='waveshare'?'32 MB update preserves badge, history, settings and BLE profiles.':['waveshare_175','waveshare_175_gps'].includes(board)?'Update requires the exact selected non-C profile (1.75: 0.13.19+; 1.75-G GPS: 0.13.21+). Use Fresh installation for the factory demo or another firmware.':board==='elecrow_21'?'Update requires this exact Elecrow 2.1 rotary profile, version 0.13.20 or newer. Use Fresh installation for the factory demo or another firmware.':board==='lilygo_175'?'Update matches the provided 0.13.20 LILYGO 1.75 layout and this profile’s 0.13.25+ builds. Other firmware or another LILYGO size requires Fresh installation with its correct profile.':board==='watcher'?'Update requires this exact Watcher 0.13.29+ partition layout. Choose Fresh installation for Seeed factory firmware.':board==='m5dial'?'Update requires this Dial profile’s 0.13.26 or newer partition layout. Use Fresh installation for the factory demo or any other firmware.':board==='waveshare_lite'?'Update requires this exact Lite profile’s 0.9.4+ layout. For an older third-party port, choose Fresh installation unless its partitions have been verified.':board==='xiao_round'?'Update preserves files; requires this XIAO + Round Display profile’s 0.9.2 or newer 8 MB layout.':'Update preserves history, badges and settings; requires this board’s existing 0.3.x–0.13.x layout.'}`;
     if(board==='waveshare_p4_knob'){
       const installation=mode==='factory'?'Fresh installation erases internal flash. Verify that your board is the ESP32-P4 revision 3.x model and back up saved files first.':'Update verifies the active slot on an existing P4 Dragon Detector install and preserves files and settings.';
       $('board-status').textContent=data.version+' · Hardware beta. Wi-Fi, Bluetooth LE and alternating reception were tested on one board. Field testing is in progress. '+installation;
@@ -117,7 +118,7 @@ $('copy-install-details').onclick=async()=>{
 
 const canvas=$('preview'), ctx=canvas.getContext('2d',{willReadFrequently:true});
 const guideCanvas=$('preview-guides'),guideCtx=guideCanvas.getContext('2d');
-let photo=null,size=466,zoom=1,offsetX=0,offsetY=0,turns=0,mirror=false,firmwareVersion='',deviceProfile='',badgeProfile='stopwatch',photoName='',imageRequest=0;
+let photo=null,size=466,badgeHeight=466,zoom=1,offsetX=0,offsetY=0,turns=0,mirror=false,firmwareVersion='',deviceProfile='',badgeProfile='stopwatch',photoName='',imageRequest=0;
 
 const themeStudio=createThemeStudio({
   state:()=>({serial,busy,version:firmwareVersion,board:models[deviceProfile]||'Device',profile:deviceProfile}),
@@ -210,9 +211,11 @@ $('finish-clock').onclick=async()=>{
 
 function setBadgeProfile(id){
   if(!supportsBadge(id))return;
-  const previous=size;badgeProfile=id;size=boardProfiles[id].size;
+  const previous=size;badgeProfile=id;size=boardProfiles[id].size;badgeHeight=boardProfiles[id].height||size;
   ({x:offsetX,y:offsetY}=rescalePan(offsetX,offsetY,previous,size));
-  canvas.width=canvas.height=guideCanvas.width=guideCanvas.height=size;
+  canvas.width=guideCanvas.width=size;canvas.height=guideCanvas.height=badgeHeight;
+  for(const c of [canvas,guideCanvas]){c.style.aspectRatio=`${size}/${badgeHeight}`;c.style.borderRadius=badgeHeight===size?'50%':'12px';}
+  $('fill').textContent=badgeHeight===size?'Fill circle':'Fill screen';
   $('badge-board').value=id;draw();
 }
 function controls(){
@@ -228,25 +231,25 @@ function controls(){
   document.querySelectorAll('[data-nudge]').forEach(b=>b.disabled=busy||!photo);
 }
 function draw(){
-  ctx.fillStyle=$('background').value;ctx.fillRect(0,0,size,size);
-  if(photo){const g=badgeTransform(photo.width,photo.height,size,{zoom,x:offsetX,y:offsetY,turns,mirror});ctx.save();ctx.translate(g.cx,g.cy);ctx.rotate(g.angle);ctx.scale(g.scale*g.mirror,g.scale);ctx.drawImage(photo,-photo.width/2,-photo.height/2);ctx.restore();}
+  ctx.fillStyle=$('background').value;ctx.fillRect(0,0,size,badgeHeight);
+  if(photo){const g=badgeTransform(photo.width,photo.height,size,{zoom,x:offsetX,y:offsetY,turns,mirror,canvasHeight:badgeHeight});ctx.save();ctx.translate(g.cx,g.cy);ctx.rotate(g.angle);ctx.scale(g.scale*g.mirror,g.scale);ctx.drawImage(photo,-photo.width/2,-photo.height/2);ctx.restore();}
   else {ctx.fillStyle='#163b25';ctx.beginPath();ctx.arc(size/2,size/2,size*.39,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#78a05b';ctx.lineWidth=1;for(let n=1;n<4;n++){ctx.beginPath();ctx.arc(size/2,size/2,size*.1*n,0,Math.PI*2);ctx.stroke();}ctx.fillStyle='#c3f66d';ctx.textAlign='center';ctx.font=`bold ${size*.062}px sans-serif`;ctx.fillText('YOUR BADGE',size/2,size*.49);ctx.font=`${size*.027}px sans-serif`;ctx.fillText('CHOOSE AN IMAGE TO BEGIN',size/2,size*.55);}
-  drawBadgeText(ctx,$('badge-text').value,size,{fontPercent:$('text-size').value,yPercent:$('text-y').value,color:$('text-color').value});
+  drawBadgeText(ctx,$('badge-text').value,size,{fontPercent:$('text-size').value,yPercent:$('text-y').value,color:$('text-color').value,canvasHeight:badgeHeight});
   $('text-size-value').textContent=$('text-size').value+'%';$('text-y-value').textContent=$('text-y').value+'%';
-  guideCtx.clearRect(0,0,size,size);
-  if($('guides').checked){guideCtx.strokeStyle='#ffffff99';guideCtx.lineWidth=Math.max(1,size/360);guideCtx.setLineDash([size/60,size/90]);guideCtx.beginPath();guideCtx.arc(size/2,size/2,size*.47,0,Math.PI*2);guideCtx.stroke();guideCtx.setLineDash([]);guideCtx.beginPath();guideCtx.moveTo(size*.44,size/2);guideCtx.lineTo(size*.56,size/2);guideCtx.moveTo(size/2,size*.44);guideCtx.lineTo(size/2,size*.56);guideCtx.stroke();}
-  $('zoom').min=photo?Math.min(.05,fitBadgeZoom(photo.width,photo.height,size,turns)):.05;
+  guideCtx.clearRect(0,0,size,badgeHeight);
+  if($('guides').checked){guideCtx.strokeStyle='#ffffff99';guideCtx.lineWidth=Math.max(1,size/360);guideCtx.setLineDash([size/60,size/90]);guideCtx.beginPath();if(badgeHeight===size)guideCtx.arc(size/2,size/2,size*.47,0,Math.PI*2);else guideCtx.rect(size*.03,badgeHeight*.03,size*.94,badgeHeight*.94);guideCtx.stroke();guideCtx.setLineDash([]);guideCtx.beginPath();guideCtx.moveTo(size*.44,size/2);guideCtx.lineTo(size*.56,size/2);guideCtx.moveTo(size/2,size*.44);guideCtx.lineTo(size/2,size*.56);guideCtx.stroke();}
+  $('zoom').min=photo?Math.min(.05,fitBadgeZoom(photo.width,photo.height,size,turns,badgeHeight)):.05;
   $('zoom').value=zoom;$('zoom-value').textContent=Math.round(zoom*100)+'%';
   for(const [axis,value] of [['x',offsetX],['y',offsetY]]){$('pan-'+axis).value=value/size*100;$('pan-'+axis+'-value').textContent=`${Math.round(value)} px`;}
   $('mirror').setAttribute('aria-pressed',String(mirror));$('rotation-value').textContent=`${((turns%4+4)%4)*90}°`;
   const profile=boardProfiles[badgeProfile];
-  $('preview-size').textContent=`${profile.name} · ${size} × ${size} · ${profile.display}`;
+  $('preview-size').textContent=`${profile.name} · ${size} × ${badgeHeight} · ${profile.display}`;
   $('image-info').textContent=photo?`${photoName} · ${photo.width} × ${photo.height} source pixels`:'Choose a photo or logo. Nothing leaves your browser until you upload to USB.';
   $('upload').disabled=busy||!serial||!photo||deviceProfile!==badgeProfile||!supportsBadge(deviceProfile);
-  $('upload').textContent=boardProfiles[deviceProfile]?.lite?'Lite is radar only — no badge upload':serial?`Upload to ${size} × ${size} display ↗`:'Connect your board to upload';
+  $('upload').textContent=boardProfiles[deviceProfile]?.lite?'Lite is radar only — no badge upload':serial?`Upload to ${size} × ${badgeHeight} display ↗`:'Connect your board to upload';
   controls();
 }
-function fit(){if(!photo)return;zoom=fitBadgeZoom(photo.width,photo.height,size,turns);offsetX=offsetY=0;draw();}
+function fit(){if(!photo)return;zoom=fitBadgeZoom(photo.width,photo.height,size,turns,badgeHeight);offsetX=offsetY=0;draw();}
 async function loadImage(file,stock=false){
   if(!file||busy)return;const revision=++imageRequest;
   try{if(file.size>20*1024*1024)throw new Error('Choose an image smaller than 20 MB.');
@@ -254,8 +257,8 @@ async function loadImage(file,stock=false){
     if(next.width*next.height>40000000){next.close();throw new Error('Choose an image below 40 megapixels.');}
     if(revision!==imageRequest){next.close();return;}
     photo?.close();photo=next;photoName=file.name;turns=0;mirror=false;
-    if(stock){zoom=1;offsetX=offsetY=0;draw();$('studio-status').textContent='Dragon Detector logo centered and sized for the round screen. Add text below, or upload as it is.';}
-    else {fit();$('studio-status').textContent='Whole image fitted inside the circle. Drag to position, or choose Fill circle for a full-screen crop.';}
+    if(stock){zoom=1;offsetX=offsetY=0;draw();$('studio-status').textContent=badgeHeight===size?'Dragon Detector logo centered and sized for the round screen. Add text below, or upload as it is.':'Dragon Detector logo on the full rectangular canvas. Add text or upload as it is.';}
+    else {fit();$('studio-status').textContent=badgeHeight===size?'Whole image fitted inside the circle. Drag to position, or choose Fill circle for a full-screen crop.':'Whole image fitted to the rectangular screen. Drag to position, or choose Fill screen to crop.';}
   }catch(error){if(revision===imageRequest)$('studio-status').textContent=error.name==='InvalidStateError'?'Could not open that image. Choose a PNG, JPEG or WebP file.':error.message;}
 }
 $('image').onchange=e=>{const file=e.target.files[0];e.target.value='';loadImage(file);};
@@ -289,7 +292,7 @@ canvas.onkeydown=e=>{const direction={ArrowLeft:'left',ArrowRight:'right',ArrowU
 for(const event of ['dragenter','dragover'])$('badge-drop').addEventListener(event,e=>{e.preventDefault();if(!busy)$('badge-drop').classList.add('drag-over');});
 $('badge-drop').ondragleave=()=>$('badge-drop').classList.remove('drag-over');
 $('badge-drop').ondrop=e=>{e.preventDefault();$('badge-drop').classList.remove('drag-over');loadImage(e.dataTransfer.files[0]);};
-$('download-badge').onclick=()=>{if(!photo)return;const output=document.createElement('canvas');output.width=output.height=size;const c=output.getContext('2d');c.beginPath();c.arc(size/2,size/2,size/2,0,Math.PI*2);c.clip();c.drawImage(canvas,0,0);output.toBlob(blob=>{const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`dragon-badge-${badgeProfile}-${size}.png`;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);},'image/png');};
+$('download-badge').onclick=()=>{if(!photo)return;const output=document.createElement('canvas');output.width=size;output.height=badgeHeight;const c=output.getContext('2d');if(badgeHeight===size){c.beginPath();c.arc(size/2,size/2,size/2,0,Math.PI*2);c.clip();}c.drawImage(canvas,0,0);output.toBlob(blob=>{const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`dragon-badge-${badgeProfile}-${size}.png`;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);},'image/png');};
 
 async function disconnect(){
   const link=serial;
@@ -316,7 +319,7 @@ async function connectDevice(){
     if(!profile)throw new Error('Unrecognized board or firmware. Select its exact hardware profile in the installer.');
     serial=link;deviceProfile=profile;firmwareVersion=info.version;
     setBadgeProfile(profile);
-    $('device-label').textContent=info.size+' × '+info.size+' · CONNECTED';
+    $('device-label').textContent=info.size+' × '+(boardProfiles[profile]?.height||info.size)+' · CONNECTED';
     $('studio-status').textContent=boardProfiles[profile].name+(supportsBadge(profile)?' connected. Your badge is ready to edit or upload.':' has no badge mode. Use Clock sync to set the time.');
     link.onLine(line=>{
       if(line===null&&serial===link&&!busy){
@@ -345,7 +348,7 @@ $('upload').onclick=async()=>{
   $('disconnect').disabled=true;draw();
   $('progress').value=0;$('studio-status').textContent='Preparing your badge and waiting for the board…';
   try{
-    const bytes=encodeBadge(ctx.getImageData(0,0,size,size).data,size);
+    const bytes=encodeBadge(ctx.getImageData(0,0,size,badgeHeight).data,size,badgeHeight);
     await uploadBadge(link,bytes,percent=>{
       $('progress').value=percent;$('studio-status').textContent=`Uploading ${percent}% · keep USB connected`;
     });

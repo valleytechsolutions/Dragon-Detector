@@ -15,14 +15,22 @@
 #include <esp_lcd_panel_io.h>
 #include <esp_lcd_panel_ops.h>
 #include <esp_lcd_co5300.h>
+#ifdef BOARD_WAVESHARE_206
+#include <SPI.h>
+#include <esp32-hal-i2c.h>
+#include "waveshare_206_touch.h"
+#else
 #include <TouchDrvCSTXXX.hpp>
+#endif
 #define XPOWERS_CHIP_AXP2101
 #include <XPowersLib.h>
 #include <time.h>
 
 static esp_lcd_panel_io_handle_t panelIo=nullptr;
 static esp_lcd_panel_handle_t panel=nullptr;
+#ifndef BOARD_WAVESHARE_206
 static TouchDrvCST92xx touch;
+#endif
 static XPowersPMU power;
 static bool touchReady=false,powerReady=false;
 static volatile bool touchIrq=false;
@@ -44,6 +52,22 @@ static void flush(lv_disp_drv_t* disp,const lv_area_t* area,lv_color_t* color_p)
   // The completion callback releases LVGL's buffer only after DMA is finished.
   if(esp_lcd_panel_draw_bitmap(panel,area->x1,area->y1,area->x2+1,area->y2+1,color_p)!=ESP_OK)lv_disp_flush_ready(disp);
 }
+#ifdef BOARD_WAVESHARE_206
+// FT3168 uses the FT5x06 register layout. A complete report includes the
+// contact count and the event bits, so releases do not depend on interrupts.
+static void touchRead(lv_indev_drv_t*,lv_indev_data_t* data){
+  static lv_point_t last{};static bool wasPressed=false;const uint32_t started=micros();
+  uint8_t reg=0x02, packet[5]{};size_t count=0;
+  bool ok=i2cWriteReadNonStop(0,TP_I2C_ADDR,&reg,1,packet,sizeof(packet),20,&count)==ESP_OK&&count==sizeof(packet);
+  int x=last.x,y=last.y;
+  bool pressed=ok&&dragon::ft3168Point(packet,sizeof(packet),x,y);
+  ++touchReads;if(!ok)++touchTimeouts;touchMaxReadUs=std::max(touchMaxReadUs,uint32_t(micros()-started));
+  if(pressed&&!wasPressed)++touchDowns;if(!pressed&&wasPressed)++touchUps;wasPressed=pressed;
+  if(pressed)last={lv_coord_t(x),lv_coord_t(y)};
+  data->point=last;data->state=pressed?LV_INDEV_STATE_PRESSED:LV_INDEV_STATE_RELEASED;
+  if(!uiTouch(pressed,last.x,last.y))data->state=LV_INDEV_STATE_RELEASED;
+}
+#else
 static void touchRead(lv_indev_drv_t*,lv_indev_data_t* data){
   static int16_t x[2],y[2];static lv_coord_t lastX=0,lastY=0;static bool was=false,pressed=false;static uint32_t lastReport=0;
   // The CST9217 sleeps between touches and NACKs polling, so only read after
@@ -59,6 +83,7 @@ static void touchRead(lv_indev_drv_t*,lv_indev_data_t* data){
   data->point.x=lastX;data->point.y=lastY;data->state=pressed?LV_INDEV_STATE_PRESSED:LV_INDEV_STATE_RELEASED;
   if(!uiTouch(pressed,lastX,lastY))data->state=LV_INDEV_STATE_RELEASED;
 }
+#endif
 void amoledHardwareStatus(){Serial.printf("AMOLED_HARDWARE touch=%u pmu=%u irq=%lu reads=%lu downs=%lu ups=%lu timeouts=%lu read_max_us=%lu bus_hz=%lu flushes=%lu flush_total_us=%lu flush_max_us=%lu\n",touchReady,powerReady,touchIrqs,touchReads,touchDowns,touchUps,touchTimeouts,touchMaxReadUs,Wire.getClock(),flushCount,flushTotalUs,flushMaxUs);}
 // 输入值为0-100
 void set_brightness(uint8_t bri){if(panelIo){uint8_t value=uint16_t(constrain(bri,0,100))*255/100;esp_lcd_panel_io_tx_param(panelIo,0x02005100,&value,1);}}
@@ -71,12 +96,26 @@ int batteryPercent(){
 bool batteryCharging(){return powerReady && power.isCharging();}
 void scr_lvgl_init(){
   Wire.begin(IIC_SDA,IIC_SCL);Wire.setClock(400000);
+#ifdef BOARD_WAVESHARE_206
+  Wire.setTimeOut(20);
+#endif
   powerReady=power.begin(Wire,AXP2101_SLAVE_ADDRESS,IIC_SDA,IIC_SCL);
   if(powerReady){power.disableIRQ(XPOWERS_AXP2101_ALL_IRQ);power.clearIrqStatus();power.enableIRQ(XPOWERS_AXP2101_PKEY_SHORT_IRQ);power.enableBattDetection();power.enableBattVoltageMeasure();power.enableVbusVoltageMeasure();}
+#ifdef BOARD_WAVESHARE_206
+  if(powerReady){
+    power.disableTSPinMeasure();
+    power.setChargeTargetVoltage(XPOWERS_AXP2101_CHG_VOL_4V2);
+  }
+#endif
   Serial.printf("PMU: %s\n",powerReady?"AXP2101 ready":"AXP2101 not found");
 
+#ifdef BOARD_WAVESHARE_206
+  constexpr size_t rows=32;
+#else
+  constexpr size_t rows=40;
+#endif
   spi_bus_config_t bus{};bus.sclk_io_num=LCD_SCLK;bus.data0_io_num=LCD_SDIO0;bus.data1_io_num=LCD_SDIO1;
-  bus.data2_io_num=LCD_SDIO2;bus.data3_io_num=LCD_SDIO3;bus.max_transfer_sz=SCREEN_RES*40*2;
+  bus.data2_io_num=LCD_SDIO2;bus.data3_io_num=LCD_SDIO3;bus.max_transfer_sz=SCREEN_WIDTH*rows*2;
   ESP_ERROR_CHECK(spi_bus_initialize(SPI2_HOST,&bus,SPI_DMA_CH_AUTO));
   esp_lcd_panel_io_spi_config_t io{};io.cs_gpio_num=LCD_CS;io.dc_gpio_num=-1;io.spi_mode=0;io.pclk_hz=40000000;
   io.trans_queue_depth=1;io.lcd_cmd_bits=32;io.lcd_param_bits=8;io.flags.quad_mode=true;io.user_ctx=&disp_drv;
@@ -86,24 +125,42 @@ void scr_lvgl_init(){
   };
   ESP_ERROR_CHECK(esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)SPI2_HOST,&io,&panelIo));
   esp_lcd_panel_dev_config_t cfg{};cfg.reset_gpio_num=LCD_RESET;cfg.rgb_ele_order=LCD_RGB_ELEMENT_ORDER_RGB;cfg.bits_per_pixel=16;
+#ifdef BOARD_WAVESHARE_206
+  // Waveshare factory BSP, 3de8684. Native 410 x 502 window starts at column 22.
+  static const uint8_t zero[]={0},qspi[]={0x80},scan[]={1,0xD1},control[]={0x20},hbm[]={0xFF};
+  static const uint8_t columns[]={0,0x16,1,0xAF},rowsWindow[]={0,0,1,0xF5};
+  static const co5300_lcd_init_cmd_t init[]={
+    {0x11,nullptr,0,120},{0xC4,qspi,1,0},{0x44,scan,2,0},{0x35,zero,1,0},
+    {0x53,control,1,10},{0x63,hbm,1,10},{0x51,zero,1,10},
+    {0x2A,columns,4,0},{0x2B,rowsWindow,4,0}
+  };
+  static co5300_vendor_config_t vendor{};
+  vendor.init_cmds=init;vendor.init_cmds_size=sizeof(init)/sizeof(init[0]);cfg.vendor_config=&vendor;
+#endif
   ESP_ERROR_CHECK(esp_lcd_new_panel_co5300(panelIo,&cfg,&panel));
   ESP_ERROR_CHECK(esp_lcd_panel_reset(panel));ESP_ERROR_CHECK(esp_lcd_panel_init(panel));
   ESP_ERROR_CHECK(esp_lcd_panel_set_gap(panel,LCD_COL_OFFSET,0));
   ESP_ERROR_CHECK(esp_lcd_panel_invert_color(panel,false));ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(panel,true));set_brightness(50);
-  Serial.printf("DISPLAY: CO5300 %dx%d\n",SCREEN_RES,SCREEN_RES);
+  Serial.printf("DISPLAY: CO5300 %dx%d\n",SCREEN_WIDTH,SCREEN_HEIGHT);
 
+#ifndef BOARD_WAVESHARE_206
   touch.setPins(TP_RESET,TP_INT);
   touchReady=touch.begin(Wire,TP_I2C_ADDR,IIC_SDA,IIC_SCL);
   if(touchReady){touch.setMaxCoordinates(SCREEN_RES,SCREEN_RES);touch.setMirrorXY(true,true);pinMode(TP_INT,INPUT_PULLUP);attachInterrupt(digitalPinToInterrupt(TP_INT),onTouch,FALLING);Serial.printf("TOUCH: %s ready\n",touch.getModelName());}
   else Serial.println("TOUCH: CST9217 not found; side buttons remain available");
 
-  size_t rows=40;
+#else
+  pinMode(TP_RESET,OUTPUT);digitalWrite(TP_RESET,LOW);delay(20);digitalWrite(TP_RESET,HIGH);delay(200);
+  Wire.beginTransmission(TP_I2C_ADDR);touchReady=Wire.endTransmission()==0;
+  if(touchReady){Wire.beginTransmission(TP_I2C_ADDR);Wire.write(0xA5);Wire.write(0);Wire.endTransmission();}
+  Serial.printf("TOUCH: FT3168 %s\n",touchReady?"ready":"not found");
+#endif
   auto* buffer=(lv_color_t*)heap_caps_malloc(rows*SCREEN_RES*sizeof(lv_color_t),MALLOC_CAP_INTERNAL|MALLOC_CAP_DMA);
   if(!buffer){Serial.println("Display buffer allocation failed");abort();}
   lv_init();
   lv_disp_draw_buf_init(&draw_buf,buffer,NULL,SCREEN_RES*rows);
   lv_disp_drv_init(&disp_drv);
-  disp_drv.hor_res=SCREEN_RES;disp_drv.ver_res=SCREEN_RES;
+  disp_drv.hor_res=SCREEN_WIDTH;disp_drv.ver_res=SCREEN_HEIGHT;
   disp_drv.flush_cb=flush;disp_drv.rounder_cb=rounder;disp_drv.draw_buf=&draw_buf;
   lv_disp_drv_register(&disp_drv);
 
@@ -115,6 +172,9 @@ void scr_lvgl_init(){
 
 void boardBegin(){
   pinMode(BTN_PIN,INPUT_PULLUP);
+#ifdef BOARD_WAVESHARE_206
+  pinMode(10,INPUT); // SYS_OUT is high while PWR is pressed.
+#endif
 #ifdef BOARD_AMOLED_175C
   rtc_gpio_deinit(GPIO_NUM_3);pinMode(3,INPUT);
   Serial.printf("AMOLED_WAKE cause=%d epoch=%lu\n",esp_sleep_get_wakeup_cause(),wallTime());
@@ -162,6 +222,14 @@ void boardLoop(){
   if(down!=raw){raw=down;changed=now;}
   if(raw!=stable&&now-changed>=25){stable=raw;if(stable&&!uiStopwatchKey(true))uiShow("menu");}
 #endif
+#ifdef BOARD_WAVESHARE_206
+  static bool powerRaw=false,powerStable=false;static uint32_t powerChanged=0;
+  const bool powerDown=digitalRead(10)==HIGH;
+  if(powerDown!=powerRaw){powerRaw=powerDown;powerChanged=now;}
+  if(powerRaw!=powerStable&&now-powerChanged>=25){
+    powerStable=powerRaw;if(powerStable&&!uiStopwatchKey(false))uiKey(true);
+  }
+#else
   if(powerReady&&now-polled>=50){
     polled=now;power.getIrqStatus();bool pressed=power.isPekeyShortPressIrq();power.clearIrqStatus();
 #ifdef BOARD_AMOLED_175C
@@ -170,6 +238,7 @@ void boardLoop(){
     if(pressed&&!uiStopwatchKey(false))uiKey(true);
 #endif
   }
+#endif
 }
 // Small checked I2C reads avoid accepting an uninitialized RTC date after a
 // failed bus transaction. The 1.75C schematic does not populate the PCF85063
@@ -210,3 +279,11 @@ void boardRtcDiagnostics(){
   uint8_t control=0,seconds=0;bool ok=rtcRead(0,&control,1)&&rtcRead(4,&seconds,1);
   Serial.printf("CLOCK_DIAGNOSTICS chip=PCF85063 io=%u control=%02x lost=%u\n",ok,control,(seconds&0x80)!=0);
 }
+
+#ifdef BOARD_WAVESHARE_206
+static SPIClass cardSpi(HSPI);
+bool boardMountCard(){
+  cardSpi.begin(2,3,1,17);
+  return SD.begin(17,cardSpi,10000000,"/sdcard",12,false);
+}
+#endif

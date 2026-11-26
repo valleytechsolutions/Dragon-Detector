@@ -16,7 +16,7 @@ export async function verifyClock(link,board,version,{
   const clock=await readWearable(link),current=now();
   if(!clock.valid||clock.offset!==-current.getTimezoneOffset()||Math.abs(clock.epoch-current.getTime()/1000)>10)
     throw new Error('Clock readback did not match this computer.');
-  const expected=['waveshare_p4_knob','waveshare_185b','watcher','m5dial','lilygo_175','stopwatch','xiao_round','waveshare_175','waveshare_175_gps'].includes(board);
+  const expected=['waveshare_206','waveshare_p4_knob','waveshare_185b','watcher','m5dial','lilygo_175','stopwatch','xiao_round','waveshare_175','waveshare_175_gps'].includes(board);
   if(expected&&!clock.rtc)throw new Error('This board requires an RTC, but it was not detected. Clock setup is incomplete.');
   let rtcVerified=false;
   if(hasHardwareClockCheck(version)){

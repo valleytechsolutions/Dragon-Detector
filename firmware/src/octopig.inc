@@ -35,7 +35,11 @@ static void pigTick(uint32_t now){
   if(fabsf(delta)>1)pigX+=std::max(-2.f,std::min(2.f,delta));
   else if(!pigReacting&&pigStep%13==0)pigLook=int(esp_random()%3)-1;
   lv_area_t moving{(lv_coord_t)S(30),(lv_coord_t)S(162),(lv_coord_t)S(330),(lv_coord_t)S(308)};
+#ifdef BOARD_WAVESHARE_206
+  lv_obj_invalidate(watchDial);
+#else
   lv_obj_invalidate_area(watchDial,&moving);
+#endif
 }
 static void pigReact(int x){
   pigTarget=constrain(x,144,216);pigLook=x<180?-1:1;
@@ -44,7 +48,11 @@ static void pigReact(int x){
 static void pigTap(lv_event_t* e){
   if(lv_event_get_target(e)!=watchDial)return;
   auto* input=lv_indev_get_act();if(!input)return;lv_point_t p;lv_indev_get_point(input,&p);
+#ifdef BOARD_WAVESHARE_206
+  pigReact(p.x*360/lv_disp_get_hor_res(nullptr));
+#else
   pigReact(p.x*360/SCREEN_RES);
+#endif
 }
 static void watchPig(lv_draw_ctx_t* ctx,const dragon::Calendar& d,bool valid){
   octoMark(ctx,29,0xee77a5);

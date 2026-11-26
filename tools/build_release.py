@@ -3,7 +3,7 @@ from pathlib import Path
 import argparse, csv, hashlib, json, os, re, shutil, subprocess, sys, zipfile
 from flash_budget import report as flash_report
 ROOT=Path(__file__).resolve().parents[1]
-BOARDS={'waveshare_143c':('Waveshare ESP32-S3-Touch-AMOLED-1.43C','waveshare-amoled-143c'),'guition_185_beta':('Guition / Surenoo JC3636W518 Beta 1','spotpear'),'waveshare_185b':('Waveshare ESP32-S3-Touch-LCD-1.85B','waveshare-lcd-185b'),'watcher':('Seeed SenseCAP Watcher','seeed-watcher'),'m5dial':('M5Stack Dial','m5stack-dial'),'lilygo_175':('LilyGo T-Display-S3-AMOLED-1.75','lilygo-amoled-175'),'elecrow_21':('Elecrow CrowPanel 2.1 Rotary','elecrow-rotary-21'),'waveshare_175_gps':('Waveshare ESP32-S3-Touch-AMOLED-1.75-G','waveshare-amoled-175'),'waveshare_175':('Waveshare ESP32-S3-Touch-AMOLED-1.75','waveshare-amoled-175'),'spotpear':('Spotpear JC3636W518','spotpear'),'waveshare':('Waveshare ESP32-S3-Touch-AMOLED-1.75C','waveshare-amoled'),'stopwatch':('M5Stack StopWatch C152','m5stack-stopwatch'),'xiao_round':('Seeed XIAO ESP32-S3 + Round Display','xiao-round'),'waveshare_lite':('Waveshare ESP32-S3-LCD-1.28 Lite','waveshare-lite')}
+BOARDS={'waveshare_206':('Waveshare ESP32-S3-Touch-AMOLED-2.06','waveshare-amoled-206'),'waveshare_143c':('Waveshare ESP32-S3-Touch-AMOLED-1.43C','waveshare-amoled-143c'),'guition_185_beta':('Guition / Surenoo JC3636W518 Beta 1','spotpear'),'waveshare_185b':('Waveshare ESP32-S3-Touch-LCD-1.85B','waveshare-lcd-185b'),'watcher':('Seeed SenseCAP Watcher','seeed-watcher'),'m5dial':('M5Stack Dial','m5stack-dial'),'lilygo_175':('LilyGo T-Display-S3-AMOLED-1.75','lilygo-amoled-175'),'elecrow_21':('Elecrow CrowPanel 2.1 Rotary','elecrow-rotary-21'),'waveshare_175_gps':('Waveshare ESP32-S3-Touch-AMOLED-1.75-G','waveshare-amoled-175'),'waveshare_175':('Waveshare ESP32-S3-Touch-AMOLED-1.75','waveshare-amoled-175'),'spotpear':('Spotpear JC3636W518','spotpear'),'waveshare':('Waveshare ESP32-S3-Touch-AMOLED-1.75C','waveshare-amoled'),'stopwatch':('M5Stack StopWatch C152','m5stack-stopwatch'),'xiao_round':('Seeed XIAO ESP32-S3 + Round Display','xiao-round'),'waveshare_lite':('Waveshare ESP32-S3-LCD-1.28 Lite','waveshare-lite')}
 VERSION=re.search(r'#define DRAGON_VERSION "([0-9.]+)"',(ROOT/'firmware/include/dragon_version.h').read_text()).group(1)
 
 def run(*args):subprocess.run([sys.executable,*args],cwd=ROOT,check=True)
@@ -31,6 +31,18 @@ def build(board,skip):
     shutil.copyfile(ROOT/'docs/licenses/Montserrat-OFL.txt',out/'FONT-LICENSE.txt')
     shutil.copyfile(ROOT/'docs/licenses/Unscii-NOTICE.txt',out/'ASCII-FONT-NOTICE.txt')
     shutil.copyfile(ROOT/'docs/licenses/ESP32DualBandWardriver-LICENSE.txt',out/'ESP32DualBandWardriver-LICENSE.txt')
+    if board=='waveshare_206':
+        (out/'BOARD-STATUS.txt').write_text(
+            'Dragon Detector 0.14.9 for Waveshare ESP32-S3-Touch-AMOLED-2.06.\n'
+            'Initial port. Physical validation pending. 410 x 502 AMOLED, FT3168 touch, 32 MB flash, 8 MB PSRAM.\n'
+            'Full application, native rectangular menus, circular radar and clocks, ES8311 sound, PCF85063 RTC, AXP2101 battery and microSD.\n'
+            'Fresh installation is required when replacing the factory demo. Updates require this exact board profile.\n'
+            'No integrated GPS. Microphone recording and IMU applications are outside Dragon Detector 0.14.9 features.\n'
+            'https://valleytech-dragon-detector.pages.dev/guides/WAVESHARE-AMOLED-206.html\n',encoding='utf-8')
+        shutil.copyfile(ROOT/'third_party/waveshare-206/NOTICE.md',out/'BOARD-NOTICE.md')
+        shutil.copyfile(ROOT/'third_party/waveshare-206/LICENSE',out/'BOARD-LICENSE.txt')
+        for name in ('UPSTREAM.md','LICENSE'):
+            shutil.copyfile(ROOT/'lib/es8311'/name,out/('ES8311-'+name))
     if board=='waveshare_143c':
         (out/'BOARD-STATUS.txt').write_text(
             'Waveshare ESP32-S3-Touch-AMOLED-1.43C / 1.43C-EN, 466 x 466, 8 MB flash, 8 MB PSRAM.\n'
@@ -117,7 +129,7 @@ def build(board,skip):
     for mode in ('factory','update'):
         selected=segments+(filesystem_segments if mode=='factory' else [])
         manifest={'name':f'Dragon Detector — {BOARDS[board][0]} ({mode})','version':VERSION,'new_install_prompt_erase':True,'new_install_improv_wait_time':0,'builds':[{'chipFamily':'ESP32-S3','parts':[{'path':name,'offset':offset} for name,offset in selected]}]}
-        if board in ('guition_185_beta','watcher','spotpear','waveshare_185b','waveshare_175','waveshare_175_gps','xiao_round','lilygo_175'):
+        if board in ('waveshare_206','guition_185_beta','watcher','spotpear','waveshare_185b','waveshare_175','waveshare_175_gps','xiao_round','lilygo_175'):
             manifest['sdResources']={'schema':1,'required':False,'path':'resources/dragon-resources-v1-20261023.zip','placement':'/dragon/resources/vendors.ddr'}
             if board=='waveshare_185b':manifest['sdResources'].update(required=True,path='resources/dragon-resources-v1-20261103.zip')
         if board=='guition_185_beta':manifest.update(release_channel='beta',beta_iteration=1,hardware_validation='physically-unverified')
@@ -139,15 +151,15 @@ def build(board,skip):
     (out/'SHA256SUMS.txt').write_text(''.join(checks),encoding='ascii')
     metadata={'version':VERSION,'board':board,'name':BOARDS[board][0],'source_commit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),'source_dirty':bool(subprocess.check_output(['git','status','--porcelain','--untracked-files=normal'],cwd=ROOT,text=True).strip()),'filesystem_offset':fs_offset,'filesystem_size':fs_size,'factory_resets_badges':True,'update_preserves_nvs_and_filesystem':True}
     metadata['hardware_validation']='dial-v11-display-controls-rtc-restart-verified' if board=='m5dial' else 'lilygo-baseline-reported-rtc-sd-pending' if board=='lilygo_175' else 'initial-unit-verified' if board=='elecrow_21' else 'new-sd-gps-features-pending' if board in ('waveshare_175','waveshare_175_gps') else 'existing-profile'
-    if board in ('guition_185_beta','watcher','spotpear','waveshare_185b','waveshare_175','waveshare_175_gps','xiao_round','lilygo_175'):
+    if board in ('waveshare_206','guition_185_beta','watcher','spotpear','waveshare_185b','waveshare_175','waveshare_175_gps','xiao_round','lilygo_175'):
         metadata['hardware_validation']='sd-resource-beta-unverified'
         metadata['sd_resources']={'schema':1,'required':False,'snapshot':20261023}
         if board=='waveshare_185b':metadata['sd_resources'].update(required=True,pack_date=20261103,ble_labels_snapshot=20261103,compiled_registry=False)
     if board=='watcher':metadata['hardware_validation']='display-rtc-sd-controls-verified'
     if board=='waveshare_185b':metadata['hardware_validation']='185b-display-touch-sd-rtc-restart-verified'
     if board=='guition_185_beta':metadata.update(release_channel='beta',beta_iteration=1,hardware_validation='physically-unverified',display_source='Guition-JC/Guition@dbadb44943658338602c5f5a584b2af026fb32da',display_commands=184,display_qspi_hz=20000000,display_id_probe_hz=3000000,display_id_autodetection=False)
-    if board=='waveshare_143c':metadata['hardware_validation']='physically-unverified'
-    metadata['flash_size']=0x2000000 if board in ('watcher','waveshare') else 0x800000 if board in ('waveshare_143c','m5dial','xiao_round') else 0x1000000
+    if board in ('waveshare_206','waveshare_143c'):metadata['hardware_validation']='physically-unverified'
+    metadata['flash_size']=0x2000000 if board in ('waveshare_206','watcher','waveshare') else 0x800000 if board in ('waveshare_143c','m5dial','xiao_round') else 0x1000000
     metadata['memory']=flash_report(entries,(build/'firmware.bin').stat().st_size,metadata['flash_size'])
     (out/'memory-budget.json').write_text(json.dumps(metadata['memory'],indent=2)+'\n',encoding='utf-8')
     if board=='waveshare':metadata.update(recon_offset=recon_offset,recon_size=recon_size,update_preserves_recon=True)

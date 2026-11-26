@@ -1,7 +1,7 @@
 #include "app.h"
 #include "background_radio.h"
 #include "board_pins.h"
-#if defined(BOARD_AMOLED_175) || defined(BOARD_WATCHER) || defined(BOARD_WAVESHARE_185B)
+#if (defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_206)) || defined(BOARD_WATCHER) || defined(BOARD_WAVESHARE_185B)
 #include "recon_internal.h"
 #endif
 #include <esp_timer.h>
@@ -98,7 +98,7 @@ void addAlert(const char* title,const char* detail,const uint8_t* mac,bool coale
 }
 #if BOARD_HAS_SD
 bool setCapture(bool enabled){
-#if defined(BOARD_AMOLED_175) || defined(BOARD_WATCHER) || defined(BOARD_WAVESHARE_185B)
+#if (defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_206)) || defined(BOARD_WATCHER) || defined(BOARD_WAVESHARE_185B)
   if(enabled)return dragon::toolkit::captureStart(false);
   dragon::toolkit::captureStop();return false;
 #else

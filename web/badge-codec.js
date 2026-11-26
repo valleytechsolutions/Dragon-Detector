@@ -6,11 +6,11 @@ export function crc32(bytes) {
   }
   return (crc ^ 0xffffffff) >>> 0;
 }
-export function encodeBadge(rgba, size) {
-  if (![240, 360, 412, 466, 480].includes(size) || rgba.length !== size * size * 4) throw new Error('Invalid display size');
-  const bytes = new Uint8Array(8 + size * size * 2);
-  bytes.set([68, 68, 66, 49, size & 255, size >> 8, size & 255, size >> 8]);
-  for (let i = 0; i < size * size; i++) {
+export function encodeBadge(rgba, size, height=size) {
+  if (![240, 360, 410, 412, 466, 480].includes(size) || !(height===size || (size===410 && height===502)) || rgba.length !== size * height * 4) throw new Error('Invalid display size');
+  const bytes = new Uint8Array(8 + size * height * 2);
+  bytes.set([68, 68, 66, 49, size & 255, size >> 8, height & 255, height >> 8]);
+  for (let i = 0; i < size * height; i++) {
     const rgb = ((rgba[i*4] >> 3) << 11) | ((rgba[i*4+1] >> 2) << 5) | (rgba[i*4+2] >> 3);
     bytes[8+i*2] = rgb >> 8; bytes[9+i*2] = rgb & 255;
   }

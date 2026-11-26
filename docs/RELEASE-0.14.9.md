@@ -156,3 +156,7 @@ Still to confirm on hardware:
 - The DagNazty and LockpickingVlad faces on panels other than the 1.85B.
 
 [Validation status](VALIDATION.md) · [Installation and recovery](FLASHING.md)
+
+## Waveshare AMOLED 2.06 hardware addition
+
+The `waveshare_206` package adds the full 0.14.9 application on the 410 × 502 rectangular AMOLED board, with FT3168 touch, ES8311 speaker, microSD, PCF85063 RTC and AXP2101 battery reporting. This hardware addition retains version 0.14.9. Physical validation awaits the board. See [installation and arrival checks](WAVESHARE-AMOLED-206.md).

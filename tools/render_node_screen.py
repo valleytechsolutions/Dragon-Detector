@@ -84,7 +84,7 @@ void nodeStop(){busy=false;}
 const dragon::node::Status& nodeStatus(){return status;}
 bool nodeBleReports(){return ble;}
 bool nodeKeyed(){return keyed;}
-static std::vector<uint16_t> frame;static int size=0;
+static std::vector<uint16_t> frame;static int size=0,height=0;
 static void flush(lv_disp_drv_t* d,const lv_area_t* a,lv_color_t* p){
   for(int y=a->y1;y<=a->y2;++y)for(int x=a->x1;x<=a->x2;++x)frame[y*size+x]=(p++)->full;
   lv_disp_flush_ready(d);
@@ -105,6 +105,10 @@ static int outside(lv_obj_t* screen,const char* out,const char* name,const char*
       const int cx=(a.x1+a.x2)/2;a.x1=cx-sz.x/2;a.x2=cx+sz.x/2;a.y2=a.y1+sz.y;
       if(sz.x>lv_area_get_width(&a)+2||sz.x>lv_obj_get_width(o)){printf("CLIPPED %s %s%s '%s' %d>%d\n",out,name,where,t,int(sz.x),int(lv_obj_get_width(o)));++problems;}
     }
+#ifdef BOARD_WAVESHARE_206
+    if(a.x1<0||a.y1<0||a.x2>=size||a.y2>=height){printf("OUTSIDE rectangle %s %s\n",out,name);++problems;}
+    continue;
+#endif
     const float r=size/2.f,margin=size*0.02f;
     for(int corner=0;corner<4;++corner){
       const float x=(corner&1?a.x2:a.x1)-r+0.5f,y=(corner&2?a.y2:a.y1)-r+0.5f;
@@ -135,10 +139,14 @@ static int labelsWith(lv_obj_t* o,const char* part){
 int main(int argc,char** argv){
   size=atoi(argv[1]);const char* out=argv[2];const bool button=atoi(argv[3]);const char* confirm=argc>4&&*argv[4]?argv[4]:nullptr;
   const char* keyHint=argc>5&&*argv[5]?argv[5]:nullptr;const char* keyHintShort=argc>6&&*argv[6]?argv[6]:nullptr;
-  lv_init();frame.assign(size*size,0);
-  static lv_disp_draw_buf_t buf;static std::vector<lv_color_t> pixels(size*size);
-  lv_disp_draw_buf_init(&buf,pixels.data(),nullptr,size*size);
-  static lv_disp_drv_t drv;lv_disp_drv_init(&drv);drv.hor_res=size;drv.ver_res=size;drv.flush_cb=flush;drv.draw_buf=&buf;drv.full_refresh=1;
+  height=size;
+#ifdef BOARD_WAVESHARE_206
+  height=502;
+#endif
+  lv_init();frame.assign(size*height,0);
+  static lv_disp_draw_buf_t buf;static std::vector<lv_color_t> pixels(size*height);
+  lv_disp_draw_buf_init(&buf,pixels.data(),nullptr,size*height);
+  static lv_disp_drv_t drv;lv_disp_drv_init(&drv);drv.hor_res=size;drv.ver_res=height;drv.flush_cb=flush;drv.draw_buf=&buf;drv.full_refresh=1;
   lv_disp_drv_register(&drv);
   lv_obj_t* screen=lv_scr_act();lv_obj_set_style_bg_color(screen,lv_color_hex(0x203040),0);
   // The options each board passes (ui.cpp, lite_node.inc).
@@ -199,6 +207,7 @@ int main(int argc,char** argv){
 # Name, panel, defines, on-screen EXIT, and the confirm and key hints the board
 # passes (ui.cpp for CrowPanel and Watcher, lite_node.inc for the Waveshare Lite).
 boards = [
+    ("410x502",410,"-DBOARD_WAVESHARE_206",True,"","",""),
     ("466", 466, "-DBOARD_AMOLED_175C", True, "", "", ""),
     ("480", 480, "-DBOARD_CROWPANEL_21", True, "", "HOLD KNOB TO EXIT", "HOLD KNOB"),
     ("412", 412, "-DBOARD_WATCHER", True, "", "HOLD KNOB TO EXIT", "HOLD KNOB"),
@@ -210,7 +219,7 @@ boards = [
 problems = 0
 for name, size, define, button, confirm, key_hint, key_hint_short in boards:
     exe = work / f"node-{name}"
-    res = {466: 466, 480: 466, 412: 412, 360: 360, 240: 240}[size]
+    res = {410: 410, 466: 466, 480: 466, 412: 412, 360: 360, 240: 240}[size]
     cmd = ["c++", "-std=c++17", "-O1", "-w", *define.split(), f"-DSCREEN_RES={res}", *includes,
            "-I" + str(root / "firmware/include"), str(work / "harness.cpp"), str(root / "firmware/src/node_ui.cpp"),
            str(root / "firmware/src/node_logo.cpp"), str(library), "-o", str(exe)]
@@ -227,14 +236,17 @@ for name, size, define, button, confirm, key_hint, key_hint_short in boards:
         problems += 1
     for raw in sorted(work.glob(f"{name}-*.raw")):
         data = raw.read_bytes()
-        img = Image.new("RGB", (size, size))
+        img = Image.new("RGB", (size, 502 if name=="410x502" else size))
         px = img.load()
-        for i in range(size * size):
+        for i in range(size * (502 if name=="410x502" else size)):
             v = data[2 * i] | data[2 * i + 1] << 8
             px[i % size, i // size] = ((v >> 11 & 31) * 255 // 31, (v >> 5 & 63) * 255 // 63, (v & 31) * 255 // 31)
-        mask = Image.new("L", (size, size), 0)
-        ImageDraw.Draw(mask).ellipse((0, 0, size - 1, size - 1), fill=255)
-        out = Image.new("RGB", (size, size), (40, 40, 40))
+        mask = Image.new("L", (size, 502 if name=="410x502" else size), 0)
+        if name=="410x502":
+            ImageDraw.Draw(mask).rectangle((0,0,size-1,501),fill=255)
+        else:
+            ImageDraw.Draw(mask).ellipse((0,0,size-1,size-1),fill=255)
+        out = Image.new("RGB", (size, 502 if name=="410x502" else size), (40, 40, 40))
         out.paste(img, (0, 0), mask)
         out.save(raw.with_suffix(".png"))
         raw.unlink()

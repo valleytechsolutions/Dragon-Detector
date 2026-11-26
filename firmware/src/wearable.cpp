@@ -23,10 +23,10 @@ static void rotatedFlush(lv_disp_drv_t* drv,const lv_area_t* a,lv_color_t* pixel
   const int w=a->x2-a->x1+1,h=a->y2-a->y1+1;
   // One persistent rotation buffer, no allocation or LVGL buffer subdivision per
   // frame. Even CO5300 update windows stay even in every orientation.
-  auto p=dragon::rotatePoint(a->x1,a->y1,SCREEN_RES,r),q=dragon::rotatePoint(a->x2,a->y2,SCREEN_RES,r);
+  auto p=dragon::rotateRectPoint(a->x1,a->y1,SCREEN_WIDTH,SCREEN_HEIGHT,r),q=dragon::rotateRectPoint(a->x2,a->y2,SCREEN_WIDTH,SCREEN_HEIGHT,r);
   lv_area_t out{lv_coord_t(std::min(p.x,q.x)),lv_coord_t(std::min(p.y,q.y)),lv_coord_t(std::max(p.x,q.x)),lv_coord_t(std::max(p.y,q.y))};
   const int stride=out.x2-out.x1+1;
-  for(int y=0;y<h;++y)for(int x=0;x<w;++x){auto dest=dragon::rotatePoint(x+a->x1,y+a->y1,SCREEN_RES,r);rotationBuffer[(dest.y-out.y1)*stride+dest.x-out.x1]=pixels[y*w+x];}
+  for(int y=0;y<h;++y)for(int x=0;x<w;++x){auto dest=dragon::rotateRectPoint(x+a->x1,y+a->y1,SCREEN_WIDTH,SCREEN_HEIGHT,r);rotationBuffer[(dest.y-out.y1)*stride+dest.x-out.x1]=pixels[y*w+x];}
   // DMA completion still releases the original LVGL buffer, so neither buffer
   // can be overwritten while the panel is transferring it.
   physicalFlush(drv,&out,rotationBuffer);
@@ -40,6 +40,9 @@ static void applyRotation(){
   lv_disp_set_rotation(display,lv_disp_rot_t(displayRotation));
   for(auto* input=lv_indev_get_next(nullptr);input;input=lv_indev_get_next(input))lv_indev_reset(input,nullptr);
   lv_obj_invalidate(lv_scr_act());
+#ifdef BOARD_WAVESHARE_206
+  extern void uiRefreshLayout();uiRefreshLayout();
+#endif
 }
 void wearableBegin(){
   prefs.begin("dd-wearable",false);
@@ -74,7 +77,7 @@ bool configureClock(uint32_t epoch){
   // A transient startup bus failure must not disable hardware saves until the
   // next reboot. Re-probe without resetting the retained calendar.
   if(!rtcAvailable)boardSensorsBegin();
-#if defined(BOARD_WATCHER) || defined(BOARD_LILYGO_175) || defined(BOARD_STOPWATCH) || defined(BOARD_XIAO_ROUND) || defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
+#if defined(BOARD_WATCHER) || defined(BOARD_LILYGO_175) || defined(BOARD_STOPWATCH) || defined(BOARD_XIAO_ROUND) || (defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_206)) || defined(BOARD_WAVESHARE_185B)
   // These profiles promise a hardware clock. Never silently report a volatile
   // software-only write as successful if their RTC is disconnected or failed.
   if(!rtcAvailable)return false;
@@ -102,7 +105,7 @@ static void reply(const char* format,...){
 }
 bool wearableCommand(const String& c){
   if(c=="clock diagnostics"){
-#if defined(BOARD_WATCHER) || defined(BOARD_LILYGO_175) || defined(BOARD_STOPWATCH) || defined(BOARD_XIAO_ROUND) || defined(BOARD_AMOLED_175) || defined(BOARD_AMOLED_175C) || defined(BOARD_WAVESHARE_185B)
+#if defined(BOARD_WATCHER) || defined(BOARD_LILYGO_175) || defined(BOARD_STOPWATCH) || defined(BOARD_XIAO_ROUND) || (defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_206)) || defined(BOARD_AMOLED_175C) || defined(BOARD_WAVESHARE_185B)
     boardRtcDiagnostics();
 #else
     Serial.println("CLOCK_DIAGNOSTICS chip=none");

@@ -67,6 +67,9 @@ struct PixelPoint {int x,y;};
 inline PixelPoint rotatePoint(int x,int y,int size,uint8_t r){
   switch(r&3){case 1:return {y,size-1-x};case 2:return {size-1-x,size-1-y};case 3:return {size-1-y,x};default:return {x,y};}
 }
+inline PixelPoint rotateRectPoint(int x,int y,int width,int height,uint8_t r){
+  switch(r&3){case 1:return {y,height-1-x};case 2:return {width-1-x,height-1-y};case 3:return {width-1-y,x};default:return {x,y};}
+}
 inline PixelPoint unrotatePoint(int x,int y,int size,uint8_t r){return rotatePoint(x,y,size,(4-r)&3);}
 
 }

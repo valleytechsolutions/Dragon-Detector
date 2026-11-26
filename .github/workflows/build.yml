@@ -38,6 +38,7 @@ jobs:
       - run: python tools/test_waveshare185b.py --cxx g++
       - run: python tools/test_waveshare185b_ui.py --cxx g++
       - run: python tools/test_waveshare143c.py --cxx g++
+      - run: python tools/test_waveshare206.py --cxx g++
       - run: python tools/test_sd_records.py --cxx g++
       - run: python tools/test_sd_labels.py --cxx g++
       - run: python tools/test_sd_labels.py --cxx g++ --sanitize
@@ -58,13 +59,16 @@ jobs:
       - run: python tools/test_theme_retirement.py --cxx g++
       - run: python tools/test_vlad_art.py
       - run: python tools/test_audio_levels.py --cxx g++
+      - run: pip install pillow ziglang==0.17.1
+      - run: python tools/render_node_screen.py
+      - run: python tools/render_waveshare206.py
   build:
     needs: [test, secrets]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        board: [waveshare_143c, waveshare_185b, watcher, m5dial, lilygo_175, spotpear, waveshare, stopwatch, xiao_round, waveshare_lite, waveshare_175, waveshare_175_gps, elecrow_21]
+        board: [waveshare_206, waveshare_143c, waveshare_185b, watcher, m5dial, lilygo_175, spotpear, waveshare, stopwatch, xiao_round, waveshare_lite, waveshare_175, waveshare_175_gps, elecrow_21]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
@@ -143,7 +147,7 @@ jobs:
           dist, out = pathlib.Path('dist'), pathlib.Path('release')
           out.mkdir()
           folders = sorted(p for p in dist.iterdir() if p.is_dir())
-          assert len(folders) == 13, f'expected 13 board packages, found {len(folders)}'
+          assert len(folders) == 14, f'expected 14 board packages, found {len(folders)}'
           sums = []
           for folder in folders:
               board = folder.name.removeprefix('dragon-detector-')

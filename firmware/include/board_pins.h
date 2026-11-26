@@ -3,7 +3,33 @@
 
 #define BTN_PIN 0
 
-#if defined(BOARD_WAVESHARE_185B)
+#if defined(BOARD_WAVESHARE_206)
+#define BOARD_NAME "Waveshare ESP32-S3-Touch-AMOLED-2.06"
+#define SCREEN_RES 410
+#define SCREEN_WIDTH 410
+#define SCREEN_HEIGHT 502
+#define BOARD_HAS_AUDIO 1
+#define BOARD_HAS_SD 1
+#define BOARD_SD_SPI 1
+#define LCD_SDIO0 4
+#define LCD_SDIO1 5
+#define LCD_SDIO2 6
+#define LCD_SDIO3 7
+#define LCD_SCLK 11
+#define LCD_CS 12
+#define LCD_RESET 8
+#define LCD_COL_OFFSET 22
+#define IIC_SDA 15
+#define IIC_SCL 14
+#define TP_RESET 9
+#define TP_INT 38
+#define TP_I2C_ADDR 0x38
+#define AUDIO_I2S_MCK_IO 16
+#define AUDIO_I2S_BCK_IO 41
+#define AUDIO_I2S_WS_IO 45
+#define AUDIO_I2S_DO_IO 40
+#define AUDIO_MUTE_PIN 46
+#elif defined(BOARD_WAVESHARE_185B)
 #define BOARD_NAME "Waveshare ESP32-S3-Touch-LCD-1.85B"
 #define SCREEN_RES 360
 #define BOARD_HAS_AUDIO 1
@@ -243,6 +269,11 @@
 #define MIC_I2S_SD 46
 #define MIC_I2S_SCK 42
 
+#endif
+
+#ifndef SCREEN_WIDTH
+#define SCREEN_WIDTH SCREEN_RES
+#define SCREEN_HEIGHT SCREEN_RES
 #endif
 
 #if (defined(BOARD_AMOLED_175) && !defined(BOARD_GPS_LC76G)) || defined(BOARD_WAVESHARE_185B)
