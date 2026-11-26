@@ -1,6 +1,6 @@
 # Installation and hosting status
 
-Updated November 26, 2026. Current firmware release: **0.14.10**.
+Updated November 26, 2026. Current firmware release: **0.14.11**.
 
 ## Official release flasher
 
@@ -11,6 +11,11 @@ The installer uses the latest published firmware packages from
 It offers the released hardware profiles, USB installation and verified local
 date, time and timezone setup. Firmware is copied from the release packages
 without rebuilding or changing it.
+
+When a stable board is selected on the companion site, its installer checks the
+same official release catalog and loads that board's published manifest and
+binary files. The P4 Knob and Guition beta continue to use their separate
+companion-site packages.
 
 The [website flasher](https://valleytechsolutions.tech/pages/dragon-detector)
 embeds this same installer, so its board list and release files match. The
@@ -43,7 +48,7 @@ The installer checks physical flash capacity before writing. A capacity match
 does not identify the display or wiring: boards with equal flash sizes still
 need the correct selection.
 
-[Installation and recovery](FLASHING.md) · [Clock setup](CLOCK-SETUP.md) · [Custom theme guide](CUSTOM-THEME.md) · [Release notes](RELEASE-0.14.10.md)
+[Installation and recovery](FLASHING.md) · [Clock setup](CLOCK-SETUP.md) · [Custom theme guide](CUSTOM-THEME.md) · [Release notes](RELEASE-0.14.11.md)
 
 ## Release updates
 

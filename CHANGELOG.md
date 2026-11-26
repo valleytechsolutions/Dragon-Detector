@@ -1,5 +1,11 @@
 # Changes
 
+## 0.14.11
+
+- Waveshare LCD 1.85B: raise and enlarge the radar's TARGETS and TOOLS buttons while keeping the summary and tracking labels clear. The owner confirmed both controls respond reliably and the layout looks clean on the flashed device.
+- The companion flasher checks the official release catalog when a stable board is selected, then loads that board's verified release manifest and binaries. Separate beta packages remain local to the companion site.
+- All other 0.14.10 firmware features and board profiles continue in this release.
+
 ## 0.14.10
 
 - Wi-Fi attacks now put the live scanned-network selector at the top of the menu. Tapping an AP returns to the Wi-Fi test choices, and the chosen network stays visible and selected across those menus. No test starts on selection; fresh AP/client checks still apply when a test starts.

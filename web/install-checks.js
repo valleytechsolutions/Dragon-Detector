@@ -1,8 +1,8 @@
-import {validateManifest} from './board-profiles.js?v=0.14.10';
+import {validateManifest} from './board-profiles.js?v=0.14.11';
 
 // Check availability before asking for USB access. The installer downloads the
 // binaries itself before erasing; these HEAD requests do not verify their hash.
-export async function checkRelease(board,mode,{fetchImpl=fetch,signal,timeoutMs=15000,appSlot=0}={}){
+export async function checkRelease(board,mode,{fetchImpl=fetch,signal,timeoutMs=15000,appSlot=0,base=`firmware/${board}/`}={}){
   const controller=new AbortController();
   const cancel=()=>controller.abort();
   if(signal?.aborted)cancel();
@@ -10,7 +10,6 @@ export async function checkRelease(board,mode,{fetchImpl=fetch,signal,timeoutMs=
   const timeout=setTimeout(cancel,timeoutMs);
   const options={cache:'no-cache',signal:controller.signal};
   try{
-    const base=`firmware/${board}/`;
     const response=await fetchImpl(`${base}${mode}${appSlot===1?'-app1':''}.json`,options);
     if(!response.ok)throw new Error(`Firmware list unavailable (HTTP ${response.status}). Retry the release check.`);
     const manifest=validateManifest(await response.json(),board,mode,appSlot);

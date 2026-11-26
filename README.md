@@ -20,7 +20,9 @@ forwards installation links to this release flasher and keeps editor and guide
 links working. P4 and separate beta installers remain on the
 [companion site](https://valleytech-dragon-detector.pages.dev/#install). [Hosting details](docs/HOSTING-STATUS.md).
 
-[**Install firmware**](https://valleytechsolutions.github.io/Dragon-Detector-Flasher/) · [Latest release](docs/RELEASE-0.14.10.md) · [User guides](docs/GUI.md) · [Clock setup](docs/CLOCK-SETUP.md)
+[**Install firmware**](https://valleytechsolutions.github.io/Dragon-Detector-Flasher/) · [Latest release](docs/RELEASE-0.14.11.md) · [User guides](docs/GUI.md) · [Clock setup](docs/CLOCK-SETUP.md)
+
+**0.14.11 · Waveshare 1.85B radar touch:** TARGETS and TOOLS have larger, higher touch areas. Both controls were checked on the device. The firmware for every other supported board is rebuilt from the same source, with the 0.14.10 scanned-network selector and radio updates. [Release notes](docs/RELEASE-0.14.11.md).
 
 **0.14.10 · Scanned-network selection and Marauder updates:** On full-interface boards, choose a live scanned AP from the Wi-Fi attacks menu before opening a test. Open Wi-Fi beacons, random beacon identity handling and busy transmit queues follow reviewed ESP32 Marauder develop behavior. SD-capable boards add framed serial file transfer; 1.85B touch response is improved. [Release notes](docs/RELEASE-0.14.10.md).
 

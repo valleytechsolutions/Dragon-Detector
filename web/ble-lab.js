@@ -1,5 +1,5 @@
 // Original MIT DDG1 profile reader and acknowledged USB transport.
-import {NodeBusyMessage,nodeBusy} from './serial.js?v=0.14.10';
+import {NodeBusyMessage,nodeBusy} from './serial.js?v=0.14.11';
 export const HEADER=580,ATTRIBUTE=559,MAX_PROFILE=HEADER+128*ATTRIBUTE;
 export function crc32(data){let c=0xffffffff;for(const b of data){c^=b;for(let i=0;i<8;i++)c=(c>>>1)^((c&1)?0xedb88320:0);}return (c^0xffffffff)>>>0;}
 const decoder=new TextDecoder();

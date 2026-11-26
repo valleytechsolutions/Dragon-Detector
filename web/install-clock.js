@@ -1,8 +1,8 @@
-import {BadgeSerial} from './serial.js?v=0.14.10';
+import {BadgeSerial} from './serial.js?v=0.14.11';
 import {deviceQuery} from './device-query.js';
-import {parseBadgeInfo,hasWearableTools,hasClockTools} from './firmware-compat.js?v=0.14.10';
-import {connectedProfile,boardProfiles} from './board-profiles.js?v=0.14.10';
-import {syncVerifiedClock} from './clock-verification.js?v=0.14.10';
+import {parseBadgeInfo,hasWearableTools,hasClockTools} from './firmware-compat.js?v=0.14.11';
+import {connectedProfile,boardProfiles} from './board-profiles.js?v=0.14.11';
+import {syncVerifiedClock} from './clock-verification.js?v=0.14.11';
 
 // Called only after the installer has relinquished this exact granted port.
 // Never guess among getPorts(): another attached detector could be changed.

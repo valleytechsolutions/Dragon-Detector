@@ -1,23 +1,24 @@
-import {resourceSetup} from "./sd-resources.js?v=0.14.10";
-import {startRadarBackground} from './radar-background.js?v=0.14.10&ui=studio1';
-import {completeInstallSession,syncInstalledClock} from './install-clock.js?v=0.14.10';
-import {checkRelease,usbErrorText,installDiagnostics} from './install-checks.js?v=0.14.10';
-import {createInstallCounter} from './install-counter.js?v=0.14.10';
-import {syncVerifiedClock,clockResultText} from './clock-verification.js?v=0.14.10';
-import {clockInstallDialogClass} from './clock-install-dialog.js?v=0.14.10';
+import {resourceSetup} from "./sd-resources.js?v=0.14.11";
+import {startRadarBackground} from './radar-background.js?v=0.14.11&ui=studio1';
+import {completeInstallSession,syncInstalledClock} from './install-clock.js?v=0.14.11';
+import {checkRelease,usbErrorText,installDiagnostics} from './install-checks.js?v=0.14.11';
+import {firmwareBase} from './release-source.js?v=0.14.11';
+import {createInstallCounter} from './install-counter.js?v=0.14.11';
+import {syncVerifiedClock,clockResultText} from './clock-verification.js?v=0.14.11';
+import {clockInstallDialogClass} from './clock-install-dialog.js?v=0.14.11';
 import {deviceQuery} from './device-query.js';
-import {readP4UpdateSlot} from './p4-install.js?v=0.14.10';
-import {BadgeSerial} from './serial.js?v=0.14.10';
-import {encodeBadge} from './badge-codec.js?v=0.14.10';
-import {uploadBadge} from './badge-transfer.js?v=0.14.10';
-import {boardProfiles,connectedProfile,supportsBadge} from './board-profiles.js?v=0.14.10';
-import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan,drawBadgeText} from './badge-editor.js?v=0.14.10';
-import {revealLocation} from './navigation.js?v=0.14.10&ui=studio2';
-import {parseBadgeInfo,hasClockTools} from './firmware-compat.js?v=0.14.10';
+import {readP4UpdateSlot} from './p4-install.js?v=0.14.11';
+import {BadgeSerial} from './serial.js?v=0.14.11';
+import {encodeBadge} from './badge-codec.js?v=0.14.11';
+import {uploadBadge} from './badge-transfer.js?v=0.14.11';
+import {boardProfiles,connectedProfile,supportsBadge} from './board-profiles.js?v=0.14.11';
+import {badgeTransform,fitBadgeZoom,panFromPointer,rescalePan,drawBadgeText} from './badge-editor.js?v=0.14.11';
+import {revealLocation} from './navigation.js?v=0.14.11&ui=studio2';
+import {parseBadgeInfo,hasClockTools} from './firmware-compat.js?v=0.14.11';
 
-import {setupWorkspaceTabs} from './workspace-tabs.js?v=0.14.10';
-import {createThemeStudio} from './theme-studio.js?v=0.14.10&ui=studio1';
-import {installPersonalTheme} from './theme-install.js?v=0.14.10';
+import {setupWorkspaceTabs} from './workspace-tabs.js?v=0.14.11';
+import {createThemeStudio} from './theme-studio.js?v=0.14.11&ui=studio1';
+import {installPersonalTheme} from './theme-install.js?v=0.14.11';
 
 setupWorkspaceTabs();
 revealLocation();
@@ -80,9 +81,12 @@ async function chooseBoard(next) {
   $('clock-setup-status').textContent='Ready to sync '+models[board]+'.';
   $('install-clock-status').textContent='';
   $('board-status').textContent = 'Checking the matching firmware release…';
-  const mode = $('install-mode').value, manifest = `firmware/${board}/${mode}.json`;
+  const mode = $('install-mode').value;
   try {
-    const data = await checkRelease(board,mode,{signal:releaseController.signal});
+    const base=await firmwareBase(board,{signal:releaseController.signal});
+    if(revision !== request)return;
+    const manifest=`${base}${mode}.json`;
+    const data = await checkRelease(board,mode,{signal:releaseController.signal,base});
     if(revision !== request)return;
     $('installer').setAttribute('manifest', manifest); releaseReady = true;releaseVersion=data.version;
     const pack=resourceSetup(board,data);
@@ -93,7 +97,7 @@ async function chooseBoard(next) {
       const installation=mode==='factory'?'Fresh installation erases internal flash. Verify that your board is the ESP32-P4 revision 3.x model and back up saved files first.':'Update verifies the active slot on an existing P4 Dragon Detector install and preserves files and settings.';
       $('board-status').textContent=data.version+' · Hardware beta. Wi-Fi, Bluetooth LE and alternating reception were tested on one board. Field testing is in progress. '+installation;
     }
-    $('download').href = `firmware/${board}/SHA256SUMS.txt`; $('download').textContent='Firmware file checksums'; $('download').hidden=false;
+    $('download').href = `${base}SHA256SUMS.txt`; $('download').textContent='Firmware file checksums'; $('download').hidden=false;
     $('install-message').textContent='Confirm your board, then connect its USB port.';
   } catch(error) {
     if(revision!==request)return;

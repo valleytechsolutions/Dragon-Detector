@@ -475,6 +475,12 @@ static void build(){
     auto* targets=button(root,"TARGETS",90,301,90,32,96);
     auto* tools=button(root,"TOOLS",187,301,78,32,2);
     auto* quiet=button(root,detector.quiet?LV_SYMBOL_MUTE:LV_SYMBOL_VOLUME_MAX,270,257,38,34,97);
+#ifdef BOARD_WAVESHARE_185B
+    lv_obj_set_pos(radarSummary,S(65),S(238));
+    lv_obj_set_pos(trackingLabel,S(70),S(274));
+    lv_obj_set_pos(targets,S(90),S(292));lv_obj_set_size(targets,S(90),S(44));
+    lv_obj_set_pos(tools,S(184),S(292));lv_obj_set_size(tools,S(90),S(44));
+#endif
 #ifdef BOARD_WAVESHARE_206
     const int width=lv_disp_get_hor_res(nullptr),height=lv_disp_get_ver_res(nullptr);
     lv_obj_set_size(radar,width,height);
