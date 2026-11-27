@@ -1,6 +1,7 @@
 """Exercise production 1.85B page cycling and timer/modal/navigation guards."""
 from pathlib import Path
 import argparse
+import re
 import subprocess
 import sys
 
@@ -15,7 +16,11 @@ ui = (root / 'firmware/src/ui.cpp').read_text()
 
 
 def function(signature):
-    start = ui.index(signature)
+    # Skip forward declarations; the P4 declares shared modal helpers before
+    # its own gesture guard, which must not be mistaken for this function.
+    match = re.search(re.escape(signature) + r'[^;{]*\{', ui)
+    assert match, signature
+    start = match.start()
     brace = ui.index('{', start)
     end, depth = brace + 1, 1
     while depth:

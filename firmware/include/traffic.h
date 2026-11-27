@@ -50,7 +50,10 @@ public:
   }
 };
 struct TrafficStatus {
-  uint32_t disconnectFrames=0,disconnectAlerts=0,bleAlerts=0,lastDisconnect=0,lastBle=0;
+  uint32_t disconnectFrames=0,disconnectAlerts=0,bleAlerts=0,lastDisconnect=0,lastBle=0,ssidConflicts=0;
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  uint32_t apSecuritySamples=0,blePayloadSamples=0;
+#endif
   uint8_t channel=0,bleGroup=0;uint16_t reason=0,bleAddresses=0,bleVariants=0;
   bool protectedFrame=false;
   bool disconnectActive(uint32_t now)const{return disconnectAlerts&&uint32_t(now-lastDisconnect)<30000;}

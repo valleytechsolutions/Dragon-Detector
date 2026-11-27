@@ -1,6 +1,9 @@
 #include "network_tools.h"
 #ifndef BOARD_RADAR_LITE
 #include "app.h"
+#if BOARD_RADIO_AP_SURVEY_ONLY
+#include "p4_radio.h"
+#endif
 #include "recon_internal.h"
 #include "ble_lab.h"
 #include "ble_profile.h"
@@ -109,9 +112,19 @@ void networkStop(){
  timeOwned=false;
 #endif
  if(!active&&!iface)return;scanStop();esp_wifi_disconnect();wifi_config_t blank{}; // Clear the driver's RAM copy as well as disconnecting.
- esp_wifi_set_config(WIFI_IF_STA,&blank);esp_wifi_set_mode(WIFI_MODE_NULL);
+ esp_wifi_set_config(WIFI_IF_STA,&blank);
+#if BOARD_RADIO_AP_SURVEY_ONLY
+ esp_wifi_stop();
+#else
+ esp_wifi_set_mode(WIFI_MODE_NULL);
+#endif
  if(wifiEvents){esp_event_handler_instance_unregister(WIFI_EVENT,ESP_EVENT_ANY_ID,wifiEvents);wifiEvents=nullptr;}
- if(iface){esp_netif_destroy_default_wifi(iface);iface=nullptr;}active=connected=false;address={};memset(&joiningProfile,0,sizeof(joiningProfile));channelLock=oldLock;setRadio(resume);
+ if(iface){esp_netif_destroy_default_wifi(iface);iface=nullptr;}active=connected=false;address={};memset(&joiningProfile,0,sizeof(joiningProfile));channelLock=oldLock;
+#if BOARD_RADIO_AP_SURVEY_ONLY
+ p4RadarReleaseClockNetwork();
+#else
+ setRadio(resume);
+#endif
 #ifdef BOARD_GPS_UART
  gpsExternalSuspend(false);
 #endif
@@ -124,7 +137,7 @@ static bool connectProfile(const Profile& profile,bool clockOnly){using namespac
  // setup failure or disconnect; settings stay saved and fixes are invalidated.
  struct GpsLease {bool keep=false;GpsLease(){gpsExternalSuspend(true);}~GpsLease(){if(!keep)gpsExternalSuspend(false);}} gpsLease;
 #endif
-#if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B) || defined(BOARD_WAVESHARE_143C) || defined(BOARD_WAVESHARE_206)
+#if (defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_206)) || defined(BOARD_WAVESHARE_185B) || defined(BOARD_WAVESHARE_143C) || defined(BOARD_WAVESHARE_P4_KNOB)
  // Initialize the resident TCP/IP task before measuring headroom. Its roughly
  // 6 KiB stays allocated after disconnect; checking a pre-init budget on later
  // joins incorrectly rejects them. TLS buffers use this board's 8 MiB PSRAM.
@@ -134,14 +147,32 @@ static bool connectProfile(const Profile& profile,bool clockOnly){using namespac
  constexpr unsigned minimumHeap=35000;
 #endif
  if(ESP.getFreeHeap()<minimumHeap){note("Not enough free memory to join Wi-Fi");return false;}
-#if !defined(BOARD_AMOLED_175) && !defined(BOARD_WAVESHARE_185B) && !defined(BOARD_WAVESHARE_143C) && !defined(BOARD_WAVESHARE_206)
+#if !defined(BOARD_AMOLED_175) && !defined(BOARD_WAVESHARE_185B) && !defined(BOARD_WAVESHARE_P4_KNOB) && !defined(BOARD_WAVESHARE_143C) && !defined(BOARD_WAVESHARE_206)
  esp_err_t err=esp_netif_init();if(err!=ESP_OK&&err!=ESP_ERR_INVALID_STATE)return false;
 #endif
- iface=esp_netif_create_default_wifi_sta();if(!iface){note("Network interface unavailable");return false;}
- joiningProfile=profile;resume=radioEnabled;oldLock=channelLock;setRadio(false);active=true;connected=false;address={};started=millis();lastCheck=0;disconnectReason=0;disconnectCount=0;handledDisconnect=0;attempts=1;lastAttempt=started;
+#if BOARD_RADIO_AP_SURVEY_ONLY
+ if(!clockOnly){note("Wi-Fi joins on this P4 build are reserved for clock sync");return false;}
+ if(!p4CoprocReady()||!p4RadarAcquireClockNetwork()){note("Clock sync waiting for the radio");return false;}
+#endif
+ iface=esp_netif_create_default_wifi_sta();
+ if(!iface){
+#if BOARD_RADIO_AP_SURVEY_ONLY
+   p4RadarReleaseClockNetwork();
+#endif
+   note("Network interface unavailable");return false;
+ }
+ joiningProfile=profile;resume=radioEnabled;oldLock=channelLock;
+#if !BOARD_RADIO_AP_SURVEY_ONLY
+ setRadio(false);
+#endif
+ active=true;connected=false;address={};started=millis();lastCheck=0;disconnectReason=0;disconnectCount=0;handledDisconnect=0;attempts=1;lastAttempt=started;
  if(esp_event_handler_instance_register(WIFI_EVENT,ESP_EVENT_ANY_ID,wifiEvent,nullptr,&wifiEvents)!=ESP_OK){networkStop();return false;}
  wifi_config_t cfg{};memcpy(cfg.sta.ssid,joiningProfile.name,strlen(joiningProfile.name));memcpy(cfg.sta.password,joiningProfile.password,strlen(joiningProfile.password));cfg.sta.threshold.authmode=*joiningProfile.password?WIFI_AUTH_WPA2_PSK:WIFI_AUTH_OPEN;cfg.sta.pmf_cfg.capable=true;cfg.sta.pmf_cfg.required=false;
- err=esp_wifi_set_mode(WIFI_MODE_STA);if(err==ESP_OK)err=esp_wifi_set_config(WIFI_IF_STA,&cfg);memset(cfg.sta.password,0,sizeof(cfg.sta.password));memset(joiningProfile.password,0,sizeof(joiningProfile.password));if(err==ESP_OK)err=esp_wifi_connect();
+ err=esp_wifi_set_mode(WIFI_MODE_STA);if(err==ESP_OK)err=esp_wifi_set_config(WIFI_IF_STA,&cfg);memset(cfg.sta.password,0,sizeof(cfg.sta.password));memset(joiningProfile.password,0,sizeof(joiningProfile.password));
+#if BOARD_RADIO_AP_SURVEY_ONLY
+ if(err==ESP_OK)err=esp_wifi_start();
+#endif
+ if(err==ESP_OK)err=esp_wifi_connect();
  if(err!=ESP_OK){networkStop();note("Wi-Fi connection setup failed");return false;}
 #ifdef BOARD_GPS_UART
  gpsLease.keep=true;
@@ -154,6 +185,9 @@ bool networkConnectCredentials(const char* ssid,const char* password){
  bool ok=connectProfile(p,false);memset(&p,0,sizeof(p));return ok;
 }
 void networkLoop(){uint32_t now=millis();
+#ifdef BOARD_WAVESHARE_P4_KNOB
+ if(!p4CoprocReady())return;
+#endif
 #ifdef DRAGON_WIFI_CLOCK
  if(!active&&timeProfile>=0&&timeSchedule.due(now)&&!reconOwnsRadio()&&!bleLabOwnsRadio()&&!reconStorageBusy()){
    if(!requestTime())timeSchedule.finished(now,false);

@@ -1,6 +1,9 @@
 // Radio modes and bounded lab sessions. Original MIT adapter; packet builders
 // originate in Valleytech HackerPhone. Marauder MIT notice is retained.
 #include "recon_internal.h"
+#ifdef BOARD_WAVESHARE_P4_KNOB
+#include "p4_radio.h"
+#endif
 #include "storage_replace.h"
 #include "background_radio.h"
 #include "portal.h"
@@ -17,7 +20,9 @@
 #include "ble_insights.h"
 #include "packet_helpers.h"
 #include <Preferences.h>
+#ifndef BOARD_WAVESHARE_P4_KNOB
 #include <NimBLEDevice.h>
+#endif
 #include <esp_wifi.h>
 #include <esp_timer.h>
 #include <mbedtls/ecp.h>
@@ -44,7 +49,7 @@ static uint8_t* packet=nullptr;static uint8_t* beacon=nullptr;static size_t beac
 static std::atomic<int> crypto{0};
 #ifdef BOARD_XIAO_ROUND
 constexpr size_t CaptureCapacity=512*1024;
-#elif defined(BOARD_WATCHER) || defined(BOARD_LILYGO_175) || defined(BOARD_AMOLED_175C) || (defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_206)) || defined(BOARD_STOPWATCH) || defined(BOARD_WAVESHARE_185B)
+#elif defined(BOARD_WATCHER) || defined(BOARD_LILYGO_175) || defined(BOARD_AMOLED_175C) || (defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_206)) || defined(BOARD_STOPWATCH) || defined(BOARD_WAVESHARE_185B) || defined(BOARD_WAVESHARE_P4_KNOB)
 constexpr size_t CaptureCapacity=2*1024*1024;
 #else
 constexpr size_t CaptureCapacity=1024*1024;
@@ -76,6 +81,10 @@ bool selectClient(unsigned i){if(busy()||!clients||i>=ClientCapacity||!clients[i
 static Ap* selected(){if(aps&&target.hasAp)for(unsigned i=0;i<ApCapacity;++i)if(aps[i].used&&!memcmp(aps[i].mac,target.bssid,6))return &aps[i];return nullptr;}
 static bool cloneMode(AttackMode m){return m==AttackMode::CloneBeacon||m==AttackMode::ApSpam||m==AttackMode::ChannelSwitch||m==AttackMode::Quiet;}
 bool available(AttackMode m,char* why,size_t cap){
+#if BOARD_RADIO_AP_SURVEY_ONLY
+ strlcpy(why,"This radio supports passive Wi-Fi surveys",cap);
+ return false;
+#endif
  const char* error=nullptr;auto* ap=selected();
  if(radioStandby())error="Leave clock or timer to use radio tools";
  else if(unsigned(m)>=unsigned(AttackMode::Count))error="Unknown tool";
@@ -99,6 +108,10 @@ static void prepareSae(void*){
  if(ok)memcpy(saeMaterial+32,encoded+1,64);mbedtls_mpi_free(&d);mbedtls_ecp_point_free(&q);mbedtls_ecp_group_free(&g);crypto=ok?2:-1;vTaskDelete(nullptr);
 }
 static bool captureInit(bool ble,bool eapol){
+#if BOARD_RADIO_AP_SURVEY_ONLY
+ say("Packet capture requires raw frames. This radio reports access points.");
+ return false;
+#endif
  if(captureDirty){say("Unsaved capture: Save or Discard first");return false;}
  captureOnCard=bleLabStorageOnCard();
  if(!captureOnCard&&!capture)capture=(uint8_t*)ps_malloc(CaptureCapacity);if(!captureOnCard&&!capture){say("Capture memory unavailable");return false;}
@@ -115,6 +128,11 @@ bool captureStart(bool ble,bool eapol){if(radioStandby()){say("Leave clock or ti
 }
 void captureStop(){bool was=status.recording;status.recording=false;wifiRecording=false;if(captureModeOwned){captureModeOwned=false;mode=capturePreviousMode;channelLock=capturePreviousLock;radioApplyMode();}if(was){if(captureOnCard){cardCapture.stop();status.saving=cardCapture.busy();say("Finalizing SD capture; keep card inserted");}else say("Capture stopped; Save to retain it across restart");}}
 static bool appendCapture(const uint8_t* data,size_t n){if(captureOnCard){if(!cardCapture.append(data,n))return false;status.bytes=uint32_t(std::min<uint64_t>(UINT32_MAX,uint64_t(status.bytes)+n));++status.records;return true;}if(n>CaptureCapacity-status.bytes){captureStop();say("Capture buffer full; stopped without overwriting");return false;}memcpy(capture+status.bytes,data,n);status.bytes+=n;++status.records;return true;}
+#ifdef BOARD_WAVESHARE_P4_KNOB
+bool start(AttackMode){say("This companion supports passive discovery");return false;}
+void stop(){}
+static void tick(uint32_t){}
+#else
 bool start(AttackMode m){
  char why[128];if(!available(m,why,sizeof(why))){if(!status.active&&unsigned(m)<unsigned(AttackMode::Count)){status.attack=m;status.accepted=status.errors=status.responses=status.eapol=0;status.error=0;}say(why);return false;}
  running=target;runSeconds=seconds;runRate=rate;beaconLength=0;randomBeaconsReady=false;if(auto* a=selected()){beaconLength=a->length;memcpy(beacon,a->beacon,beaconLength);}
@@ -166,6 +184,7 @@ static void tick(uint32_t now){
  }
  if(result==ESP_OK){++status.accepted;if(random)random->sequence=(random->sequence+1)&4095;}else{++status.errors;status.error=result;if(result==ESP_ERR_NO_MEM){say("Radio TX queue busy / retrying next interval");return;}stop();snprintf(status.message,sizeof(status.message),"Driver rejected frame (%d); stopped",result);}
 }
+#endif
 static bool safeFile(const char* p){size_t n=strlen(p);if(n<6||n>=48||strstr(p,".."))return false;for(size_t i=0;i<n;++i)if(!isalnum(uint8_t(p[i]))&&p[i]!='-'&&p[i]!='.'&&p[i]!='_')return false;return true;}
 static bool serialWrite(const char* p,size_t n){RadioTransfer transfer;uint32_t at=millis();while(n){size_t k=std::min<size_t>(128,std::min(n,size_t(Serial.availableForWrite())));if(k){k=Serial.write((const uint8_t*)p,k);p+=k;n-=k;at=millis();}else if(millis()-at>5000)return false;radioTransferTick();delay(1);}return true;}
 static String capturePath(const char* name){return String(!strncmp(name,"wigle-",6)?"/wardrive/":"/captures/")+name;}
@@ -207,13 +226,20 @@ bool reconAccepts(Family family,bool ble){return modeAccepts(mode,family,ble);}
 bool reconStorageBusy(){return status.saving||cardCapture.busy();}
 bool reconOwnsRadio(){return nodeBusy()||wardriveBusy()||wardriveUploadBusy()||status.active||portalActive()||csiActive()||networkActive();}
 bool reconRecording(){return wifiRecording.load();}
-bool reconSetMode(ReconMode next){if(!validMode(unsigned(next))||busy())return false;if(status.recording&&next!=mode)captureStop();mode=next;prefs.putUChar("mode",unsigned(mode));trackedContact=-1;channelLock=0;radioApplyMode();return true;}
+static bool modeAvailable(unsigned value){
+#if BOARD_RADIO_AP_SURVEY_ONLY
+  return p4RadarProfileSupported(value);
+#else
+  return validMode(value);
+#endif
+}
+bool reconSetMode(ReconMode next){if(!modeAvailable(unsigned(next))||busy())return false;if(status.recording&&next!=mode)captureStop();mode=next;prefs.putUChar("mode",unsigned(mode));trackedContact=-1;channelLock=0;radioApplyMode();return true;}
 void reconStop(){wardriveStop();networkStop();csiStop();portalStop();stop();captureStop();}
 uint16_t reconHopDwell(){return hopDwell;}
 uint8_t reconNextChannel(uint8_t current){return analysis::nextChannel(current,hopMask);}
 bool reconSetIBeacon(const dragon::ibeacon::Identity& value){if(busy()||status.recording)return false;beaconIdentity=value;return true;}
 const dragon::ibeacon::Identity& reconIBeacon(){return beaconIdentity;}
-void reconBegin(){networkBegin();prefs.begin("dd-recon",false);loadList();unsigned m=prefs.getUChar("mode",0);mode=validMode(m)?ReconMode(m):ReconMode::Radar;probes=(analysis::Probe*)ps_calloc(96,sizeof(analysis::Probe));aps=(Ap*)ps_calloc(ApCapacity,sizeof(Ap));clients=(dragon::toolkit::Client*)ps_calloc(ClientCapacity,sizeof(dragon::toolkit::Client));packet=(uint8_t*)ps_malloc(1200);beacon=(uint8_t*)ps_malloc(1024);radioApplyMode();}
+void reconBegin(){networkBegin();prefs.begin("dd-recon",false);loadList();unsigned m=prefs.getUChar("mode",0);mode=modeAvailable(m)?ReconMode(m):ReconMode::Radar;probes=(analysis::Probe*)ps_calloc(96,sizeof(analysis::Probe));aps=(Ap*)ps_calloc(ApCapacity,sizeof(Ap));clients=(dragon::toolkit::Client*)ps_calloc(ClientCapacity,sizeof(dragon::toolkit::Client));packet=(uint8_t*)ps_malloc(1200);beacon=(uint8_t*)ps_malloc(1024);radioApplyMode();}
 void reconLoop(){recipeLoop();missionLoop();networkLoop();csiLoop();portalLoop();tick(millis());saveTick();if(status.recording&&!captureOnCard&&millis()-captureAt>=15*60*1000){captureStop();say("15-minute capture limit; Save to retain");}}
 void reconWifi(const uint8_t* p,size_t n,size_t original,uint64_t us,int rssi,uint8_t channel){
  if(status.saving)return;
@@ -234,7 +260,7 @@ static bool number(const String& s,unsigned& n){if(!s.length())return false;n=0;
 bool reconCommand(const String& c){
  if(recipeCommand(c)||missionCommand(c)||networkCommand(c)||portalCommand(c)||csiCommand(c))return true;
  if(!c.startsWith("mode ")&&!c.startsWith("tool ")&&!c.startsWith("recon "))return false;unsigned n=0;
- if(c=="mode list"){for(unsigned i=0;i<unsigned(ReconMode::Count);++i)Serial.printf("MODE %u %s / %s\n",i,reconModes[i].name,reconModes[i].detail);Serial.println("RECON_OK");}
+ if(c=="mode list"){for(unsigned i=0;i<unsigned(ReconMode::Count);++i)if(modeAvailable(i))Serial.printf("MODE %u %s / %s\n",i,reconModes[i].name,reconModes[i].detail);Serial.println("RECON_OK");}
  else if(c=="mode status"||c=="tool status")Serial.printf("MODE_STATUS mode=%u radio=%u active=%u tool=%u accepted=%lu errors=%lu error=%d responses=%lu eapol=%lu recording=%u records=%lu bytes=%u capture_capacity=%u unsaved=%u saving=%u ssids=%u message=%s\n",unsigned(mode),reconRadio(),status.active,unsigned(status.attack),status.accepted,status.errors,status.error,status.responses,status.eapol,status.recording,status.records,unsigned(status.bytes),unsigned(CaptureCapacity),captureDirty,status.saving,ssidCount,status.message);
  else if(c.startsWith("mode set ")&&number(c.substring(9),n)&&validMode(n))Serial.println(reconSetMode(ReconMode(n))?"RECON_OK":"RECON_ERROR busy");
  else if(c=="recon stats"){Serial.printf("RECON_STATS frames=%lu beacons=%lu probes=%lu disconnect=%lu eapol=%lu pwnagotchi=%lu detections=%lu protected=%lu retries=%lu m1=%lu m2=%lu m3=%lu m4=%lu other_eapol=%lu pmkid=%lu sae=%lu\n",counters.frames,counters.beacons,counters.probes,counters.disconnect,counters.eapol,counters.peers,counters.detections,counters.protectedFrames,counters.retries,counters.keyMessages[1],counters.keyMessages[2],counters.keyMessages[3],counters.keyMessages[4],counters.keyMessages[0],counters.pmkid,counters.sae);Serial.println("RECON_OK");}

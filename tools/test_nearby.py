@@ -19,7 +19,9 @@ assert {k:v for k,v in feeds.items() if v}=={'radio.cpp':1},feeds
 radio=(src/'radio.cpp').read_text(encoding='utf-8')
 line=next(x for x in radio.splitlines() if 'nearby.observe(' in x)
 assert line.strip().startswith('if(c.rssi>=nearby.exitDbm()&&!(deviceRules(contactKey(c))&RuleIgnore))'),line
-assert radio.count('nearby.listen(elapsed,now)')==2 and radio.count('nearby.tick()')==1
+assert radio.count('nearby.listen(elapsed,now)')==2 and radio.count('nearby.tick()')==2
+assert 'nearby.listen(ble.listen_ms,ble.captured_ms)' in radio
+assert 'if(ble.listen_ms)observeNearby(*dot)' in radio and 'observeNearby(c);' in radio
 for name in ['ui.cpp','ui_lite.cpp']:
     assert 'dragon::nearbyText(' in (src/name).read_text(encoding='utf-8'),name
 # Nothing that touches the count may notify, sound, log or record history.

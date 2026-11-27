@@ -46,12 +46,16 @@ class SsidMonitor {
   AP entries[64]{};
 public:
   bool observe(const WifiFrame& f,uint32_t now,uint8_t* peer) {
-    if(!f.valid || !f.beacon || !*f.name || (f.bssid[0]&1) || memcmp(f.source,f.bssid,6))return false;
+    if(!f.valid || !f.beacon || !*f.name || memcmp(f.source,f.bssid,6))return false;
+    return observeAp(f.bssid,f.ssid,f.ssidLength,f.security,now,peer);
+  }
+  bool observeAp(const uint8_t* mac,const uint8_t* ssid,size_t length,uint8_t security,uint32_t now,uint8_t* peer) {
+    if(!mac || (mac[0]&1) || !ssid || !length || length>32 || !peer)return false;
     AP* slot=nullptr;AP* oldest=&entries[0];
-    for(auto& a:entries){if(a.used&&!memcmp(a.mac,f.bssid,6)){slot=&a;break;}if(!a.used&&!slot)slot=&a;if(uint32_t(now-a.last)>uint32_t(now-oldest->last))oldest=&a;}
+    for(auto& a:entries){if(a.used&&!memcmp(a.mac,mac,6)){slot=&a;break;}if(!a.used&&!slot)slot=&a;if(uint32_t(now-a.last)>uint32_t(now-oldest->last))oldest=&a;}
     if(!slot)slot=oldest;
-    if(!slot->used || memcmp(slot->mac,f.bssid,6) || slot->length!=f.ssidLength || memcmp(slot->ssid,f.ssid,f.ssidLength) || slot->security!=f.security || uint32_t(now-slot->last)>30000){
-      *slot={};slot->used=true;memcpy(slot->mac,f.bssid,6);memcpy(slot->ssid,f.ssid,f.ssidLength);slot->length=f.ssidLength;slot->security=f.security;slot->first=now;
+    if(!slot->used || memcmp(slot->mac,mac,6) || slot->length!=length || memcmp(slot->ssid,ssid,length) || slot->security!=security || uint32_t(now-slot->last)>30000){
+      *slot={};slot->used=true;memcpy(slot->mac,mac,6);memcpy(slot->ssid,ssid,length);slot->length=length;slot->security=security;slot->first=now;
     }
     slot->last=now;if(slot->hits<255)++slot->hits;
     if(slot->hits<3 || uint32_t(now-slot->first)<400 || (slot->alerted&&uint32_t(now-slot->alertAt)<60000))return false;

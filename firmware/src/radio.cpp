@@ -9,7 +9,6 @@
 #include "node_mode.h"
 #include "background_radio.h"
 #include <WiFi.h>
-#include <NimBLEDevice.h>
 #include <esp_wifi.h>
 #include <esp_event.h>
 #include <esp_timer.h>
@@ -18,16 +17,38 @@
 #include <esp_heap_caps.h>
 #include <new>
 #include <atomic>
+#ifdef BOARD_WAVESHARE_P4_KNOB
+#include "p4_radio.h"
+#include "p4_wifi_metadata.h"
+#else
+#include <NimBLEDevice.h>
 #include <nimble/porting/nimble/include/nimble/nimble_port.h>
+#endif
 #include "axon.h"
 #include "radio_schedule.h"
 
 bool radioEnabled=true,blePhase=false,candidatesOnly=true;
 static bool standby=false;
+#ifdef BOARD_WAVESHARE_P4_KNOB
+static bool p4RadarRequested=true;
+static p4_radar_wifi_snapshot_t p4LastSurvey{};
+static bool p4HaveSurvey=false;
+const p4_radar_wifi_snapshot_t* p4LatestWifiSurvey(){return p4HaveSurvey?&p4LastSurvey:nullptr;}
+bool p4RadarChannelSummary(uint16_t counts[P4_RADAR_CHANNELS],int8_t strongest[P4_RADAR_CHANNELS],uint32_t* completedMs){
+  if(!p4HaveSurvey||!counts||!strongest||!completedMs)return false;
+  memcpy(counts,p4LastSurvey.channel_counts,sizeof(p4LastSurvey.channel_counts));
+  memcpy(strongest,p4LastSurvey.channel_peaks,sizeof(p4LastSurvey.channel_peaks));
+  *completedMs=p4LastSurvey.finished_ms;
+  return true;
+}
+#endif
 static bool wardriveTransition=false;
 bool radioStandby(){return standby;}
 void setRadioStandby(bool enabled){
   if(standby==enabled)return;
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  const bool requested=p4RadarRequested;
+#endif
   standby=enabled;
   if(enabled){
     recipeStop();
@@ -36,11 +57,20 @@ void setRadioStandby(bool enabled){
 #endif
     reconStop();bleLabStop();setCapture(false);
   }
+  // Utility pages suspend receive; a manually paused radar stays paused.
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  setRadio(requested);
+#else
   setRadio(!enabled);
+#endif
 }
 bool radarRecent=true;
 int trackedContact=-1;
 static bool radarVisibleWith(const Contact& c,uint32_t now,uint8_t flags){
+#ifdef BOARD_WAVESHARE_P4_KNOB
+ const uint8_t scannerMode=p4RadarScanMode();
+ if ((scannerMode==1 && c.ble) || (scannerMode==2 && !c.ble)) return false;
+#endif
  if(!reconAccepts(c.match.family,c.ble))return false;
  return candidateVisible(c,now,detector,!candidatesOnly||reconAll(),flags&RuleIgnore,flags&RuleWatch) || (radarRecent&&recentCandidateVisible(c,now,detector,flags&RuleIgnore,flags&RuleWatch));
 }
@@ -93,6 +123,7 @@ static void countAxon(dragon::AxonEvidence clue,bool ble,bool payloadValid,uint3
 }
 
 
+#ifndef BOARD_WAVESHARE_P4_KNOB
 static NimBLEScan* scanner;
 static dragon::WifiSweep wifiSweep;
 static bool configuredActive=false;
@@ -121,6 +152,7 @@ static bool scanCommand(ScanAction action,uint32_t duration=0,bool active=false)
   xSemaphoreTake(scanRequest.done,portMAX_DELAY);
   return scanRequest.ok;
 }
+#endif
 static uint32_t lastHop=0,lastAccounting=0;
 static bool surveyListen=false; // see radioSurveyListen()
 static dragon::RadioSchedule schedule;
@@ -133,6 +165,9 @@ static dragon::DisconnectMonitor disconnects;
 unsigned recentDisconnects(){return disconnects.recent(millis());}
 static bool fox=false;
 bool foxTransmit(){return fox;}
+#ifdef BOARD_WAVESHARE_P4_KNOB
+void setFoxTransmit(bool) {}
+#else
 void setFoxTransmit(bool enabled){
   if(enabled&&standby)return;
   if(bleLabOwnsRadio()||reconOwnsRadio())return;
@@ -148,10 +183,18 @@ void setFoxTransmit(bool enabled){
     advertising->setMinInterval(160);advertising->setMaxInterval(240);fox=advertising->start();
   }
 }
+#endif
 static void wifiRx(void* buffer,wifi_promiscuous_pkt_type_t type){
   if(type!=WIFI_PKT_MGMT && type!=WIFI_PKT_DATA)return;
   auto* p=static_cast<wifi_promiscuous_pkt_t*>(buffer);
   if(p->rx_ctrl.rx_state || p->rx_ctrl.sig_len<28)return;
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  static_assert(sizeof(wifi_pkt_rx_ctrl_t)==28,"Check the extconn RX layout after SDK changes");
+  const uint8_t packetChannel=dragon::p4::wifiPrimaryChannel(&p->rx_ctrl);
+  if(packetChannel<1||packetChannel>14||p->rx_ctrl.sig_len>2500)return;
+#else
+  const uint8_t packetChannel=p->rx_ctrl.channel;
+#endif
 #ifndef BOARD_RADAR_LITE
   // Room motion counts the selected AP's PHY classes; detections still queue.
   if(csiActive())csiFrame(p);
@@ -168,10 +211,14 @@ static void wifiRx(void* buffer,wifi_promiscuous_pkt_type_t type){
   full=full||dragon::parseWifi(p->payload,std::min<size_t>(o.original,48)).eapol;
 #endif
   o.len=std::min<size_t>(o.original,full?sizeof(o.data):48);
-  o.rssi=p->rx_ctrl.rssi;o.channel=p->rx_ctrl.channel;
+  o.rssi=p->rx_ctrl.rssi;o.channel=packetChannel;
   memcpy(o.data,p->payload,o.len);
   enqueueObservation(index,priority);
 }
+#ifdef BOARD_WAVESHARE_P4_KNOB
+void p4ReceiveWifiFrame(void* buffer,wifi_promiscuous_pkt_type_t type){wifiRx(buffer,type);}
+#endif
+#ifndef BOARD_WAVESHARE_P4_KNOB
 class BleCallbacks:public NimBLEScanCallbacks {
   void onDiscovered(const NimBLEAdvertisedDevice* d) override {
     // In active mode, don't lose devices which never send a scan response.
@@ -188,6 +235,7 @@ class BleCallbacks:public NimBLEScanCallbacks {
   }
 };
 static BleCallbacks bleCallbacks;
+#endif
 static Contact* getContact(const uint8_t* mac,bool ble,uint8_t addressType,uint32_t now,dragon::Match incoming){
   dragon::DeviceKey key;memcpy(key.mac,mac,6);key.radio=ble;key.addressType=ble?addressType:0;
   int cached=contactCache.lookup(key,contacts.data);
@@ -214,20 +262,31 @@ static Contact* getContact(const uint8_t* mac,bool ble,uint8_t addressType,uint3
   slot->match={ble?Family::Ble:Family::Wifi,Confidence::None,"no specific signature"};
   contactCache.remember(key,slot-contacts.data);return slot;
 }
-static void update(Contact& c,const Observation& o,const char* name,dragon::Match m,uint8_t advertised=0,bool beacon=false){
-  if(c.packets && uint32_t(o.at-c.seen)>30000){c.signal={};c.advChannel=0;c.matchHits=0;c.match={c.ble?Family::Ble:Family::Wifi,Confidence::None,"expired evidence"};c.signatureAlerted=false;c.wifiAlerts=0;}
-  if(o.rssi<0 && o.rssi>=-127){c.signal.add(o.rssi,o.at,detector.smoothingMs);c.rssi=c.signal.value();c.trace.add(c.rssi,o.at);}c.seen=o.at;noteChannel(c,o.channel,advertised,beacon);++c.packets;
-  visitTouch(keyOf(c),o.at);
-  if(*name)strlcpy(c.name,name,sizeof(c.name));
-  if(c.matchHits && uint32_t(o.at-c.matchedAt)>30000){c.matchHits=0;c.signatureAlerted=false;c.match={c.ble?Family::Ble:Family::Wifi,Confidence::None,"expired evidence"};}
+static bool noteSignature(Contact& c,dragon::Match m,uint32_t at){
+  if(c.matchHits && uint32_t(at-c.matchedAt)>30000){c.matchHits=0;c.signatureAlerted=false;c.match={c.ble?Family::Ble:Family::Wifi,Confidence::None,"expired evidence"};}
   bool changed=dragon::strongerMatch(m,c.match);
   if(m.confidence!=Confidence::None && (changed || (m.family==c.match.family && m.confidence>=c.match.confidence))){
     if(changed){c.match=m;c.matchHits=0;c.signatureAlerted=false;}
     else c.match.evidence=m.evidence;
-    if(!c.matchHits)c.matchSince=o.at;
-    if(c.matchHits<65535)++c.matchHits;c.matchedAt=o.at;
+    if(!c.matchHits)c.matchSince=at;
+    if(c.matchHits<65535)++c.matchHits;c.matchedAt=at;
   }
-  if(c.match.family!=Family::Adult && detector.enabled(c.match.family) && (c.packets==1 || changed || uint32_t(o.at-c.lastLog)>30000)){logContact(c,changed?"signature":"seen");c.lastLog=o.at;}
+  return changed;
+}
+struct ContactSample {
+  uint32_t at;
+  int8_t rssi;
+  uint8_t channel;
+  uint32_t reports;
+};
+static void update(Contact& c,const ContactSample& o,const char* name,dragon::Match m,uint8_t advertised=0,bool beacon=false){
+  const bool first=c.packets==0;
+  if(c.packets && uint32_t(o.at-c.seen)>30000){c.signal={};c.advChannel=0;c.matchHits=0;c.match={c.ble?Family::Ble:Family::Wifi,Confidence::None,"expired evidence"};c.signatureAlerted=false;c.wifiAlerts=0;}
+  if(o.rssi<0 && o.rssi>=-127){c.signal.add(o.rssi,o.at,detector.smoothingMs);c.rssi=c.signal.value();c.trace.add(c.rssi,o.at);}c.seen=o.at;noteChannel(c,o.channel,advertised,beacon);c.packets+=std::min(UINT32_MAX-c.packets,o.reports);
+  visitTouch(keyOf(c),o.at);
+  if(*name)strlcpy(c.name,name,sizeof(c.name));
+  const bool changed=noteSignature(c,m,o.at);
+  if(c.match.family!=Family::Adult && detector.enabled(c.match.family) && (first || changed || uint32_t(o.at-c.lastLog)>30000)){logContact(c,changed?"signature":"seen");c.lastLog=o.at;}
   // Save the first valid match too: short encounters remain inspectable even
   // when they have not earned a repeat-confirmed audible alert.
   if(c.match.confidence!=Confidence::None && (c.matchHits==1 || changed))historyObserve(c,c.match.family,c.match.confidence,c.match.evidence);
@@ -243,23 +302,44 @@ static void update(Contact& c,const Observation& o,const char* name,dragon::Matc
     else emitDetection(c,c.match.family,c.match.confidence,c.match.evidence);
   }
 }
-static void checkBleBurst(Contact& participant,const Observation& o,uint8_t group){
-  // Ignore scan-response bytes in the fingerprint, so active scanning doesn't
-  // turn one advertisement plus its response into two payload variants.
-  size_t length=o.advLength?std::min<size_t>(o.advLength,o.len):o.len;
-  auto result=bleBursts.observe(contactKey(participant),group,dragon::crc32(o.data,length),o.at);
+static void observeNearby(const Contact& c){
+  if(c.rssi>=nearby.exitDbm()&&!(deviceRules(contactKey(c))&RuleIgnore))nearby.observe(contactHash(keyOf(c)),c.rssi,dragon::rotatingAddress(c.mac,c.addressType));
+}
+static void checkBleBurst(Contact& participant,uint8_t group,const uint8_t* advertisement,size_t length,uint32_t at){
+  auto result=bleBursts.observe(contactKey(participant),group,dragon::crc32(advertisement,length),at);
   if(result.alert){
-    ++participant.wifiAlerts;participant.lastWifiAlert=o.at;participant.trafficFamily=Family::BleSpam;
+    ++participant.wifiAlerts;participant.lastWifiAlert=at;participant.trafficFamily=Family::BleSpam;
     snprintf(participant.trafficEvidence,sizeof(participant.trafficEvidence),"%s: %u addresses, %u payload variants / 5s; possible spam, not proven source",dragon::bleBurstName(group),result.addresses,result.variants);
-    ++trafficStatus.bleAlerts;trafficStatus.lastBle=o.at;trafficStatus.bleGroup=group;trafficStatus.bleAddresses=result.addresses;trafficStatus.bleVariants=result.variants;
+    ++trafficStatus.bleAlerts;trafficStatus.lastBle=at;trafficStatus.bleGroup=group;trafficStatus.bleAddresses=result.addresses;trafficStatus.bleVariants=result.variants;
     const dragon::Incident burst{dragon::IncidentKind::BleBurst,group,dragon::BleBurstQuietMs};
     emitDetection(participant,Family::BleSpam,Confidence::Medium,participant.trafficEvidence,&burst);
   }
 }
+static void checkBleActivity(Contact& c,const dragon::BleFrame& f,const uint8_t* payload,size_t length,uint32_t at){
+  const auto family=f.match.family;
+  if(family==Family::Tracker || family==Family::SmartTag || family==Family::GoogleTag || family==Family::Tile || family==Family::IBeacon)
+    checkBleBurst(c,3,payload,length,at);
+  if(f.applePopup)checkBleBurst(c,0,payload,length,at);
+  if(f.fastPair)checkBleBurst(c,1,payload,length,at);
+  if(f.swiftPair)checkBleBurst(c,2,payload,length,at);
+}
+static void reportSsidConflict(Contact& c,const uint8_t* ssid,uint8_t length,bool secured,const uint8_t* peer,uint32_t at){
+  if(!detector.enabled(Family::EvilTwin))return;
+  char mac[18];macText(peer,mac);
+  ++trafficStatus.ssidConflicts;
+  ++c.wifiAlerts;c.lastWifiAlert=at;c.trafficFamily=Family::EvilTwin;
+  snprintf(c.trafficEvidence,sizeof(c.trafficEvidence),"Same SSID, open/protected mismatch with %s; possible evil twin or network configuration",mac);
+  const dragon::Incident pair{dragon::IncidentKind::EvilTwin,dragon::ssidConflictId(ssid,length,secured?peer:c.mac),dragon::EvilTwinQuietMs};
+  emitDetection(c,Family::EvilTwin,Confidence::Medium,c.trafficEvidence,&pair);
+}
+#ifndef BOARD_WAVESHARE_P4_KNOB
 namespace noderadio {void bleSeen(const uint8_t*,int);extern bool owned;}
+#endif
 static void process(const Observation& o){
   // A wardriving node only counts Bluetooth addresses; nothing reaches the detector.
+#ifndef BOARD_WAVESHARE_P4_KNOB
   if(noderadio::owned){if(o.kind==1)noderadio::bleSeen(o.mac,o.rssi);return;}
+#endif
   if(wardriveBusy()){
     if(wardriveActive()){
       if(o.kind==0)wardriveWifi(o.data,o.len,o.rssi,o.channel,o.at);
@@ -286,15 +366,11 @@ static void process(const Observation& o){
     // Priority observations may overtake older general traffic for this key.
     if(c.packets&&int32_t(o.at-c.seen)<0)return;
     if(radarChannel(f.channel)){++advertisedFrames;if(f.channel!=o.channel)++advertisedMismatch;}
-    update(c,o,f.name,f.match,f.channel,f.beacon);
+    update(c,{o.at,o.rssi,o.channel,1},f.name,f.match,f.channel,f.beacon);
     if(&c-contacts.data==trackedContact && radarChannel(c.channel))channelLock=c.channel;
     dragon::mergeDrone(c.drone,f.drone,o.at);
     uint8_t peer[6];
-    if(ssids.observe(f,o.at,peer)){
-      char mac[18],msg[128];macText(peer,mac);snprintf(msg,sizeof(msg),"Same SSID, open/protected mismatch with %s; possible evil twin or network configuration",mac);
-      if(detector.enabled(Family::EvilTwin)){++c.wifiAlerts;c.lastWifiAlert=o.at;c.trafficFamily=Family::EvilTwin;strlcpy(c.trafficEvidence,msg,sizeof(c.trafficEvidence));
-        const dragon::Incident pair{dragon::IncidentKind::EvilTwin,dragon::ssidConflictId(f.ssid,f.ssidLength,f.security?peer:f.bssid),dragon::EvilTwinQuietMs};emitDetection(c,Family::EvilTwin,Confidence::Medium,msg,&pair);}
-    }
+    if(ssids.observe(f,o.at,peer))reportSsidConflict(c,f.ssid,f.ssidLength,f.security!=0,peer,o.at);
     if(f.deauth || f.disassoc){
       ++trafficStatus.disconnectFrames;
       if(disconnects.observe(o.at)){
@@ -314,11 +390,12 @@ static void process(const Observation& o){
     if(!payloadValid)++malformedFrames;if(!f.valid)return;
     countAxon(dragon::inspectAxonBle(o.data,o.len,o.advLength,o.mac,o.addressType),true,payloadValid,o.at);
     auto* contact=getContact(o.mac,true,o.addressType,o.at,f.match);if(!contact)return;Contact& c=*contact;if(c.packets&&int32_t(o.at-c.seen)<0)return;
-    update(c,o,f.name,f.match);
-    if(c.rssi>=nearby.exitDbm()&&!(deviceRules(contactKey(c))&RuleIgnore))nearby.observe(contactHash(keyOf(c)),c.rssi,dragon::rotatingAddress(o.mac,o.addressType));
+    update(c,{o.at,o.rssi,o.channel,1},f.name,f.match);
+    observeNearby(c);
     dragon::mergeDrone(c.drone,f.drone,o.at);
-    if(f.match.family==Family::Tracker||f.match.family==Family::SmartTag||f.match.family==Family::GoogleTag||f.match.family==Family::Tile||f.match.family==Family::IBeacon)checkBleBurst(c,o,3);
-    if(f.applePopup)checkBleBurst(c,o,0);if(f.fastPair)checkBleBurst(c,o,1);if(f.swiftPair)checkBleBurst(c,o,2);
+    // A following scan response is not another advertisement payload variant.
+    const size_t length=o.advLength?std::min<size_t>(o.advLength,o.len):o.len;
+    checkBleActivity(c,f,o.data,length,o.at);
   }
 }
 void radioBegin(){
@@ -334,6 +411,13 @@ void radioBegin(){
   priorityQueue=xQueueCreateStatic(QUEUE_SIZE,1,priorityMemory,&priorityControl);
   freeSlots=xQueueCreateStatic(QUEUE_SIZE,1,freeMemory,&freeControl);
   for(uint8_t i=0;i<QUEUE_SIZE;++i)xQueueSend(freeSlots,&i,0);
+
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  // The companion worker feeds the same packet pool and detector as other boards.
+  blePhase=false;
+  p4RadarSetEnabled(radioEnabled && !standby);
+  p4CoprocStart();
+#else
   // STA transmit sessions publish driver events even without joining a network.
   // The passive NULL interface did not require the default event loop.
 #ifndef BOARD_RADAR_LITE
@@ -353,12 +437,17 @@ void radioBegin(){
   wifi_country_t country={"US",1,11,20,WIFI_COUNTRY_POLICY_MANUAL};esp_wifi_set_country(&country);
   wifi_promiscuous_filter_t filter{WIFI_PROMIS_FILTER_MASK_MGMT|WIFI_PROMIS_FILTER_MASK_DATA};
   esp_wifi_set_promiscuous_filter(&filter);esp_wifi_set_promiscuous_rx_cb(wifiRx);esp_wifi_set_channel(1,WIFI_SECOND_CHAN_NONE);
-  NimBLEDevice::init("");scanner=NimBLEDevice::getScan();scanner->setScanCallbacks(&bleCallbacks,true);
-  configuredActive=activeBle&&reconMode()==dragon::ReconMode::Radar;scanner->setActiveScan(configuredActive);scanner->setInterval(100);scanner->setWindow(100);scanner->setMaxResults(0);
-  scanRequest.done=xSemaphoreCreateBinaryStatic(&scanRequest.semaphore);
-  ble_npl_event_init(&scanRequest.event,scanOnHost,nullptr);
+  // On the P4 Knob BLE is on the radio chip; if it never syncs, NimBLEDevice::init
+  // returns false (bounded wait) instead of hanging. Keep Wi-Fi either way.
+  if(NimBLEDevice::init("")){
+    scanner=NimBLEDevice::getScan();scanner->setScanCallbacks(&bleCallbacks,true);
+    configuredActive=activeBle&&reconMode()==dragon::ReconMode::Radar;scanner->setActiveScan(configuredActive);scanner->setInterval(100);scanner->setWindow(100);scanner->setMaxResults(0);
+    scanRequest.done=xSemaphoreCreateBinaryStatic(&scanRequest.semaphore);
+    ble_npl_event_init(&scanRequest.event,scanOnHost,nullptr);
+  }else addAlert("Bluetooth unavailable","Radio chip BLE did not start; Wi-Fi only");
   setRadio(true);
-  Serial.println("RADIO ready: BLE-first 2200ms / Wi-Fi 2200ms; channels 1-11; Axon reserved queue");
+  Serial.printf("RADIO ready: %s; channels 1-11; Axon reserved queue\n",scanner?"BLE-first 2200ms / Wi-Fi 2200ms":"Wi-Fi only (no BLE)");
+#endif
 }
 static void discardQueued(){
   uint8_t pendingIndex;while(xQueueReceive(priorityQueue,&pendingIndex,0)==pdTRUE)xQueueSend(freeSlots,&pendingIndex,0);
@@ -368,6 +457,9 @@ static void discardQueued(){
 // the AP table on every channel, ignoring a channel lock. No BLE, no
 // detections, no alerts, and radioEnabled stays false, so the paused radar is
 // what other tools see and restore. Any setRadio() call ends it.
+#ifdef BOARD_WAVESHARE_P4_KNOB
+bool radioSurveyListen(bool on){return !on;}
+#else
 bool radioSurveyListen(bool on){
   if(on==surveyListen)return true;
   if(on){
@@ -378,8 +470,15 @@ bool radioSurveyListen(bool on){
   }
   surveyListen=false;esp_wifi_set_promiscuous(false);discardQueued();return true;
 }
+#endif
 bool radioSurveyListening(){return surveyListen;}
 void setRadio(bool enabled){
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  p4RadarRequested=enabled;
+  radioEnabled=p4RadarRequested&&!standby;
+  blePhase=false;
+  p4RadarSetEnabled(radioEnabled);
+#else
   enabled=enabled&&!standby;
   if(surveyListen){surveyListen=false;esp_wifi_set_promiscuous(false);discardQueued();}
   if(!wardriveTransition&&(bleLabOwnsRadio()||reconOwnsRadio()))return;
@@ -399,8 +498,13 @@ void setRadio(bool enabled){
     if(channelLock>=1&&channelLock<=11&&esp_wifi_set_channel(channelLock,WIFI_SECOND_CHAN_NONE)==ESP_OK)wifiChannel=channelLock;
     esp_wifi_set_promiscuous(true);
   }
+#endif
 }
 #if BOARD_HAS_GPS
+#ifdef BOARD_WAVESHARE_P4_KNOB
+bool radioWardrive(bool on){return !on;}
+void radioWardriveStatus(){Serial.println("WARDRIVE_RADIO unavailable");}
+#else
 #include "wardrive_radio.inc"
 bool radioWardrive(bool enabled){
   static int previousTracked=-1;static uint8_t previousChannel=0;static bool previousRadio=true;
@@ -424,6 +528,7 @@ void radioWardriveStatus(){
 #endif
 }
 #endif
+#endif
 #include "node_radio.inc"
 // Runs on the application task only: from radioLoop() and once more after the
 // UI pass, never from a radio or LVGL callback. process() applies the
@@ -442,17 +547,121 @@ static void drain(bool afterUi){
   radioMaxBatchUs=std::max<uint32_t>(radioMaxBatchUs,esp_timer_get_time()-batchAt);
   queueDrops=drops.load();
 }
-void radioDrain(){if(queue)drain(true);}
+void radioDrain(){
+  if(!queue)return;
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  if(!radioEnabled||standby||p4CoprocBusy()){discardQueued();return;}
+#endif
+  drain(true);
+}
+#ifdef BOARD_WAVESHARE_P4_KNOB
+bool radioDriversUp(){return queue&&p4CoprocReady();}
+#else
+bool radioDriversUp(){return queue&&scanner;}
+#endif
+static void maintainVisits(bool wifi,bool ble,uint32_t now){
+  static uint32_t expireAt=0,persistAt=0;
+  visitListen(wifi,ble,now);
+  if(uint32_t(now-expireAt)>=60000){expireAt=now;visitExpire(now);}
+  if(uint32_t(now-persistAt)>=10000){persistAt=now;visitsPersist();}
+}
+
 void radioLoop(){
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  if(!queue)return;
+  if(noderadio::owned){discardQueued();noderadio::loop(millis());return;}
+  if(radioEnabled&&!standby&&!p4CoprocBusy())drain(false);else discardQueued();
+  auto& sample=p4LastSurvey;
+  static uint32_t lastBleWindow=0;
+  const uint32_t now=millis();
+  const bool on=radioEnabled && !standby && p4CoprocReady() && !p4CoprocBusy();
+  const auto mode=p4RadarScanMode();
+  // Stop charging absence to a radio which is paused, excluded or no longer
+  // completing surveys. A normal combined cycle finishes within this interval.
+  maintainVisits(on && mode!=2 && p4HaveSurvey && now-sample.finished_ms<15000,
+                 on && mode!=1 && lastBleWindow && now-lastBleWindow<15000,now);
+  if (radioEnabled && !standby && p4RadarTakeSnapshot(sample)) {
+    p4HaveSurvey=true;
+    for (unsigned i=0;contacts.data && i<sample.count;++i) {
+      const p4_radar_ap_t& ap=sample.aps[i];
+      static constexpr uint8_t zero[6]={};
+      if (ap.rssi>=0 || ap.rssi<-127 || ap.channel<1 || ap.channel>14 ||
+          (ap.bssid[0]&1) || !memcmp(ap.bssid,zero,6)) continue;
+      p4RecordSessionContact(false,ap.bssid,0,ap.rssi,ap.channel,nullptr,0,sample.finished_ms);
+      char name[64]{};
+      dragon::safeText(name,sizeof(name),ap.ssid,std::min<size_t>(ap.ssid_length,sizeof(ap.ssid)));
+      const auto identity=dragon::inspectAxonWifiIdentity(ap.bssid,ap.ssid,ap.ssid_length);
+      const auto match=dragon::withAxon(dragon::addressHint(ap.bssid,true,dragon::named(name,Family::Wifi)),identity);
+      Contact* dot=getContact(ap.bssid,false,0,sample.finished_ms,match);
+      if (!dot || (dot->packets && int32_t(sample.finished_ms-dot->seen)<=0)) continue;
+      // One observation per BSSID per completed survey, regardless of raw frame count.
+      update(*dot,{sample.finished_ms,ap.rssi,ap.channel,1},name,match,ap.channel,true);
+      dot->apSecurity=ap.security;
+      // Enhanced Open transition deployments may intentionally pair open and OWE APs.
+      if(ap.security!=P4_AP_UNKNOWN && ap.security!=P4_AP_OWE){
+        uint8_t peer[6];
+        const bool secured=ap.security!=P4_AP_OPEN;
+        if(ap.ssid_length)++trafficStatus.apSecuritySamples;
+        if(ssids.observeAp(ap.bssid,ap.ssid,ap.ssid_length,secured,sample.finished_ms,peer))
+          reportSsidConflict(*dot,ap.ssid,ap.ssid_length,secured,peer,sample.finished_ms);
+      }
+    }
+  }
+  static p4_ble_snapshot_t* received=static_cast<p4_ble_snapshot_t*>(ps_malloc(sizeof(p4_ble_snapshot_t)));
+  blePhase=p4RadarBleListening();
+  if (received && p4RadarTakeBleSnapshot(*received) && radioEnabled && !standby && contacts.data) {
+    auto& ble=*received;
+    lastBleWindow=ble.captured_ms;
+    if(ble.listen_ms){
+      bleListenMs+=ble.listen_ms;
+      nearby.listen(ble.listen_ms,ble.captured_ms);
+    }
+    // Slots are allocated on first sighting but contain the last sighting's time.
+    // Feed the rolling burst windows in reception order, including across millis() wrap.
+    std::sort(ble.sightings,ble.sightings+ble.count,[end=ble.captured_ms](const p4_ble_sighting_t& a,const p4_ble_sighting_t& b){
+      return uint32_t(end-a.seen_ms)>uint32_t(end-b.seen_ms);
+    });
+    for (uint8_t i=0;i<ble.count;++i) {
+      const p4_ble_sighting_t& sighting=ble.sightings[i];
+      bool payloadValid=false;
+      const size_t length=std::min<size_t>(sighting.payload_length,sizeof(sighting.payload));
+      // The companion retains one complete legacy advertisement per address per window.
+      notebookBle(sighting.address,sighting.address_type,sighting.rssi,
+                  sighting.payload,length,length,sighting.seen_ms);
+      const auto frame=dragon::parseBleObservation(sighting.payload,length,length,sighting.address,
+                                                   sighting.address_type,payloadValid,detector.enabled(Family::Adult));
+      p4RecordSessionContact(true,sighting.address,sighting.address_type,sighting.rssi,0,
+                             sighting.payload,payloadValid?length:0,sighting.seen_ms);
+      char name[64]{};
+      const size_t nameSize=std::min<size_t>(sighting.name_length,sizeof(sighting.name));
+      dragon::safeText(name,sizeof(name),sighting.name,nameSize);
+      auto match=frame.valid?frame.match:dragon::Match{Family::Ble,Confidence::None,"passive advertisement"};
+      // A name can come from an earlier report by this address in the same window.
+      // Keep the stronger payload evidence when combining those observations.
+      if (!frame.name[0] && nameSize) match=dragon::withObservedBleName(match,name);
+      Contact* dot=getContact(sighting.address,true,sighting.address_type,sighting.seen_ms,match);
+      if (!dot || (dot->packets && int32_t(sighting.seen_ms-dot->seen)<=0)) continue;
+      dot->connectable=sighting.connectable;
+      // Each batch retains one payload per address. Count all received reports,
+      // but evaluate signature and notification policy once for the retained payload.
+      update(*dot,{sighting.seen_ms,sighting.rssi,0,sighting.reports},name,match);
+      if(ble.listen_ms)observeNearby(*dot);
+      if(payloadValid){
+        ++trafficStatus.blePayloadSamples;
+        dragon::mergeDrone(dot->drone,frame.drone,sighting.seen_ms);
+        checkBleActivity(*dot,frame,sighting.payload,length,sighting.seen_ms);
+      }
+    }
+    if(ble.listen_ms)nearby.tick();
+  }
+#else
   if(!queue)return;
   drain(false);
   uint32_t now=millis(),elapsed=now-lastAccounting;lastAccounting=now;
-  static uint32_t nearTick=0,visitTick=0,keepTick=0;if(uint32_t(now-nearTick)>=1000){nearTick=now;nearby.tick();}
+  static uint32_t nearTick=0;if(uint32_t(now-nearTick)>=1000){nearTick=now;nearby.tick();}
   // Only time spent listening on a radio counts as a device being away: the
   // same gates as process(), per radio for BLE-only and Wi-Fi-only modes.
-  {const bool on=radioEnabled&&!standby&&!surveyListen&&!wardriveBusy()&&!reconOwnsRadio()&&!bleLabOwnsRadio();visitListen(on&&reconRadio()!=2,on&&reconRadio()!=1,now);}
-  if(uint32_t(now-visitTick)>=60000){visitTick=now;visitExpire(now);}
-  if(uint32_t(now-keepTick)>=10000){keepTick=now;visitsPersist();}
+  {const bool on=radioEnabled&&!standby&&!surveyListen&&!wardriveBusy()&&!reconOwnsRadio()&&!bleLabOwnsRadio();maintainVisits(on&&reconRadio()!=2,on&&reconRadio()!=1,now);}
   if(noderadio::owned){noderadio::loop(now);return;}
 #if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
   if(wardriveBusy()){driveRadioLoop(now,elapsed);return;}
@@ -481,13 +690,16 @@ void radioLoop(){
   if(!blePhase && wifiSweep.hop(now,relocating?0:channelLock,schedule.focus==dragon::RadioSchedule::Wifi?schedule.left(now):0)){
     if(esp_wifi_set_channel(wifiSweep.current,WIFI_SECOND_CHAN_NONE)==ESP_OK)wifiChannel=wifiSweep.current;
   }
+#endif
 }
 
 void trackContact(int index){
  if(bleLabOwnsRadio()||reconOwnsRadio())return;
  if(index<0 || index>=int(MAX_CONTACTS) || !contacts[index].used){trackedContact=-1;channelLock=0;setRadio(true);return;}
  trackedContact=index;channelLock=contacts[index].ble?0:contacts[index].channel;setRadio(true);
+#ifndef BOARD_WAVESHARE_P4_KNOB
  if(channelLock && esp_wifi_set_channel(channelLock,WIFI_SECOND_CHAN_NONE)==ESP_OK)wifiChannel=channelLock;
+#endif
 }
 // Read-only filter diagnostics for `radar signal`. Addresses are shortened to
 // their last two bytes: enough to follow a contact between calls.
@@ -513,6 +725,11 @@ bool huntDevice(const dragon::DeviceKey& key,uint8_t channel){
  trackContact(i);return trackedContact==i;
 }
 
+#ifdef BOARD_WAVESHARE_P4_KNOB
+void setActiveBle(bool) { activeBle=false; }
+void radioApplyMode() {}
+void radioRebindBle() {}
+#else
 void setActiveBle(bool enabled){
   if(bleLabOwnsRadio()||reconOwnsRadio())return;
   activeBle=enabled;detectorSave();
@@ -524,8 +741,12 @@ void setActiveBle(bool enabled){
 #ifndef BOARD_RADAR_LITE
 void radioApplyMode(){if(bleLabOwnsRadio()||reconOwnsRadio()||!scanner)return;setRadio(false);scanCommand(ScanAction::Configure,0,reconMode()==dragon::ReconMode::Radar?activeBle:false);setRadio(true);}
 void radioRebindBle(){
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  if(!p4CoprocReady()||!scanner)return;   // scanner null: BLE did not come up
+#endif
   NimBLEDevice::init("");scanner=NimBLEDevice::getScan();scanner->setScanCallbacks(&bleCallbacks,true);
   configuredActive=activeBle&&reconMode()==dragon::ReconMode::Radar;scanner->setActiveScan(configuredActive);scanner->setInterval(100);scanner->setWindow(100);scanner->setMaxResults(0);
   ble_npl_event_init(&scanRequest.event,scanOnHost,nullptr);
 }
+#endif
 #endif

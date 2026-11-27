@@ -289,7 +289,13 @@ static void radarSweep(lv_draw_ctx_t* ctx){
 static inline uint32_t radarAge(uint32_t now,uint32_t at){return int32_t(now-at)<0?0:now-at;}
 // radarFrame() runs once per frame: it advances dot positions and chooses the
 // labels. radarDraw() only paints that model, for as many tiles as LVGL asks.
-struct RadarLabelPlan {int dot=-1;uint8_t slot=0;uint32_t color=0;char text[48]{};};
+struct RadarLabelPlan {int dot=-1;uint8_t slot=0;uint32_t color=0;
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  char text[80]{};
+#else
+  char text[48]{};
+#endif
+};
 #ifdef BOARD_RADAR_LITE
 static RadarLabelPlan radarLabelPlanStore[RadarRenderLabelLimit];
 static RadarLabelPlan* const radarLabelPlan=radarLabelPlanStore;
@@ -348,7 +354,23 @@ static void radarFrame(uint32_t now){
   radarLabelCount=labelCount;
   for(unsigned j=0;j<labelCount;++j){auto& dot=dots[labels[j]];labelKeys[j]=dot.key;dot.labelSlot=slots[j];auto& c=contacts[dot.index];uint32_t age=radarAge(now,c.seen);
     char state[24];if(age>=10000)snprintf(state,sizeof(state),"%lus ago",(unsigned long)(age/1000));else snprintf(state,sizeof(state),"%d dBm",c.rssi);
-    auto& plan=radarLabelPlan[j];plan.dot=labels[j];plan.slot=slots[j];plan.color=contactColor(c);snprintf(plan.text,sizeof(plan.text),"%s\n%s",radarFamilyName(c.match.family),state);
+    auto& plan=radarLabelPlan[j];plan.dot=labels[j];plan.slot=slots[j];plan.color=contactColor(c);
+#ifdef BOARD_WAVESHARE_P4_KNOB
+    char titleText[64];
+    const int width=S(dragon::radarLabelSlot(plan.slot).w)-S(5)-S(3);
+    const auto* font=uiFont(FCALLOUT);
+    const bool named=p4FittedContactTitle(titleText,dot.index,font,width);
+    const auto familyOnRadar=visibleFamily(c,now,detector.families);
+    if((named && dragon::p4::signatureFamily(c)) || familyOnRadar!=c.match.family){
+      char family[64];strlcpy(family,radarFamilyName(familyOnRadar),sizeof(family));
+      dragon::p4::fitTitle(family,0,width,[font](const char* s,size_t n){return lv_txt_get_width(s,n,font,0,LV_TEXT_FLAG_NONE);});
+      snprintf(plan.text,sizeof(plan.text),"%s\n%s",family,titleText);
+      continue;
+    }
+#else
+    const char* titleText=radarFamilyName(c.match.family);
+#endif
+    snprintf(plan.text,sizeof(plan.text),"%s\n%s",titleText,state);
   }
 }
 static bool radarDotCurrent(const Dot& dot){auto& c=contacts[dot.index];return c.used&&contactKey(c)==dot.key;}

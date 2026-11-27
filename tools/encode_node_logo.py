@@ -66,6 +66,14 @@ def main() -> None:
             lines.append(f"extern const lv_img_dsc_t {name};")
             lines.append(f"const lv_img_dsc_t {name}={{{{LV_IMG_CF_ALPHA_8BIT,0,0,{width},{height}}},{width * height},{name}_map}};")
         lines.append("#endif")
+        # LVGL's alpha-only images use native dimensions; the knob launcher has a 120px canvas.
+        width = round(mask.width * 98 / mask.height)
+        pixels = mask.resize((width, 98), Image.Resampling.LANCZOS).tobytes()
+        symbol = name + "_launcher"
+        lines.extend(["#ifdef BOARD_WAVESHARE_P4_KNOB", f"static const uint8_t {symbol}_map[]={{"])
+        lines.extend(",".join(str(v) for v in pixels[i:i+40])+"," for i in range(0,len(pixels),40))
+        lines.extend(["};", f"extern const lv_img_dsc_t {symbol};",
+                      f"const lv_img_dsc_t {symbol}={{{{LV_IMG_CF_ALPHA_8BIT,0,0,{width},98}},{len(pixels)},{symbol}_map}};", "#endif"])
     (root / "firmware/src/node_logo.cpp").write_text("\n".join(lines) + "\n", encoding="utf8")
     print(f"Encoded {len(logos)} node logos at 240/360/466 panel sizes; original artwork unchanged.")
 

@@ -62,6 +62,14 @@ inline AxonEvidence inspectAxonBle(const uint8_t* p,size_t n,size_t advLength,co
   }
   return result;
 }
+inline AxonEvidence inspectAxonWifiIdentity(const uint8_t* address,const uint8_t* ssid,size_t size){
+  AxonEvidence result;
+  if(axonPrefix(address))result.signals=AxonOui;
+  else if(bodyCameraPrefix(address))result.signals=BodyCameraVendor;
+  else if(axonResearchPrefix(address))result.signals=AxonResearch;
+  if(ssid && size && size<=32 && axonName(ssid,size))result.signals|=AxonName;
+  return result;
+}
 inline AxonEvidence inspectAxonWifi(const uint8_t* p,size_t n){
   AxonEvidence result;
   // Address evidence is independent of SSID/security IE decoding. The hardware
@@ -69,13 +77,11 @@ inline AxonEvidence inspectAxonWifi(const uint8_t* p,size_t n){
   if(!p||n<24||(p[0]&3))return result;
   const unsigned type=(p[0]>>2)&3;
   if(type!=0&&type!=2)return result;
-  if(axonPrefix(p+10))result.signals=AxonOui;
-  else if(bodyCameraPrefix(p+10))result.signals=BodyCameraVendor;
-  else if(axonResearchPrefix(p+10))result.signals=AxonResearch;
+  result=inspectAxonWifiIdentity(p+10,nullptr,0);
   // A directed probe's SSID names its destination, not its transmitter.
   if(p[0]==0x80||p[0]==0x50)for(size_t at=36;at+2<=n;){
     uint8_t id=p[at++],length=p[at++];if(length>n-at)break;
-    if(id==0&&length<=32&&axonName(p+at,length))result.signals|=AxonName;
+    if(id==0)result.signals|=inspectAxonWifiIdentity(nullptr,p+at,length).signals;
     at+=length;
   }
   return result;
@@ -87,6 +93,14 @@ inline Match withAxon(Match current,AxonEvidence clue){
   if(current.confidence>next.confidence)return current;
   if(current.confidence==next.confidence&&familyPriority(current.family)>familyPriority(next.family))return current;
   return next;
+}
+inline Match withObservedBleName(Match current,const char* name){
+  // This name was heard from the same address in the current receive window.
+  const auto hint=named(name,Family::Ble);
+  if(strongerMatch(hint,current))current=hint;
+  if(axonName(reinterpret_cast<const uint8_t*>(name),strlen(name)))
+    current=withAxon(current,{AxonName});
+  return current;
 }
 // Used by both the receive pipeline and host tests. Complete, bounded Axon
 // fields survive a damaged unrelated AD tail; malformed bytes never supply IDs.

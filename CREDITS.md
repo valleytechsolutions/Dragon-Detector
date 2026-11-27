@@ -402,6 +402,20 @@ Their [source and modification notice](third_party/waveshare-185b/NOTICE.md) and
 in the board package. The board's ES8311 codec driver retains its existing
 [upstream notice](lib/es8311/UPSTREAM.md) and [license](lib/es8311/LICENSE).
 
+## Waveshare ESP32-P4 Knob 1.75 hardware reference
+
+The P4 Wi-Fi and Bluetooth transport uses Espressif's Apache-2.0 [esp-extconn](https://components.espressif.com/components/espressif/esp-extconn). The Wi-Fi Channel Visualizer and BLE Beacon Scan in the Evil tab are Dragon Detector implementations of instruments featured by 7h30th3r0n3 in [Evil-M5Project](https://github.com/7h30th3r0n3/Evil-M5Project).
+
+The `waveshare_p4_knob` profile's CO5300 command list and DSI timing, knob
+debounce, haptic click patterns, SYSTIMER repair, ES8389 speaker start-up table
+and ES7210 microphone register values follow Waveshare's Apache-2.0 board files
+for the ESP32-P4-Knob-Touch-AMOLED-1.75, whose audio code is adapted from
+Espressif's Apache-2.0 `esp_codec_dev`. The board integration and the Voice
+Recorder (microphone capture, WAV writer and reader, rate conversion and
+player) are original MIT code.
+
+MP3 decoding uses [esp-libhelix-mp3 1.0.3](https://components.espressif.com/components/chmorgan/esp-libhelix-mp3/versions/1.0.3/readme). The P4 release ZIP includes the corresponding decoder source and RPSL license in `helix-mp3-source.zip`. Helix DNA Client technology included. Copyright (c) RealNetworks, Inc., 1995-2002. All rights reserved.
+
 ## Waveshare AMOLED 1.43C hardware reference
 
 Pin assignments, the CO5300 start-up values, QSPI settings and touch orientation

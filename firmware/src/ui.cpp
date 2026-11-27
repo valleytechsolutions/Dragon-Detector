@@ -1,4 +1,8 @@
 #include "app.h"
+#ifdef BOARD_WAVESHARE_P4_KNOB
+#include "p4_radio.h"
+#include "p4_contact_label.h"
+#endif
 #include "wardrive.h"
 #include "wardrive_upload.h"
 #include "personal_theme.h"
@@ -13,7 +17,7 @@
 #include "waveshare_185b_performance.h"
 #endif
 #include "recipes.h"
-#ifdef BOARD_AMOLED_175C
+#if defined(BOARD_AMOLED_175C) || defined(BOARD_WAVESHARE_P4_KNOB)
 #include "missions.h"
 #endif
 #include "radar_colors.h"
@@ -30,6 +34,10 @@
 #include "rotary_ui.h"
 #include "node_mode.h"
 #include "node_ui.h"
+#if BOARD_HAS_MIC
+#include "voice_recorder.h"
+#endif
+#include "usb_drive.h"
 #include <lvgl.h>
 #include <math.h>
 #include <esp_heap_caps.h>
@@ -78,7 +86,12 @@ extern lv_img_dsc_t radar_logo_awok,watch_logo_awok,radar_logo_baph,watch_logo_b
 #endif
 static const int CENTER=SCREEN_RES/2;
 #include "target_pages.h"
-enum Page {Boot,Radar,Menu,Devices,Details,Alerts,Channels,Files,Audio,Settings,About,Badge,Hunt,Detectors,History,HistoryDetail,Rules,Controls,Display,Diagnostics,Activity,RadarStyle,Stopwatch,Laps,Clock,ClockEdit,Orientation,FamilyColors,BleLab,Recon,Notebook,NotebookProbes,NotebookBle,NotebookDetail,ClockSettings,ClockWheels,Startup,BadUsb,Node};
+enum Page {Boot,Radar,Menu,Devices,Details,Alerts,Channels,Files,Audio,Settings,About,Badge,Hunt,Detectors,History,HistoryDetail,Rules,Controls,Display,Diagnostics,Activity,RadarStyle,Stopwatch,Laps,Clock,ClockEdit,Orientation,FamilyColors,BleLab,Recon,Notebook,NotebookProbes,NotebookBle,NotebookDetail,ClockSettings,ClockWheels,Startup,BadUsb,Node,Recorder,Player,UsbDrive
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  ,P4ActivityHub,P4Media=P4ActivityHub+2,P4Library,P4Channels,P4Beacons,P4Modes,P4BleLab,P4Profiles=P4BleLab+3
+  ,P4GattPicker,P4Gatt,P4AdvertChanges,P4Sessions
+#endif
+};
 static unsigned notebookPage=0,notebookRows=0;
 static dragon::DeviceKey notebookKeys[10];
 static dragon::notebook::Advert notebookSelection;
@@ -163,8 +176,15 @@ static lv_obj_t* label(lv_obj_t* parent,const char* text,int x,int y,int w=0,con
   auto* o=lv_label_create(parent);lv_label_set_text(o,text);lv_obj_set_pos(o,S(x),pageY(parent,y));if(w)lv_obj_set_width(o,S(w));lv_obj_set_style_text_font(o,uiFont(font),0);lv_obj_set_style_text_color(o,color(c),0);return o;
 }
 static void go(Page p){
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  if(p==BleLab || p==Recon || p==Channels)p=Diagnostics;
+#endif
 // A wardriving node keeps its screen up; a key asks it to stop instead (nodeKey).
 if(nodeBusy()&&p!=Node)return;
+#ifdef DRAGON_USB_DRIVE
+// The PC has the card: its screen stays until Done, an eject or an unplug (usbDriveLoop).
+if(usbDriveOn()&&p!=UsbDrive)return;
+#endif
 if(wardriveUploadBusy()&&p!=Recon){wardriveUploadCancel();reconPage("wardrive-upload");pending=Recon;return;}
 if(wardriveBusy()&&p!=Recon){reconEndWardrive();pending=Recon;return;}
 if(p==Radar){recipeStop();reconStop();bleLabStop();}
@@ -193,8 +213,26 @@ static bool nodeKey(const char* source,bool hold=false){
   return true;
 }
 static void action(lv_event_t* e);
+static void runAction(int id);
+#ifdef BOARD_WAVESHARE_P4_KNOB
+static bool p4UnavailableAction(int id){
+  switch(id){
+    case 23: case 24: case 45: case 46: case 77: case 98:
+    case 200:
+    case 7000: case 7001: case 7002:
+    case 7100: case 7102: case 7103: case 7105: case 7109: return true;
+    default: return id>=201 && id<=211;
+  }
+}
+#endif
 static lv_obj_t* button(lv_obj_t* parent,const char* text,int x,int y,int w,int h,int id){
   auto* b=lv_btn_create(parent);lv_obj_set_pos(b,S(x),pageY(parent,y));lv_obj_set_size(b,S(w),S(h));lv_obj_set_style_pad_all(b,S(8),0);lv_obj_set_style_bg_color(b,color(uiColors().surface),0);lv_obj_set_style_radius(b,uiAscii()?0:S(13),0);lv_obj_set_style_border_width(b,1,0);lv_obj_set_style_border_color(b,color(uiColors().border),0);lv_obj_set_style_shadow_width(b,0,0);
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  if(p4UnavailableAction(id)){
+    lv_obj_add_state(b,LV_STATE_DISABLED);
+    lv_obj_set_style_opa(b,LV_OPA_50,LV_STATE_DISABLED);
+  }
+#endif
 #ifdef BOARD_WAVESHARE_206
   if(parent==root)lv_obj_set_height(b,std::min(S(h),h*lv_disp_get_ver_res(nullptr)/360));
 #endif
@@ -217,7 +255,7 @@ static void locksportColors(lv_obj_t* object){
   for(unsigned i=0;i<lv_obj_get_child_cnt(object);++i)locksportColors(lv_obj_get_child(object,i));
 }
 void uiNotify(const char* text,const char* detail,const dragon::DeviceKey* key,bool watched){
-  if(wardriveBusy()||wardriveUploadBusy()||nodeBusy())return;
+  if(wardriveBusy()||wardriveUploadBusy()||nodeBusy()||usbDriveOn())return;
   dragon::DetectionNotice item;strlcpy(item.title,text,sizeof(item.title));strlcpy(item.detail,detail,sizeof(item.detail));item.watched=watched;item.at=millis();item.hasKey=key!=nullptr;if(key){item.key=*key;int i=findContact(*key);if(i>=0)item.family=contacts[i].match.family;}
   for(unsigned f=0;f<unsigned(Family::Count);++f)if(!strcmp(text,dragon::familyName(Family(f)))){item.family=Family(f);break;}
   if(key&&!dragon::detectionPopupAllowed(page==Radar,pending==Radar))return;
@@ -237,6 +275,25 @@ void uiNotify(const char* text,const char* detail,const dragon::DeviceKey* key,b
   waveshare143cPictureChanged(false);lv_obj_add_event_cb(notice,[](lv_event_t*){waveshare143cPictureChanged(true);},LV_EVENT_DELETE,nullptr);
 #endif
 }
+#ifdef BOARD_WAVESHARE_P4_KNOB
+// A box over the start-up screen while the P4 sets up its radio chip (the
+// first start after a radio firmware change). nullptr removes it.
+void uiSetupStatus(const char* text,const char* detail){
+  static lv_obj_t *box=nullptr,*heading=nullptr,*message=nullptr;
+  if(!text){if(box){lv_obj_del(box);box=heading=message=nullptr;lv_timer_handler();}return;}
+  if(!box){
+    uint32_t accent=uiColors().accent;
+    box=lv_obj_create(lv_layer_top());lv_obj_set_size(box,S(260),S(84));lv_obj_set_pos(box,S(50),S(230));lv_obj_clear_flag(box,LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_style_bg_color(box,color(uiColors().bg),0);lv_obj_set_style_border_color(box,color(accent),0);lv_obj_set_style_border_width(box,2,0);
+    lv_obj_set_style_radius(box,uiAscii()?0:S(16),0);lv_obj_set_style_pad_all(box,0,0);
+    heading=label(box,text,10,9,240,F16,accent);lv_obj_set_style_text_align(heading,LV_TEXT_ALIGN_CENTER,0);
+    message=label(box,"",12,36,236,F12);lv_obj_set_style_text_align(message,LV_TEXT_ALIGN_CENTER,0);
+  }
+  lv_label_set_text(heading,text);lv_label_set_text(message,detail?detail:"");
+  lastInteraction=millis();
+  lv_timer_handler();
+}
+#endif
 static void title(const char* text,const char* subtitle=nullptr){
   auto* t=label(root,text,55,39,250,F20);lv_obj_set_style_text_align(t,LV_TEXT_ALIGN_CENTER,0);
   if(subtitle){auto* s=label(root,subtitle,55,67,250,F12,uiColors().muted);lv_obj_set_style_text_align(s,LV_TEXT_ALIGN_CENTER,0);}
@@ -261,6 +318,9 @@ static lv_obj_t* scrollBody(int y=91,int h=211){
   return o;
 }
 static void row(lv_obj_t* parent,const char* top,const char* bottom,int index,int id,uint32_t c=uiColors().ink){
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  if(p4UnavailableAction(id))bottom="Unavailable with this passive radio";
+#endif
   auto* b=button(parent,"",1,index*59,256,54,id);auto* heading=label(b,top,0,0,231,F14,c);auto* detail=label(b,bottom,0,22,231,F12,uiColors().muted);
 #ifdef BOARD_WAVESHARE_206
   lv_obj_set_width(b,lv_obj_get_width(parent)-4);lv_obj_set_width(heading,lv_obj_get_width(b)-24);lv_obj_set_width(detail,lv_obj_get_width(b)-24);
@@ -299,6 +359,7 @@ static void resetStopwatch(){
   lv_obj_add_event_cb(resetBox,[](lv_event_t*){resetBox=nullptr;},LV_EVENT_DELETE,nullptr);
 }
 #include "clock_settings.inc"
+#include "voice_ui.inc"
 static void radarPick(lv_draw_ctx_t* ctx,float radians);
 static void radarAwokArt(lv_draw_ctx_t* ctx);
 static void radarBaphArt(lv_draw_ctx_t* ctx);
@@ -317,6 +378,27 @@ static void radarDeflockArt(lv_draw_ctx_t* ctx);
 static void radarPigArt(lv_draw_ctx_t* ctx);
 static void radarPigSweep(lv_draw_ctx_t* ctx,float angle);
 static void asciiMark(lv_draw_ctx_t* ctx,const char* text,int x,int y,uint32_t ink);
+#ifdef BOARD_WAVESHARE_P4_KNOB
+static constexpr int P4RecentContacts=3;
+static size_t p4ContactTitle(char (&out)[64],int index){
+  return dragon::p4::contactTitle(out,contacts[index],unsigned(index),detector.privacy);
+}
+static bool p4FittedContactTitle(char (&out)[64],int index,const lv_font_t* font,int pixels){
+  const size_t suffix=p4ContactTitle(out,index);
+  dragon::p4::fitTitle(out,suffix,pixels,[font](const char* s,size_t length){
+    return lv_txt_get_width(s,length,font,0,LV_TEXT_FLAG_NONE);
+  });
+  return suffix==0;
+}
+#endif
+static String contactPageTitle(int index,const char* mac){
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  char text[64];p4ContactTitle(text,index);return String(text);
+#else
+  auto& c=contacts[index];
+  return *c.name?displayName(c.name):String(mac);
+#endif
+}
 #include "radar_renderer.inc"
 #include "watch_faces.inc"
 static void radarPick(lv_draw_ctx_t* ctx,float radians){
@@ -356,7 +438,12 @@ static void updateRadarSummary(){
   int index=radarHasSelection&&uint32_t(millis()-radarSelectedAt)<10000?findContact(radarSelectedKey):-1;
   if(index<0){setHidden(radarSummary,true);return;}
   auto& c=contacts[index];char summary[160];
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  char titleText[64];p4FittedContactTitle(titleText,index,uiFont(F12),S(194)-4);
+  snprintf(summary,sizeof(summary),"%s\n%d dBm / tap for details",titleText,c.rssi);
+#else
   snprintf(summary,sizeof(summary),"%s / %02X:%02X\n%d dBm / tap here for details",radarFamilyName(c.match.family),c.mac[4],c.mac[5],c.rssi);
+#endif
   setText(radarSummary,summary);setTextColor(radarSummary,contactColor(c));setHidden(radarSummary,false);
 }
 static void radarTap(lv_event_t* event){
@@ -391,7 +478,7 @@ static void loadFiles(){
 #endif
 #include "startup_logo.inc"
 static void drawStartup(){showStartupLogo(root);}
-#ifdef BOARD_WAVESHARE_185B
+#ifdef SD_BLE_LABELS
 static const char* ui185bResourceState(){
   if(sdLookupNamesReady())return "ready";
   for(const char* state:{sdResourceVendorState(),sdResourceBleLabelState()})
@@ -400,15 +487,21 @@ static const char* ui185bResourceState(){
     if(strcmp(state,"ready")&&strncmp(state,"missing",7))return "unavailable";
   return "missing";
 }
+#ifdef BOARD_WAVESHARE_185B
 static void build185bSystem(){
   button(root,"Settings",60,115,240,32,40);button(root,"GPS setup",60,151,240,32,7110);
   char title[48];snprintf(title,sizeof(title),"SD resources: %s",ui185bResourceState());
   button(root,title,60,187,240,32,7111);
   button(root,"Recon notebook",60,223,240,32,153);button(root,"Radio health",70,259,220,32,99);
 }
+#endif
 static void show185bResources(){
   char message[400];snprintf(message,sizeof(message),
+#ifdef BOARD_WAVESHARE_185B
     "IEEE names: %s\nBLE names: %s\n\nGet the 1.85B lookup pack from the web flasher. Extract dragon/ to the FAT32 card root:\nvendors.ddr + ble-labels.ddb\ninside /dragon/resources/\n\nRestart to load changed files. Core radar works without lookup names.",
+#else
+    "IEEE names: %s\nBLE names: %s\n\nThe built-in names always work. For more, get the lookup pack from the web flasher and extract dragon/ to the FAT32 card root:\nvendors.ddr + ble-labels.ddb\ninside /dragon/resources/\n\nRestart to load changed files. Core radar works without lookup names.",
+#endif
     sdResourceVendorState(),sdResourceBleLabelState());
   auto* box=uiMessageBox(root,"SD RESOURCES",message,nullptr,true);lv_obj_set_size(box,S(260),S(244));lv_obj_center(box);
   if(auto* heading=lv_msgbox_get_title(box))lv_obj_set_style_text_font(heading,uiFont(F16),0);
@@ -416,23 +509,69 @@ static void show185bResources(){
   auto* content=lv_msgbox_get_content(box);lv_obj_set_height(content,S(172));lv_obj_set_scroll_dir(content,LV_DIR_VER);lv_obj_add_flag(content,LV_OBJ_FLAG_SCROLLABLE);
 }
 #endif
+#ifdef DRAGON_USB_DRIVE
+// Tools > Utilities > USB Drive: the PC has the card. Done (touch, or the knob's
+// click on its only button) gives it back; usb_drive.cpp does the rest.
+static lv_obj_t *usbState=nullptr,*usbMessage=nullptr,*usbDetail=nullptr,*usbDone=nullptr;
+static void usbDriveUpdate(){
+  if(!usbState)return;char detail[96];usbDriveDetail(detail,sizeof(detail));const bool confirm=usbDriveConfirming();
+  setText(usbState,usbDriveStateText());setText(usbDetail,detail);
+  setText(usbMessage,confirm?"The PC may still be using the card. Tap Done again to finish anyway.":"Your PC sees the card as a drive. Eject it on the PC or tap Done.");
+  setText(lv_obj_get_child(usbDone,0),confirm?"Tap again":"Done");
+}
+static void usbDriveView(){
+  centered(label(root,"USB DRIVE",55,40,250,F20));
+  usbState=label(root,"",55,84,250,F20,uiColors().accent);centered(usbState);
+  usbMessage=label(root,"",64,124,232,F14);centered(usbMessage);
+  usbDetail=label(root,"",64,204,232,F12,uiColors().muted);centered(usbDetail);
+  usbDone=button(root,"Done",110,258,140,44,7121);
+  usbDriveUpdate();
+}
+#endif
+#ifdef BOARD_WAVESHARE_P4_KNOB
+#include "p4_ui_bindings.inc"
+static lv_obj_t *p4RetryButton=nullptr;
+static bool uiSideKeyModalOpen();
+static bool p4GesturesAllowed(){
+  return root && outputBrightness && page==pending && page!=Boot && page!=Startup &&
+         !nodeBusy() && !usbDriveOn() && !voiceRecording() && !wardriveBusy() &&
+         !wardriveUploadBusy() && !clockPrompt && !resetBox &&
+         (p4Info || notice || !uiSideKeyModalOpen());
+}
+#endif
 static void build(){
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  if(page==P4Gatt && pending!=P4Gatt)p4GattCancel();
+#endif
 #ifdef BOARD_WAVESHARE_185B
   waveshare185bResetPointer();
 #endif
-#ifdef BOARD_WATCHER
+#ifdef ROTARY_TOUCH_UI
   rotaryUiReset();
 #endif
 #ifdef BOARD_WAVESHARE_143C
   waveshare143cPictureChanged(true);
 #endif
   if(pending!=Radar){if(noticeHasKey)dismissNotice();noticeQueue.count=0;}
+#if BOARD_HAS_MIC
+  if(page==Player&&pending!=Player)voicePlayStop(); // leaving the player stops the file
+  voiceUiForget();
+#endif
   // BLE Lab owns its complete screen and returns before the shared mic label
   // is rebuilt. Never retain a label from the page that is about to be freed.
   micBadge=nullptr;radarSummary=nullptr;radarGesture.clear();radarPress.clear();
   timerOrbit=nullptr;timerValue=timerState=timerLap=timerStartButton=timerSecondary=timerSplit=clockValue=clockDate=editValue=nullptr;
   if(page==BadUsb)badusbLeave();
-  badgeUnload();page=pending;pageAt=millis();statusLabel=audioLabel=audioMeter=radar=trackingLabel=huntValue=huntMeta=huntGauge=huntGraph=diagnosticsLabel=activityLabel=radarActivity=nullptr;radarPrepared=0;
+#ifdef DRAGON_USB_DRIVE
+  usbState=usbMessage=usbDetail=usbDone=nullptr;
+#endif
+  badgeUnload();page=pending;
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  p4ObserveRoute();
+  p4Launcher.forget();
+  p4RetryButton=nullptr;
+#endif
+  pageAt=millis();statusLabel=audioLabel=audioMeter=radar=trackingLabel=huntValue=huntMeta=huntGauge=huntGraph=diagnosticsLabel=activityLabel=radarActivity=nullptr;radarPrepared=0;
   // A node owns the radios: standby is left as it was and settles after the node.
   if(!nodeBusy())setRadioStandby(page==Clock||page==Stopwatch||page==Laps||page==ClockSettings||page==ClockWheels||page==ClockEdit);
   nodeScreenClose();lv_obj_clean(root);lv_obj_set_style_bg_color(root,color(uiColors().bg),0);
@@ -452,12 +591,20 @@ static void build(){
     // EXIT button is the only control on screen; the knob reaches it only by a hold.
     dismissNotice();lv_obj_set_style_bg_color(root,color(0x000000),0);
     NodeScreenOptions options;options.exitButton=true;options.exited=nodeExited;
-#if defined(BOARD_CROWPANEL_21) || defined(BOARD_WATCHER)
+#if defined(BOARD_WAVESHARE_P4_KNOB)
+    options.keyHint="HOLD BOOT TO EXIT";options.keyHintShort="HOLD BOOT";   // BOOT is the knob's select key; touch EXIT works as on other boards
+#elif defined(BOARD_CROWPANEL_21) || defined(BOARD_WATCHER)
     options.keyHint="HOLD KNOB TO EXIT";options.keyHintShort="HOLD KNOB";   // a knob click only shows this; touch EXIT works as on other boards
 #endif
     nodeScreenOpen(root,options);return;
   }
+#ifdef DRAGON_USB_DRIVE
+  if(page==UsbDrive){dismissNotice();usbDriveView();return;}
+#endif
   if(page==Startup){dismissNotice();drawStartup();return;}
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  else if(p4BuildPage()){}
+#endif
   else if(page==Badge){lv_obj_set_style_bg_color(root,color(0x000000),0);badgeView(root);
   }else if(page==Radar){
     radar=lv_obj_create(root);lv_obj_remove_style_all(radar);lv_obj_set_pos(radar,0,0);lv_obj_set_size(radar,SCREEN_RES,SCREEN_RES);lv_obj_clear_flag(radar,LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN);lv_obj_add_flag(radar,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_PRESS_LOCK);
@@ -467,7 +614,13 @@ static void build(){
     else if(radarTheme!=dragon::VladTheme&&!lawLockTools()&&!moki()&&!delta44()&&!argyle()&&!vectorPotential()&&radarTheme!=13&&radarTheme!=24&&radarTheme!=32&&radarTheme!=CanCommanderTheme&&radarTheme!=MuldersRevengeTheme&&!greenArtTheme(radarTheme)){auto* logo=lv_img_create(root);lv_img_set_src(logo,radarLogo(radarTheme));lv_obj_align(logo,LV_ALIGN_TOP_MID,0,S(17));lv_obj_clear_flag(logo,LV_OBJ_FLAG_CLICKABLE);if(radarTheme==10||radarTheme==3){lv_obj_set_style_img_recolor(logo,color(radarTheme==3?0xd6b46e:0xffffff),0);lv_obj_set_style_img_recolor_opa(logo,LV_OPA_COVER,0);}}
 #endif
     const auto& theme=radarPalette(radarTheme);
-    statusLabel=label(root,"LISTENING",56,radarTheme==dragon::VladTheme?30:66,248,F12,theme.text);lv_obj_set_style_text_align(statusLabel,LV_TEXT_ALIGN_CENTER,0);legible(statusLabel);lv_obj_set_style_bg_color(statusLabel,color(theme.panel),0);lv_obj_set_style_bg_opa(statusLabel,LV_OPA_60,0);
+    statusLabel=label(root,
+#ifdef BOARD_WAVESHARE_P4_KNOB
+      p4RadarStatus(),
+#else
+      "LISTENING",
+#endif
+      56,radarTheme==dragon::VladTheme?30:66,248,F12,theme.text);lv_obj_set_style_text_align(statusLabel,LV_TEXT_ALIGN_CENTER,0);legible(statusLabel);lv_obj_set_style_bg_color(statusLabel,color(theme.panel),0);lv_obj_set_style_bg_opa(statusLabel,LV_OPA_60,0);
     radarActivity=label(root,"",75,radarTheme==dragon::VladTheme?48:84,210,F12,0xffbc76);lv_obj_set_style_text_align(radarActivity,LV_TEXT_ALIGN_CENTER,0);legible(radarActivity);lv_obj_add_flag(radarActivity,LV_OBJ_FLAG_CLICKABLE);lv_obj_add_event_cb(radarActivity,action,LV_EVENT_CLICKED,(void*)116);radarActivityCue=false;
     radarSummary=label(root,"",65,244,194,F12,theme.text);
     lv_obj_set_height(radarSummary,S(34));lv_obj_set_style_text_align(radarSummary,LV_TEXT_ALIGN_CENTER,0);
@@ -508,7 +661,7 @@ static void build(){
 #ifdef BOARD_WAVESHARE_185B
     menuWardriveAvailable=wardriveAvailable();
 #endif
-    title("DRAGON TOOLS");const char* tabs[]={"RECON","UTILITIES","SYSTEM"};
+    title("COMMAND");const char* tabs[]={"ACTION","UTILITIES","SYSTEM"};
     for(int i=0;i<3;++i){
       auto* b=button(root,tabs[i],47+i*89,76,86,32,10+i);
 #ifdef BOARD_WATCHER
@@ -539,6 +692,11 @@ static void build(){
       button(root,"Wi-Fi",57,first+step,119,height,20);button(root,"Bluetooth",184,first+step,119,height,21);
       button(root,"History",57,first+2*step,119,height,60);button(root,"Hunt",184,first+2*step,119,height,57);
       button(root,"Radio tools",57,first+3*step,119,height,7102);button(root,"BLE Lab",184,first+3*step,119,height,7000);
+#elif defined(BOARD_WAVESHARE_P4_KNOB)
+      button(root,"Modes",57,109,119,35,int(p4ui::Action::Modes));button(root,"BLE Lab",184,109,119,35,int(p4ui::Action::BleLab));
+      button(root,"Wi-Fi",57,151,119,35,20);button(root,"Bluetooth",184,151,119,35,int(p4ui::Action::BleContacts));
+      button(root,"History",57,193,119,35,60);button(root,"Hunt",184,193,119,35,57);
+      button(root,"Alerts",57,235,119,35,22);button(root,"Notebook",184,235,119,35,153);
 #else
       button(root,"Modes",57,115,119,40,7100);button(root,"Attacks",184,115,119,40,7103);button(root,"Wi-Fi",57,162,119,40,20);button(root,"Bluetooth",184,162,119,40,21);button(root,"History",57,209,119,40,60);button(root,"Hunt",184,209,119,40,57);button(root,"Radio tools",57,257,119,39,7102);button(root,"BLE Lab",184,257,119,39,7000);
 #endif
@@ -552,8 +710,23 @@ static void build(){
 #else
     button(root,"Saved files",184,176,119,49,7104);
 #endif
+#ifdef BOARD_WAVESHARE_P4_KNOB
+    button(root,"Activity",57,233,119,49,int(p4ui::Action::ActivityHub));
+    button(root,"USB Drive",184,233,119,49,7120);}
+#elif BOARD_HAS_MIC || defined(DRAGON_USB_DRIVE)
+    // Voice Recorder, USB Drive and Activity (opens the saved
+    // History) share one row, kept clear of the HOME button at the bottom.
+#if BOARD_HAS_MIC
+    button(root,"Voice\nRecorder",57,233,78,49,190);
+#endif
+#ifdef DRAGON_USB_DRIVE
+    button(root,"USB\nDrive",141,233,78,49,7120);
+#endif
+    button(root,"Activity",225,233,78,49,60);}
+#else
     if(badusbSupported()){button(root,"Activity",57,242,119,43,116);button(root,"BadUSB",184,242,119,43,7200);}
     else button(root,"Activity",79,242,202,43,116);}
+#endif
 
     if(menuTab==2){
 #ifdef BOARD_WATCHER
@@ -561,6 +734,11 @@ static void build(){
       button(root,"Radio health",70,205,220,38,99);button(root,"Sleep",60,250,116,38,181);button(root,"Power off",184,250,116,38,180);
 #elif defined(BOARD_WAVESHARE_185B)
       build185bSystem();
+#elif defined(BOARD_WAVESHARE_P4_KNOB)
+      {char resources[48];snprintf(resources,sizeof(resources),"SD resources: %s",ui185bResourceState());
+      button(root,"Settings",60,115,240,32,40);button(root,resources,60,151,240,32,7111);
+      button(root,"Recon notebook",60,187,240,32,153);button(root,"Radio health",70,223,220,32,99);
+      button(root,"Sleep",60,259,116,32,181);button(root,"Power off",184,259,116,32,180);}
 #elif defined(BOARD_AMOLED_175)
       button(root,"Settings",60,115,240,38,40);button(root,"GPS setup",60,160,240,38,7110);
       button(root,"Recon notebook",60,205,240,38,153);button(root,"Radio health",70,250,220,38,99);
@@ -574,24 +752,51 @@ static void build(){
     std::sort(order,order+deviceTotal,[now](int a,int b){if(filter==0){auto ga=dragon::targetGroup(visibleFamily(contacts[a],now,detector.families)),gb=dragon::targetGroup(visibleFamily(contacts[b],now,detector.families));if(ga!=gb)return ga<gb;}return preferContact(contacts[a],contacts[b],now);});
     devicePages=std::max(1,filter==0?int(groups.pages()):(deviceTotal+9)/10);devicePage=constrain(devicePage,0,devicePages-1);deviceRows=0;
     auto slice=groups.slice(devicePage);int first=filter==0?slice.offset:devicePage*10;int limit=filter==0?first+slice.count:std::min(first+10,deviceTotal);
-    title(filter==0?"RADAR TARGETS":filter==1?"WI-FI CONTACTS":"BLE CONTACTS",filter==0?dragon::targetGroupName(slice.group):nullptr);body=scrollBody(88,180);
+    const char* contactHeading=filter==0?"RADAR TARGETS":filter==1?"WI-FI CONTACTS":"BLE CONTACTS";
+#ifdef BOARD_WAVESHARE_P4_KNOB
+    if(filter==P4RecentContacts)contactHeading="NEARBY CONTACTS";
+#endif
+    title(contactHeading,filter==0?dragon::targetGroupName(slice.group):nullptr);
+#ifdef BOARD_WAVESHARE_P4_KNOB
+    if(filter==1){
+      button(root,"Channel visualizer",76,87,208,33,int(p4ui::Action::Channels));
+      body=scrollBody(126,142);
+    }else
+#endif
+      body=scrollBody(88,180);
     for(int k=first;k<limit&&deviceRows<10;++k){auto& c=contacts[order[k]];deviceKeys[deviceRows]=contactKey(c);
       char mac[18],sub[96];displayMac(c.mac,mac);auto flags=deviceRules(contactKey(c));
       snprintf(sub,sizeof(sub),"%d dBm / %lus / %s%s",c.rssi,(unsigned long)((now-c.seen)/1000),flags&RuleWatch?"WATCH / ":flags&RuleIgnore?"IGNORED / ":"",dragon::familyName(visibleFamily(c,now,detector.families)));
-      row(body,*c.name?displayName(c.name).c_str():mac,sub,deviceRows,6000+deviceRows,familyColor(visibleFamily(c,now,detector.families)));++deviceRows;
+      row(body,contactPageTitle(order[k],mac).c_str(),sub,deviceRows,6000+deviceRows,familyColor(visibleFamily(c,now,detector.families)));++deviceRows;
     }
-    if(!deviceRows)label(body,"Listening...\nNo recent targets",10,30,230);
+    if(!deviceRows){
+#ifdef BOARD_WAVESHARE_P4_KNOB
+      label(body,p4RadarStatus(),10,30,230);
+#else
+      label(body,"Listening...\nNo recent targets",10,30,230);
+#endif
+    }
     button(root,"<",68,274,40,31,114);char pages[30];snprintf(pages,sizeof(pages),"%d/%d",devicePage+1,devicePages);label(root,pages,118,280,60,F12);
     button(root,">",180,274,40,31,115);button(root,LV_SYMBOL_REFRESH,230,274,50,31,25);
   }else if(page==Details){
     title("DEVICE DETAILS");body=scrollBody(88,169);if(selectionValid()){auto& c=contacts[selected];char mac[18];displayMac(c.mac,mac);
-      String s=(*c.name?displayName(c.name):String(mac))+"\n"+mac+"\n\n"+dragon::familyName(c.match.family)+"\n"+dragon::confidenceName(c.match.confidence)+"\n"+(detector.privacy?"Evidence hidden by privacy mode":c.match.evidence)+"\n\n"+String(c.rssi)+" dBm  |  "+(c.ble?"BLE":String("CH ")+c.channel)+"\n"+c.signal.quality()+" / "+c.signal.direction()+"\nLast seen "+String((millis()-c.seen)/1000)+"s ago\nFrames: "+String(c.packets);
+#ifdef BOARD_WAVESHARE_P4_KNOB
+      const char* countLabel=c.ble?"Adverts heard: ":"AP sightings: ";
+#else
+      const char* countLabel="Frames: ";
+#endif
+      String s=contactPageTitle(selected,mac)+"\n"+mac+"\n\n"+dragon::familyName(c.match.family)+"\n"+dragon::confidenceName(c.match.confidence)+"\n"+(detector.privacy?"Evidence hidden by privacy mode":c.match.evidence)+"\n\n"+String(c.rssi)+" dBm  |  "+(c.ble?"BLE":String("CH ")+c.channel)+"\n"+c.signal.quality()+" / "+c.signal.direction()+"\nLast seen "+String((millis()-c.seen)/1000)+"s ago\n"+countLabel+String(c.packets);
       if(trafficFresh(c,millis()))s+="\n\nTraffic: "+String(dragon::familyName(c.trafficFamily))+"\n"+(detector.privacy?String("Evidence hidden"):String(c.trafficEvidence))+"\nHunt follows this observed address, not a proven attacker.";
+#ifdef BOARD_WAVESHARE_P4_KNOB
+      if(!c.ble)s+="\nAdvertised Wi-Fi security: "+String(p4_ap_security_name(c.apSecurity));
+#endif
       if(c.drone.valid && !detector.privacy){if(c.drone.hasId)s+="\nRemote ID: "+String(c.drone.id);if(c.drone.hasLocation){s+="\nAircraft: "+String(c.drone.latitude,6)+", "+String(c.drone.longitude,6)+"\nPosition age: "+String((millis()-c.drone.locationAt)/1000)+"s";if(c.drone.altitude>-1000)s+="\nAltitude WGS84: "+String(c.drone.altitude,1)+" m";if(c.drone.speed<255)s+="\nSpeed: "+String(c.drone.speed,1)+" m/s";}if(c.drone.hasOperator)s+="\nOperator location: "+String(c.drone.operatorLatitude,6)+", "+String(c.drone.operatorLongitude,6)+"\nOperator position age: "+String((millis()-c.drone.operatorAt)/1000)+"s";s+="\nBroadcast data; not authenticated.";}
       s+="\n\nIdentity and activity unverified. Signal strength is not distance.";
       if(const char* vendor=dragon::registeredVendor(c.mac,c.ble,c.addressType))s+="\n\nIEEE address registrant:\n"+String(vendor)+"\nRegistry ownership is not product identification.";
       int evidenceY=0;
-#ifndef BOARD_RADAR_LITE
+#ifdef BOARD_WAVESHARE_P4_KNOB
+      if(c.ble){button(body,"Inspect advertisement",8,0,240,36,p4InspectContact);evidenceY=46;}
+#elif !defined(BOARD_RADAR_LITE)
       if(c.ble){button(body,"BLE TOOLKIT",8,0,240,36,7001);button(body,"GATT CLONE TOOLS",8,44,240,36,7002);evidenceY=92;}
 #endif
       label(body,s.c_str(),8,evidenceY,240);
@@ -599,10 +804,20 @@ static void build(){
       button(root,"Hunt signal",184,263,124,37,52);
     }else label(body,"Contact expired. Return to the radar and select again.",8,0,240);
   }else if(page==Hunt){
+#ifdef BOARD_WAVESHARE_P4_KNOB
+    title("DRAGON HUNT","Wi-Fi and Bluetooth signal strength");
+#else
     title("DRAGON HUNT",reconRadio()?"Selected survey mode owns this radio":"Target priority / both radios scanning");
-    if(trackedContact<0){label(root,"Choose a target, then HUNT.\nWalk and compare the signal.\nStronger readings move inward.",65,125,234,F14);button(root,"Nearby contacts",75,230,210,44,21);}
+#endif
+    if(trackedContact<0){label(root,"Choose a target, then HUNT.\nWalk and compare the signal.\nStronger readings move inward.",65,125,234,F14);button(root,"Nearby contacts",75,230,210,44,
+#ifdef BOARD_WAVESHARE_P4_KNOB
+      96
+#else
+      21
+#endif
+    );}
     else {
-      auto& c=contacts[trackedContact];char mac[18];displayMac(c.mac,mac);auto* name=label(root,*c.name?displayName(c.name).c_str():mac,65,92,230,F14,uiColors().accent);lv_obj_set_style_text_align(name,LV_TEXT_ALIGN_CENTER,0);
+      auto& c=contacts[trackedContact];char mac[18];displayMac(c.mac,mac);auto* name=label(root,contactPageTitle(trackedContact,mac).c_str(),65,92,230,F14,uiColors().accent);lv_obj_set_style_text_align(name,LV_TEXT_ALIGN_CENTER,0);
       huntValue=label(root,"LISTENING",70,119,220,F20,uiColors().accent);lv_obj_set_style_text_align(huntValue,LV_TEXT_ALIGN_CENTER,0);
       huntGauge=lv_bar_create(root);lv_obj_set_pos(huntGauge,S(70),S(151));lv_obj_set_size(huntGauge,S(220),S(14));lv_bar_set_range(huntGauge,-105,-25);lv_obj_set_style_bg_color(huntGauge,color(uiColors().raised),0);lv_obj_set_style_bg_color(huntGauge,color(uiColors().accent),LV_PART_INDICATOR);
       huntMeta=label(root,"Waiting for target",62,172,240,F12,uiColors().muted);lv_obj_set_style_text_align(huntMeta,LV_TEXT_ALIGN_CENTER,0);
@@ -612,17 +827,48 @@ static void build(){
   }else if(page==Notebook){
     title("RECON NOTEBOOK","Scanning stays active");body=scrollBody();auto& t=notebookCounters;
     row(body,"BLE advertisement inspector","Payload / company / services / changes",0,155);
+#ifdef BOARD_WAVESHARE_P4_KNOB
+    row(body,"Wi-Fi channels","Access points and peak signal by channel",1,int(p4ui::Action::Channels));
+    row(body,"Beacon summary","Received iBeacon and Eddystone reports",2,int(p4ui::Action::Beacons));
+    row(body,"Recon sessions","Record Wi-Fi or BLE observations to your SD card",3,p4SessionsOpen);
+#else
     row(body,"Probe-request inventory","Requested Wi-Fi names / raw SSID export",1,154);
     row(body,"Refresh snapshot","USB flasher downloads both CSV tables",2,153);
     String s=String("Wi-Fi frames: ")+t.frames+"\nBeacons: "+t.beacons+"\nProbes: "+t.probes+"\nDisconnect: "+t.disconnect+"\nEAPOL: "+t.eapol+"\nM1 / M2 / M3 / M4: "+t.keyMessages[1]+" / "+t.keyMessages[2]+" / "+t.keyMessages[3]+" / "+t.keyMessages[4]+"\nPMKID observations: "+t.pmkid+"\nSAE commit: "+t.sae+"\nRetries: "+t.retries+"\n\nIEEE vendor prefixes: "+dragon::vendorRegistryCount()+"\nUncached BLE frames: "+notebookRejected+"\n\nCounts are observations, not proof of a valid handshake. Tables retain up to 96 entries each in RAM.";
     label(body,s.c_str(),7,190,240,F12);
-  }else if(page==NotebookProbes||page==NotebookBle){
-    bool ble=page==NotebookBle;title(ble?"BLE INSPECTOR":"PROBE INVENTORY","Refresh updates this snapshot");body=scrollBody(88,178);
+#endif
+  }else if(page==NotebookProbes||page==NotebookBle
+#ifdef BOARD_WAVESHARE_P4_KNOB
+           ||page==P4GattPicker
+#endif
+  ){
+    bool ble=page!=NotebookProbes;
+#ifdef BOARD_WAVESHARE_P4_KNOB
+    if(page==P4GattPicker)title("GATT SERVICES","Choose a nearby device");
+    else
+#endif
+    title(ble?"BLE INSPECTOR":"PROBE INVENTORY","Refresh updates this snapshot");
+    body=scrollBody(88,178);
     unsigned order[dragon::notebook::Capacity],count=0;for(unsigned i=0;i<dragon::notebook::Capacity;++i)if(ble?(notebookAdverts&&notebookAdverts[i].used):(notebookProbes&&notebookProbes[i].used))order[count++]=i;
     auto seen=[&](unsigned i){return ble?notebookAdverts[i].seen:notebookProbes[i].seen;};uint32_t now=millis();std::sort(order,order+count,[&](unsigned a,unsigned b){return uint32_t(now-seen(a))<uint32_t(now-seen(b));});
     notebookPage=std::min<unsigned>(notebookPage,count?(count-1)/10:0);notebookRows=0;
     for(unsigned j=notebookPage*10;j<count&&notebookRows<10;++j){unsigned i=order[j];char mac[18],sub[128];
-      if(ble){auto& a=notebookAdverts[i];displayMac(a.mac,mac);auto d=dragon::lab::inspectAdvertisement(a.data,a.length,a.boundary);snprintf(sub,sizeof(sub),"%d dBm / %lus / %lu changes",a.rssi,(now-a.seen)/1000,a.changes);auto& key=notebookKeys[notebookRows];memcpy(key.mac,a.mac,6);key.radio=1;key.addressType=a.type;String top=String(mac)+" / "+d.protocol;row(body,top.c_str(),sub,notebookRows,8000+notebookRows);}
+      if(ble){
+        auto& a=notebookAdverts[i];displayMac(a.mac,mac);
+        auto d=dragon::lab::inspectAdvertisement(a.data,a.length,a.boundary);
+        snprintf(sub,sizeof(sub),"%d dBm / %lus / %lu changes",a.rssi,(now-a.seen)/1000,a.changes);
+        auto& key=notebookKeys[notebookRows];memcpy(key.mac,a.mac,6);key.radio=1;key.addressType=a.type;
+        String top=String(mac)+" / "+d.protocol;
+#ifdef BOARD_WAVESHARE_P4_KNOB
+        const int index=findContact(key);
+        if(index>=0 && contacts[index].name[0])top=contactPageTitle(index,mac)+" / "+d.protocol;
+        if(page==P4GattPicker){
+          if(const char* reason=p4GattUnavailable(a.mac,a.type))snprintf(sub,sizeof(sub),"%s",reason);
+          else snprintf(sub,sizeof(sub),"Connectable / %d dBm",a.rssi);
+        }
+#endif
+        row(body,top.c_str(),sub,notebookRows,8000+notebookRows);
+      }
       else {auto& a=notebookProbes[i];displayMac(a.mac,mac);char name[33];dragon::safeText(name,sizeof(name),a.ssid,a.length);snprintf(sub,sizeof(sub),"%s / CH%u / %d dBm / %lu frames",mac,a.channel,a.rssi,a.count);row(body,a.length?displayName(name).c_str():"Wildcard probe",sub,notebookRows,0);}
       ++notebookRows;
     }
@@ -632,13 +878,32 @@ static void build(){
     title("ADVERTISEMENT","Latest complete received payload");body=scrollBody();auto& a=notebookSelection;auto d=dragon::lab::inspectAdvertisement(a.data,a.length,a.boundary);char mac[18];displayMac(a.mac,mac);
     String s=String(mac)+"\nAddress type: "+a.type+"\n"+a.rssi+" dBm / "+a.count+" observations\nAdvert changes: "+a.changes+"\n\n"+d.protocol+"\nService: "+(d.service?d.service:"Unresolved / not advertised")+"\nCompany: "+(d.company==0xffff?String("Not advertised"):String(dragon::lab::companyName(d.company))+" ("+String(d.company,HEX)+")")+"\nAppearance: "+d.appearance;
     if(d.hasPower)s+="\nAdvertised TX power: "+String(d.power)+" dBm";
+#ifdef BOARD_WAVESHARE_P4_KNOB
+    if(!detector.privacy)p4ListAdvertisedServices(s,a);
+#endif
     if(const char* v=dragon::registeredVendor(a.mac,true,a.type))s+="\nAddress registrant: "+String(v);
     s+="\n\n"+String(a.length)+" bytes / "+a.boundary+" advertisement bytes\n";
     if(detector.privacy)s+="Payload hidden by privacy mode";else for(unsigned i=0;i<a.length;++i){char b[4];snprintf(b,4,"%02x ",a.data[i]);s+=b;if(i%8==7)s+='\n';}
+#ifdef BOARD_WAVESHARE_P4_KNOB
+    button(body,"Compare advertisements",5,0,240,36,p4ChangesOpen);
+    button(body,"GATT services",5,42,240,36,p4GattOpen);
+    label(body,s.c_str(),8,88,240,F12);
+#else
     label(body,s.c_str(),8,0,240,F12);
+#endif
   }else if(page==Activity){
-    title("RADIO ACTIVITY","Observed traffic / possible attacks");body=scrollBody(88,178);activityLabel=label(body,"Listening...",5,0,246,F12);
-    button(root,"Events",63,272,105,32,22);button(root,"Channels",184,272,113,32,23);
+#ifdef BOARD_WAVESHARE_P4_KNOB
+    title("RADIO ACTIVITY","Passive radio discovery");
+#else
+    title("RADIO ACTIVITY","Observed traffic / possible attacks");
+#endif
+    body=scrollBody(88,178);activityLabel=label(body,"Listening...",5,0,246,F12);
+    button(root,"Events",63,272,105,32,22);
+#ifdef BOARD_WAVESHARE_P4_KNOB
+    button(root,"Channels",184,272,113,32,int(p4ui::Action::Channels));
+#else
+    button(root,"Channels",184,272,113,32,23);
+#endif
   }else if(page==Detectors){
     title("DETECTION FILTERS","Priority devices alert; trackers stay as dots");body=scrollBody();
     row(body,detector.minimum==Confidence::Low?"Other alerts: all matches":detector.minimum==Confidence::Medium?"Other alerts: medium +":"Other alerts: strong only","Axon / cameras / glasses / drones / Flipper bypass",0,62);
@@ -680,8 +945,20 @@ static void build(){
   }else if(page==Files){
     title("SD CARD",directory.c_str());loadFiles();body=scrollBody();
     if(!sdReady)label(body,"SD card unavailable.\nInsert FAT32 card and restart.",5,20,244);
-    else{row(body,".. / Parent",fileCount?"Tap a folder or text file":"This folder is empty",0,39);for(int i=0;i<fileCount;++i){String name=files[i].path.substring(files[i].path.lastIndexOf('/')+1);String sub=files[i].dir?"Folder":String(files[i].size/1024)+" KB";row(body,name.c_str(),sub.c_str(),i+1,2000+i);}if(filesTruncated)label(body,"First 96 entries shown",5,(fileCount+1)*59,235);}
+    else{row(body,".. / Parent",fileCount?
+#if BOARD_HAS_MIC
+      "Tap a folder, text or WAV file"
+#else
+      "Tap a folder or text file"
+#endif
+      :"This folder is empty",0,39);for(int i=0;i<fileCount;++i){String name=files[i].path.substring(files[i].path.lastIndexOf('/')+1);String sub=files[i].dir?"Folder":String(files[i].size/1024)+" KB";row(body,name.c_str(),sub.c_str(),i+1,2000+i);}if(filesTruncated)label(body,"First 96 entries shown",5,(fileCount+1)*59,235);}
 
+#endif
+#if BOARD_HAS_MIC
+  }else if(page==Recorder){
+    buildRecorder();
+  }else if(page==Player){
+    buildPlayer();
 #endif
   }else if(page==Audio){
     title("AUDIO / HUNT",audioReady()?"Device melodies & signal feedback":"Speaker unavailable");body=scrollBody();int n=0;
@@ -709,7 +986,9 @@ static void build(){
     if(audioReady()){String sound=String("Sound level: ")+dragon::audioLevelLabel(audioLevel());row(body,sound.c_str(),"Tap: Silent / Medium / High",n++,85);}
     row(body,"Audio & hunt tones","Sound level, target focus and RTTTL alerts",n++,31);
     row(body,"Detection filters","Radar families / audible alert threshold",n++,61);
+#ifndef BOARD_WAVESHARE_P4_KNOB
     row(body,activeBle?"BLE scan: ACTIVE":"BLE scan: PASSIVE",activeBle?"Requests scan-response names; transmits":"Listen only; tap for scan-response names",n++,98);
+#endif
     row(body,"Radio health","Queue, memory and reception diagnostics",n++,99);
     row(body,"Recon notebook","Passive BLE / Wi-Fi details and USB export",n++,153);
     row(body,"Watch / ignore list","Manage saved and snoozed addresses",n++,64);
@@ -718,13 +997,26 @@ static void build(){
     row(body,detector.history?"Flash history: ON":"Flash history: OFF","512 unique records / USB CSV export",n++,74);
     row(body,detector.privacy?"Display privacy: ON":"Display privacy: OFF","Mask addresses, names and coordinates",n++,75);
     row(body,candidatesOnly?"Radar: candidates":"Radar: all contacts","Show filtered candidates or nearby traffic",n++,53);
+#ifdef BOARD_WAVESHARE_P4_KNOB
+    row(body,"Passive radar",p4RadarStatus(),n++,99);
+#else
     row(body,"Detection: always on","Hunt, badge and menus keep both radios scanning",n++,99);
+#endif
     row(body,"Signal smoothing",detector.smoothingMs==600?"Fast / 0.6 s":detector.smoothingMs==1800?"Balanced / 1.8 s":"Steady / 4 s",n++,76);
+#ifndef BOARD_WAVESHARE_P4_KNOB
     row(body,foxTransmit()?"Fox beacon: TRANSMITTING":"Fox beacon: OFF","Opt in to a public Dragon training beacon",n++,77);
+#endif
 #ifdef BOARD_STOPWATCH
     row(body,alertVibration?"Vibration: ON":"Vibration: OFF","Built-in StopWatch motor",n++,79);
 #endif
-#if defined(BOARD_WATCHER) || defined(BOARD_WAVESHARE_185B)
+#ifdef BOARD_WAVESHARE_P4_KNOB
+    row(body,alertVibration?"Alert vibration: ON":"Alert vibration: OFF","Buzz on a new alert / quiet mode stays silent",n++,79);
+    {extern const char* p4KnobClickName();String clicks=String("Knob clicks: ")+p4KnobClickName();row(body,clicks.c_str(),"Off / Light / Medium / Strong",n++,186);}
+#endif
+#if defined(BOARD_WAVESHARE_P4_KNOB)
+    row(body,"Advertisement inspector","Company, services and last received payload",n++,155);
+    row(body,"SD files","Browse sessions, event logs and media",n++,32);
+#elif defined(BOARD_WATCHER) || defined(BOARD_WAVESHARE_185B)
     row(body,"Capture studio",sdReady?"Wi-Fi + BLE / SD streaming / Stop saves":"RAM capture / Stop then Save",n++,7105);
     row(body,"Saved captures",sdReady?"SD files / USB download":"Internal files / USB download",n++,7104);
 #else
@@ -735,7 +1027,7 @@ static void build(){
     row(body,loggingEnabled&&sdReady?"SD event logging: ON":"SD event logging: OFF",sdReady?sessionPath.c_str():"Requires a mounted SD card",n++,43);
 #if defined(BOARD_AMOLED_175)
     row(body,"Capture studio",sdReady?"Wi-Fi + BLE / SD streaming / Stop saves":"RAM capture / Stop then Save",n++,7105);
-#elif !defined(BOARD_WATCHER) && !defined(BOARD_WAVESHARE_185B)
+#elif !defined(BOARD_WATCHER) && !defined(BOARD_WAVESHARE_185B) && !defined(BOARD_WAVESHARE_P4_KNOB)
     row(body,captureEnabled?"SD PCAP: recording":"SD PCAP: stopped",sdReady?"Raw 802.11 / 16 MB per capture":"Requires a mounted SD card",n++,24);
 #endif
 #endif
@@ -807,7 +1099,14 @@ static void build(){
     row(body,detector.wakeAlert?"Wake on alert: ON":"Wake on alert: OFF","Touch or button also wakes the display",4,83);
     row(body,"Restore always-on defaults","100% brightness; no dimming or timeout",5,84);
   }else if(page==Diagnostics){
+#ifdef BOARD_WAVESHARE_P4_KNOB
+    title("RADIO HEALTH","P4 wireless coprocessor");
+    body=scrollBody(88,155);diagnosticsLabel=label(body,"Reading...",6,0,244,F14);
+    p4RetryButton=button(root,"Retry scan",103,251,154,37,-22418);
+    setHidden(p4RetryButton,true);
+#else
     title("RADIO HEALTH","Live reception and resource counters");body=scrollBody();diagnosticsLabel=label(body,"Reading...",6,0,244,F12);
+#endif
   }else if(page==About){
     title("SIGNATURES & LIMITS");body=scrollBody();
     label(body,"DRAGON DETECTOR " DRAGON_VERSION "\nDetection / hunt edition\n\nGreen radar / signal proximity.\nAngles are decorative.\nNo distance or direction.\n\nAll contacts on one radar.\nALPR / Axon / camera priority.\nCameras / glasses / drones alert.\nTrackers stay silent as dots.\nTap a dot for its summary.\nDouble-tap for details / BLE / Hunt\nwith both radios listening.\n\nAirTag / Find My is a family\nmatch, not model or owner ID.\nBiscuit Pro / Ultra cannot be\ndistinguished from adverts.\nNo proof of malicious intent.\n\nHold badge: tools.\nAlways on at 100% by default.\nDisplay timeouts in Settings.\nUSB Badge Studio on GitHub.\n\nBy Your Pal Kal / Valleytech\nOriginal code: MIT.\nFlock Noir / Colonel Panic\nOUI Spy / Unified Blue\nMarauder: Just Call Me Koko\nSquachWatch feature reference\nOpenDroneID: Apache-2.0\nFull notices in CREDITS.md",5,0,244,F14);
@@ -815,22 +1114,59 @@ static void build(){
   micBadge=label(root,"MIC REC",137,17,86,F12,0xff8585);lv_obj_set_style_text_align(micBadge,LV_TEXT_ALIGN_CENTER,0);legible(micBadge);lv_obj_add_flag(micBadge,LV_OBJ_FLAG_HIDDEN);
 }
 static void action(lv_event_t* e){
-  ++inputActions;lastInputAction=int(intptr_t(lv_event_get_user_data(e)));
+  runAction(int(intptr_t(lv_event_get_user_data(e))));
+}
+static void runAction(int id){
+  ++inputActions;lastInputAction=id;
   lastInteraction=millis();
-  int id=(intptr_t)lv_event_get_user_data(e);
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  if(p4UnavailableAction(id))return;
+  if(id==7104){directory="/";go(Files);return;}
+  if(id==-22418){
+    if(p4TransportNeedsRestart())p4RestartFailedTransport();
+    else p4RadarRetry();
+    return;
+  }
+  if(p4Action(id))return;
+#endif
   if(id>=9000 && id<9000+int(RadarThemeCount)){selectRadarTheme(id-9000);go(RadarStyle);page=Boot;return;}
 #if BOARD_HAS_SD
-  if(id>=2000 && id<2096){int i=id-2000;if(i>=fileCount)return;if(files[i].dir){directory=files[i].path;go(Files);page=Boot;}else{String ext=files[i].path;ext.toLowerCase();if(ext.endsWith(".mp3")||ext.endsWith(".wav")){audioPlay(files[i].path);go(Audio);}else{
+  if(id>=2000 && id<2096){int i=id-2000;if(i>=fileCount)return;if(files[i].dir){directory=files[i].path;go(Files);page=Boot;}else{String ext=files[i].path;ext.toLowerCase();if(ext.endsWith(".mp3")||ext.endsWith(".wav")){
+#if BOARD_HAS_MIC
+      voiceOpen(files[i].path,Files);
+#else
+      audioPlay(files[i].path);go(Audio);
+#endif
+    }else{
       xSemaphoreTake(sdMutex,portMAX_DELAY);File f=CardFS.open(files[i].path);String text;while(f && f.available() && text.length()<2048){char ch=f.read();text+=(ch=='\n'||ch=='\t'||(ch>=32&&ch<127))?ch:'.';}f.close();xSemaphoreGive(sdMutex);
       lv_obj_t* box=uiMessageBox(root,"FILE PREVIEW",text.c_str(),nullptr,true);lv_obj_set_size(box,S(260),S(225));lv_obj_center(box);
     }}return;}
+#endif
+#if BOARD_HAS_MIC
+  if(voiceAction(id))return;
 #endif
   if(id>=6000 && id<6000+deviceRows){int i=findContact(deviceKeys[id-6000]);if(i>=0){selectContact(i);go(Details);}else{uiNotify("Target expired","Refresh the list or reopen it from History.",nullptr,false);}return;}
   if(id>=1000 && id<1000+(int)MAX_CONTACTS){selectContact(id-1000);go(Details);return;}
   if(id>=3000&&id<3000+historyRows){for(size_t i=0;i<historyCount;++i)if(historyRecords[i].key==historyKeys[id-3000]&&historyRecords[i].family==historyFamilies[id-3000]){historySelection=historyRecords[i];go(HistoryDetail);return;}go(History);page=Boot;return;}
   if(id>=4002&&id<4000+int(Family::Count)&&id!=4000+int(Family::Adult)){detector.families^=1u<<(id-4000);detectorSave();go(Detectors);page=Boot;return;}
   if(id>=5000&&id<5000+int(RULE_LIMIT)){controlKey=ruleKeys[id-5000];controlChannel=0;go(Controls);return;}
-  if(id>=8000&&id<8010){unsigned row=id-8000;if(row<notebookRows&&notebookAdverts){auto& k=notebookKeys[row];for(unsigned i=0;i<dragon::notebook::Capacity;++i){auto& a=notebookAdverts[i];if(a.used&&a.type==k.addressType&&!memcmp(a.mac,k.mac,6)){notebookSelection=a;go(NotebookDetail);return;}}}go(NotebookBle);return;}
+  if(id>=8000&&id<8010){
+    unsigned row=id-8000;
+    if(row<notebookRows&&notebookAdverts){
+      const auto& k=notebookKeys[row];
+      for(unsigned i=0;i<dragon::notebook::Capacity;++i){
+        const auto& a=notebookAdverts[i];
+        if(a.used&&a.type==k.addressType&&!memcmp(a.mac,k.mac,6)){
+          notebookSelection=a;
+#ifdef BOARD_WAVESHARE_P4_KNOB
+          if(page==P4GattPicker){go(P4Gatt);return;}
+#endif
+          go(NotebookDetail);return;
+        }
+      }
+    }
+    pending=page;page=Boot;return;
+  }
   if(id>=201 && id<=211){trackedContact=-1;channelLock=id-200;setRadio(true);go(Channels);page=Boot;return;}
 #ifndef BOARD_RADAR_LITE
   if(id==7109){
@@ -844,8 +1180,12 @@ static void action(lv_event_t* e){
 #if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
   if(id==7110){reconPage("gps-setup");go(Recon);return;}
 #endif
-#ifdef BOARD_WAVESHARE_185B
+#ifdef SD_BLE_LABELS
   if(id==7111){show185bResources();return;}
+#endif
+#ifdef DRAGON_USB_DRIVE
+  if(id==7120){char why[112];if(usbDriveStart(why,sizeof(why)))go(UsbDrive);else uiNotify("USB drive unavailable",why,nullptr,false);return;}
+  if(id==7121){usbDriveDone();lastUpdate=0;return;}
 #endif
   if(id==7104||id==7105){reconPage(id==7104?"files":"captures");go(Recon);return;}
   if(id==7100||id==7102){openRadioTools=id==7102;go(Recon);return;}
@@ -933,7 +1273,14 @@ static void action(lv_event_t* e){
     case 88:audioCommand("tone play 3");break;
     case 94:audioCommand("tone play 4");break;
     case 95:uiNotify("USB TONE EDITOR","Open Detector tools on the Dragon Detector web flasher.",nullptr,false);break;
-    case 79:alertVibration=!alertVibration;detectorSave();go(Settings);page=Boot;break;
+    case 79:alertVibration=!alertVibration;detectorSave();go(Settings);page=Boot;
+#ifdef BOARD_WAVESHARE_P4_KNOB
+      if(alertVibration){extern void p4KnobBuzz();p4KnobBuzz();}
+#endif
+      break;
+#ifdef BOARD_WAVESHARE_P4_KNOB
+    case 186:{extern uint8_t p4KnobClickLevel();extern void p4KnobSetClickLevel(uint8_t);p4KnobSetClickLevel((p4KnobClickLevel()+1)%4);go(Settings);page=Boot;break;}
+#endif
     case 80:{const uint16_t choices[]={0,15,30,60,120,300};size_t i=0;while(i<5&&choices[i]!=detector.dimSeconds)++i;detector.dimSeconds=choices[(i+1)%6];detectorSave();go(Display);page=Boot;break;}
     case 81:detector.idleBrightness=detector.idleBrightness==5?8:detector.idleBrightness==8?15:detector.idleBrightness==15?25:5;detectorSave();go(Display);page=Boot;break;
     case 82:{const uint16_t choices[]={0,30,60,120,300,600};size_t i=0;while(i<5&&choices[i]!=detector.offSeconds)++i;detector.offSeconds=choices[(i+1)%6];detectorSave();go(Display);page=Boot;break;}
@@ -942,7 +1289,11 @@ static void action(lv_event_t* e){
     case 89:if(noticeHasKey)noticeQueue.drop(noticeKey);dismissNotice();break;
     case 90:if(noticeHasKey){auto key=noticeKey;dismissNotice();huntDevice(key);go(Hunt);}break;
     case 91:if(noticeHasKey){if(!(deviceRules(noticeKey)&RuleSnooze))toggleRule(noticeKey,RuleSnooze);dismissNotice();}break;
-    case 96:filter=0;devicePage=0;go(Devices);break;
+    case 96:filter=0;
+#ifdef BOARD_WAVESHARE_P4_KNOB
+      if(page==Hunt)filter=P4RecentContacts;
+#endif
+      devicePage=0;go(Devices);break;
     case 97:detector.quiet=!detector.quiet;detectorSave();audioStop();go(Radar);page=Boot;break;
     case 98:setActiveBle(!activeBle);go(Settings);page=Boot;break;
     case 99:go(Diagnostics);break;
@@ -964,20 +1315,34 @@ static void action(lv_event_t* e){
     case 126:nearbySet(nearby.on,nearby.enter>-65?-70:nearby.enter>-75?-80:-60);go(RadarStyle);page=Boot;break; // -60, -70, -80
     case 110:if(historyPage>0)--historyPage;go(History);page=Boot;break;
     case 111:if(size_t((historyPage+1)*10)<historyCount)++historyPage;go(History);page=Boot;break;
-#ifdef BOARD_WATCHER
+#if defined(BOARD_WATCHER) || defined(BOARD_WAVESHARE_P4_KNOB)
     case 181:{
       static const char* choices[]={"Cancel","Sleep",""};
+#ifdef BOARD_WAVESHARE_P4_KNOB
+      auto* box=uiMessageBox(root,"SLEEP?","Stops scanning and turns the screen off. Press PWR to wake. The clock keeps time.",choices,true);
+#else
       auto* box=uiMessageBox(root,"SLEEP?","Stops scanning. Press the wheel to wake. Keeps the system power latch on for the clock.",choices,true);
+#endif
       lv_obj_set_width(box,S(260));lv_obj_center(box);
       lv_obj_add_event_cb(box,[](lv_event_t* event){
         auto* b=lv_event_get_current_target(event);bool yes=lv_msgbox_get_active_btn(b)==1;lv_msgbox_close(b);if(!yes)return;
+#ifdef BOARD_WAVESHARE_P4_KNOB
+        extern bool p4KnobSleep(unsigned);recipeStop();reconStop();bleLabStop();
+        if(!p4KnobSleep(0)){
+#else
         extern bool watcherSleep(unsigned);
-        if(!watcherSleep(0)){auto* info=uiMessageBox(root,"SLEEP UNAVAILABLE","Stop recording and wait for saving to finish, then try again.",nullptr,true);lv_obj_set_width(info,S(260));lv_obj_center(info);}
+        if(!watcherSleep(0)){
+#endif
+          auto* info=uiMessageBox(root,"SLEEP UNAVAILABLE","Stop recording and wait for saving to finish, then try again.",nullptr,true);lv_obj_set_width(info,S(260));lv_obj_center(info);}
       },LV_EVENT_VALUE_CHANGED,nullptr);break;
     }
     case 180:{
       static const char* choices[]={"Cancel","Power off",""};
+#ifdef BOARD_WAVESHARE_P4_KNOB
+      auto* box=uiMessageBox(root,"POWER OFF?","Turns the knob off. Press PWR to turn it on again. Unplug USB first.",choices,true);
+#else
       auto* box=uiMessageBox(root,"POWER OFF?","Full power off can lose clock time. Use Sleep to retain it. Unplug USB first.",choices,true);
+#endif
       lv_obj_set_width(box,S(260));lv_obj_center(box);
       lv_obj_add_event_cb(box,[](lv_event_t* event){
         auto* b=lv_event_get_current_target(event);bool yes=lv_msgbox_get_active_btn(b)==1;
@@ -986,8 +1351,13 @@ static void action(lv_event_t* e){
           auto* info=uiMessageBox(root,"STILL SAVING","Stop recording and wait for saving to finish before powering off.",nullptr,true);
           lv_obj_set_width(info,S(260));lv_obj_center(info);return;
         }
+#ifdef BOARD_WAVESHARE_P4_KNOB
+        extern bool p4KnobPowerOff();
+        if(!p4KnobPowerOff()){
+#else
         extern bool watcherPowerOff();
         if(!watcherPowerOff()){
+#endif
           auto* info=uiMessageBox(root,"POWER STILL ON","Could not power off. Unplug USB and try again.",nullptr,true);
           lv_obj_set_width(info,S(260));lv_obj_center(info);
         }
@@ -998,18 +1368,58 @@ static void action(lv_event_t* e){
     case 200:trackContact(-1);pending=page;page=Boot;break;
   }
 }
-bool uiTouch(bool pressed,int,int){
+bool uiTouch(bool pressed,int x,int y){
+  (void)x;(void)y;
   static bool consumeWake=false;
   if(pressed && outputBrightness==0)consumeWake=true;
   if(pressed)lastInteraction=millis();
   if(consumeWake){if(!pressed)consumeWake=false;return false;}
-  // Navigation uses visible Tools/Home buttons. Leave drags to LVGL lists.
   return true;
 }
-#if defined(BOARD_CROWPANEL_21) || defined(BOARD_WATCHER)
+#ifdef BOARD_WAVESHARE_P4_KNOB
+bool uiP4ClockOwnsDial(){
+  return page==Clock && pending==Clock && !uiSideKeyModalOpen();
+}
+bool uiP4TurnClock(int steps){
+  if(!steps || !uiP4ClockOwnsDial())return false;
+  chooseWatch(steps);
+  return true;
+}
+bool uiP4DialInput(int steps,bool click){
+  if(page!=pending||uiSideKeyModalOpen())return false;
+  if(page==Menu){if(click)p4Launcher.activate();else p4Launcher.turn(steps);return true;}
+  if(page==Player){
+    if(click)voiceAction(193);
+    else if(steps){audioVolume(int(audioStatus().volume)+(steps>0?2:-2));voicePlayerTick();}
+    return true;
+  }
+  return false;
+}
+void uiP4ReadPointer(lv_indev_data_t* data,p4ui::PointerFrame (*readPhysical)()){
+  static p4ui::PointerReader reader(SCREEN_RES);
+  static uint8_t rotation=displayRotation;
+  if(rotation!=displayRotation){reader=p4ui::PointerReader(SCREEN_RES);rotation=displayRotation;}
+  reader.read(data,[&](){
+    auto raw=readPhysical();
+    raw.at=p4ui::rotatePoint(raw.at,SCREEN_RES,rotation);
+    if(!uiTouch(raw.pressed,raw.at.x,raw.at.y))raw.pressed=false;
+    return raw;
+  },[](p4ui::Gesture gesture){p4QueuedGesture=gesture;},millis(),p4GesturesAllowed());
+  // LVGL rotates pointer samples after this callback; gestures use display coordinates.
+  const auto raw=p4ui::rotatePoint({data->point.x,data->point.y},SCREEN_RES,4-rotation);
+  data->point.x=raw.x;data->point.y=raw.y;
+}
+#endif
+#if defined(BOARD_CROWPANEL_21) || defined(BOARD_WATCHER) || defined(BOARD_WAVESHARE_P4_KNOB)
 lv_obj_t* uiRotaryScope(){return resetBox?resetBox:clockPrompt?clockPrompt:notice?notice:root;}
-#ifdef BOARD_WATCHER
-bool uiRotaryOpenMenu(){if(nodeKey("rotary"))return true;if(resetBox||clockPrompt||notice)return false;go(Menu);return true;}
+#ifdef ROTARY_TOUCH_UI
+bool uiRotaryOpenMenu(){if(nodeKey("rotary"))return true;if(resetBox||clockPrompt||notice)return false;
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  go(page==Menu?Radar:Menu);
+#else
+  go(Menu);
+#endif
+  return true;}
 #endif
 bool uiRotaryWake(){bool wasOff=outputBrightness==0;lastInteraction=millis();return wasOff;}
 bool uiRotaryNode(bool click,bool back){
@@ -1019,7 +1429,23 @@ bool uiRotaryNode(bool click,bool back){
 }
 #endif
 void uiShow(const String& name){
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  if(name=="node"){go(nodeBusy()?Node:Menu);return;}
+  if(name=="modes"){go(P4Modes);return;}
+  if(name=="lab"){go(P4BleLab);return;}
+  if(name=="missions"){go(P4Sessions);return;}
+  if(name=="channels"){p4ChannelBank=0;go(P4Channels);return;}
+  if(name=="beacons"){go(P4Beacons);return;}
+  if(name=="inspect" || name=="ble-inspector"){notebookPage=0;go(NotebookBle);return;}
+  if(name=="evil" || name=="capabilities"){menuTab=0;go(Menu);return;}
+  if(name=="wardrive" || name=="ble-attacks" ||
+     name=="ibeacon" || name=="attacks" || name=="recipes" || name=="network" ||
+     name=="csi" || name=="portal" || name=="analysis" || name=="probes" || name=="filters" ||
+     name=="captures" || name=="findmy-beeper"){Serial.println("SCREEN_UNAVAILABLE");return;}
+  if(name=="tools"){menuTab=0;go(Menu);return;}
+#else
   if(name=="node"){if(nodeBusy())go(Node);else{openRadioTools=false;go(Recon);}return;}
+#endif
   // A running node keeps its screen. The boards whose key opens the menu
   // (1.75, LILYGO, XIAO) ask it to stop; nothing else may move the page.
   if(nodeBusy()){if(name=="menu")nodeKey("menu_key");return;}
@@ -1047,6 +1473,14 @@ void uiShow(const String& name){
   }
   if(name=="badusb"&&badusbSupported()){go(BadUsb);return;}
   if(name=="utilities"){menuTab=1;go(Menu);return;}
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  if(name=="activity"){go(P4ActivityHub);return;}
+  if(name=="music"){go(P4Library);return;}
+#endif
+#if BOARD_HAS_MIC
+  if(name=="recorder"){go(Recorder);return;}
+  if(name=="player"){go(Player);return;}
+#endif
   if(name=="notebook"){go(Notebook);return;}if(name=="notebook-ble"){notebookPage=0;go(NotebookBle);return;}if(name=="notebook-probes"){notebookPage=0;go(NotebookProbes);return;}
   if(name=="device-colors"){go(FamilyColors);return;}
   if(name=="clock-settings"||name=="clock-edit"||name=="time-settings"){clockTab(0,true);return;}
@@ -1071,7 +1505,8 @@ void uiBegin(){
   settings.begin("dd-ui",false);
   watchFace=settings.getUChar("watch-face",0);if(!watchFaceAllowed(watchFace)){watchFace=0;settings.putUChar("watch-face",watchFace);}
   if(!settings.getBool("panel-v04",false)){settings.putUChar("brightness",100);settings.putBool("panel-v04",true);}
-  brightness=settings.getUChar("brightness",100);if(brightness<25||brightness>100)brightness=100;candidatesOnly=settings.getBool("candidates",true);
+  brightness=settings.getUChar("brightness",100);if(brightness<25||brightness>100)brightness=100;
+  candidatesOnly=settings.getBool("candidates",true);
   if(!settings.getBool("radar-v07",false)){settings.putBool("radar-labels",true);settings.putUChar("radar-theme",1);settings.putBool("radar-v07",true);}
   radarLabels=settings.getBool("radar-labels",true);radarRecent=settings.getBool("radar-recent",true);radarTheme=settings.getUChar("radar-theme",1);if(!radarThemeAllowed(radarTheme)){radarTheme=1;settings.putUChar("radar-theme",radarTheme);}
   scr_lvgl_init();uiApplyTheme(radarTheme);set_brightness(brightness);lastInteraction=millis();root=lv_scr_act();lv_obj_clear_flag(root,LV_OBJ_FLAG_SCROLLABLE);lv_obj_set_style_bg_color(root,color(uiColors().bg),0);
@@ -1082,12 +1517,26 @@ void uiBegin(){
   pageAt=millis();
 }
 void uiLoop(){
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  if(page==pending)p4RefreshRadioPage(false);
+  if(p4QueuedGesture!=p4ui::Gesture::None)p4RunGesture(p4GesturesAllowed());
+#endif
   // The node screen asked to go: rebuild it for a changed kind, else Tools > Modes.
-  if(nodeLeft){nodeLeft=false;if(page==Node){nodeScreenClose();if(nodeBusy())page=Boot;else{openRadioTools=false;go(Recon);}}}
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  constexpr Page afterNode=Menu;
+#else
+  constexpr Page afterNode=Recon;
+#endif
+  if(nodeLeft){nodeLeft=false;if(page==Node){nodeScreenClose();if(nodeBusy())page=Boot;else{openRadioTools=false;go(afterNode);}}}
   // A running node owns the display as well as the radios: nothing opens over
   // its screen and nothing replaces it (this also wins over the startup splash).
   if(nodeBusy()){dismissNotice();if(clockPrompt){lv_obj_del(clockPrompt);clockPrompt=nullptr;}pending=Node;}
-  else if(pending==Node){openRadioTools=false;pending=Recon;if(page==Recon)page=Boot;}
+  else if(pending==Node){openRadioTools=false;pending=afterNode;if(page==afterNode)page=Boot;}
+#ifdef DRAGON_USB_DRIVE
+  // USB drive mode owns the display like a node; afterwards Utilities comes back.
+  if(usbDriveOn()){dismissNotice();if(clockPrompt){lv_obj_del(clockPrompt);clockPrompt=nullptr;}if(pending!=UsbDrive)go(UsbDrive);}
+  else if(pending==UsbDrive){menuTab=1;pending=Menu;if(page==Menu)page=Boot;}
+#endif
   if(wardriveUploadBusy()){
     dismissNotice();if(clockPrompt){lv_obj_del(clockPrompt);clockPrompt=nullptr;}
     if(page!=Recon&&pending!=Recon){reconPage("wardrive-upload");pending=Recon;}
@@ -1106,6 +1555,9 @@ void uiLoop(){
   uint32_t idle=millis()-lastInteraction;
   int level=detector.offSeconds&&idle>=uint32_t(detector.offSeconds)*1000?0:detector.dimSeconds&&idle>=uint32_t(detector.dimSeconds)*1000?detector.idleBrightness:brightness;
   if(level!=outputBrightness){outputBrightness=level;set_brightness(level);}
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  p4Launcher.awake(page==Menu&&level>0);
+#endif
   if(notice&&!noticeWatch&&millis()-noticeAt>=6000)dismissNotice();
   if(!dragon::detectionPopupAllowed(page==Radar,pending==Radar)){if(noticeHasKey)dismissNotice();noticeQueue.count=0;}
   if(!clockPrompt&&!notice&&dragon::detectionPopupAllowed(page==Radar,pending==Radar)){dragon::DetectionNotice next;if(noticeQueue.take(millis(),next)&&detector.enabled(next.family)&&(!detector.quiet||next.watched)&&(!next.hasKey||!(deviceRules(next.key)&(RuleIgnore|RuleSnooze))))uiNotify(next.title,next.detail,next.hasKey?&next.key:nullptr,next.watched);}
@@ -1114,7 +1566,7 @@ void uiLoop(){
   if(page==Menu&&pending==Menu&&!clockPrompt&&!notice&&!resetBox&&menuWardriveAvailable!=wardriveAvailable()&&gpsMenuInputReleased())build();
 #endif
   if(page!=pending)build();
-  if(!wardriveBusy()&&!wardriveUploadBusy()&&!nodeBusy()&&page!=BadUsb)clockSetupPrompt();
+  if(!wardriveBusy()&&!wardriveUploadBusy()&&!nodeBusy()&&!usbDriveOn()&&page!=BadUsb)clockSetupPrompt();
   if(page==BadUsb)badusbViewLoop();
   if(page==Node)nodeScreenLoop();
 #ifndef BOARD_RADAR_LITE
@@ -1132,6 +1584,13 @@ void uiLoop(){
 #endif
   if(millis()-lastUpdate>updateInterval){lastUpdate=millis();if(micBadge){if(audioStatus().mode==AudioMode::Recording)lv_obj_clear_flag(micBadge,LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(micBadge,LV_OBJ_FLAG_HIDDEN);}
     if(page==Stopwatch)updateTimer();
+#if BOARD_HAS_MIC
+    if(page==Recorder)voiceRecorderTick();
+    if(page==Player)voicePlayerTick();
+#endif
+#ifdef DRAGON_USB_DRIVE
+    if(page==UsbDrive)usbDriveUpdate();
+#endif
     if(page==Clock)watchTick();
     if(page==ClockSettings)updateClockStatus();
     if(page==Radar && radar){
@@ -1148,11 +1607,36 @@ void uiLoop(){
       setText(radarActivity,deauth&&spam?"DEAUTH + BLE BURST  >":deauth?"DEAUTH ACTIVITY  >":spam?"BLE SPAM CANDIDATE  >":near);
       setHidden(radarActivity,!(deauth||spam||cue));
       if(trackedContact>=0 && trackingLabel){auto& t=contacts[trackedContact];uint32_t age=millis()-t.seen;String line=age>10000?"SIGNAL LOST / HUNT":String("HUNT / ")+t.signal.direction();setText(trackingLabel,line.c_str());}
-      else if(trackingLabel){char primary[64];if(radarPrimary>=0){auto& c=contacts[radarPrimary];snprintf(primary,sizeof(primary),"%s / %d dBm",radarFamilyName(c.match.family),c.rssi);setTextColor(trackingLabel,familyColor(c.match.family));}else{strlcpy(primary,reconMode()==dragon::ReconMode::Radar?"":dragon::reconModes[unsigned(reconMode())].name,sizeof(primary));setTextColor(trackingLabel,radarPalette(radarTheme).text);}setText(trackingLabel,primary);}
+      else if(trackingLabel){char primary[88];if(radarPrimary>=0){auto& c=contacts[radarPrimary];
+#ifdef BOARD_WAVESHARE_P4_KNOB
+        char titleText[64],tail[20];
+        snprintf(tail,sizeof(tail)," / %d dBm",c.rssi);
+        const auto* font=uiFont(F12);
+        p4FittedContactTitle(titleText,radarPrimary,font,S(220)-4-lv_txt_get_width(tail,strlen(tail),font,0,LV_TEXT_FLAG_NONE));
+#else
+        const char* titleText=radarFamilyName(c.match.family);
+#endif
+        snprintf(primary,sizeof(primary),"%s / %d dBm",titleText,c.rssi);setTextColor(trackingLabel,familyColor(c.match.family));}else{strlcpy(primary,reconMode()==dragon::ReconMode::Radar?"":dragon::reconModes[unsigned(reconMode())].name,sizeof(primary));setTextColor(trackingLabel,radarPalette(radarTheme).text);}setText(trackingLabel,primary);}
       if(locksport()&&trackingLabel){if(trackedContact>=0)setTextColor(trackingLabel,familyColor(contacts[trackedContact].match.family));setBgColor(trackingLabel,(radarPrimary>=0||trackedContact>=0)?dragon::RadarLabelBackground:locksportBg());if(lv_obj_get_style_bg_opa(trackingLabel,0)!=LV_OPA_COVER){lv_obj_set_style_bg_opa(trackingLabel,LV_OPA_COVER,0);lv_obj_set_style_radius(trackingLabel,S(5),0);}}
       // Live: heard within RadarLiveMs. Recent: every other plotted contact.
       int live=0,recent=0;for(auto& c:contacts)if(radarVisible(c,radarFrameAt))++(uint32_t(radarFrameAt-c.seen)<dragon::RadarLiveMs?live:recent);char s[96];
       // The row is one line: when the full text is wider than the label, "+N" stands for "N recent".
+#ifdef BOARD_WAVESHARE_P4_KNOB
+      const char* phase=p4RadarStatus();
+      const bool receiving=p4CoprocReady() && radioEnabled && !radioStandby() && !p4CoprocBusy();
+      if(receiving && (live || recent) && !strstr(phase,"error")){
+        const char* shortPhase=p4RadarBleListening()?"BLE RX":(!strcmp(phase,"Listening for Wi-Fi")?"Wi-Fi RX":"Radar");
+        snprintf(s,sizeof(s),"%s / %d live",shortPhase,live);
+        if(recent)snprintf(s+strlen(s),sizeof(s)-strlen(s)," +%d",recent);
+      }else strlcpy(s,phase,sizeof(s));
+      const int battery=batteryPercent();
+      if(battery>=0){
+        char withBattery[112];
+        snprintf(withBattery,sizeof(withBattery),"%s / %d%%",s,battery);
+        if(lv_txt_get_width(withBattery,strlen(withBattery),lv_obj_get_style_text_font(statusLabel,0),lv_obj_get_style_text_letter_space(statusLabel,0),LV_TEXT_FLAG_NONE)<=lv_obj_get_content_width(statusLabel))
+          strlcpy(s,withBattery,sizeof(s));
+      }
+#else
       for(bool compact:{false,true}){int n=snprintf(s,sizeof(s),"%s %s / %d live",radioEnabled?(blePhase?"BLE":"WI-FI"):"PAUSED",captureEnabled?"PCAP":"RX",live);
       if(recent)n+=snprintf(s+n,sizeof(s)-n,compact?" +%d":" %d recent",recent);
       int battery=batteryPercent();if(battery>=0)snprintf(s+n,sizeof(s)-n,"%s%s%d%%",recent?" / ":"  /  ",batteryCharging()?LV_SYMBOL_CHARGE " ":"",battery);
@@ -1160,6 +1644,7 @@ void uiLoop(){
       else snprintf(s+n,sizeof(s)-n," / %d%%",brightness);
 #endif
       if(lv_txt_get_width(s,strlen(s),lv_obj_get_style_text_font(statusLabel,0),lv_obj_get_style_text_letter_space(statusLabel,0),LV_TEXT_FLAG_NONE)<=lv_obj_get_content_width(statusLabel))break;}
+#endif
       setText(statusLabel,s);
       // Repaint only what changed, then draw it now so the frame shown is the
       // frame just measured.
@@ -1168,19 +1653,54 @@ void uiLoop(){
       radarPaintPixels=0;radarRefreshNow();
       radarRecordPaint(full,micros()-paintStart,radarPaintPixels);}
     if(page==Diagnostics&&diagnosticsLabel){
+#ifdef BOARD_WAVESHARE_P4_KNOB
+      const char* phase=p4RadarStatus();
+      bool scanError=!strcmp(phase,"Wi-Fi scan error");
+      const bool restart=p4TransportNeedsRestart();
+      const char* blocked=restart?p4TransportRestartBlock():nullptr;
+      const char* guidance=restart?(blocked?blocked:"Restart the knob to reconnect the radio."):
+                           scanError?"Tap Retry scan to listen again.":"";
+      char text[224];
+      snprintf(text,sizeof(text),"Radio: %s\nBluetooth: %s\n\nFree heap: %u KB\nFree PSRAM: %u KB\n\n%s",
+               phase,p4RadarBluetoothStatus(),
+               ESP.getFreeHeap()/1024,ESP.getFreePsram()/1024,guidance);
+      if (candidatesOnly)
+        strlcat(text,"\n\nCandidates filter on. Choose All contacts in Settings to see ordinary devices.",sizeof(text));
+      setText(diagnosticsLabel,text);
+      setText(lv_obj_get_child(p4RetryButton,0),restart?"Restart knob":"Retry scan");
+      setHidden(p4RetryButton,!(scanError||restart)||blocked);
+#else
       char text[360];snprintf(text,sizeof(text),"Wi-Fi frames: %lu\nBLE adverts: %lu\nQueue drops: %lu / peak %u\nMax processing: %lu us\nMax queue age: %lu ms\nContact slots: %u\nEvictions: %lu\nCache hits/misses: %lu/%lu\nFree heap: %u KB\nFree PSRAM: %u KB\nBLE: %s\n\nCounters restart at boot.\nHigher queue age means delayed\nRSSI and scan results.",wifiFrames,bleFrames,queueDrops,radioQueueHigh,radioMaxBatchUs,radioMaxLagMs,unsigned(MAX_CONTACTS),contactEvictions,contactCacheHits,contactCacheMisses,ESP.getFreeHeap()/1024,ESP.getFreePsram()/1024,activeBle?"Active / requests names":"Passive / listen only");lv_label_set_text(diagnosticsLabel,text);
+#endif
     }
     if(page==Activity&&activityLabel){
+#ifdef BOARD_WAVESHARE_P4_KNOB
+      char summary[360];
+      int used=snprintf(summary,sizeof(summary),"%s\n\nWi-Fi scans: %lu\nAccess points in last scan: %u\nOpen/protected SSID conflicts: %lu\n\nBluetooth windows: %lu\nAdverts heard: %lu\nBLE addresses near: %u%s (%s)\nPossible advertising bursts: %lu",
+               p4RadarStatus(),(unsigned long)p4RadarCompletedScans(),unsigned(p4RadarLastApCount()),
+               (unsigned long)trafficStatus.ssidConflicts,(unsigned long)p4RadarBleWindows(),
+               (unsigned long)p4RadarBleReports(),unsigned(nearby.near),nearby.capped()?"+":"",
+               nearby.state(millis()),(unsigned long)trafficStatus.bleAlerts);
+      if(trafficStatus.bleAlerts && used>0 && size_t(used)<sizeof(summary))
+        snprintf(summary+used,sizeof(summary)-used,"\nLast: %s / %u addresses, %u payloads",
+                 dragon::bleBurstName(trafficStatus.bleGroup),trafficStatus.bleAddresses,trafficStatus.bleVariants);
+      setText(activityLabel,summary);
+#else
       char text[900],wifiMeta[100],bleMeta[120];auto& t=trafficStatus;unsigned recent=recentDisconnects();
       if(t.disconnectAlerts){snprintf(wifiMeta,sizeof(wifiMeta),"Last: CH %u / %s\nReason: %s",t.channel,t.disconnectActive(millis())?"RECENT":"older burst",t.protectedFrame?"protected / unavailable":"");if(!t.protectedFrame)snprintf(wifiMeta+strlen(wifiMeta),sizeof(wifiMeta)-strlen(wifiMeta),"%u",t.reason);}else strcpy(wifiMeta,"No bursts observed.");
       if(t.bleAlerts)snprintf(bleMeta,sizeof(bleMeta),"%s / %s\n%u addresses / %u variants",dragon::bleBurstName(t.bleGroup),t.bleActive(millis())?"RECENT":"older burst",t.bleAddresses,t.bleVariants);else strcpy(bleMeta,"No bursts observed.");
       int used=snprintf(text,sizeof(text),"WI-FI DEAUTH / DISASSOC\n%lu frames / %lu burst alerts\n%u%s frames in last 3s\n%s\n\nBLE SPAM CANDIDATES\n%lu burst alerts\n%s\n\nThresholds: 6 disconnects / 3s;\n12 BLE addresses / 5s, or\n24 pairing variants / 5s.\nRetries/identical adverts filtered.\nScan gaps can hide activity.\nCrowding or normal disconnects\ncan resemble attacks.\nEvents retain the evidence.",t.disconnectFrames,t.disconnectAlerts,recent,recent==64?"+":"",wifiMeta,t.bleAlerts,bleMeta);
       if(used>0&&size_t(used)<sizeof(text))snprintf(text+used,sizeof(text)-used,"\n\nBLE RADIOS NEAR\n%u%s near / %u steady  (%s)\nLevel %d dBm or stronger\n\nCounts radio addresses, not\npeople. One person may carry\nseveral radios or none. Phones\nchange address about every\n15 minutes. Wi-Fi is not counted.\nSteady: near for minutes (about\n5 in normal scanning), usually\nyour own devices. A hidden line\ndoes not mean nobody is near.\nNot a distance. No alert or log.",unsigned(nearby.near),nearby.capped()?"+":"",unsigned(nearby.steady),nearby.state(millis()),int(nearby.enter));
       lv_label_set_text(activityLabel,text);
+#endif
     }
     if(page==Hunt&&trackedContact>=0&&huntValue){auto& c=contacts[trackedContact];uint32_t age=millis()-(c.signal.count?c.signal.last:c.seen);bool stale=age>=10000||!c.signal.count;
       char value[52],meta[128];if(stale)snprintf(value,sizeof(value),"%s",c.packets?"SIGNAL LOST":"SEARCHING");else snprintf(value,sizeof(value),"%d dBm  %s",c.rssi,c.signal.trend>0?LV_SYMBOL_UP:c.signal.trend<0?LV_SYMBOL_DOWN:"-");lv_label_set_text(huntValue,value);lv_bar_set_value(huntGauge,stale?-105:c.rssi,LV_ANIM_OFF);
+#if BOARD_RADIO_AP_SURVEY_ONLY
+      if(stale)snprintf(meta,sizeof(meta),"Last heard %lus ago\n%s",(unsigned long)(age/1000),p4RadarStatus());
+#else
       if(stale)snprintf(meta,sizeof(meta),"Last heard %lus ago\n%s",(unsigned long)(age/1000),c.ble?"Listening for BLE target":huntSweep(c,millis())?"Searching Wi-Fi channels 1-11":"Listening on saved channel");
+#endif
       else if(c.trace.mark>-127)snprintf(meta,sizeof(meta),"%s / peak %d dBm\n%+d dB from mark / %s",c.signal.direction(),c.trace.peak,c.rssi-c.trace.mark,c.signal.quality());
       else snprintf(meta,sizeof(meta),"%s / peak %d dBm\n%s / MARK to compare",c.signal.direction(),c.trace.peak,c.signal.quality());
       if(!stale){size_t n=strlen(meta);snprintf(meta+n,sizeof(meta)-n,"\nRaw %d dBm / last %lus",c.signal.raw,(unsigned long)(age/1000));}
@@ -1188,7 +1708,7 @@ void uiLoop(){
     }
     if(page==Audio && audioLabel){auto s=audioStatus();String text=String(s.mode==AudioMode::Recording?"RECORDING":s.mode==AudioMode::Playing?"PLAYING":s.mode==AudioMode::Error?"ERROR":"READY")+"  "+s.seconds+"s  Vol "+s.volume+"%\n"+s.message;lv_label_set_text(audioLabel,text.c_str());lv_bar_set_value(audioMeter,s.peak,LV_ANIM_OFF);}
   }
-#if defined(BOARD_CROWPANEL_21) || defined(BOARD_WATCHER)
+#if defined(BOARD_CROWPANEL_21) || defined(BOARD_WATCHER) || defined(BOARD_WAVESHARE_P4_KNOB)
   rotaryUiLoop();
 #endif
 #ifdef BOARD_WAVESHARE_185B
@@ -1205,7 +1725,7 @@ bool uiStopwatchKey(bool start,uint64_t at){
   if(!at)at=stopwatchNow();if(start)stopwatch.toggle(at);else if(stopwatch.running){if(locksport())stopwatch.finish(at);else stopwatch.lap(at);}else resetStopwatch();
   updateTimer();return true;
 }
-#if defined(BOARD_WAVESHARE_185B) || defined(BOARD_WAVESHARE_143C) || defined(BOARD_AMOLED_175C)
+#if defined(BOARD_WAVESHARE_185B) || defined(BOARD_WAVESHARE_143C) || defined(BOARD_AMOLED_175C) || defined(BOARD_WAVESHARE_P4_KNOB)
 static bool uiSideKeyHasMessageBox(lv_obj_t* object){
   if(!object||lv_obj_has_flag(object,LV_OBJ_FLAG_HIDDEN))return false;
   if(lv_obj_check_type(object,&lv_msgbox_class))return true;
@@ -1214,11 +1734,14 @@ static bool uiSideKeyHasMessageBox(lv_obj_t* object){
 }
 static bool uiSideKeyModalOpen(){return resetBox||clockPrompt||notice||uiSideKeyHasMessageBox(root)||uiSideKeyHasMessageBox(lv_layer_top());}
 #endif
-#ifdef BOARD_AMOLED_175C
+#if defined(BOARD_AMOLED_175C) || defined(BOARD_WAVESHARE_P4_KNOB)
 void uiAmoled175cSleep(unsigned seconds){
   if(nodeKey("boot_hold",true))return; // the hold is an exit request; sleep would end the node unasked
   lastInteraction=millis();
   if(uiSideKeyModalOpen()||page!=pending)return;
+#ifdef DRAGON_USB_DRIVE
+  if(usbDriveOn()){auto* box=uiMessageBox(root,"USB DRIVE ON","Eject the card on the PC or tap Done before sleep.",nullptr,true);lv_obj_set_width(box,S(280));lv_obj_center(box);return;}
+#endif
   const char* title="SLEEP UNAVAILABLE";
   const char* message="Release both buttons and try again.";
   if(stopwatch.running||reconRecording()||reconStorageBusy()||reconOwnsRadio()||bleLabOwnsRadio()||missionActive()||wardriveBusy()||wardriveUploadBusy()||audioStatus().mode==AudioMode::Recording){
@@ -1226,8 +1749,13 @@ void uiAmoled175cSleep(unsigned seconds){
   }else{
     bool wasRadio=radioEnabled;
     badusbStop();recipeStop();reconStop();bleLabStop();audioStop();setRadio(false);
+#ifdef BOARD_WAVESHARE_P4_KNOB
+    extern bool p4KnobSleep(unsigned);
+    if(p4KnobSleep(seconds))return;
+#else
     extern bool amoled175cSleep(unsigned);
     if(amoled175cSleep(seconds))return;
+#endif
     setRadio(wasRadio);
   }
   auto* box=uiMessageBox(root,title,message,nullptr,true);
@@ -1317,7 +1845,19 @@ bool uiCommand(const String& cmd){
   if(cmd=="ui test notification"){dragon::DeviceKey key{};uiNotify("Input test","Test detection notification",&key,false);Serial.println("UI_TEST_OK");return true;}
   if(cmd=="ui test watch-notification"){dragon::DeviceKey key{};uiNotify("Input test","Test watch-list notification",&key,true);Serial.println("UI_TEST_OK");return true;}
   if(cmd=="ui status"){Serial.printf("UI_STATUS page=%u actions=%lu last_action=%d notice=%u queued=%u\n",unsigned(page),inputActions,lastInputAction,notice!=nullptr,noticeQueue.count);return true;}
-  if(cmd=="radar status"){Serial.printf("RADAR_SETTINGS theme=%u labels=%u recent=%u pages=1 plotted=%u primary=%d touches=%lu hits=%lu selected=%u\n",radarTheme,radarLabels,radarRecent,dotCount,radarPrimary,radarTouches,radarHits,radarHasSelection);return true;}
+  if(cmd=="radar status"){
+    Serial.printf("RADAR_SETTINGS theme=%u labels=%u recent=%u pages=1 plotted=%u primary=%d touches=%lu hits=%lu selected=%u",radarTheme,radarLabels,radarRecent,dotCount,radarPrimary,radarTouches,radarHits,radarHasSelection);
+#ifdef BOARD_WAVESHARE_P4_KNOB
+    unsigned classified=0;
+    for(int i=0;i<dotCount;++i){
+      const auto& c=contacts[dots[i].index];
+      if(keyOf(c)==dots[i].key && dragon::p4::signatureFamily(c))++classified;
+    }
+    Serial.printf(" scope=%s classified=%u privacy=%u",candidatesOnly?"candidates":"all",classified,detector.privacy);
+#endif
+    Serial.println();
+    return true;
+  }
   if(cmd=="radar paint"){radarPrintStats();return true;}
   if(cmd=="radar paint reset"){radarStats=RadarPaintStats{};Serial.println("RADAR_PAINT_RESET");return true;}
   if(cmd=="radar dots"){for(int i=0;i<dotCount;++i)Serial.printf("RADAR_DOT %d x=%d y=%d color=%06lx selected=%u\n",i,dots[i].x,dots[i].y,contactColor(contacts[dots[i].index]),radarHasSelection&&dots[i].key==radarSelectedKey);Serial.println("RADAR_DOTS_END");return true;}

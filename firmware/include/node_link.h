@@ -232,7 +232,7 @@ struct Status {
   uint8_t plan[14]={},planCount=0;
   uint16_t dwellMs=DwellDefaultMs;
   uint32_t wifi=0,ble=0;            // different networks and devices found
-  uint32_t sent=0,failed=0,dropped=0,acked=0;
+  uint32_t sent=0,failed=0,dropped=0,acked=0,submitted=0;
   uint32_t cycles=0,scans=0,scanErrors=0,requests=0,links=0,losses=0,heartbeats=0;
   uint32_t coreAgeMs=0;
   uint32_t heard=0,heardCore=0;     // node messages heard from anyone, and from the linked core
@@ -371,6 +371,11 @@ public:
   void sent(bool delivered,uint32_t now){
     if(status_.phase==Phase::Off||flight_==Flight::None)return;
     settle(delivered,true,now);
+  }
+  // A transport completion without radio feedback cannot prove delivery or core life.
+  void submitted(uint32_t now){
+    if(status_.phase==Phase::Off||flight_==Flight::None)return;
+    settle(true,false,now);
   }
   void wifi(const uint8_t* bssid,const uint8_t* ssid,size_t ssidLength,Auth auth,uint8_t channel,int rssi){
     if(!status_.linked||!bssid)return;
@@ -640,7 +645,7 @@ private:
       return;
     }
     if(kind!=Flight::Record)return;
-    if(delivered){++status_.sent;reported_=true;return;}
+    if(delivered){if(onAir)++status_.sent;else ++status_.submitted;reported_=true;return;}
     if(++record_.tries<SendTries&&status_.linked&&push(record_))return;
     ++status_.failed;forget(record_);
   }

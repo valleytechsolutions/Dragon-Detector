@@ -41,6 +41,17 @@ static void parityTests(){
   SsidMonitor mesh;uint8_t peer[6];
   for(unsigned t=0;t<3000;t+=250){assert(!mesh.observe(fa,t,peer));assert(!mesh.observe(fb,t,peer));}
   assert(!mesh.observe(fo,3100,peer));assert(!mesh.observe(fo,3300,peer));assert(mesh.observe(fo,3600,peer));assert(!mesh.observe(fo,3900,peer));
+  // P4 supplies AP records once per completed survey rather than raw beacons.
+  SsidMonitor survey;
+  for(unsigned pass=0;pass<6;++pass){
+    uint32_t at=0xfffff000u+pass*6000;
+    assert(!survey.observeAp(fa.bssid,fa.ssid,fa.ssidLength,true,at,peer));
+    bool conflict=survey.observeAp(fo.bssid,fo.ssid,fo.ssidLength,false,at,peer);
+    assert(conflict==(pass==2));
+    if(conflict)assert(!memcmp(peer,fa.bssid,6));
+    assert(!survey.observeAp(fo.bssid,fo.ssid,0,false,at,peer));
+    assert(!survey.observeAp(fo.bssid,fo.ssid,33,false,at,peer));
+  }
   SsidMonitor stale;for(unsigned t=0;t<1000;t+=250)stale.observe(fa,t,peer);for(unsigned t=31000;t<33000;t+=250)assert(!stale.observe(fo,t,peer));
   SsidMonitor raw;auto similar=fo;similar.ssid[0]='?';similar.ssid[1]=0xff;auto different=fa;different.ssid[0]='?';different.ssid[1]=0xfe;
   for(unsigned t=0;t<1500;t+=250){assert(!raw.observe(similar,t,peer));assert(!raw.observe(different,t,peer));}

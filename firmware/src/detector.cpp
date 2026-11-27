@@ -287,7 +287,14 @@ bool detectorCommand(const String& cmd){
   if(cmd=="detector quiet on"||cmd=="detector quiet off"){detector.quiet=cmd.endsWith("on");detectorSave();audioStop();Serial.printf("DETECTOR_QUIET %u\n",detector.quiet);return true;}
   if(cmd=="axon status"){axonStatus();return true;}
   if(cmd=="axon priority on"||cmd=="axon priority off"){axonPriority=cmd.endsWith("on");detectorSave();Serial.printf("AXON_PRIORITY %u\n",axonPriority);return true;}
-  if(cmd=="traffic status"){auto& t=trafficStatus;Serial.printf("TRAFFIC deauth_frames=%lu deauth_alerts=%lu recent=%u channel=%u reason=%u protected=%u ble_alerts=%lu group=%u addresses=%u variants=%u\n",t.disconnectFrames,t.disconnectAlerts,recentDisconnects(),t.channel,t.reason,t.protectedFrame,t.bleAlerts,t.bleGroup,t.bleAddresses,t.bleVariants);return true;}
+  if(cmd=="traffic status"){
+    auto& t=trafficStatus;
+    Serial.printf("TRAFFIC deauth_frames=%lu deauth_alerts=%lu recent=%u channel=%u reason=%u protected=%u ble_alerts=%lu group=%u addresses=%u variants=%u ssid_conflicts=%lu",t.disconnectFrames,t.disconnectAlerts,recentDisconnects(),t.channel,t.reason,t.protectedFrame,t.bleAlerts,t.bleGroup,t.bleAddresses,t.bleVariants,t.ssidConflicts);
+#ifdef BOARD_WAVESHARE_P4_KNOB
+    Serial.printf(" ap_security_samples=%lu ble_payload_samples=%lu raw_wifi=0",t.apSecuritySamples,t.blePayloadSamples);
+#endif
+    Serial.println();return true;
+  }
   if(cmd=="radio active"||cmd=="radio passive"){setActiveBle(cmd=="radio active");Serial.printf("RADIO_MODE active_ble=%u\n",activeBle);return true;}
   if(cmd=="history export"){if(!historyExport())Serial.println("HISTORY_ERROR");return true;}
   if(cmd=="history clear"){historyClear();Serial.printf("HISTORY_COUNT %u\n",unsigned(historyCount));return true;}

@@ -11,7 +11,7 @@ labels_path=root/'docs/ble-labels.json';document=json.loads(labels_path.read_tex
 (work/'labels.ddb').write_bytes(labels)
 # Confirm that offloading preserves every existing label on other profiles.
 insights=(root/'firmware/include/ble_insights.h').read_text();expected={}
-for kind,start,end in [('uuid16','inline const char* uuidName(uint16_t u){switch(u){','default:return nullptr;}}'),('company16','inline const char* companyName(uint16_t c){switch(c){','default:return "Unresolved company ID";}}')]:
+for kind,start,end in [('uuid16','inline const char* builtInUuidName(uint16_t u){switch(u){','default:return nullptr;}}'),('company16','inline const char* builtInCompanyName(uint16_t c){switch(c){','default:return "Unresolved company ID";}}')]:
     block=insights.split(start,1)[1].split(end,1)[0]
     for cases,label in re.findall(r'((?:case 0x[0-9a-f]+:\s*)+)return "([^"]+)";',block):
         for value in re.findall(r'case 0x([0-9a-f]+):',cases):expected[(kind,int(value,16))]=label

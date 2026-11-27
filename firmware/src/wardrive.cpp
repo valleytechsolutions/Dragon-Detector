@@ -164,7 +164,9 @@ bool wardriveI2cBusy(){
 }
 bool wardriveBusy(){return owned;}
 bool wardriveAvailable(){
-#ifdef BOARD_WAVESHARE_185B
+#if BOARD_RADIO_AP_SURVEY_ONLY
+  return false;
+#elif defined(BOARD_WAVESHARE_185B)
   return externalGpsConfig.enabled&&externalGpsOpen&&!externalGpsSuspended&&gps.receiverPresent(millis());
 #else
   return true;
@@ -212,6 +214,10 @@ void wardriveBegin(){
 #endif
 }
 bool wardriveStart(){
+#if BOARD_RADIO_AP_SURVEY_ONLY
+  strlcpy(notice,"GPS wardrive is unavailable on this P4 build",sizeof(notice));
+  return false;
+#endif
 #if !defined(BOARD_GPS_LC76G) && !defined(BOARD_WATCHER) && !defined(BOARD_GPS_UART)
   strlcpy(notice,"Flash the 1.75-G GPS profile on LC76G hardware",sizeof(notice));return false;
 #else

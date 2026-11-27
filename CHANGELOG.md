@@ -1,5 +1,9 @@
 # Changes
 
+## 0.14.12 · Waveshare P4 Knob Beta 2
+
+- Add the P4 knob as a separate beta with the animated launcher, MP3/WAV playback, voice recording, USB Disk, passive radar and Biscuit/JCMK node modes. Portal and Room Motion are pending.
+
 ## 0.14.12
 
 - Waveshare LCD 1.85B: make HOME wider and enlarge its touch area on regular pages and the locksport timer. The owner confirmed HOME is easy to tap and the layout stays clean on a flashed preview. Other boards keep their existing layout.

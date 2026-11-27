@@ -3,6 +3,10 @@
 #include "tracking.h"
 
 struct Contact {
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  uint8_t apSecurity=0;
+  bool connectable=false;
+#endif
   bool used=false,ble=false; uint8_t addressType=0,advChannel=0,mac[6]{}; char name[64]{};
   int16_t rssi=-100; uint8_t channel=0,rxChannel=0; uint32_t seen=0,firstSeen=0,packets=0,lastLog=0;
   dragon::Match match{dragon::Family::Wifi,dragon::Confidence::None,""};

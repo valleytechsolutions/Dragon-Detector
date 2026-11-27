@@ -1,12 +1,20 @@
 #pragma once
 #include "recon_analysis.h"
 #include "ble_insights.h"
+#ifdef BOARD_WAVESHARE_P4_KNOB
+#include "p4_advert_fields.h"
+#endif
 namespace dragon::notebook {
 constexpr unsigned Capacity=96,AdvertBytes=512;
 struct Advert {
   bool used=false;uint8_t mac[6]{},type=0;int8_t rssi=-127;
   uint16_t length=0,boundary=0;uint32_t seen=0,count=0,changes=0,fingerprint=0;
   uint8_t data[AdvertBytes]{};
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  uint8_t previous[p4::LegacyAdvertBytes]{},previousLength=0;
+  uint32_t previousSeen=0;
+  bool hasPrevious=false;
+#endif
 };
 // Bounded complete advertisements only. A shorter prefix cannot masquerade as
 // the full payload, and scan-response changes don't masquerade as advert churn.
@@ -17,7 +25,19 @@ inline bool observeAdvert(Advert* rows,unsigned capacity,const uint8_t* mac,uint
   auto& a=rows[slot];bool same=a.used&&a.type==type&&!memcmp(a.mac,mac,6);
   if(same&&int32_t(now-a.seen)<0)return false;
   uint32_t fingerprint=lab::checksum(p,boundary);
-  if(!same)a={};else if(fingerprint!=a.fingerprint)++a.changes;
+  if(!same)a={};
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  else if(a.boundary!=boundary || memcmp(a.data,p,boundary)){
+    ++a.changes;
+    a.hasPrevious=a.boundary<=sizeof(a.previous);
+    if(a.hasPrevious){
+      a.previousLength=uint8_t(a.boundary);a.previousSeen=a.seen;
+      memcpy(a.previous,a.data,a.previousLength);
+    }
+  }
+#else
+  else if(fingerprint!=a.fingerprint)++a.changes;
+#endif
   a.used=true;memcpy(a.mac,mac,6);a.type=type;a.rssi=rssi;a.length=n;a.boundary=boundary;a.seen=now;a.fingerprint=fingerprint;++a.count;memcpy(a.data,p,n);return true;
 }
 }

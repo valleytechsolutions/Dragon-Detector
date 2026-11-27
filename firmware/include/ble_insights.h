@@ -1,16 +1,22 @@
 #pragma once
+#ifndef __cplusplus
+// ESP-IDF 5.5's Bluetooth component (ESP32-P4 Knob build) optionally includes
+// a C header named "ble_insights.h" and calls ble_insights_log(). This file is
+// C++ only; C sources get a no-op, as when the header is absent.
+static inline void ble_insights_log(const char* log){(void)log;}
+#else
 // Independent BLE advertising and HID metadata decoders. No upstream firmware code.
 #include "detection.h"
 #include "ble_profile.h"
-#ifdef BOARD_WAVESHARE_185B
 #include "sd_resources.h"
+#ifdef SD_BLE_LABELS
 #include "ble_label_index.h"
 #endif
 namespace dragon::lab {
 #ifdef BOARD_WAVESHARE_185B
 inline const char* uuidName(uint16_t u){return sdResourceBleLabel(BleLabelIndex::Uuid16,u);}
 #else
-inline const char* uuidName(uint16_t u){switch(u){
+inline const char* builtInUuidName(uint16_t u){switch(u){
  case 0x1800:return "Generic Access";case 0x1801:return "Generic Attribute";case 0x180a:return "Device Information";
  case 0x180d:return "Heart Rate";case 0x180f:return "Battery";case 0x1812:return "Human Interface Device";
  case 0x1816:return "Cycling Speed/Cadence";case 0x181a:return "Environmental Sensing";case 0x1826:return "Fitness Machine";
@@ -22,12 +28,22 @@ inline const char* uuidName(uint16_t u){switch(u){
  case 0xfe2c:return "Google Fast Pair";case 0xfeaa:return "Eddystone / Find Hub";case 0xfcd2:return "BTHome";
  case 0xfd6f:return "Exposure Notification";case 0xfe95:return "Xiaomi MiBeacon";case 0xfeed:case 0xfeec:case 0xfd84:return "Tile";
  default:return nullptr;}}
+#ifdef SD_BLE_LABELS
+inline const char* uuidName(uint16_t u){const char* name=sdResourceBleLabel(BleLabelIndex::Uuid16,u);return name?name:builtInUuidName(u);}
+#else
+inline const char* uuidName(uint16_t u){return builtInUuidName(u);}
+#endif
 #endif
 inline const char* uuidName(const char* u){if(!uuidValid(u))return nullptr;char full[37];uuidCanonical(u,full);if(strncmp(full,"0000",4)||strcmp(full+8,"-0000-1000-8000-00805f9b34fb"))return nullptr;unsigned v=0;sscanf(full+4,"%4x",&v);return uuidName(uint16_t(v));}
 #ifdef BOARD_WAVESHARE_185B
 inline const char* companyName(uint16_t c){const char* name=sdResourceBleLabel(BleLabelIndex::Company16,c);return name?name:"Unresolved company ID";}
 #else
-inline const char* companyName(uint16_t c){switch(c){case 0x004c:return "Apple";case 0x0006:return "Microsoft";case 0x0075:return "Samsung";case 0x00e0:return "Google";case 0x034d:return "Axon / TASER";case 0x01ab:return "Meta";case 0x058e:return "Meta Technologies";case 0x0d53:return "Luxottica";case 0x03c2:return "Snap";case 0x060c:return "Vuzix";case 0x08c3:return "Chipolo";case 0x0e29:return "Flipper Devices (includes BUSY Bar)";case 0x09c8:return "Xuntong module";default:return "Unresolved company ID";}}
+inline const char* builtInCompanyName(uint16_t c){switch(c){case 0x004c:return "Apple";case 0x0006:return "Microsoft";case 0x0075:return "Samsung";case 0x00e0:return "Google";case 0x034d:return "Axon / TASER";case 0x01ab:return "Meta";case 0x058e:return "Meta Technologies";case 0x0d53:return "Luxottica";case 0x03c2:return "Snap";case 0x060c:return "Vuzix";case 0x08c3:return "Chipolo";case 0x0e29:return "Flipper Devices (includes BUSY Bar)";case 0x09c8:return "Xuntong module";default:return "Unresolved company ID";}}
+#ifdef SD_BLE_LABELS
+inline const char* companyName(uint16_t c){const char* name=sdResourceBleLabel(BleLabelIndex::Company16,c);return name?name:builtInCompanyName(c);}
+#else
+inline const char* companyName(uint16_t c){return builtInCompanyName(c);}
+#endif
 #endif
 struct AdvertInsight {bool valid=false,hasPower=false;int8_t power=0;uint16_t appearance=0,company=0xffff;const char* protocol="Unclassified advertisement";const char* service=nullptr;unsigned fields=0;};
 inline AdvertInsight inspectAdvertisement(const uint8_t* p,size_t n,size_t boundary){
@@ -60,3 +76,4 @@ inline HidLayout parseHidMap(const uint8_t* p,size_t n){
 }
 inline bool decodeHex(const char* text,uint8_t* out,size_t capacity,size_t& count){count=0;int high=-1;for(;*text;++text){unsigned char c=*text;if(c==' '||c==':'||c=='-'){if(high>=0)return false;continue;}int digit=c>='0'&&c<='9'?c-'0':c>='a'&&c<='f'?c-'a'+10:c>='A'&&c<='F'?c-'A'+10:-1;if(digit<0)return false;if(high<0)high=digit;else{if(count>=capacity)return false;out[count++]=uint8_t(high*16+digit);high=-1;}}return high<0&&count>0;}
 }
+#endif

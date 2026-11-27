@@ -364,14 +364,26 @@ static void watchDraw(lv_event_t* e){
   }
   for(unsigned i=0;i<WatchCount;++i)disc(ctx,S(180+(int(i)*2-int(WatchCount-1))*3),S(338),std::max(1,S(i==watchFacePosition()?2:1)),i==watchFacePosition()?p.accent:p.muted);
 }
-static void chooseWatch(int delta){do{watchFace=WatchFaces[(watchFacePosition()+WatchCount+delta)%WatchCount];}while(!watchFaceAllowed(watchFace));settings.putUChar("watch-face",watchFace);pending=Clock;page=Boot;}
+static void chooseWatch(int steps){
+  const int direction=steps<0?-1:1;
+  while(steps){
+    do{watchFace=WatchFaces[(watchFacePosition()+WatchCount+direction)%WatchCount];}while(!watchFaceAllowed(watchFace));
+    steps-=direction;
+  }
+  settings.putUChar("watch-face",watchFace);pending=Clock;page=Boot;
+}
+#ifndef BOARD_WAVESHARE_P4_KNOB
 static void watchGesture(lv_event_t*){
   auto* input=lv_indev_get_act();if(!input)return;auto direction=lv_indev_get_gesture_dir(input);if(direction==LV_DIR_LEFT)chooseWatch(1);else if(direction==LV_DIR_RIGHT)chooseWatch(-1);else if(direction==LV_DIR_BOTTOM)go(Menu);lv_indev_wait_release(input);
 }
+#endif
 static void buildWatch(){
   dismissNotice();const auto& p=watches[watchFace];lv_obj_set_style_bg_color(root,color(watchFace==dragon::PersonalWatchId?personalTheme().bg:p.bg),0);watchFrameAt=millis();
   watchDial=lv_obj_create(root);lv_obj_remove_style_all(watchDial);lv_obj_set_size(watchDial,SCREEN_RES,SCREEN_RES);lv_obj_clear_flag(watchDial,LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_GESTURE_BUBBLE);
-  lv_obj_add_event_cb(watchDial,watchDraw,LV_EVENT_DRAW_MAIN,nullptr);lv_obj_add_event_cb(watchDial,watchGesture,LV_EVENT_GESTURE,nullptr);
+  lv_obj_add_event_cb(watchDial,watchDraw,LV_EVENT_DRAW_MAIN,nullptr);
+#ifndef BOARD_WAVESHARE_P4_KNOB
+  lv_obj_add_event_cb(watchDial,watchGesture,LV_EVENT_GESTURE,nullptr);
+#endif
   if(watchFace==27){pigFrameAt=millis();pigNextAt=millis();lv_obj_add_event_cb(watchDial,pigTap,LV_EVENT_CLICKED,nullptr);}
 #ifdef BOARD_WAVESHARE_206
   const int width=lv_disp_get_hor_res(nullptr),height=lv_disp_get_ver_res(nullptr);

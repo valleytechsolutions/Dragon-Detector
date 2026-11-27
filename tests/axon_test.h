@@ -6,6 +6,21 @@ static void axonTests(){
   const uint8_t random[]={0xc2,1,2,3,4,5},publicMac[]={0,0x25,0xdf,1,2,3},other[]={0x44,1,2,3,4,5};
   bool valid=false;
   auto observation=[&](const std::vector<uint8_t>& data,const uint8_t* mac,uint8_t type,size_t boundary=0){return parseBleObservation(data.data(),data.size(),boundary,mac,type,valid);};
+  // A decoded AP record has a real public BSSID and optional SSID, without raw frame bytes.
+  const uint8_t apName[]={'A','B','3','-','T','E','S','T'};
+  assert(inspectAxonWifiIdentity(other,apName,sizeof(apName)).signals==AxonName);
+  assert(inspectAxonWifiIdentity(publicMac,nullptr,0).signals==AxonOui);
+  assert(inspectAxonWifiIdentity(other,nullptr,0).signals==0);
+  assert(inspectAxonWifiIdentity(other,reinterpret_cast<const uint8_t*>("Printer"),7).signals==0);
+  assert(inspectAxonWifiIdentity(other,apName,33).signals==0);
+  auto apClues=inspectAxonWifiIdentity(publicMac,apName,sizeof(apName));
+  assert(apClues.signals==(AxonName|AxonOui)&&apClues.match().confidence==Confidence::Medium);
+  const Match noClue{Family::Ble,Confidence::None,"advertisement"};
+  assert(withObservedBleName(noClue,"Ring-Test").family==Family::Ring);
+  assert(withObservedBleName(noClue,"AB3-Test").confidence==Confidence::Low);
+  assert(withObservedBleName(noClue,"Printer").confidence==Confidence::None);
+  const Match payload{Family::IBeacon,Confidence::Strong,"protocol payload"};
+  assert(withObservedBleName(payload,"AB3-Test").family==Family::IBeacon);
   // All three assigned UUIDs, all AD encodings, unnamed rotating addresses.
   for(uint16_t id:{0xfc81,0xfe6b,0xfe6c})for(unsigned width:{2u,4u,16u})for(unsigned kind:{0u,1u,2u}){
     uint8_t type=kind==2?(width==2?0x16:width==4?0x20:0x21):(width==2?2:width==4?4:6)+kind;

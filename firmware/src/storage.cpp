@@ -1,7 +1,7 @@
 #include "app.h"
 #include "background_radio.h"
 #include "board_pins.h"
-#if (defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_206)) || defined(BOARD_WATCHER) || defined(BOARD_WAVESHARE_185B)
+#if (defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_206)) || defined(BOARD_WATCHER) || defined(BOARD_WAVESHARE_185B) || defined(BOARD_WAVESHARE_P4_KNOB)
 #include "recon_internal.h"
 #endif
 #include <esp_timer.h>
@@ -23,6 +23,30 @@ static bool openLog(){
   if(eventFile) eventFile.println("uptime_ms,event,radio,mac,name,rssi,channel,family,confidence,evidence");
   return bool(eventFile);
 }
+// Dragon's folders and a new session on a mounted card, then sdReady. Null on
+// success, else a short reason; a card is never formatted here.
+static const char* prepareCard(){
+  const char* dirs[]={"/dragon","/music","/recordings",
+#ifdef BOARD_WAVESHARE_P4_KNOB
+    "/audio",
+#endif
+    "/dragon/captures","/dragon/profiles","/dragon/events","/dragon/surveys","/dragon/missions","/dragon/wardrive","/dragon/resources"};
+  for(const char* path:dirs){if(!CardFS.exists(path)&&!CardFS.mkdir(path)){Serial.printf("SD: cannot create %s; storage disabled\n",path);return "cannot create Dragon's folders";}}
+
+  char s[40];snprintf(s,sizeof(s),"/dragon/session-%08lx",(unsigned long)esp_random());sessionPath=s;
+  if(CardFS.exists(sessionPath)||!CardFS.mkdir(sessionPath)){Serial.println("SD: cannot create unique session");return "cannot create a session folder";}loggingEnabled=false;
+  File info=CardFS.open(sessionPath+"/session.txt",FILE_WRITE);
+  if(!info){Serial.println("SD: session not writable");return "the card is not writable";}
+  const char* description="Dragon Detector " DRAGON_VERSION "\nTimes are milliseconds since boot, not UTC. Wi-Fi channels 1-11 and BLE alternate. Radar angles are decorative. RSSI is not distance. Signatures can be spoofed. Recording state of detected devices is unknown.\n";
+  bool writable=info.write((const uint8_t*)description,strlen(description))==strlen(description);info.close();
+  if(!writable){Serial.println("SD: session write failed");return "the card is not writable";}
+  Serial.printf("SD: %llu MB; session created\n",CardFS.cardSize()/1048576);
+  sdReady=true;return nullptr;
+}
+#ifdef BOARD_WAVESHARE_P4_KNOB
+// usb_drive.cpp, with sdMutex held, once the PC has given the card back.
+const char* storagePrepareCard(){return prepareCard();}
+#endif
 static void mount(){
 #if defined(BOARD_SD_SPI)
   extern bool boardMountCard();bool mounted=boardMountCard();
@@ -30,6 +54,15 @@ static void mount(){
   // Dedicated four-bit SDMMC bus; never format a user's card on mount failure.
   CardFS.setPins(SD_MMC_CLK_PIN,SD_MMC_CMD_PIN,SD_MMC_D0_PIN,SD_MMC_D1_PIN,SD_MMC_D2_PIN,SD_MMC_D3_PIN);
   bool mounted=CardFS.begin("/sdcard",false,false,SDMMC_FREQ_DEFAULT,12);
+#elif defined(BOARD_WAVESHARE_P4_KNOB)
+  // Slot 0 on its IO MUX pins. The board owns LDO_VO4 (shared with the radio
+  // chip's SDIO link), so the card driver must not take or switch it. Four bits
+  // at 40 MHz first, then slower and narrower; never format on failure.
+  CardFS.setPowerChannel(-1);
+  CardFS.setPins(SD_MMC_CLK_PIN,SD_MMC_CMD_PIN,SD_MMC_D0_PIN,SD_MMC_D1_PIN,SD_MMC_D2_PIN,SD_MMC_D3_PIN);
+  bool mounted=false;
+  const struct {bool oneBit;int khz;} attempts[]={{false,SDMMC_FREQ_HIGHSPEED},{false,SDMMC_FREQ_DEFAULT},{true,SDMMC_FREQ_DEFAULT}};
+  for(const auto& a:attempts){if((mounted=CardFS.begin("/sdcard",a.oneBit,false,a.khz,12)))break;CardFS.end();}
 #else
   CardFS.setPins(SD_MMC_CLK_PIN,SD_MMC_CMD_PIN,SD_MMC_D0_PIN);
   bool mounted=CardFS.begin("/sdcard",true,false,SDMMC_FREQ_DEFAULT,12);
@@ -38,18 +71,7 @@ static void mount(){
   mounted=sdMaintenanceBoot(mounted);
 #endif
   if(!mounted){Serial.println("SD: not mounted; insert FAT32 card and restart");return;}
-  const char* dirs[]={"/dragon","/music","/recordings","/dragon/captures","/dragon/profiles","/dragon/events","/dragon/surveys","/dragon/missions","/dragon/wardrive","/dragon/resources"};
-  for(const char* path:dirs){if(!CardFS.exists(path)&&!CardFS.mkdir(path)){Serial.printf("SD: cannot create %s; storage disabled\n",path);return;}}
-
-  char s[40];snprintf(s,sizeof(s),"/dragon/session-%08lx",(unsigned long)esp_random());sessionPath=s;
-  if(CardFS.exists(sessionPath)||!CardFS.mkdir(sessionPath)){Serial.println("SD: cannot create unique session");return;}loggingEnabled=false;
-  File info=CardFS.open(sessionPath+"/session.txt",FILE_WRITE);
-  if(!info){Serial.println("SD: session not writable");return;}
-  const char* description="Dragon Detector " DRAGON_VERSION "\nTimes are milliseconds since boot, not UTC. Wi-Fi channels 1-11 and BLE alternate. Radar angles are decorative. RSSI is not distance. Signatures can be spoofed. Recording state of detected devices is unknown.\n";
-  bool writable=info.write((const uint8_t*)description,strlen(description))==strlen(description);info.close();
-  if(!writable){Serial.println("SD: session write failed");return;}
-  Serial.printf("SD: %llu MB; session created\n",CardFS.cardSize()/1048576);
-  sdReady=true;
+  prepareCard();
 }
 void storageBegin(){
   sdMutex=xSemaphoreCreateMutex();
@@ -98,7 +120,7 @@ void addAlert(const char* title,const char* detail,const uint8_t* mac,bool coale
 }
 #if BOARD_HAS_SD
 bool setCapture(bool enabled){
-#if (defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_206)) || defined(BOARD_WATCHER) || defined(BOARD_WAVESHARE_185B)
+#if (defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_206)) || defined(BOARD_WATCHER) || defined(BOARD_WAVESHARE_185B) || defined(BOARD_WAVESHARE_P4_KNOB)
   if(enabled)return dragon::toolkit::captureStart(false);
   dragon::toolkit::captureStop();return false;
 #else
@@ -126,7 +148,7 @@ void writePcap(const uint8_t* p,size_t n,size_t original,uint64_t us){
   if(!ok)addAlert("SD capture failed","Capture stopped after a write failure");
   else if(full)addAlert("Capture complete","16 MB capture limit reached; start a new capture to continue");
 }
-#ifdef BOARD_WATCHER
+#if defined(BOARD_WATCHER) || defined(BOARD_WAVESHARE_P4_KNOB)
 bool watcherCloseStorage(){
  if(!sdReady)return true;
  if(xSemaphoreTake(sdMutex,pdMS_TO_TICKS(1000))!=pdTRUE)return false;

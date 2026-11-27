@@ -288,7 +288,7 @@ bool nodeKeyed(){return false;}
 static unsigned keys=0;
 lv_obj_t* uiRotaryScope(){return lv_scr_act();}
 bool uiRotaryWake(){return false;}
-#ifdef BOARD_WATCHER
+#ifdef ROTARY_TOUCH_UI
 bool uiRotaryOpenMenu(){++keys;return true;}
 #endif
 void uiKey(bool){++keys;}
@@ -324,7 +324,7 @@ int main(){
 }
 """
 (work / "knob.cpp").write_text(knob_harness)
-for name, define in (("crowpanel", "-DBOARD_CROWPANEL_21"), ("watcher", "-DBOARD_WATCHER")):
+for name, define in (("crowpanel", "-DBOARD_CROWPANEL_21"), ("watcher", "-DBOARD_WATCHER"), ("p4knob", "-DBOARD_WAVESHARE_P4_KNOB")):
     exe = work / f"knob-{name}"
     (native / "board_pins.h").write_text("#pragma once\n")
     subprocess.run(["c++", "-std=c++17", "-O1", "-w", define, f'-DBOARD="{name}"', "-DSCREEN_RES=466", *includes,

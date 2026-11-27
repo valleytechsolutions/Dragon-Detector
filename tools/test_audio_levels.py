@@ -137,6 +137,11 @@ int main(){
  assert(audioCommand("tone config 1 25 0 2")&&audioStatus().volume==25&&audioLevel()==AudioLevel::Medium);boot();assert(audioStatus().volume==25&&audioFocus==2&&!huntSound);
  assert(audioCommand("tone config 1 75 0 2")&&audioLevel()==AudioLevel::High&&audioStatus().volume==75);boot();assert(audioStatus().volume==75);
  audioVolume(0);assert(!outputHz&&audioLevel()==AudioLevel::Silent);
+#ifdef BOARD_WAVESHARE_P4_KNOB
+ assert(nvs[ns]["volume"]==75);audioVolume(42);tick(699);assert(nvs[ns]["volume"]==75);
+ tick(1);assert(nvs[ns]["volume"]==42);audioVolume(101);assert(audioStatus().volume==100);
+ audioSave();assert(nvs[ns]["volume"]==100);audioVolume(-1);assert(audioStatus().volume==0);tick(700);assert(nvs[ns]["volume"]==0);
+#endif
 #ifdef BOARD_M5DIAL
  assert(audioCommand("dial sound on")&&alertSound&&audioStatus().volume==50);previewTone();assert(outputHz);
  assert(audioCommand("dial sound off")&&!outputHz&&!alertSound);writes=audibleWrites;huntSound=true;freshTarget();tick(500);assert(audibleWrites==writes);
@@ -148,6 +153,7 @@ int main(){
 '''
 
 profiles = [
+    ('p4', ['BOARD_WAVESHARE_P4_KNOB'], 'audio.cpp'),
     ('waveshare185b', ['BOARD_WAVESHARE_185B'], 'audio.cpp'),
     ('waveshare143c', ['BOARD_WAVESHARE_143C'], 'audio.cpp'),
     ('watcher', ['BOARD_WATCHER'], 'audio.cpp'),

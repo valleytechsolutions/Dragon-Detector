@@ -10,7 +10,68 @@
 #include "flash_budget.h"
 #include "recon_storage.h"
 #include "attack_frames.h"
-#ifndef BOARD_RADAR_LITE
+#ifdef BOARD_WAVESHARE_P4_KNOB
+#include "app.h"
+#include "p4_gatt.h"
+#include <lvgl.h>
+namespace {
+ReconFS store;
+bool mounted=false;
+}
+void bleLabBegin() {
+    mounted=store.select();
+    if (mounted) {
+        store.mkdir("/profiles");
+        store.mkdir("/events");
+    }
+}
+bool bleLabStorageOnCard() { return mounted && store.onCard(); }
+const char* bleLabStorageName() { return mounted?store.medium():"unavailable"; }
+fs::FS* bleLabStorage() { return mounted?&store:nullptr; }
+bool bleLabStorageSpace(size_t bytes) { return mounted && store.fits(bytes); }
+bool bleLabCommand(const String& c) {
+    if (!c.startsWith("lab ")) return false;
+    if(c=="lab status"){
+        p4GattPrintStatus();
+        Serial.println("LAB_END");
+    }else if(c=="lab inventory"){
+        p4GattPrintInventory(detector.privacy);
+    }else if(c=="lab stop"){
+        p4GattCancel();
+        Serial.println("LAB_OK stopping");
+    }else if(c.startsWith("lab inspect ")){
+        char address[18],separator[2],tail;
+        unsigned type;
+        uint8_t mac[6];
+        if(sscanf(c.c_str(),"lab inspect %17[0123456789abcdefABCDEF:]%1[ \t] %u %c",address,separator,&type,&tail)!=3 ||
+           type>3 || !dragon::tx::parseMac(address,mac,false)){
+            Serial.println("LAB_ERROR expected address and address type");
+        }else if(const char* reason=p4GattUnavailable(mac,type)){
+            Serial.printf("LAB_ERROR %s\n",reason);
+        }else{
+            Serial.println(p4GattStart(mac,type)?"LAB_OK connecting":"LAB_ERROR cannot start discovery");
+        }
+    }else{
+        Serial.println("LAB_ERROR supported commands: inspect, inventory, status, stop");
+    }
+    return true;
+}
+bool bleLabOwnsRadio() { return p4GattBusy(); }
+void bleLabLoop() {}
+void bleLabStop() { p4GattCancel(); }
+void bleLabObserve(const uint8_t*,uint8_t,int,const uint8_t*,size_t,size_t,uint32_t) {}
+void bleLabBeeperPage() {}
+void bleLabViewLoop() {}
+void bleLabSelect(const uint8_t*,uint8_t,const char*) {}
+bool bleLabOpenDevice(const uint8_t*,uint8_t,const char*,bool) { return false; }
+void bleLabView(void* parent) {
+    if (!parent) return;
+    lv_obj_t* label=lv_label_create(static_cast<lv_obj_t*>(parent));
+    lv_label_set_text(label,"Passive Bluetooth discovery runs on the radar.");
+    lv_obj_set_width(label,lv_pct(75));
+    lv_obj_center(label);
+}
+#elif !defined(BOARD_RADAR_LITE)
 #include "app.h"
 #include "ui_theme.h"
 #include <NimBLEDevice.h>
@@ -267,7 +328,11 @@ void worker(void*){for(;;){xSemaphoreTake(jobReady,portMAX_DELAY);Job run=job;
   say(ok?(run==Read?"Value refreshed":run==Write?"Write acknowledged by peer":run==WriteNr?"Write command queued; no peer acknowledgement":run==Unsubscribe?"Unsubscribed":"Subscribed; notifications appear in Events"):"Operation rejected / may require pairing or permission");state=Monitoring;
  }else if(run!=None){say("Connection no longer available");stopWorker();}
  }}
-bool start(Job next,unsigned index=0){if((radioStandby()&&next!=Stop)||!profile||!workerTask||working()||finished||reconOwnsRadio())return false;
+bool start(Job next,unsigned index=0){
+#if BOARD_RADIO_AP_SURVEY_ONLY
+ if(next!=Stop){say("Bluetooth is unavailable on this P4 build");return false;}
+#endif
+ if((radioStandby()&&next!=Stop)||!profile||!workerTask||working()||finished||reconOwnsRadio())return false;
  if(next==Discover||next==Clone||next==Replay||(next==Sound&&soundTemporary)){if(owned||reconStorageBusy())return false;missionStop();reconStop();resumeRadio=radioEnabled;setRadio(false);owned=true;cancelled=false;eventCount=eventHead=0;eventDrops=0;}
  else if(next==BridgeWrite){if(state!=Bridging)return false;}else if(next!=Stop&&state!=Monitoring)return false;
  job=next;jobIndex=index;state=Working;say(next==Discover?"Connecting...":next==Clone?"Building local GATT peripheral...":next==Stop?"Stopping lab / restoring radar...":"Request pending...");xSemaphoreGive(jobReady);return true;}

@@ -52,10 +52,22 @@ void received(const esp_now_recv_info_t* info,const uint8_t* data,int length){
   r.length=uint8_t(length);memcpy(r.data,data,size_t(length));
   if(xQueueSend(receiveQueue,&r,0)!=pdTRUE)++receiveDrops;
 }
+// IDF 5.5 hands the send callback a tx-info record instead of the MAC.
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 5, 0)
+void reported(const esp_now_send_info_t*,esp_now_send_status_t status){
+#else
 void reported(const uint8_t*,esp_now_send_status_t status){
+#endif
   uint32_t out=sendsOut.load();
   while(out&&!sendsOut.compare_exchange_weak(out,out-1)){}
-  if(out==1)sendResult.store(status==ESP_NOW_SEND_SUCCESS?1:0);
+  if(out==1){
+#ifdef BOARD_WAVESHARE_P4_KNOB
+    // esp-extconn posts this callback after SDIO submission, without a radio TX status.
+    sendResult.store(2);
+#else
+    sendResult.store(status==ESP_NOW_SEND_SUCCESS?1:0);
+#endif
+  }
 }
 void scanDone(void*,esp_event_base_t,int32_t,void* data){
   if(data&&scanWaiting.load())scanResult.store(int(static_cast<wifi_event_sta_scan_done_t*>(data)->status));
@@ -156,8 +168,14 @@ struct RadioPort final : Port {
   }
   void scanStop() override {stopScan();}
   void ble(bool on,uint32_t durationMs) override {
+#ifdef BOARD_WAVESHARE_P4_KNOB
+    blePhase=on;
+    if(on){if(!p4NodeBleStart())Serial.printf("NODE_BLE_ERROR scan could not start\n");}
+    else p4NodeBleStop();
+#else
     blePhase=on;
     if(on)scanCommand(ScanAction::Start,durationMs);else scanCommand(ScanAction::Stop);
+#endif
   }
   // Runs on the main loop, but also inside a binary USB transfer (radioTransferTick
   // between screenshot chunks): lines wait in noteLines until no transfer runs.
@@ -192,7 +210,11 @@ void release(){
 bool begin(const Config& requested,const uint8_t* pmk,const uint8_t* linkKey,char* why,size_t whyLength){
   auto fail=[&](const char* reason){snprintf(why,whyLength,"%s",reason);return false;};
   if(owned)return fail("Node already running");
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  if(!queue||!p4CoprocReady())return fail("Radio did not start");
+#else
   if(!queue||!scanner)return fail("Radio did not start");
+#endif
   // Scan results arrive as a driver event. Lite builds never needed the
   // default event loop until now; creating it twice is harmless. It comes
   // first, so a failure here leaves no node memory taken.
@@ -207,14 +229,25 @@ bool begin(const Config& requested,const uint8_t* pmk,const uint8_t* linkKey,cha
   if(!link){void* room=heap_caps_malloc(sizeof(Link),NodeMemory);if(room)link=new(room) Link();}
   if(!seen||!link){release();return fail("Not enough memory");}
 
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  if(!p4RadarAcquireClockNetwork()){release();return fail("Radio is busy; try again");}
+  if(requested.family==dragon::node::Family::Jcmk && requested.ble && !p4NodeBlePrepare()){
+    p4RadarReleaseClockNetwork();release();return fail("Bluetooth did not start");
+  }
+#endif
   wardriveTransition=true;
   previousTracked=trackedContact;previousLock=channelLock;previousRadio=radioEnabled;
   setRadio(false);
   wardriveScanning=true;trackedContact=-1;channelLock=0;
+#ifndef BOARD_WAVESHARE_P4_KNOB
   scanCommand(ScanAction::Configure,0,false);   // a node listens, it never asks BLE devices to answer
+#endif
   esp_wifi_get_mode(&previousMode);esp_wifi_get_ps(&previousPs);
   bool ok=esp_event_handler_instance_register(WIFI_EVENT,WIFI_EVENT_SCAN_DONE,scanDone,nullptr,&scanEvent)==ESP_OK;
   if(ok)ok=esp_wifi_set_mode(WIFI_MODE_STA)==ESP_OK;
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  if(ok)ok=esp_wifi_start()==ESP_OK;
+#endif
   if(ok){esp_wifi_set_ps(WIFI_PS_NONE);ok=esp_wifi_set_channel(HomeChannel,WIFI_SECOND_CHAN_NONE)==ESP_OK;}
   if(ok)wifiChannel=HomeChannel;
   if(ok)ok=esp_now_init()==ESP_OK;
@@ -235,9 +268,17 @@ bool begin(const Config& requested,const uint8_t* pmk,const uint8_t* linkKey,cha
     owned=false;
     if(espNow){esp_now_unregister_recv_cb();esp_now_unregister_send_cb();esp_now_deinit();espNow=false;}
     if(scanEvent){esp_event_handler_instance_unregister(WIFI_EVENT,WIFI_EVENT_SCAN_DONE,scanEvent);scanEvent=nullptr;}
-    esp_wifi_set_ps(previousPs);esp_wifi_set_mode(previousMode);
+    esp_wifi_set_ps(previousPs);
+#ifdef BOARD_WAVESHARE_P4_KNOB
+    esp_wifi_stop();
+#endif
+    esp_wifi_set_mode(previousMode);
     wardriveScanning=false;trackedContact=previousTracked;channelLock=previousLock;
+#ifdef BOARD_WAVESHARE_P4_KNOB
+    p4RadarReleaseClockNetwork();
+#else
     scanCommand(ScanAction::Configure,0,activeBle&&reconMode()==dragon::ReconMode::Radar);
+#endif
     setRadio(previousRadio);wardriveTransition=false;release();
     return fail("Wi-Fi could not switch to node mode");
   }
@@ -252,16 +293,29 @@ void end(){
   if(traceDrops&&!radioTransferDepth)Serial.printf("NODE_FRAME dropped=%lu\n",(unsigned long)traceDrops);
   traceDrops=0;                // trace lines lost to a transfer belong to this session
   wardriveTransition=true;
-  scanCommand(ScanAction::Stop);blePhase=false;
+#ifndef BOARD_WAVESHARE_P4_KNOB
+  scanCommand(ScanAction::Stop);
+#else
+  p4NodeBleStop();
+#endif
+  blePhase=false;
   stopScan();
   if(espNow){esp_now_unregister_recv_cb();esp_now_unregister_send_cb();esp_now_deinit();espNow=false;}
   if(scanEvent){esp_event_handler_instance_unregister(WIFI_EVENT,WIFI_EVENT_SCAN_DONE,scanEvent);scanEvent=nullptr;}
-  esp_wifi_set_ps(previousPs);esp_wifi_set_mode(previousMode);
+  esp_wifi_set_ps(previousPs);
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  esp_wifi_stop();
+#endif
+  esp_wifi_set_mode(previousMode);
   keyed=false;memset(lmk,0,sizeof(lmk));
   if(receiveQueue)xQueueReset(receiveQueue);
   owned=false;wardriveScanning=false;
   trackedContact=previousTracked;channelLock=previousLock;
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  p4RadarReleaseClockNetwork();
+#else
   scanCommand(ScanAction::Configure,0,activeBle&&reconMode()==dragon::ReconMode::Radar);
+#endif
   setRadio(previousRadio);wardriveTransition=false;
   release();
 }
@@ -275,7 +329,8 @@ void loop(uint32_t now){
     link->received(r.from,r.data,r.length,r.rssi,now);
   }
   const int sent=sendResult.exchange(-1);
-  if(sent>=0)link->sent(sent==1,now);
+  if(sent==2)link->submitted(now);
+  else if(sent>=0)link->sent(sent==1,now);
   const int scanned=scanResult.load();
   if(scanning&&scanned>=0){
     scanWaiting=false;scanning=false;scanResult=-1;
@@ -288,6 +343,11 @@ void loop(uint32_t now){
     esp_wifi_clear_ap_list();
     link->scanned(ok,now);
   }
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  // The companion uses a finite GAP window; keep its phase until it completes.
+  if(p4NodeBleBusy())return;
+  p4NodeBleDrain([](const uint8_t* address,int rssi){if(owned)link->ble(address,rssi);});
+#endif
   link->loop(now);
 }
 void bleSeen(const uint8_t* address,int rssi){if(owned)link->ble(address,rssi);}
@@ -299,7 +359,12 @@ bool radioNodeBegin(const dragon::node::Config& config,const uint8_t* pmk,const 
 void radioNodeEnd(){noderadio::end();}
 bool radioNodeOwned(){return noderadio::owned;}
 const dragon::node::Status& radioNodeStatus(){return noderadio::owned?noderadio::link->status():noderadio::idle;}
-void radioNodeMac(uint8_t* mac){esp_read_mac(mac,ESP_MAC_WIFI_STA);}
+void radioNodeMac(uint8_t* mac){
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  if(p4CoprocReady()&&esp_wifi_get_mac(WIFI_IF_STA,mac)==ESP_OK)return;
+#endif
+  esp_read_mac(mac,ESP_MAC_WIFI_STA);
+}
 uint32_t radioNodeReceiveDrops(){return noderadio::receiveDrops.load();}
 void radioNodeTrace(bool on){
   using namespace noderadio;

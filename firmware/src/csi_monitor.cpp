@@ -72,6 +72,10 @@ void csiFrame(const wifi_promiscuous_pkt_t* p){if(active.load()&&p->rx_ctrl.chan
 bool csiActive(){return active.load();}
 void csiStop(){if(!active.exchange(false))return;esp_wifi_set_csi(false);esp_wifi_set_csi_rx_cb(nullptr,nullptr);esp_wifi_set_promiscuous(false);esp_wifi_set_mode(WIFI_MODE_NULL);channelLock=oldLock;setRadio(resume);state="STOPPED";strlcpy(message,"Room motion stopped / radar restored",sizeof(message));}
 bool csiStart(){using namespace dragon::toolkit;
+#if BOARD_RADIO_AP_SURVEY_ONLY
+ strlcpy(message,"Room Motion requires CSI, which this P4 driver does not provide.",sizeof(message));
+ return false;
+#endif
  if(active.load()){strlcpy(message,"Room motion is already running; stop it first",sizeof(message));return false;}
  if(!target.hasAp){strlcpy(message,"No network selected; tap one on the Room motion screen",sizeof(message));return false;}
  bool fresh=false;for(unsigned i=0;aps&&i<ApCapacity;++i)if(aps[i].used&&!memcmp(aps[i].mac,target.bssid,6)&&millis()-aps[i].seen<30000&&aps[i].channel==target.channel)fresh=true;
@@ -80,6 +84,9 @@ bool csiStart(){using namespace dragon::toolkit;
 }
 namespace {
 bool begin(const uint8_t* bssid,uint8_t ch,const char* name){using namespace dragon::toolkit;
+#ifdef BOARD_WAVESHARE_P4_KNOB
+ return false;
+#endif
  // Switching networks keeps the radar paused and the state to restore; only
  // a fresh start checks for other radio work (Room motion is that owner now).
  const bool switching=active.load();
@@ -153,6 +160,10 @@ void csiStatus(char* out,size_t capacity){
  snprintf(out,capacity,"%s%s / CH %u\nScore %u / limit %u / margin %s\nQuality %u%% / %u samples/s\n%s\n\n%s",state,name,channel,model?model->motionScore():0,MotionModel::MotionThreshold,edge,model?model->reliability():0,model?model->samplesPerSecond():0,text,Standing);
 }
 bool csiCommand(const String& c){if(!c.startsWith("csi "))return false;
+#ifdef BOARD_WAVESHARE_P4_KNOB
+ Serial.println("RECON_ERROR Room Motion is pending for the P4 Knob beta");
+ return true;
+#endif
  if(c=="csi start"){if(active.load())Serial.println("RECON_ERROR Room motion already running; csi stop first");else Serial.println(csiStart()?"RECON_OK CSI started":"RECON_ERROR fresh AP / busy / CSI setup");}
  // Indexes refer to the list `csi networks` printed last, not a new ranking.
  else if(c=="csi networks"){unsigned n=gather(dragon::csi::FreshMs,32);printedCount=n;for(unsigned i=0;i<n;++i){auto& x=pool[order[i]];auto& a=dragon::toolkit::aps[x.slot];char mac[18];macText(x.mac,mac);memcpy(printed[i],x.mac,6);

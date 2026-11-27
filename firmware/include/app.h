@@ -108,9 +108,18 @@ bool badgeCommand(const String& command);
 void boardBegin();
 void boardLoop();
 void uiKey(bool home);
-#ifdef BOARD_AMOLED_175C
+#if defined(BOARD_AMOLED_175C) || defined(BOARD_WAVESHARE_P4_KNOB)
 void uiAmoled175cKey(bool primary);
 void uiAmoled175cSleep(unsigned seconds=0);
+#endif
+#ifdef BOARD_WAVESHARE_P4_KNOB
+// The knob's ESP32 radio chip (p4_coproc.cpp).
+void p4CoprocStart();   // Load the onboard radio runtime on its worker task.
+bool p4CoprocBusy();
+bool p4CoprocReady();
+const char* p4CoprocStateName();
+void p4CoprocStatus();
+void p4CoprocCommand(bool install);   // Compatibility with older USB command names.
 #endif
 bool uiCommand(const String& command);
 void audioBeep();

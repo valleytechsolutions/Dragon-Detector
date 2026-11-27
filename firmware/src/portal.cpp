@@ -1,7 +1,18 @@
 #include "portal.h"
 #include "storage_replace.h"
 #include "background_radio.h"
-#ifndef BOARD_RADAR_LITE
+#if defined(BOARD_WAVESHARE_P4_KNOB)
+bool portalActive(){return false;}
+bool portalStart(){return false;}
+void portalStop(){}
+void portalLoop(){}
+void portalStatus(char* out,size_t capacity,bool){snprintf(out,capacity,"Portal is pending for the P4 Knob beta");}
+bool portalCommand(const String& command){
+  if(!command.startsWith("portal "))return false;
+  Serial.println("RECON_ERROR Portal is pending for the P4 Knob beta");
+  return true;
+}
+#elif !defined(BOARD_RADAR_LITE)
 #include "app.h"
 #include "recon_internal.h"
 #include "ble_lab.h"

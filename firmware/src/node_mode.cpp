@@ -101,6 +101,10 @@ bool startRadio(NodeKind kind){
 bool startSession(NodeKind kind){
   load();*error=0;
   if(kind==NodeKind::None){nodeStop();return true;}
+#if BOARD_RADIO_AP_SURVEY_ONLY && !defined(BOARD_WAVESHARE_P4_KNOB)
+  say("Node mode requires ESP-NOW. This radio supports Wi-Fi surveys.");
+  return false;
+#endif
   if(radioNodeOwned()&&running==kind)return true;
   // BadUSB keyboard mode is a one-shot session without USB serial, and a script types
   // only while nothing else runs. Neither shares the device with a node.
@@ -155,11 +159,19 @@ void nodeStop(){
   if(was)Serial.println("NODE_STOPPED radar restored");
 }
 
+#ifdef BOARD_WAVESHARE_P4_KNOB
+bool radioDriversUp();
+static NodeKind pendingResume=NodeKind::None;
+#endif
 void nodeBegin(){
   load();
   const NodeKind kind=remembered();
   const uint32_t quick=quickRestarts();setQuickRestarts(0);
   if(kind==NodeKind::None)return;
+#if BOARD_RADIO_AP_SURVEY_ONLY && !defined(BOARD_WAVESHARE_P4_KNOB)
+  Serial.println("NODE_RESUME_SKIPPED ESP-NOW unavailable on this radio");
+  return;
+#endif
   // The restart into BadUSB keyboard mode never resumes a node. The choice is kept, so
   // the node resumes after EXIT, the reset button or a power cycle.
   if(badusbKeyboardMode()){Serial.printf("NODE_RESUME_SKIPPED %s: USB keyboard mode\n",kindText(kind));return;}
@@ -176,16 +188,33 @@ void nodeBegin(){
     return;
   }
   setQuickRestarts(quick+1);   // counted before the radio starts, which is when a weak supply gives way
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  // The knob's radio chip starts on its own task: resume once it is up.
+  if(!radioDriversUp()){pendingResume=kind;Serial.printf("NODE_RESUME_WAITING %s: the radio chip is starting\n",kindText(kind));return;}
+#endif
   if(startSession(kind)){resumeWatch=true;resumedAt=millis();uiShow("node");Serial.printf("NODE_RESUMED %s\n",kindText(kind));}
   else{setQuickRestarts(0);Serial.printf("NODE_ERROR resume %s: %s\n",kindText(kind),error);}
 }
 
 void nodeLoop(){
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  if(pendingResume!=NodeKind::None&&!p4CoprocBusy()){
+    // The radio chip has finished starting, one way or the other. Try once:
+    // startSession fails cleanly if the radio did not come up, so this never
+    // waits forever (e.g. Wi-Fi up but BLE down leaves no scanner).
+    const NodeKind kind=pendingResume;pendingResume=NodeKind::None;
+    if(startSession(kind)){resumeWatch=true;resumedAt=millis();uiShow("node");Serial.printf("NODE_RESUMED %s\n",kindText(kind));}
+    else{setQuickRestarts(0);Serial.printf("NODE_ERROR resume %s: %s (radio %s)\n",kindText(kind),error,p4CoprocStateName());}
+  }
+#endif
   // A resumed node that has run a minute, or has ended, no longer counts as a quick restart.
   if(resumeWatch&&(!radioNodeOwned()||millis()-resumedAt>=ResumeSettledMs))settle();
 }
 
 bool nodeAllowsCommand(const String& c){
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  if(c=="p4 status"||c=="radio chip status"||c=="p4 radio status")return true;
+#endif
   // Node commands, the clock, a restart and read-only queries, USB Studio's connect queries among them.
   static const char* const exact[]={"node","status","memory status","loop diagnostics","scan status","ui status","touch status",
     "amoled status","143c status","185b status","rotary status","watcher status","dial status","display status",
@@ -205,12 +234,12 @@ bool nodeCommand(const String& c){
     for(uint8_t i=0;i<s.planCount&&at+4<sizeof(plan);++i)at+=size_t(snprintf(plan+at,sizeof(plan)-at,i?",%u":"%u",s.plan[i]));
     // bound, keyed and ble_reports: what the running link uses. node config shows the saved settings.
     Serial.printf("NODE_STATUS mode=%s active=%u phase=%s core=%s linked=%u core_mac=%s core_rssi=%d channel=%u registered=%u assigned=%u own_plan=%u plan=%s dwell_ms=%u role=%u node=%u/%u "
-      "wifi=%lu ble=%lu sent=%lu failed=%lu dropped=%lu acked=%lu cycles=%lu scans=%lu scan_errors=%lu requests=%lu links=%lu losses=%lu heartbeats=%lu core_age_ms=%lu "
+      "wifi=%lu ble=%lu sent=%lu failed=%lu dropped=%lu acked=%lu submitted=%lu cycles=%lu scans=%lu scan_errors=%lu requests=%lu links=%lu losses=%lu heartbeats=%lu core_age_ms=%lu "
       "other=%s broadcast=%u bound=%u keyed=%u ble_reports=%u rx_drops=%lu heard=%lu heard_core=%lu waiting=%u elapsed_ms=%lu remembered=%s heap=%u min_heap=%u largest=%u\n",
       kindText(nodeKind()),nodeBusy(),dragon::node::phaseName(s.phase),dragon::node::coreName(s.core),s.linked,s.linked?coreMac:"-",s.coreRssi,s.channel,
       s.registered,s.assigned,s.ownPlan,at?plan:"-",s.dwellMs,s.role,s.nodeIndex,s.nodeCount,
       (unsigned long)s.wifi,(unsigned long)s.ble,(unsigned long)s.sent,(unsigned long)s.failed,(unsigned long)s.dropped,(unsigned long)s.acked,
-      (unsigned long)s.cycles,(unsigned long)s.scans,(unsigned long)s.scanErrors,(unsigned long)s.requests,(unsigned long)s.links,(unsigned long)s.losses,
+      (unsigned long)s.submitted,(unsigned long)s.cycles,(unsigned long)s.scans,(unsigned long)s.scanErrors,(unsigned long)s.requests,(unsigned long)s.links,(unsigned long)s.losses,
       (unsigned long)s.heartbeats,(unsigned long)s.coreAgeMs,dragon::node::coreName(s.other),s.broadcast,nodeBusy()&&linkBound,nodeKeyed(),nodeBleReports(),
       (unsigned long)radioNodeReceiveDrops(),(unsigned long)s.heard,(unsigned long)s.heardCore,unsigned(s.waiting),(unsigned long)nodeElapsedMs(),kindText(remembered()),
       unsigned(ESP.getFreeHeap()),unsigned(ESP.getMinFreeHeap()),unsigned(heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL|MALLOC_CAP_8BIT)));

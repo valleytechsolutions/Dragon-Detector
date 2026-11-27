@@ -19,6 +19,13 @@ void toneOutput(uint16_t hz,uint16_t ms,uint8_t volume){M5.Speaker.setVolume(uns
 #include <es8311.h>
 #endif
 static i2s_chan_handle_t tx=nullptr;
+#if BOARD_HAS_MIC
+// The microphones' receiver: full duplex with tx on the same port, so it runs
+// on tx's MCLK, BCLK and WS. Enabled only while the Voice Recorder records.
+static i2s_chan_handle_t rx=nullptr;
+static bool rxOn=false;
+size_t voicePlaybackFill(int16_t* stereo,size_t frames); // voice_recorder.cpp: 0 = no file playing
+#endif
 static portMUX_TYPE lock=portMUX_INITIALIZER_UNLOCKED;
 #ifdef BOARD_WATCHER
 static volatile uint32_t outputWrites=0,outputErrors=0,audibleBuffers=0;
@@ -28,6 +35,10 @@ static uint16_t frequency=0;static uint8_t gain=0;static uint32_t until=0;
 static void outputTask(void*){
  int16_t samples[256*2];float phase=0,amplitude=0;
  for(;;){
+#if BOARD_HAS_MIC
+  // A WAV file owns the speaker while it plays or is paused; tones wait (audio.cpp).
+  if(voicePlaybackFill(samples,256)){size_t written=0;if(i2s_channel_write(tx,samples,sizeof(samples),&written,100)!=ESP_OK)vTaskDelay(1);continue;}
+#endif
   portENTER_CRITICAL(&lock);uint16_t hz=frequency;uint8_t volume=gain;uint32_t end=until;portEXIT_CRITICAL(&lock);
   if(int32_t(millis()-end)>=0)hz=0;
   float target=hz?volume*327.0f:0;
@@ -47,10 +58,25 @@ bool toneOutputBegin(){
  pinMode(AUDIO_MUTE_PIN,OUTPUT);digitalWrite(AUDIO_MUTE_PIN,LOW);
 #endif
  i2s_chan_config_t cfg=I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_0,I2S_ROLE_MASTER);cfg.dma_desc_num=4;cfg.dma_frame_num=256;
- if(i2s_new_channel(&cfg,&tx,nullptr)!=ESP_OK)return false;
  i2s_std_config_t cfgStd{};cfgStd.clk_cfg=I2S_STD_CLK_DEFAULT_CONFIG(16000);cfgStd.slot_cfg=I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT,I2S_SLOT_MODE_STEREO);
  cfgStd.gpio_cfg.mclk=gpio_num_t(AUDIO_I2S_MCK_IO);cfgStd.gpio_cfg.bclk=gpio_num_t(AUDIO_I2S_BCK_IO);cfgStd.gpio_cfg.ws=gpio_num_t(AUDIO_I2S_WS_IO);cfgStd.gpio_cfg.dout=gpio_num_t(AUDIO_I2S_DO_IO);cfgStd.gpio_cfg.din=GPIO_NUM_NC;
+#if BOARD_HAS_MIC
+ // Both directions from one i2s_new_channel and the identical config: IDF
+ // pairs them and makes the receiver, initialized second, a slave of the
+ // transmitter's clocks. Without the receiver the tones still work.
+ cfgStd.gpio_cfg.din=gpio_num_t(AUDIO_I2S_DI_IO);
+ if(i2s_new_channel(&cfg,&tx,&rx)!=ESP_OK)return false;
+ if(i2s_channel_init_std_mode(tx,&cfgStd)!=ESP_OK)return false;
+ if(i2s_channel_init_std_mode(rx,&cfgStd)!=ESP_OK){i2s_del_channel(rx);rx=nullptr;}
+ if(i2s_channel_enable(tx)!=ESP_OK)return false;
+#else
+ if(i2s_new_channel(&cfg,&tx,nullptr)!=ESP_OK)return false;
  if(i2s_channel_init_std_mode(tx,&cfgStd)!=ESP_OK||i2s_channel_enable(tx)!=ESP_OK)return false;
+#endif
+#ifdef BOARD_WAVESHARE_P4_KNOB
+ // ES8389 DAC: configured once MCLK runs (board_waveshare_p4_knob.cpp).
+ extern bool p4KnobCodecBegin();if(!p4KnobCodecBegin())return false;
+#endif
 #if defined(BOARD_WATCHER) || defined(BOARD_AMOLED_175C) || (defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_206)) || defined(BOARD_WAVESHARE_185B) || defined(BOARD_WAVESHARE_143C)
 #ifdef BOARD_WAVESHARE_185B
  // Touch polling shares I2C0. Serialize codec setup with its bounded reads.
@@ -73,7 +99,7 @@ bool toneOutputBegin(){
  bool ok=es8311_init(codec,&clock,ES8311_RESOLUTION_16,ES8311_RESOLUTION_16)==ESP_OK&&es8311_voice_volume_set(codec,codecVolume,nullptr)==ESP_OK&&es8311_voice_mute(codec,false)==ESP_OK;es8311_delete(codec);if(!ok)return false;
 #endif
  // Queue silence before enabling the amplifier, avoiding stale DMA startup.
-#if defined(BOARD_WAVESHARE_185B) || defined(BOARD_WAVESHARE_143C) || defined(BOARD_WAVESHARE_206)
+#if defined(BOARD_WAVESHARE_185B) || defined(BOARD_WAVESHARE_143C) || defined(BOARD_WAVESHARE_P4_KNOB) || defined(BOARD_WAVESHARE_206)
  int16_t silence[128]{};size_t silentBytes=0;
  if(i2s_channel_write(tx,silence,sizeof(silence),&silentBytes,100)!=ESP_OK||silentBytes!=sizeof(silence))return false;
 #endif
@@ -86,4 +112,17 @@ bool toneOutputBegin(){
  return true;
 }
 void toneOutput(uint16_t hz,uint16_t ms,uint8_t volume){portENTER_CRITICAL(&lock);frequency=hz;gain=volume;until=millis()+ms;portEXIT_CRITICAL(&lock);}
+#if BOARD_HAS_MIC
+bool audioInputReady(){return rx!=nullptr;}
+// Capture task only (voice_recorder.cpp): start or stop the receiver's DMA.
+bool audioInputEnable(bool on){
+ if(!rx||on==rxOn)return rx!=nullptr;
+ if((on?i2s_channel_enable(rx):i2s_channel_disable(rx))!=ESP_OK)return false;
+ rxOn=on;return true;
+}
+// Interleaved 16-bit stereo (left MIC1, right MIC2); bytes read, 0 on timeout.
+size_t audioInputRead(void* data,size_t bytes,uint32_t timeoutMs){size_t got=0;if(rx&&rxOn)i2s_channel_read(rx,data,bytes,&got,timeoutMs);return got;}
+// The speaker amplifier: off while recording, so nothing plays into the microphones.
+void audioAmplifier(bool on){digitalWrite(AUDIO_MUTE_PIN,on?HIGH:LOW);}
+#endif
 #endif

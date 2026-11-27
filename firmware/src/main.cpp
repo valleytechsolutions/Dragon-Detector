@@ -3,6 +3,9 @@
 #include "badusb_mode.h"
 #include <Arduino.h>
 #include "app.h"
+#ifdef BOARD_WAVESHARE_P4_KNOB
+#include "p4_radio.h"
+#endif
 #include "wardrive.h"
 #include "wardrive_upload.h"
 #include "personal_theme.h"
@@ -12,12 +15,39 @@
 #include "ble_lab.h"
 #include "recon.h"
 #include "node_mode.h"
+#include "usb_drive.h"
 #include "board_pins.h"
 #include "flash_budget.h"
+#if BOARD_HAS_MIC
+#include "voice_recorder.h"
+#endif
 #include <lvgl.h>
 #include <esp_timer.h>
 #include <esp_ota_ops.h>
 #include <LittleFS.h>
+#ifdef BOARD_WAVESHARE_P4_KNOB
+static void printP4InstallLayout() {
+  struct Entry { const char* label; esp_partition_type_t type; esp_partition_subtype_t subtype; uint32_t address, size; };
+  constexpr Entry expected[] = {
+    {"nvs", ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_NVS, 0x9000, 0x5000},
+    {"otadata", ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_OTA, 0xe000, 0x2000},
+    {"app0", ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_APP_OTA_0, 0x10000, 0x600000},
+    {"app1", ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_APP_OTA_1, 0x610000, 0x600000},
+    {"spiffs", ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_SPIFFS, 0xc10000, 0x11f0000},
+    {"cpbackup", ESP_PARTITION_TYPE_DATA, static_cast<esp_partition_subtype_t>(0x40), 0x1e00000, 0x200000},
+  };
+  bool matches = ESP.getFlashChipSize() == 0x2000000;
+  for (const auto& entry : expected) {
+    const auto* partition = esp_partition_find_first(entry.type, entry.subtype, entry.label);
+    if (!partition || partition->address != entry.address || partition->size != entry.size) matches = false;
+  }
+  const auto* running = esp_ota_get_running_partition();
+  const auto* boot = esp_ota_get_boot_partition();
+  Serial.printf("P4_LAYOUT layout=%u revision=%u running=%u boot=%u\n", unsigned(matches),
+                unsigned(ESP.getChipRevision()), unsigned(running ? running->address : 0),
+                unsigned(boot ? boot->address : 0));
+}
+#endif
 #if BOARD_HAS_SD
 #include <mbedtls/base64.h>
 #endif
@@ -100,9 +130,34 @@ static void health(){
 }
 static uint32_t loopLastUs[6]{},loopMaxUs[6]{};
 static void command(const String& c){
+  // USB drive mode (P4 Knob): its own commands, and no card commands while the PC has the card.
+  if(usbDriveCommand(c))return;
+#if BOARD_RADIO_AP_SURVEY_ONLY
+  if(nodeBusy()&&!nodeAllowsCommand(c)){Serial.println("NODE_BUSY stop the node first: node stop");return;}
+  if(c.startsWith("radio chip mode ")){
+    const String value=c.substring(16);
+    const unsigned mode=value=="both"?0:value=="wifi"?1:value=="ble"?2:3;
+    if(!p4RadarSetScanMode(mode))Serial.println("P4RADIO_ERROR unsupported mode or save failed");
+    else {Serial.printf("P4RADIO_MODE %u\n",unsigned(p4RadarScanMode()));p4CoprocStatus();}
+    return;
+  }
+  if(c=="pause"||c=="resume"){
+    if(c=="resume"&&radioStandby()){
+      Serial.println("RADIO_STANDBY return to the radar to scan");
+    }else{
+      setRadio(c=="resume");
+      p4CoprocStatus();
+    }
+    return;
+  }
+  if(c=="capture on"||c.startsWith("tool start ")||c.startsWith("recipe ")){
+    Serial.println("RECON_ERROR this P4 radio tool requires unsupported frame access");
+    return;
+  }
+#endif
   if(badusbCommand(c))return;
   if(badusbStatus().running&&c!="status"){Serial.println("BADUSB_BUSY stop the script first");return;}
-#if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B)
+#if defined(BOARD_AMOLED_175) || defined(BOARD_WAVESHARE_185B) || defined(BOARD_WAVESHARE_P4_KNOB)
   // The removable card is the deliberate credential-editing surface. Do not
   // expose its secrets through generic Web Serial/USB file previews or dumps.
   if(c.startsWith("get ")){String path=c.substring(4);path.toLowerCase();
@@ -122,6 +177,9 @@ static void command(const String& c){
   if(wardriveBusy()&&c!="status"&&c!="scan status"&&c!="memory status"&&c!="loop diagnostics"&&c!="screen wardrive"&&c!="ui status"&&c!="touch status"&&c!="amoled status"){
     Serial.println("WARDRIVE_BUSY stop wardriving and wait for SD save first");return;
   }
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  if(c=="install layout"){printP4InstallLayout();return;}
+#endif
   if(nodeCommand(c))return;
   if(personalThemeCommand(c))return;
 #ifdef BOARD_WAVESHARE_185B
@@ -192,6 +250,19 @@ static void command(const String& c){
 #ifdef BOARD_CROWPANEL_21
   else if(c=="touch status"||c=="rotary status"){extern void crowInputStatus();crowInputStatus();}
 #endif
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  else if(c=="p4 status"||c=="touch status"||c=="rotary status"||c=="amoled status"){extern void p4KnobStatus();p4KnobStatus();}
+  else if(c=="p4 sleep test"){uiAmoled175cSleep(15);}
+  else if(c=="radio chip status"||c=="p4 radio status"){p4CoprocStatus();}
+  else if(c=="radio chip probe"){p4CoprocCommand(false);}
+  else if(c=="radio chip recover"){
+    if(const char* reason=p4TransportRestartBlock())Serial.printf("P4RADIO_ERROR %s\n",reason);
+    else p4RestartFailedTransport();
+  }
+  else if(c=="radio chip install"){p4CoprocCommand(true);}
+  else if(c=="system download"){extern void p4KnobDownloadMode();p4KnobDownloadMode();}
+  else if(c.startsWith("touch inject ")){int x,y,pressed;char extra;if(sscanf(c.c_str(),"touch inject %d %d %d %c",&x,&y,&pressed,&extra)==3&&x>=0&&x<SCREEN_RES&&y>=0&&y<SCREEN_RES&&(pressed==0||pressed==1)){extern void testTouch(int,int,bool);testTouch(x,y,pressed);Serial.println("TOUCH_INJECT_OK");}else Serial.println("TOUCH_INJECT_ERROR");}
+#endif
 #ifdef BOARD_WATCHER
   else if(c=="watcher sleep test"){extern bool watcherSleep(unsigned);if(!watcherSleep(5))Serial.println("SLEEP_ERROR busy");}
   else if(c=="watcher audio"){extern void watcherAudioDiagnostics();watcherAudioDiagnostics();}
@@ -202,7 +273,11 @@ static void command(const String& c){
   else if(c=="pause")Serial.println("RADIO_ALWAYS_ON select an explicit Waveshare radio mode instead");
   else if(c=="resume")setRadio(true);
   else if(c=="record")audioRecord();
-  else if(c=="stop")audioStop();
+  else if(c=="stop"){audioStop();
+#if BOARD_HAS_MIC
+    voiceRecordStop();voicePlayStop(); // the recording still saves in the background
+#endif
+  }
   else if(c.startsWith("screen "))uiShow(c.substring(7));
   else if(c=="audio status"){auto a=audioStatus();Serial.printf("AUDIO mode=%u seconds=%lu peak=%u volume=%u file=%s\n",unsigned(a.mode),a.seconds,a.peak,a.volume,a.message);}
   else if(c.startsWith("volume "))audioVolume(c.substring(7).toInt());
@@ -281,7 +356,9 @@ void setup(){
   pinMode(DIAL_HOLD,OUTPUT);digitalWrite(DIAL_HOLD,HIGH);
 #endif
   Serial.setRxBufferSize(4096);
-  Serial.setTxBufferSize(2048);
+#ifndef BOARD_WAVESHARE_P4_KNOB
+  Serial.setTxBufferSize(2048);  // TinyUSB CDC (P4 Knob) has a fixed transmit FIFO
+#endif
   Serial.begin(115200);delay(500);Serial.println("DRAGON DETECTOR " DRAGON_VERSION " / " BOARD_NAME " / boot");
   previousCaptureStage=captureTrace[0]==CAPTURE_TRACE_MAGIC?captureTrace[1]:0;
   Serial.printf("PREVIOUS_CAPTURE stage=%lu reset=%d\n",previousCaptureStage,esp_reset_reason());captureStage(0);
@@ -303,8 +380,15 @@ void setup(){
   if(!contacts.data){Serial.println("FATAL: contact storage allocation failed");while(true)delay(100);}
   for(size_t i=0;i<MAX_CONTACTS;++i)new(&contacts[i]) Contact{};
   runSelfTests();boardBegin();personalThemeBegin();uiBegin();wearableBegin();
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  lv_refr_now(nullptr);
+  storageBegin();radioBegin();p4TransportBootWindow();
+#endif
   uint32_t at=millis();while(millis()-at<1600){uiLoop();delay(5);}
-  storageBegin();sdResourcesBegin();badgeInit();audioBegin();detectorBegin();notebookBegin();
+#ifndef BOARD_WAVESHARE_P4_KNOB
+  storageBegin();
+#endif
+  sdResourcesBegin();badgeInit();audioBegin();detectorBegin();notebookBegin();
 #ifndef BOARD_RADAR_LITE
   if(!dragon::vendorRegistryBegin())Serial.println(
 #ifdef BOARD_WAVESHARE_185B
@@ -317,7 +401,10 @@ void setup(){
 #ifdef BOARD_CROWPANEL_21
   extern void crowInputStatus();crowInputStatus();
 #endif
-  radioBegin();bleLabBegin();reconBegin();wardriveBegin();wardriveUploadBegin();nodeBegin();badusbBegin();Serial.println("DRAGON READY");health();
+#ifndef BOARD_WAVESHARE_P4_KNOB
+  radioBegin();
+#endif
+  bleLabBegin();reconBegin();wardriveBegin();wardriveUploadBegin();nodeBegin();badusbBegin();Serial.println("DRAGON READY");health();
   if(badusbKeyboardMode())uiShow("badusb");
 }
 void loop(){
@@ -326,7 +413,7 @@ void loop(){
   // LC76G command/reply exchanges span short cooperative waits. Other I2C
   // slaves must remain quiet until the reply has been consumed. Radios and SD
   // still run during these waits; touch IRQs stay latched for the next UI pass.
-  if(!wardriveI2cBusy())boardLoop();wardriveLoop();wardriveUploadLoop();nodeLoop();
+  if(!wardriveI2cBusy())boardLoop();wardriveLoop();wardriveUploadLoop();nodeLoop();usbDriveLoop();
   // A wardrive owns the radios and SD writer. Suspend unrelated analysis,
   // history writes, alerts and badge traffic until finalization completes.
   const bool quiet=!wardriveBusy()&&!wardriveUploadBusy()&&!nodeBusy(); // a node does nothing but act as a node

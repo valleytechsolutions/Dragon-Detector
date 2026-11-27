@@ -1,10 +1,20 @@
-// MIT: synthesized RTTTL alerts; no legacy MP3 decoder or microphone capture.
+// MIT: synthesized RTTTL alerts; no legacy MP3 decoder. Boards with a
+// microphone driver (BOARD_HAS_MIC) record and play WAV files through
+// voice_recorder.cpp; alerts wait while a file plays and stay off while
+// the microphones record.
 #include "app.h"
 #include "recon.h"
 #include "tones.h"
 #include <Preferences.h>
+#if BOARD_HAS_MIC
+#include "voice_recorder.h"
+#endif
 static Preferences prefs;
 static AppAudioStatus status;
+#ifdef BOARD_WAVESHARE_P4_KNOB
+static bool volumeDirty=false;
+static uint32_t volumeChangedAt=0;
+#endif
 static String custom[unsigned(Family::Count)];
 static dragon::Melody melody;
 static dragon::ToneQueue queue;
@@ -19,6 +29,9 @@ void toneOutput(uint16_t hz,uint16_t ms,uint8_t volume);
 static_assert(sizeof(dragon::defaultTones)/sizeof(*dragon::defaultTones)==unsigned(Family::Count),"Every detector needs a tone");
 static String toneText(unsigned f){char key[12];snprintf(key,sizeof(key),"tone%u",f);return prefs.isKey(key)?custom[f]:String(dragon::defaultTones[f]);}
 static bool start(const char* text,bool isPreview=false){
+#if BOARD_HAS_MIC
+ if(voiceBusy())return false; // a WAV file or the microphones own the speaker
+#endif
  dragon::Melody next;if(!ready||!alertSound||!status.volume||!dragon::parseTone(text,next))return false;
  toneOutput(0,0,0);melody=next;cursor=0;noteAt=millis();playing=next.count>0;preview=isPreview;
  status.mode=playing?AudioMode::Playing:AudioMode::Idle;return true;
@@ -39,8 +52,21 @@ void audioBegin(){
  #endif
  Serial.printf("AUDIO_READY %u\n",ready);
 }
-void audioSave(){if(!alertSound||!status.volume)audioStop();prefs.putUChar("volume",status.volume);prefs.putBool("hunt",huntSound);prefs.putInt("focus",audioFocus);detectorSave();}
-void audioVolume(int v){status.volume=constrain(v,0,100);audioSave();}
+void audioSave(){
+#ifdef BOARD_WAVESHARE_P4_KNOB
+ volumeDirty=false;
+#endif
+ if(!alertSound||!status.volume)audioStop();prefs.putUChar("volume",status.volume);prefs.putBool("hunt",huntSound);prefs.putInt("focus",audioFocus);detectorSave();}
+void audioVolume(int v){
+#ifdef BOARD_WAVESHARE_P4_KNOB
+ const uint8_t next=constrain(v,0,100);if(next==status.volume)return;status.volume=next;
+ if(!next)audioStop();
+ // Keep knob turns responsive and save once after the user stops turning.
+ volumeDirty=true;volumeChangedAt=millis();
+#else
+ status.volume=constrain(v,0,100);audioSave();
+#endif
+}
 dragon::AudioLevel audioLevel(){return dragon::audioLevelFor(ready&&alertSound,status.volume);}
 void audioSetLevel(dragon::AudioLevel level){
  unsigned volume=dragon::audioLevelVolume(level);if(volume&&!ready)return;
@@ -53,12 +79,29 @@ void audioStop(){playing=preview=false;queue.clear();toneOutput(0,0,0);
  status.mode=ready?AudioMode::Idle:AudioMode::Error;
 #endif
 }
+#if BOARD_HAS_MIC
+void audioPlay(const String& path){char why[96];if(!voicePlay(path.c_str(),why,sizeof(why)))snprintf(status.message,sizeof(status.message),"%s",why);}
+void audioRecord(){char why[96];if(!voiceRecordStart(why,sizeof(why)))snprintf(status.message,sizeof(status.message),"%s",why);}
+uint8_t audioVolumePercent(){return status.volume;} // WAV playback follows the device volume
+AppAudioStatus audioStatus(){
+ AppAudioStatus s=status;const auto v=voiceStatus();
+ if(v.rec==VoiceRec::Recording){s.mode=AudioMode::Recording;s.seconds=v.recSeconds;s.peak=v.peak;snprintf(s.message,sizeof(s.message),"%s",*v.recFile?v.recFile:"Starting recording");}
+ else if(v.play==VoicePlay::Playing||v.play==VoicePlay::Paused){s.mode=AudioMode::Playing;s.seconds=v.playMs/1000;snprintf(s.message,sizeof(s.message),"%s",v.playFile);}
+ return s;
+}
+#else
 void audioPlay(const String&){snprintf(status.message,sizeof(status.message),"Use RTTTL alerts in Settings / Audio");}
 void audioRecord(){snprintf(status.message,sizeof(status.message),"Microphone recording is not enabled");}
 AppAudioStatus audioStatus(){return status;}
+#endif
 bool audioReady(){return ready;}
 void audioBeep(){start("Test:d=16,o=6,b=180:c,e,g",true);}
 void audioAlert(Family family){if(ready&&alertSound&&!detector.quiet&&status.volume){
+#if BOARD_HAS_MIC
+  // Nothing plays into the microphones; a playing file keeps the alert queued.
+  if(voiceRecording())return;
+  if(voicePlaying()){queue.request(unsigned(family),millis());return;}
+#endif
   // Axon can interrupt a lower-priority melody immediately; retain cooldown.
   if(family==Family::Axon&&!(queue.played&(1u<<unsigned(family))&&uint32_t(millis()-queue.last[unsigned(family)])<4000)){
     queue.pending&=~(1u<<unsigned(family));queue.played|=1u<<unsigned(family);queue.last[unsigned(family)]=millis();start(toneText(unsigned(family)).c_str());
@@ -87,7 +130,15 @@ static int target(uint32_t now){
  cached=best;return best;
 }
 void audioLoop(){
+#ifdef BOARD_WAVESHARE_P4_KNOB
+ if(volumeDirty&&uint32_t(millis()-volumeChangedAt)>=700)audioSave();
+#endif
  if(!ready||!alertSound||!status.volume){hadSignal=false;lastTarget=-1;audioStop();return;}
+#if BOARD_HAS_MIC
+ // While a file plays, alerts wait in the queue (10 s) and hunt pulses pause.
+ // While recording, the speaker stays silent and nothing queues.
+ if(voiceBusy()){if(voiceRecording())queue.clear();hadSignal=false;lastTarget=-1;if(playing){playing=preview=false;toneOutput(0,0,0);}return;}
+#endif
  uint32_t now=millis();bool enabled=ready&&alertSound&&!detector.quiet&&radioEnabled&&status.volume;
  if(!enabled){queue.clear();hadSignal=false;lastTarget=-1;if(!preview)audioStop();}
  if(playing&&int32_t(now-noteAt)>=0){
@@ -110,6 +161,9 @@ void audioLoop(){
 }
 static void settings(){Serial.printf("TONE_SETTINGS ready=%u enabled=%u volume=%u hunt=%u focus=%d quiet=%u level=%s\n",ready,alertSound,status.volume,huntSound,audioFocus,detector.quiet,dragon::audioLevelName(audioLevel()));}
 bool audioCommand(const String& c){
+#if BOARD_HAS_MIC
+ if(voiceCommand(c))return true;
+#endif
  if(c=="tone settings"){settings();return true;}
  if(c=="tone stop"){audioStop();Serial.println("TONE_OK");return true;}
  if(c.startsWith("tone level ")){dragon::AudioLevel level;if(!dragon::parseAudioLevel(c.c_str()+11,level)){Serial.println("TONE_ERROR level");return true;}if(level!=dragon::AudioLevel::Silent&&!ready){Serial.println("TONE_ERROR output");return true;}audioSetLevel(level);Serial.println("TONE_OK");return true;}
@@ -130,7 +184,7 @@ bool audioCommand(const String& c){
  Serial.println("TONE_ERROR command");return true;
 }
 #if !defined(BOARD_STOPWATCH) && !defined(BOARD_CROWPANEL_21)
-#if !defined(BOARD_WATCHER) && !defined(BOARD_LILYGO_175) && !defined(BOARD_AMOLED_175C) && !defined(BOARD_AMOLED_175) && !defined(BOARD_XIAO_ROUND) && !defined(BOARD_WAVESHARE_185B) && !defined(BOARD_WAVESHARE_143C) && !defined(BOARD_WAVESHARE_206)
+#if !defined(BOARD_WATCHER) && !defined(BOARD_LILYGO_175) && !defined(BOARD_AMOLED_175C) && !defined(BOARD_AMOLED_175) && !defined(BOARD_XIAO_ROUND) && !defined(BOARD_WAVESHARE_185B) && !defined(BOARD_WAVESHARE_143C) && !defined(BOARD_WAVESHARE_P4_KNOB) && !defined(BOARD_WAVESHARE_206)
 void boardBegin(){}
 void boardLoop(){}
 #endif

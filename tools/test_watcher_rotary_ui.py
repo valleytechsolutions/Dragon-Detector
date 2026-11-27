@@ -9,6 +9,7 @@ work = root / '.work/watcher-rotary-tests'
 work.mkdir(parents=True, exist_ok=True)
 p = argparse.ArgumentParser()
 p.add_argument('--lvgl-library', type=Path, help='Optional native LVGL built with the emitted lv_conf.h')
+p.add_argument('--p4', action='store_true', help='Exercise the P4 knob and its clock detour')
 args = p.parse_args()
 zig = [sys.executable, '-m', 'ziglang']
 lv = root / 'hardware/spotpear/lib/lvgl'
@@ -134,6 +135,22 @@ int main(){
 }
 '''
 cpp,exe=work/'watcher.cpp',work/'watcher.exe'
+if args.p4:
+    source = source.replace('#define BOARD_WATCHER', '#define BOARD_WAVESHARE_P4_KNOB')
+    source = source.replace('unsigned menuRequests=0', 'bool dialOwnsInput=false; int dialTurns=0,dialClicks=0;\nbool uiP4DialInput(int steps,bool click){if(!dialOwnsInput)return false;dialTurns+=steps;dialClicks+=click;return true;}\nbool clockOwnsDial=false; int clockTurns=0;\nbool uiP4TurnClock(int steps){if(!clockOwnsDial)return false;clockTurns+=steps;return true;}\nunsigned menuRequests=0')
+    source = source.replace('412', '466').replace('production Watcher', 'production P4')
+    source = source.replace(' rotaryUiDiagnostics();', '''
+ {auto* before=lv_group_get_focused(g);dialOwnsInput=true;
+  rotaryUiInput(3,false,false);frame();rotaryUiInput(0,true,false);frame();
+  assert(dialTurns==3&&dialClicks==1&&lv_group_get_focused(g)==before);
+  physicalDown=true;frame();rotaryUiInput(4,false,false);assert(dialTurns==3);
+  physicalDown=false;frame();frame(160);dialOwnsInput=false;}
+ {auto* before=lv_group_get_focused(g);clockOwnsDial=true;
+  rotaryUiInput(3,false,false);frame();rotaryUiInput(-2,false,false);frame();
+  assert(clockTurns==1&&lv_group_get_focused(g)==before);
+  clockOwnsDial=false;rotaryUiInput(1,false,false);frame();assert(lv_group_get_focused(g)!=before);}
+ rotaryUiDiagnostics();''')
+    cpp,exe=work/'p4.cpp',work/'p4.exe'
 cpp.write_text(source)
 subprocess.run(zig+['c++','-std=c++17','-O1','-UNDEBUG',*includes,str(cpp),str(library),'-o',str(exe)],check=True,cwd=root)
 subprocess.run([str(exe)],check=True,cwd=root)

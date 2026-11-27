@@ -1,4 +1,4 @@
-#if defined(BOARD_CROWPANEL_21) || defined(BOARD_WATCHER)
+#if defined(BOARD_CROWPANEL_21) || defined(BOARD_WATCHER) || defined(BOARD_WAVESHARE_P4_KNOB)
 #include "app.h"
 #include "rotary_ui.h"
 #include "rotary_input.h"
@@ -8,7 +8,7 @@ namespace {
 lv_group_t* group=nullptr;
 lv_obj_t* members[160]{};
 unsigned memberCount=0;
-#ifdef BOARD_WATCHER
+#ifdef ROTARY_TOUCH_UI
 // One current navigation intent, never a queue of turns to replay after a
 // slow frame. Ordinary individual detents still each move focus once.
 int pendingMove=0;
@@ -19,7 +19,7 @@ dragon::RotaryNavigation navigation;
 #endif
 unsigned pendingClicks=0;
 bool releasing=false;
-#ifdef BOARD_WATCHER
+#ifdef ROTARY_TOUCH_UI
 lv_indev_t* encoderInput=nullptr;
 bool touchActive=false,touchSeen=false;
 uint32_t touchAt=0;
@@ -51,10 +51,10 @@ void collect(lv_obj_t* obj,lv_obj_t** found,unsigned& count){
 }
 void readEncoder(lv_indev_drv_t*,lv_indev_data_t* data){
   data->key=LV_KEY_ENTER;data->enc_diff=0;
-#ifdef BOARD_WATCHER
+#ifdef ROTARY_TOUCH_UI
   if(touchOwnsInput()){cancelEncoder();data->state=LV_INDEV_STATE_REL;return;}
 #endif
-#ifdef BOARD_WATCHER
+#ifdef ROTARY_TOUCH_UI
   // Finish each key press/release in one LVGL read cycle, before rendering.
   if(releasing){
     releasing=false;data->key=activeKey;data->state=LV_INDEV_STATE_REL;
@@ -78,24 +78,24 @@ void readEncoder(lv_indev_drv_t*,lv_indev_data_t* data){
 void rotaryUiBegin(){
   group=lv_group_create();lv_group_set_wrap(group,true);
   static lv_indev_drv_t driver;lv_indev_drv_init(&driver);
-#ifdef BOARD_WATCHER
+#ifdef ROTARY_TOUCH_UI
   driver.type=LV_INDEV_TYPE_KEYPAD;
 #else
   driver.type=LV_INDEV_TYPE_ENCODER;
 #endif
   driver.read_cb=readEncoder;
   auto* input=lv_indev_drv_register(&driver);lv_indev_set_group(input,group);
-#ifdef BOARD_WATCHER
+#ifdef ROTARY_TOUCH_UI
   encoderInput=input;
 #endif
 }
 void rotaryUiInput(int steps,bool click,bool back){
   if(!group||(!steps&&!click&&!back))return;
-#ifdef BOARD_WATCHER
+#ifdef ROTARY_TOUCH_UI
   if(touchOwnsInput()){++touchCancelled;cancelEncoder();return;}
 #endif
   if(uiRotaryWake()){
-#ifdef BOARD_WATCHER
+#ifdef ROTARY_TOUCH_UI
     cancelEncoder();
 #else
     navigation.clear();
@@ -105,7 +105,7 @@ void rotaryUiInput(int steps,bool click,bool back){
   // On the node screen a knob click would land on EXIT, and two clicks would
   // leave: the knob is no screen tap there, so nothing reaches LVGL.
   if(uiRotaryNode(click,back)){
-#ifdef BOARD_WATCHER
+#ifdef ROTARY_TOUCH_UI
     cancelEncoder();  // the Watcher keeps one pending move instead of a navigation queue
 #else
     navigation.clear();
@@ -113,20 +113,30 @@ void rotaryUiInput(int steps,bool click,bool back){
     pendingClicks=0;releasing=false;lv_group_set_editing(group,false);
     return;
   }
+#ifdef BOARD_WAVESHARE_P4_KNOB
+  if(!back && uiP4DialInput(steps,click)){
+    cancelEncoder();
+    return;
+  }
+  if(!click && !back && uiP4TurnClock(steps)){
+    cancelEncoder();
+    return;
+  }
+#endif
   if(back){
-#ifdef BOARD_WATCHER
+#ifdef ROTARY_TOUCH_UI
     cancelEncoder();
 #endif
-#ifndef BOARD_WATCHER
+#ifndef ROTARY_TOUCH_UI
     navigation.clear();
 #endif
     pendingClicks=0;releasing=false;lv_group_set_editing(group,false);
-#ifdef BOARD_WATCHER
+#ifdef ROTARY_TOUCH_UI
     if(uiRotaryOpenMenu())return;
 #endif
     uiKey(true);return;
   }
-#ifdef BOARD_WATCHER
+#ifdef ROTARY_TOUCH_UI
   if(click){pendingMove=0;pendingClicks=1;}
   else if(!pendingClicks&&!releasing){
     if(steps){
@@ -140,7 +150,7 @@ void rotaryUiInput(int steps,bool click,bool back){
   else if(!pendingClicks&&!releasing)navigation.push(steps,millis());
 #endif
 }
-#ifdef BOARD_WATCHER
+#ifdef ROTARY_TOUCH_UI
 void rotaryUiTouch(bool down){
   if(down||touchActive){touchAt=millis();touchSeen=true;}
   touchActive=down;
@@ -169,7 +179,7 @@ void rotaryUiLoop(){
   bool changed=count!=memberCount||lv_group_get_obj_count(group)!=count;
   for(unsigned i=0;i<count&&!changed;++i)changed=found[i]!=members[i];
   if(!changed)return;
-#ifdef BOARD_WATCHER
+#ifdef ROTARY_TOUCH_UI
   cancelEncoder();
 #else
   navigation.clear();
@@ -182,7 +192,7 @@ void rotaryUiLoop(){
     auto* obj=members[i]=found[i];
     lv_obj_add_flag(obj,LV_OBJ_FLAG_SCROLL_ON_FOCUS);
     const auto focusStyle=
-#ifdef BOARD_WATCHER
+#ifdef ROTARY_TOUCH_UI
       LV_STATE_FOCUS_KEY;
 #else
       LV_STATE_FOCUSED;
