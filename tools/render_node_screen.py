@@ -291,6 +291,10 @@ bool uiRotaryWake(){return false;}
 #ifdef ROTARY_TOUCH_UI
 bool uiRotaryOpenMenu(){++keys;return true;}
 #endif
+#ifdef BOARD_WAVESHARE_P4_KNOB
+bool uiP4DialInput(int,bool){++keys;return true;}
+bool uiP4TurnClock(int){++keys;return true;}
+#endif
 void uiKey(bool){++keys;}
 const dragon::UiPalette& uiColors(){static dragon::UiPalette p{0,0x202020,0x303030,0xffffff,0x909090,0x00c0ff,0x404040,0,false};return p;}
 // ui.cpp's uiRotaryNode, with nodeKey() on a node screen that is shown (its body is checked above).
