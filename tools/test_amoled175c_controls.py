@@ -75,7 +75,7 @@ void nodeScreenKeyHint(){++keyHints;}
 struct SerialMock {void println(const char*){}void flush(){}template<class... T>void printf(const char*,T...){}} Serial;
 '''
 for signature in ['static void go(', 'static bool nodeKey(', 'void uiKey(', 'bool uiStopwatchKey(',
-                  'static bool uiSideKeyHasMessageBox(', 'static bool uiSideKeyModalOpen(',
+                  'static bool uiSideKeyHasMessageBox(', 'static bool uiSideKeyModalOpen(){',
                   'void uiAmoled175cSleep(', 'void uiAmoled175cKey(']:
     source += '\n' + function(ui, signature)
 source += r'''
