@@ -44,13 +44,17 @@ assert 'addAlert(title,detail,c.mac,false,tag)' in emit and 'alertRepeat(title,i
 assert 'bool watch=!incident&&(flags&RuleWatch)' in emit
 # Incident quiet follows the visit setting; a participant visit gets each kind once.
 assert 'dragon::incidentQuietMs(in.quietMs,detector.autoQuiet)' in emit and 'visits.claimIncident(' in emit
-assert 'dragon::deauthId(f.bssid,o.channel)' in radio and 'dragon::ssidConflictId(f.ssid,f.ssidLength,f.security?peer:f.bssid)' in radio
+assert 'dragon::deauthId(f.bssid,o.channel)' in radio
+assert 'dragon::ssidConflictId(ssid,length,secured?peer:c.mac)' in radio
+assert 'reportSsidConflict(c,f.ssid,f.ssidLength,f.security!=0,peer,o.at)' in radio
 # Only listening time counts as away, with the same gates as process().
 loop=radio[radio.index('void radioLoop()'):]
-assert 'visitListen(on&&reconRadio()!=2,on&&reconRadio()!=1,now)' in loop and loop.index('visitListen(')<loop.index('visitExpire(')
+visits=radio[radio.index('static void maintainVisits('):radio.index('void radioLoop()')]
+assert 'maintainVisits(on&&reconRadio()!=2,on&&reconRadio()!=1,now)' in loop
+assert visits.index('visitListen(wifi,ble,now)')<visits.index('visitExpire(now)')
 assert '!surveyListen&&!wardriveBusy()&&!reconOwnsRadio()&&!bleLabOwnsRadio()' in loop
 # Visits survive deep sleep: saved periodically and right before sleeping.
-assert 'RTC_NOINIT_ATTR static VisitKeep visitKeep;' in detector and 'visitsPersist();' in loop
+assert 'RTC_NOINIT_ATTR static VisitKeep visitKeep;' in detector and 'visitsPersist();' in visits
 for board in ['board_amoled175c.cpp','board_watcher.cpp']:
     b=(src/board).read_text(encoding='utf-8');assert b.index('visitsPersist();')<b.index('esp_deep_sleep_start();'),board
 # No static fallback table in internal RAM on PSRAM boards.
